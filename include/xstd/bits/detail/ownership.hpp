@@ -78,11 +78,13 @@ struct storage_access
         }
 };
 
-// Whether a view of reading R may refer into Owner: a refinement of R answers for R.
+// Whether a container, owner or view, reads its blocks as R: a refinement of R answers for R.
+template<class T, class R>
+concept reads = std::derived_from<typename std::remove_const_t<T>::reads_as, R>;
+
+// Whether a view of reading R may refer into Owner.
 template<class Owner, class R>
-concept owner_reading =
-        owner<Owner> and
-        std::derived_from<typename owned_storage<std::remove_const_t<Owner>>::reads, R>;
+concept owner_reading = owner<Owner> and reads<Owner, R>;
 
 // Whether a view of reading R over Bits can refer into Owner: same storage, const flowing owner to view.
 template<class Owner, class Bits, class R>

@@ -13,7 +13,7 @@
 #include <xstd/bits/bit_subspan.hpp>                // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, storage
+#include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, reads, sequence_reading_tag, set_reading_tag, storage
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // blit_source, sequence_adaptor
 #include <xstd/bits/from_blocks.hpp>                // from_blocks
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
@@ -268,6 +268,19 @@ BOOST_AUTO_TEST_CASE(ABlitSourceIsASequenceOfTheSameBlockType)
         static_assert(not blit_source<bytes, std::uint64_t>);
         static_assert(not blit_source<xstd::bit_set, std::size_t> and not blit_source<std::vector<bool>, std::size_t>);
         static_assert(not blit_source<bytes::reference, std::uint8_t> and not blit_source<bytes::iterator, std::uint8_t>);
+        BOOST_CHECK(true);
+}
+
+// Every container states its reading through its adaptor, an owner and a view alike, and only that one.
+BOOST_AUTO_TEST_CASE(EveryContainerReadsAsItsAdaptorDoes)
+{
+        using xstd::bits::detail::reads;
+        using xstd::bits::detail::sequence_reading_tag;
+        using xstd::bits::detail::set_reading_tag;
+        static_assert(reads<xstd::bit_vector, sequence_reading_tag> and reads<xstd::bit_array<9> const, sequence_reading_tag>);
+        static_assert(reads<xstd::bit_span<std::array<std::uint8_t, 2>>, sequence_reading_tag> and not reads<xstd::bit_vector, set_reading_tag>);
+        static_assert(reads<xstd::bit_set, set_reading_tag> and not reads<xstd::bit_set, sequence_reading_tag>);
+        static_assert(not reads<xstd::bit_vector::reference, sequence_reading_tag> and not reads<std::vector<bool>, sequence_reading_tag>);
         BOOST_CHECK(true);
 }
 
