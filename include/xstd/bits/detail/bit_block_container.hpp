@@ -10,7 +10,7 @@
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/bit_block_range.hpp>              // bit_block_range
 #include <xstd/bits/detail/bit_blocks_capacity.hpp>          // bit_blocks_capacity_v
-#include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, container_source, fixed_blocks_source
+#include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, container_source, copy_bits, fixed_blocks_source
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/owned_bit_blocks.hpp>             // owned_bit_blocks
@@ -27,11 +27,10 @@
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append_tag
 #include <algorithm>                                         // all_of, any_of, copy, fill, fill_n, find_if, fold_left, max, min, reverse, rotate, shift_left, shift_right
 #include <array>                                             // array
-#include <bit>                                               // endian, has_single_bit
+#include <bit>                                               // has_single_bit
 #include <cassert>                                           // assert
 #include <concepts>                                          // default_initializable, same_as
-#include <cstddef>                                           // byte, ptrdiff_t, size_t, to_integer
-#include <cstring>                                           // memcpy
+#include <cstddef>                                           // ptrdiff_t, size_t
 #include <format>                                            // format
 #include <functional>                                        // plus
 #include <iterator>                                          // next, prev
@@ -226,9 +225,6 @@ public:
         using block_container_type = Blocks;
 
         static constexpr auto bits_per_block = static_cast<std::size_t>(xstd::numeric_limits<block_type>::digits);
-
-        // Derived rather than written as an 8: a block's digits over its bytes is the bits in a byte.
-        static constexpr auto bits_per_byte = bits_per_block / sizeof(block_type);
 
         // A width that is a member and moves under growth; the other run-time width is the span's own length.
         static constexpr bool has_stored_size = resizable_bit_blocks<Blocks>;
@@ -586,20 +582,10 @@ public:
         template<std::size_t E>
                 requires has_static_size
         [[nodiscard]] constexpr auto to_bytes() const noexcept
-                -> std::array<std::byte, E>
+                -> std::array<unsigned char, E>
         {
-                auto bytes = std::array<std::byte, E>();
-                if constexpr (shared_bytes<E> > 0UZ) {
-                        if consteval {
-                                to_bytes_by_shifts(bytes);
-                        } else {
-                                if constexpr (bytes_copy_as_blocks) {
-                                        std::memcpy(bytes.data(), m_blocks.data(), shared_bytes<E>);
-                                } else {
-                                        to_bytes_by_shifts(bytes);
-                                }
-                        }
-                }
+                auto bytes = std::array<unsigned char, E>();
+                copy_bits(m_blocks, std::span(bytes));
                 return bytes;
         }
 
@@ -1390,55 +1376,13 @@ private:
                 }
         }
 
-        // The bits as bytes and back, said in shifts: byte j holds [8j, 8j + 8), least significant bit first.
-        template<std::size_t E>
-        static constexpr auto shared_bytes = std::ranges::min(E, static_num_blocks * sizeof(block_type));
-
-        // On a little-endian target a straight copy of those bytes is the same answer, and not byte at a time.
-        static constexpr bool bytes_copy_as_blocks = std::endian::native == std::endian::little;
-
-        // The shifts, in one place: they say where a position goes rather than assume a byte order.
-        template<std::size_t E>
-        constexpr auto assign_bytes_by_shifts(std::array<std::byte, E> const& bytes) noexcept
-                -> void
-        {
-                for (auto const j : std::views::iota(0UZ, shared_bytes<E>)) {
-                        auto const byte = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
-                        auto& block     = m_blocks[j / sizeof(block_type)];
-                        block           = static_cast<block_type>(block | shl(byte, bits_per_byte * (j % sizeof(block_type))));
-                }
-        }
-
-        template<std::size_t E>
-        constexpr auto to_bytes_by_shifts(std::array<std::byte, E>& bytes) const noexcept
-                -> void
-        {
-                for (auto const j : std::views::iota(0UZ, shared_bytes<E>)) {
-                        auto const block = shr(m_blocks[j / sizeof(block_type)], bits_per_byte * (j % sizeof(block_type)));
-                        bytes[j]         = static_cast<std::byte>(static_cast<unsigned char>(block));
-                }
-        }
-
         template<std::size_t E>
                 requires has_static_size
-        constexpr auto assign_bytes(std::array<std::byte, E> const& bytes) noexcept
+        constexpr auto assign_bytes(std::array<unsigned char, E> const& bytes) noexcept
                 -> void
         {
                 std::ranges::fill(m_blocks, zero);
-
-                // if constexpr, not a loop running zero times: an unenterable loop is a line no test reaches.
-                if constexpr (shared_bytes<E> > 0UZ) {
-                        // The shifts answer the two cases a copy cannot: a constant expression, and big-endian.
-                        if consteval {
-                                assign_bytes_by_shifts(bytes);
-                        } else {
-                                if constexpr (bytes_copy_as_blocks) {
-                                        std::memcpy(m_blocks.data(), bytes.data(), shared_bytes<E>);
-                                } else {
-                                        assign_bytes_by_shifts(bytes);
-                                }
-                        }
-                }
+                copy_bits(bytes, std::span(m_blocks));
 
                 // The source keeps its own tail clear, so this restores nothing where the two widths agree.
                 erase_unused();

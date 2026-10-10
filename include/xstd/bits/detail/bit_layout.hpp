@@ -9,18 +9,20 @@
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>           // bit_blocks
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
 #include <xstd/bits/detail/owned_bit_blocks.hpp>           // owned_bit_blocks
+#include <xstd/bits/detail/shift.hpp>                      // shl, shr
 #include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
 #include <xstd/ints/limits.hpp>                            // numeric_limits
+#include <algorithm>                                       // copy, min
 #include <array>                                           // array
 #include <bit>                                             // bit_cast, endian
-#include <cstddef>                                         // byte, size_t, to_integer
+#include <cstddef>                                         // size_t
 #include <cstring>                                         // memcpy
 #include <iterator>                                        // size
 #include <limits>                                          // numeric_limits
 #include <memory>                                          // addressof
-#include <ranges>                                          // data, iota, range_value_t
-#include <span>                                            // dynamic_extent, span
-#include <type_traits>                                     // is_bounded_array_v, is_trivially_copyable_v
+#include <ranges>                                          // iota, range_value_t, size
+#include <span>                                            // as_bytes, as_writable_bytes, dynamic_extent, span
+#include <type_traits>                                     // is_bounded_array_v, is_class_v, is_trivially_copyable_v, remove_const_t
 
 namespace xstd::bits::detail {
 
@@ -54,15 +56,16 @@ template<class Block>
 inline constexpr auto value_bits_fill_object =
         static_cast<std::size_t>(xstd::numeric_limits<Block>::digits) == bits_per_byte * sizeof(Block);
 
-template<class Blocks>
-inline constexpr auto blocks_copy_as_bytes =
-        std::endian::native == std::endian::little and value_bits_fill_object<std::ranges::range_value_t<Blocks>>;
+// A block whose object is its value's bytes, least significant first: a built-in, little-endian, without padding.
+template<class Block>
+inline constexpr bool block_copies_as_bytes =
+        std::endian::native == std::endian::little and (not std::is_class_v<Block>) and value_bits_fill_object<Block>;
 
 template<class Bits>
 [[nodiscard]] constexpr auto object_bytes(Bits const& b) noexcept
-        -> std::array<std::byte, sizeof(Bits)>
+        -> std::array<unsigned char, sizeof(Bits)>
 {
-        return std::bit_cast<std::array<std::byte, sizeof(Bits)>>(b);
+        return std::bit_cast<std::array<unsigned char, sizeof(Bits)>>(b);
 }
 
 // The second family: a foreign field of bits, read under std::bit_cast's rules wherever its object has room for N bits.
@@ -79,78 +82,92 @@ concept bit_layout = fixed_blocks_source<Bits, N> or container_source<Bits, N>;
 template<class Blocks>
 inline constexpr auto bytes_per_block = block_digits<Blocks> / bits_per_byte;
 
+// The bytes a range of blocks holds as positions, its value bits alone, at every block width.
+template<class Blocks>
+[[nodiscard]] constexpr auto value_bytes(Blocks const& blocks) noexcept
+        -> std::size_t
+{
+        return std::ranges::size(blocks) * bytes_per_block<Blocks>;
+}
+
 // Byte j of a range of blocks: the positions [8j, 8j + 8), at every block width.
 template<class Blocks>
 [[nodiscard]] constexpr auto block_byte(Blocks const& blocks, std::size_t j) noexcept
-        -> std::byte
+        -> unsigned char
 {
         auto const block = blocks[j / bytes_per_block<Blocks>];
         auto const shift = bits_per_byte * (j % bytes_per_block<Blocks>);
-        return static_cast<std::byte>(static_cast<unsigned char>(block >> shift));
+        return static_cast<unsigned char>(shr(block, shift));
 }
 
 // The write side, an or into blocks that start clear, so every byte is written once whatever the order.
 template<class T, std::size_t E>
-constexpr auto or_block_byte(std::span<T, E> blocks, std::size_t j, std::byte byte) noexcept
+constexpr auto or_block_byte(std::span<T, E> blocks, std::size_t j, unsigned char byte) noexcept
         -> void
 {
         constexpr auto per_block = bytes_per_block<std::span<T, E>>;
-        auto const value         = static_cast<T>(std::to_integer<unsigned char>(byte));
-        auto& block              = blocks[j / per_block];
-        block                    = static_cast<T>(block | static_cast<T>(value << (bits_per_byte * (j % per_block))));
+        // Through unsigned, as an unsigned char would promote to int and choose absl::uint128's signed constructor.
+        auto const value = static_cast<T>(static_cast<unsigned>(byte));
+        auto& block      = blocks[j / per_block];
+        block            = static_cast<T>(block | shl(value, bits_per_byte * (j % per_block)));
 }
 
-template<class Blocks, std::size_t E>
-constexpr auto block_bytes_by_shifts(Blocks const& b, std::array<std::byte, E>& bytes) noexcept
+template<class Src, class T, std::size_t E>
+constexpr auto copy_bytes_by_shifts(Src const& src, std::span<T, E> dst, std::size_t bytes) noexcept
         -> void
 {
-        for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
-                bytes[j] = block_byte(b, j);
+        for (auto const j : std::views::iota(0UZ, bytes)) {
+                or_block_byte(dst, j, block_byte(src, j));
         }
 }
 
-template<class Blocks, std::size_t E>
-constexpr auto bytes_blocks_by_shifts(std::array<std::byte, E> const& bytes, Blocks& blocks) noexcept
+// Blocks to blocks at any two block widths, byte j to byte j, as far as the shorter reaches; the target starts clear.
+template<class Src, class T, std::size_t E>
+constexpr auto copy_bits(Src const& src, std::span<T, E> dst) noexcept
         -> void
 {
-        for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
-                or_block_byte(std::span(blocks), j, bytes[j]);
+        auto const bytes = std::ranges::min(value_bytes(src), value_bytes(dst));
+        // Two alternatives rather than an early return, or MSVC's C4702 calls the shifts unreachable.
+        if consteval {
+                copy_bytes_by_shifts(src, dst, bytes);
+        } else {
+                if constexpr (block_copies_as_bytes<std::ranges::range_value_t<Src>> and block_copies_as_bytes<std::remove_const_t<T>>) {
+                        // The object bytes in one copy, as memcpy, but over spans, where a null data() is no argument.
+                        std::ranges::copy(std::as_bytes(std::span(src)).first(bytes), std::as_writable_bytes(dst).begin());
+                } else {
+                        copy_bytes_by_shifts(src, dst, bytes);
+                }
+        }
+}
+
+// A block as the range of one it is, and a range of blocks as itself, so that both copy as blocks.
+template<class Bits>
+[[nodiscard]] constexpr auto block_span(Bits& b) noexcept
+{
+        if constexpr (xstd::unsigned_integer<std::remove_const_t<Bits>>) {
+                return std::span<Bits, 1>(std::addressof(b), 1UZ);
+        } else {
+                return std::span(b);
         }
 }
 
 template<std::size_t N, class Bits>
         requires bit_layout<Bits, N>
 [[nodiscard]] constexpr auto bit_bytes(Bits const& b) noexcept
-        -> std::array<std::byte, byte_count<N>>
+        -> std::array<unsigned char, byte_count<N>>
 {
-        auto bytes = std::array<std::byte, byte_count<N>>();
-        if constexpr (byte_count<N> > 0UZ) {
-                if constexpr (xstd::unsigned_integer<Bits>) {
-                        // No copy: memcpy timed at 0.31ns either way, so the branch buys nothing.
+        auto bytes = std::array<unsigned char, byte_count<N>>();
+        if constexpr (fixed_blocks_source<Bits, N>) {
+                copy_bits(block_span(b), std::span(bytes));
+        } else if constexpr (byte_count<N> > 0UZ) {
+                // Trivially copyable by container_source, so the object representation reads straight out.
+                if consteval {
+                        auto const object = object_bytes(b);
                         for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
-                                bytes[j] = static_cast<std::byte>(static_cast<unsigned char>(b >> (bits_per_byte * j)));
-                        }
-                } else if constexpr (fixed_blocks_source<Bits, N>) {
-                        // Two alternatives rather than an early return, or MSVC's C4702 calls the shifts unreachable.
-                        if consteval {
-                                block_bytes_by_shifts(b, bytes);
-                        } else {
-                                if constexpr (blocks_copy_as_bytes<Bits>) {
-                                        std::memcpy(bytes.data(), std::ranges::data(b), std::size(bytes));
-                                } else {
-                                        block_bytes_by_shifts(b, bytes);
-                                }
+                                bytes[j] = object[j];
                         }
                 } else {
-                        // Trivially copyable by container_source, so the object representation reads straight out.
-                        if consteval {
-                                auto const object = object_bytes(b);
-                                for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
-                                        bytes[j] = object[j];
-                                }
-                        } else {
-                                std::memcpy(bytes.data(), std::addressof(b), std::size(bytes));
-                        }
+                        std::memcpy(bytes.data(), std::addressof(b), std::size(bytes));
                 }
         }
         return bytes;
@@ -158,40 +175,20 @@ template<std::size_t N, class Bits>
 
 template<class Bits, std::size_t N>
         requires bit_layout<Bits, N>
-[[nodiscard]] constexpr auto bytes_bits(std::array<std::byte, byte_count<N>> const& bytes) noexcept
+[[nodiscard]] constexpr auto bytes_bits(std::array<unsigned char, byte_count<N>> const& bytes) noexcept
         -> Bits
 {
-        if constexpr (byte_count<N> == 0UZ) {
-                if constexpr (fixed_blocks_source<Bits, N>) {
-                        return Bits{};
-                } else {
-                        // No byte to read, and bit_cast of std::bitset<0> reads uninitialised: zero bytes are cast in.
-                        return std::bit_cast<Bits>(std::array<std::byte, sizeof(Bits)>());
-                }
-        } else if constexpr (xstd::unsigned_integer<Bits>) {
-                // The shifts alone, for the reason bit_bytes gives: a copy measured the same and said less.
-                auto value = Bits{};
-                for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
-                        auto const byte = static_cast<Bits>(std::to_integer<unsigned char>(bytes[j]));
-                        value           = static_cast<Bits>(value | static_cast<Bits>(byte << (bits_per_byte * j)));
-                }
-                return value;
-        } else if constexpr (fixed_blocks_source<Bits, N>) {
+        if constexpr (fixed_blocks_source<Bits, N>) {
                 // Value-initialised first, clearing the blocks above N, so set -> blocks -> set is the identity.
                 auto blocks = Bits{};
-                if consteval {
-                        bytes_blocks_by_shifts(bytes, blocks);
-                } else {
-                        if constexpr (blocks_copy_as_bytes<Bits>) {
-                                std::memcpy(std::ranges::data(blocks), bytes.data(), std::size(bytes));
-                        } else {
-                                bytes_blocks_by_shifts(bytes, blocks);
-                        }
-                }
+                copy_bits(bytes, block_span(blocks));
                 return blocks;
+        } else if constexpr (byte_count<N> == 0UZ) {
+                // No byte to read, and bit_cast of std::bitset<0> reads uninitialised: zero bytes are cast in.
+                return std::bit_cast<Bits>(std::array<unsigned char, sizeof(Bits)>());
         } else {
                 // Zero bytes past the width and a bit_cast, so nothing of Bits is constructed or called.
-                auto object = std::array<std::byte, sizeof(Bits)>();
+                auto object = std::array<unsigned char, sizeof(Bits)>();
                 if consteval {
                         for (auto const j : std::views::iota(0UZ, std::size(bytes))) {
                                 object[j] = bytes[j];

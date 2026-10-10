@@ -424,7 +424,7 @@ The stated family is **one concept over a block or a fixed number of them**, and
 convertible. An unsigned integer states its own layout; a **contiguous sequence of unsigned integer blocks** states
 the rest of it, block `j` holding the positions `[j·digits, (j+1)·digits)`. A scalar is the sequence of length one,
 which is why `fixed_blocks_source` is one concept: `fixed_bit_blocks` whose width covers `N` and that a value owns.
-The byte conversions still branch on `xstd::unsigned_integer` inside, where a scalar is shifted and a range is copied. Everything in it is read by **shifts on values**, never by `std::bit_cast` on an
+A scalar crosses as the range of one block it is, so one copy serves both. Everything in it is read by **shifts on values**, never by `std::bit_cast` on an
 object, so no padding is reachable and endianness never enters: `b[j] >> k` is the same number on either byte
 order. Only a foreign field of bits, whose internals this library cannot name, is read as an object.
 
@@ -452,10 +452,13 @@ spelling that says which reading of the argument is meant, which is exactly what
 
 The currency is **bytes**, not blocks. Byte `j` holds the positions `[8j, 8j + 8)` least significant bit first,
 which is what every contiguous bit container lays them out as whatever its block width, so two widths over the
-same positions agree byte for byte. That is what makes this a copy rather than a walk over positions, and the
-storage's own `assign_bytes` and `to_bytes` are the primitives.
+same positions agree byte for byte. That is what makes this a copy rather than a walk over positions, and one
+function is the primitive: `copy_bits`, blocks to blocks at any two block widths, a run of bytes being blocks of
+`unsigned char`. The storage's `assign_bytes` and `to_bytes`, the two families' `bit_bytes` and `bytes_bits`,
+`bit_convert`'s copy between owners and `boost::dynamic_bitset`'s gather all go through it or its two byte
+accessors, and the hash reads the same bytes through the same accessor.
 
-Both are said **twice**, and the reason is measured rather than tasteful. Said in **shifts**, they name where a
+It is said **twice**, and the reason is measured rather than tasteful. Said in **shifts**, they name where a
 position goes instead of assuming a byte order, so they are right on either endianness and they are a constant
 expression — neither of which a `memcpy` is. They are also a byte at a time, and over the eight kilobytes of
 2^16 positions that costs **9.70µs against 0.07µs**, a factor of about a hundred and forty-five. So the shifts
@@ -466,14 +469,18 @@ because neither is a branch at run time.
 
 That pair of cases is worth taking one branch at a time, because three of them are not the same question.
 
-A **scalar** takes no copy at all, and that is measured rather than assumed: a value is at most a handful of
-bytes, the loop unrolls, and `memcpy` timed identically at every width — **0.31ns either way** on `uint8`,
-`uint32` and `uint64`. A branch that buys nothing is worse than no branch.
+A **scalar** is the range of one block and takes whatever a range takes, and that is measured rather than
+assumed: a value is at most a handful of bytes, the loop unrolls, and `memcpy` timed identically at every width
+— **0.31ns either way** on `uint8`, `uint32` and `uint64`. A branch of its own would buy nothing.
 
 A **sequence of blocks** takes the copy only where the bytes of a value are the bytes of the field, which is a
 little-endian target whose block type has no padding: the shifts count by `digits` where a copy counts by
 `sizeof`, and those agree only when every bit of the object is a value bit. No standard type has such padding,
-and the test is there so that one could not quietly turn a copy into the wrong answer. Its shape is load-bearing
+and the test is there so that one could not quietly turn a copy into the wrong answer. The block must also be a
+built-in: a class such as `absl::uint128` or `boost::int128::uint128` lays out its value as its author chose,
+which no rule of the language makes its bytes, so it crosses by shifts. That is one predicate,
+`block_copies_as_bytes`, asked by every copy in the library, the hash's included, so no two of them can disagree
+on when a copy is the answer. Its shape is load-bearing
 too: written as `if !consteval` with a return, the shifts below it become unreachable code in a run-time
 instantiation, which MSVC reports as C4702 and this build treats as an error. Two alternatives, so neither arm
 is dead.
@@ -1376,8 +1383,8 @@ nothing, and equality never crosses types. A run-time width appends `hash_append
 for a sequence. A set of run-time width cannot: equal sets need not share a width
 ([width-is-capacity](#width-is-capacity)), so its string stops after the byte holding its last key, and its
 suffix is that byte count. An empty static width appends the one `'\x00'`, by Hash2's rule. Wherever
-`blocks_copy_as_bytes` holds -- a little-endian target, and value bits that fill the block object -- and the
-block is a scalar, the first ceil(N / 8) bytes of the storage **are** that string, whatever the block type,
+`block_copies_as_bytes` holds -- a little-endian target, a built-in block, and value bits that fill its
+object -- the first ceil(N / 8) bytes of the storage **are** that string, whatever the block type,
 since the unused bits are clear; this is the identity `bit_convert` rests on. There the string goes in as one
 `update` over the storage, from `std::uint8_t` blocks to `unsigned __int128` ones. Elsewhere -- a big-endian
 target, a block with padding bits, a class-type 128-bit block whose layout no rule proves, a constant
@@ -3623,7 +3630,7 @@ has its own header under `<xstd/bits/bit_concepts/>`.
   blocks move: `extract()` into the adopting constructor, O(1), the source left at width zero. The capacity clause
   leaves out a `bit_bounded_vector<100>`, whose `inplace_vector` of two 64-bit blocks holds 128 bits the owner may
   not, and those blocks are inline, so a copy is all a move would have been. Everything else copies: the object
-  bytes in one call, as `memcpy` would, where both block types are padding-free and the target is little-endian
+  bytes in one call, as `memcpy` would, where both block types are padding-free built-ins and the target is little-endian
   outside a constant expression, and byte shifts everywhere else. All of it is `constexpr`.
 - **`noexcept`** holds exactly where both ends are fixed widths. A run-time end can allocate, refuse a bounded
   capacity, or throw `std::overflow_error` into a fixed target.
