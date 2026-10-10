@@ -76,15 +76,11 @@ target_sources(
         include/xstd/bits/bit.hpp
         include/xstd/bits/bit/bit_convert.hpp
         include/xstd/bits/bit_concepts.hpp
-        include/xstd/bits/bit_concepts/bit_block.hpp
-        include/xstd/bits/bit_concepts/bit_block_range.hpp
         include/xstd/bits/bit_concepts/bit_blocks.hpp
         include/xstd/bits/bit_concepts/bit_constructible_from.hpp
         include/xstd/bits/bit_concepts/bit_convertible_to.hpp
         include/xstd/bits/bit_concepts/bit_index_mapping.hpp
         include/xstd/bits/bit_concepts/bit_mask_mapping.hpp
-        include/xstd/bits/bit_concepts/owned_bit_blocks.hpp
-        include/xstd/bits/bit_concepts/resizable_bit_blocks.hpp
         include/xstd/bits/bit_concepts/sized_bit_index_mapping.hpp
         include/xstd/bits/bit_bounded_set.hpp
         include/xstd/bits/bit_bounded_vector.hpp
@@ -100,7 +96,6 @@ target_sources(
         include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_type_traits.hpp
         include/xstd/bits/bit_type_traits/bit_align.hpp
-        include/xstd/bits/bit_type_traits/bit_blocks_capacity.hpp
         include/xstd/bits/bit_type_traits/bit_blocks_extent.hpp
         include/xstd/bits/bit_type_traits/bit_fast.hpp
         include/xstd/bits/bit_type_traits/bit_least.hpp
@@ -129,7 +124,10 @@ target_sources(
         include/xstd/bits/detail/pred.hpp
         include/xstd/bits/detail/bit_layout.hpp
         include/xstd/bits/detail/bit_convertible.hpp
-        include/xstd/bits/detail/static_block_capacity.hpp
+        include/xstd/bits/detail/bit_blocks_capacity.hpp
+        include/xstd/bits/detail/bit_block_range.hpp
+        include/xstd/bits/detail/owned_bit_blocks.hpp
+        include/xstd/bits/detail/resizable_bit_blocks.hpp
         include/xstd/bits/detail/bit_width.hpp
         include/xstd/bits/detail/range_const_reference.hpp
         include/xstd/bits/detail/shift.hpp

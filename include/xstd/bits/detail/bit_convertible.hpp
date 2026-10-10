@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_BIT_CONVERTIBLE_HPP
 
 #include <xstd/bits/bit_concepts/bit_constructible_from.hpp> // bit_constructible_from
-#include <xstd/bits/bit_type_traits/bit_blocks_capacity.hpp> // bit_blocks_capacity_v
+#include <xstd/bits/detail/bit_blocks_capacity.hpp>          // bit_blocks_capacity_v
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, block_byte, blocks_copy_as_bytes, byte_count, bytes_bits, bytes_per_block, or_block_byte
 #include <xstd/bits/detail/bit_width.hpp>                    // bit_width_v
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owner, owner_reading, set_reading_tag, storage_access, view
@@ -299,7 +299,7 @@ concept adopts_from =
         (not std::is_const_v<std::remove_reference_t<From>>) and
         requires (From&& from) { std::forward<From>(from).extract(); } and
         xstd::bit_constructible_from<To, decltype(std::declval<From&&>().extract())> and
-        ((not owned_bits_t<To>::has_static_capacity) or owned_bits_t<To>::static_capacity() == xstd::bit_blocks_capacity_v<typename owned_bits_t<To>::block_container_type>);
+        ((not owned_bits_t<To>::has_static_capacity) or owned_bits_t<To>::static_capacity() == bit_blocks_capacity_v<typename owned_bits_t<To>::block_container_type>);
 
 // The blocks move over and the source is left at width zero; adopted whole, a sequence then takes the source's width.
 template<class To, class From>

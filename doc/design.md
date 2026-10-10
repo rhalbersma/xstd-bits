@@ -33,7 +33,7 @@ inventories in `doc/audit/` and the check that runs them are that denominator.
 
 ### owned-bit-storage
 
-`xstd::owned_bit_blocks` asks whether a type is bit storage a container can **own**: `bit_blocks`
+The exposition-only `owned_bit_blocks` asks whether a type is bit storage a container can **own**: `bit_blocks`
 ([is-and-has](#is-and-has)) that is also regular, and read-only through a `const` object. For a range that is a
 regular, sized, contiguous, subscriptable range of unsigned integers whose `const` subscript does not write.
 Regular is what lets `bit_block_container` default its `==` over the width and the blocks, in that member
@@ -43,20 +43,27 @@ blocks, `std::uint64_t[4]`, is bit storage and not owned bit storage: it is not 
 assignment nor an `==` over its blocks, so no owner holds one and no `bit_block_container` has it as `Blocks`. The tag
 constructors, `xstd::bit_convert` and the views read it as they read the `std::array` of the same blocks.
 
-**`bit_blocks` is two concepts joined.** `xstd::bit_block` is one unsigned block, const or not, as
-`xstd::unsigned_integer` already admits a cv-qualified integer; `xstd::bit_block_range` is a sized contiguous range of
-them that subscripts; `xstd::bit_blocks` is either. Code that treats the scalar and the range differently branches on
-`bit_block`, and `bit_block_container` asks `bit_block_range` of its `Blocks`, which is how a bare block is refused at
-the constraint while contiguity is named rather than implied.
+**`bit_blocks` is two cases joined.** One block is an `xstd::unsigned_integer`, const or not, as that concept
+already admits a cv-qualified integer; the exposition-only `bit_block_range` is a sized contiguous range of them that
+subscripts; `xstd::bit_blocks` is either, and is the one of the three a user names. Code that treats the scalar and
+the range differently branches on `xstd::unsigned_integer`, and `bit_block_container` asks `bit_block_range` of its
+`Blocks`, which is how a bare block is refused at the constraint while contiguity is named rather than implied.
 
-**It is public because a storage joins the library through it.** The storage under every owner is a
-`bit_block_container` over `owned_bit_blocks Blocks`, while the views take any `bit_blocks`. The split is
+**It is exposition-only because no storage joins the library from outside.** The storage under every owner is
+a `bit_block_container` over `owned_bit_blocks Blocks`, while the views take any `bit_blocks`. The split is
 the one between owning and borrowing: `std::span<B>` is bit storage a view borrows, and it is neither regular --
-two spans comparing equal would mean the same blocks, not the same bits -- nor read-only through `const`. The
-owners over `boost::container::small_vector` in `ext/` are written against this concept and nothing else, so a
-requirement a storage's author has to meet is public API, and a hard error inside `detail/` is not how to state it.
+two spans comparing equal would mean the same blocks, not the same bits -- nor read-only through `const`. Each
+owner fixes its storage by its name, and none takes one as an argument: the grid's four columns, the array, the
+bounded vector, the vector and the small vector, are the whole of what an owner holds. A user's own container of
+blocks is read by a view over it, which asks only `bit_blocks`. So `owned_bit_blocks` and `resizable_bit_blocks`
+state what the library's own storages provide, as the standard's exposition-only concepts state what its own
+templates ask, and a user never meets them in a signature. Meyers' *Effective STL*, Item 2, "Beware the illusion of
+container-independent code", is the reason not to open it: the storages already part on what growth past capacity
+throws, on whether they are constant-evaluable (only `std::inplace_vector`), on whether a copy is `noexcept` (not
+`boost::container::static_vector`'s) and on what a capacity of nought costs, and an owner generic over them all could
+promise only what they share.
 
-**A run-time width asks one thing more.** `xstd::resizable_bit_blocks` refines `owned_bit_blocks` with what
+**A run-time width asks one thing more.** `resizable_bit_blocks` refines `owned_bit_blocks` with what
 the vehicle calls to change its block count: `resize(count, value)`, `push_back`, `insert` at the end, `clear`
 and `max_size`. The storage requires it only at `N == std::dynamic_extent`, so `std::array<B, K>` still serves a
 fixed width while `bit_block_container<std::array<B, K>, std::dynamic_extent>` is refused at the constraint
@@ -75,7 +82,7 @@ gives, because the width moves only after the storage has grown: over any of the
 `resize` on unsigned blocks either completes or changes nothing, a failed growth leaves the owner as it was. A
 storage whose `resize` is `noexcept` never takes that path.
 
-The element clause is `bit_block`, which is `unsigned_integer`, and **not** the wider `bit_mask`, which would be the concept
+The element clause is `xstd::unsigned_integer`, and **not** the wider `bit_mask`, which would be the concept
 if the operators were all a block is asked for. They are not. Beyond them the body wants the `<bit>` intrinsics
 — `popcount`, `countr_zero` and `countl_zero`, each constrained on `xstd::unsigned_integer` in
 `detail/intrin.hpp` and reached at some thirty sites — a `numeric_limits<block_type>::digits` for
@@ -417,7 +424,7 @@ The stated family is **one concept over a block or a fixed number of them**, and
 convertible. An unsigned integer states its own layout; a **contiguous sequence of unsigned integer blocks** states
 the rest of it, block `j` holding the positions `[j·digits, (j+1)·digits)`. A scalar is the sequence of length one,
 which is why `fixed_blocks_source` is one concept: `fixed_bit_blocks` whose width covers `N` and that a value owns.
-The byte conversions still branch on `bit_block` inside, where a scalar is shifted and a range is copied. Everything in it is read by **shifts on values**, never by `std::bit_cast` on an
+The byte conversions still branch on `xstd::unsigned_integer` inside, where a scalar is shifted and a range is copied. Everything in it is read by **shifts on values**, never by `std::bit_cast` on an
 object, so no padding is reachable and endianness never enters: `b[j] >> k` is the same number on either byte
 order. Only a foreign field of bits, whose internals this library cannot name, is read as an object.
 
@@ -1678,10 +1685,11 @@ storage it mapped a name to a name, and the base clause says `std::array<Block, 
 only the vehicle it uses: measured, a central switchboard had `bit_array.hpp` pulling `<vector>`, which is
 exactly the property the vehicle split was for.
 
-**The axis stays open, and it is the concept that keeps it open.** What a storage has to satisfy is
-`owned_bit_blocks` ([owned-bit-storage](#owned-bit-storage)), which is a claim about blocks
-and says nothing about where they live. `ext/boost.hpp` joins on that and nothing else: two containers over
-`boost::container::small_vector`, written from outside the library without a line of it changing.
+**The axis is closed to users and open to the library.** What a storage has to satisfy is the exposition-only
+`owned_bit_blocks` ([owned-bit-storage](#owned-bit-storage)), which is a claim about blocks and says nothing about
+where they live. `ext/boost.hpp` joins on that and nothing else: two containers over
+`boost::container::small_vector`, added without a line of the core changing. No owner takes a storage argument, so a
+new column is a new owner here, not a parameter a user sets.
 
 ### the-container-adaptor
 
@@ -2330,7 +2338,7 @@ A view over blocks that belong to no container of ours takes them directly: `bit
 storage underneath is `bits::detail::borrowed_bits<Block, Extent>`, which is `bit_block_container` over a
 `std::span<Block, Extent>`, and a deduction guide on each view names it from the argument: one block is
 `std::span<Block, 1>`, a range is whatever `std::span(blocks)` deduces, which over a built-in array `Block[K]` is
-`std::span<Block, K>`, a static width, as [span.deduct] takes the bound of `T (&)[N]`. A `bit_block` is taken by
+`std::span<Block, K>`, a static width, as [span.deduct] takes the bound of `T (&)[N]`. One block is taken by
 lvalue, a `bit_block_range` by lvalue or as a `borrowed_range`, so a contiguous range that does not subscript, such
 as a `std::initializer_list`, is not lent at all, and `bit_set_view(std::uint64_t{5})` and `bit_span(std::vector<std::uint32_t>{})`
 do not compile, and a `std::span` temporary does. Const blocks make const storage, and a view over const

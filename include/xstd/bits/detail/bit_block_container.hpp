@@ -6,17 +6,16 @@
 #ifndef XSTD_BITS_DETAIL_BIT_BLOCK_CONTAINER_HPP
 #define XSTD_BITS_DETAIL_BIT_BLOCK_CONTAINER_HPP
 
-#include <xstd/bits/bit_concepts/bit_block.hpp>              // bit_block
-#include <xstd/bits/bit_concepts/bit_block_range.hpp>        // bit_block_range
-#include <xstd/bits/bit_concepts/owned_bit_blocks.hpp>       // owned_bit_blocks
-#include <xstd/bits/bit_concepts/resizable_bit_blocks.hpp>   // resizable_bit_blocks
-#include <xstd/bits/bit_type_traits/bit_blocks_capacity.hpp> // bit_blocks_capacity_v
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>   // bit_blocks_extent_v
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
+#include <xstd/bits/detail/bit_block_range.hpp>              // bit_block_range
+#include <xstd/bits/detail/bit_blocks_capacity.hpp>          // bit_blocks_capacity_v
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, container_source, fixed_blocks_source
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
+#include <xstd/bits/detail/owned_bit_blocks.hpp>             // owned_bit_blocks
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of
+#include <xstd/bits/detail/resizable_bit_blocks.hpp>         // resizable_bit_blocks
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl, shr
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
@@ -64,14 +63,14 @@ template<class Blocks>
 consteval auto default_extent() noexcept
         -> std::size_t
 {
-        if constexpr (not xstd::bit_block_range<Blocks>) {
+        if constexpr (not bit_block_range<Blocks>) {
                 return std::dynamic_extent;
         } else if constexpr (xstd::bit_blocks_extent_v<Blocks> != std::dynamic_extent) {
                 return xstd::bit_blocks_extent_v<Blocks>;
         } else if constexpr (dynamic_span<Blocks>) {
                 return blocks_extent;
         } else {
-                return xstd::bit_blocks_capacity_v<Blocks>;
+                return bit_blocks_capacity_v<Blocks>;
         }
 }
 
@@ -83,9 +82,9 @@ template<class Blocks, std::size_t N>
 consteval auto admits_owner_extent() noexcept
         -> bool
 {
-        if constexpr (xstd::bit_blocks_extent_v<Blocks> != std::dynamic_extent or not xstd::resizable_bit_blocks<Blocks>) {
+        if constexpr (xstd::bit_blocks_extent_v<Blocks> != std::dynamic_extent or not resizable_bit_blocks<Blocks>) {
                 return N != std::dynamic_extent;
-        } else if constexpr (constexpr auto capacity = xstd::bit_blocks_capacity_v<Blocks>; capacity == std::dynamic_extent) {
+        } else if constexpr (constexpr auto capacity = bit_blocks_capacity_v<Blocks>; capacity == std::dynamic_extent) {
                 return N == std::dynamic_extent;
         } else if constexpr (N > capacity) {
                 return false;
@@ -165,7 +164,11 @@ public:
 
 // Blocks of a capacity of nought, under which the width is zero without being stored.
 template<class Blocks, std::size_t N>
-concept zero_capacity = xstd::resizable_bit_blocks<Blocks> and N == 0UZ and xstd::bit_blocks_capacity_v<Blocks> == 0UZ;
+concept zero_capacity = resizable_bit_blocks<Blocks> and N == 0UZ and bit_blocks_capacity_v<Blocks> == 0UZ;
+
+// The width is a size_t unless the blocks out-align one, when it fills what would be padding.
+template<class Blocks>
+using stored_width_t = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, std::ranges::range_value_t<Blocks>>;
 
 // The width is a size_t unless the blocks out-align one, when it fills what would be padding.
 template<class Blocks>
@@ -173,7 +176,7 @@ using stored_width_t = std::conditional_t<(alignof(std::size_t) >= alignof(Block
 
 // The width a vehicle over these blocks stores: one that moves under growth, where it is not always zero.
 template<class Blocks, std::size_t N>
-using width_member_t = conditional_data_member_t<xstd::resizable_bit_blocks<Blocks> and not zero_capacity<Blocks, N>, stored_width_t<Blocks>, struct size_tag>;
+using width_member_t = conditional_data_member_t<resizable_bit_blocks<Blocks> and not zero_capacity<Blocks, N>, stored_width_t<Blocks>, struct size_tag>;
 
 // Blocks held inline and filled by the width, so that every pattern of their blocks is a value.
 template<class Blocks, std::size_t N>
@@ -211,7 +214,7 @@ using bit_members_t = std::conditional_t<
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>>
-        requires (xstd::bit_block_range<Blocks> and xstd::owned_bit_blocks<Blocks> and admits_owner_extent<Blocks, N>()) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
+        requires (bit_block_range<Blocks> and owned_bit_blocks<Blocks> and admits_owner_extent<Blocks, N>()) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
 class bit_block_container : public bit_members_t<Blocks, N>
 {
         using members_type = bit_members_t<Blocks, N>;
@@ -228,7 +231,7 @@ public:
         static constexpr auto bits_per_byte = bits_per_block / sizeof(block_type);
 
         // A width that is a member and moves under growth; the other run-time width is the span's own length.
-        static constexpr bool has_stored_size = xstd::resizable_bit_blocks<Blocks>;
+        static constexpr bool has_stored_size = resizable_bit_blocks<Blocks>;
         static constexpr bool has_static_size = not has_stored_size and N != blocks_extent;
 
         // A run-time width under a capacity the type carries, which is N and may stop short of the blocks' last bit.
@@ -320,7 +323,7 @@ public:
 
         // flat_set's adopting constructor: the blocks move in whole, every bit a position, and no tail to clear.
         [[nodiscard]] constexpr bit_block_container(xstd::from_blocks_t, Blocks blocks) noexcept(std::is_nothrow_move_constructible_v<Blocks>)
-                requires has_stored_size or (xstd::owned_bit_blocks<Blocks> and N == xstd::bit_blocks_extent_v<Blocks>)
+                requires has_stored_size or (owned_bit_blocks<Blocks> and N == xstd::bit_blocks_extent_v<Blocks>)
                 : members_type(has_stored_size ? std::ranges::size(blocks) * bits_per_block : 0UZ, std::move(blocks))
         {
                 assert(num_blocks() <= max_num_blocks);
@@ -1725,11 +1728,11 @@ private:
 };
 
 // One block deduces the array of one block, at the block's width.
-template<xstd::bit_block Block>
+template<xstd::unsigned_integer Block>
 bit_block_container(xstd::from_blocks_t, Block) -> bit_block_container<std::array<Block, 1>>;
 
 // A built-in array of blocks deduces the std::array of the same blocks.
-template<xstd::bit_block Block, std::size_t K>
+template<xstd::unsigned_integer Block, std::size_t K>
 bit_block_container(xstd::from_blocks_t, Block const (&)[K]) -> bit_block_container<std::array<Block, K>>; // NOLINT(modernize-avoid-c-arrays): a built-in array is what it reads.
 
 // The one vehicle and nothing else, const where a view over a const owner names it.

@@ -3,21 +3,21 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_CONCEPTS_BIT_BLOCK_RANGE_HPP
-#define XSTD_BITS_BIT_CONCEPTS_BIT_BLOCK_RANGE_HPP
+#ifndef XSTD_BITS_DETAIL_BIT_BLOCK_RANGE_HPP
+#define XSTD_BITS_DETAIL_BIT_BLOCK_RANGE_HPP
 
-#include <xstd/bits/bit_concepts/bit_block.hpp> // bit_block
-#include <ranges>                               // contiguous_range, range_size_t, range_value_t, sized_range
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <ranges>                                  // contiguous_range, range_size_t, range_value_t, sized_range
 
-namespace xstd {
+namespace xstd::bits::detail {
 
 // A sized contiguous range of blocks that subscripts.
 template<class Blocks>
 concept bit_block_range =
         std::ranges::sized_range<Blocks> and std::ranges::contiguous_range<Blocks> and
-        bit_block<std::ranges::range_value_t<Blocks>> and
+        xstd::unsigned_integer<std::ranges::range_value_t<Blocks>> and
         requires (Blocks& blocks, std::ranges::range_size_t<Blocks> n) { blocks[n]; };
 
-} // namespace xstd
+} // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_BIT_CONCEPTS_BIT_BLOCK_RANGE_HPP
+#endif // XSTD_BITS_DETAIL_BIT_BLOCK_RANGE_HPP

@@ -6,10 +6,10 @@
 #ifndef TEST_VIEWED_HPP
 #define TEST_VIEWED_HPP
 
-#include <xstd/bits/bit_concepts/resizable_bit_blocks.hpp> // resizable_bit_blocks
-#include <cstddef>                                         // size_t
-#include <limits>                                          // numeric_limits
-#include <ranges>                                          // range_value_t
+#include <xstd/bits/detail/resizable_bit_blocks.hpp> // resizable_bit_blocks
+#include <cstddef>                                   // size_t
+#include <limits>                                    // numeric_limits
+#include <ranges>                                    // range_value_t
 
 namespace test {
 
@@ -18,7 +18,7 @@ template<class T>
 [[nodiscard]] auto make_viewed(std::size_t num_bits)
         -> T
 {
-        if constexpr (xstd::resizable_bit_blocks<T>) {
+        if constexpr (xstd::bits::detail::resizable_bit_blocks<T>) {
                 constexpr auto digits = static_cast<std::size_t>(std::numeric_limits<std::ranges::range_value_t<T>>::digits);
                 return T((num_bits + digits - 1UZ) / digits);
         } else {
