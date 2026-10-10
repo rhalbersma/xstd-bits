@@ -72,6 +72,16 @@ target_sources(
         include/xstd/bits/detail/sequence_adaptor.hpp
         include/xstd/bits/detail/set_adaptor.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
+        include/xstd/bits/algorithm.hpp
+        include/xstd/bits/algorithm/bit_all_of.hpp
+        include/xstd/bits/algorithm/bit_any_of.hpp
+        include/xstd/bits/algorithm/bit_count.hpp
+        include/xstd/bits/algorithm/bit_disjoint.hpp
+        include/xstd/bits/algorithm/bit_includes.hpp
+        include/xstd/bits/algorithm/bit_mismatch.hpp
+        include/xstd/bits/algorithm/bit_none_of.hpp
+        include/xstd/bits/algorithm/bit_reverse.hpp
+        include/xstd/bits/algorithm/bit_rotate.hpp
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bit.hpp
         include/xstd/bits/bit/bit_convert.hpp
@@ -105,6 +115,7 @@ target_sources(
         include/xstd/bits/bit_type_traits/bit_underlying.hpp
         include/xstd/bits/bit_vector.hpp
         include/xstd/bits/detail/adapted_bits.hpp
+        include/xstd/bits/detail/algorithm.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
         include/xstd/bits/detail/bounded_blocks.hpp
         include/xstd/bits/detail/bit_block_container.hpp

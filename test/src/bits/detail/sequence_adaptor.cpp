@@ -5,6 +5,7 @@
 
 #include <test/bit_exchange.hpp>                    // converts_between, converts_from, converts_to, exchanges_from_bits
 #include <test/block_types.hpp>                     // graded_extents
+#include <xstd/bits/algorithm.hpp>                  // bit_all_of, bit_any_of, bit_count, bit_mismatch, bit_none_of
 #include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
@@ -24,9 +25,10 @@
 #include <concepts>                                 // copyable, equality_comparable, regular, same_as, totally_ordered
 #include <cstddef>                                  // ptrdiff_t, size_t
 #include <cstdint>                                  // uint8_t, uint32_t, uint64_t
+#include <functional>                               // identity
 #include <iterator>                                 // reverse_iterator
 #include <limits>                                   // numeric_limits
-#include <ranges>                                   // equal, iota, random_access_range, transform
+#include <ranges>                                   // equal, iota, random_access_range, ssize, transform
 #include <span>                                     // dynamic_extent
 #include <stdexcept>                                // length_error, out_of_range
 #include <type_traits>                              // is_const_v, is_constructible_v, is_convertible_v
@@ -478,26 +480,12 @@ template<class Seq>
 auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m)
         -> std::size_t
 {
-        auto disagreements = 0UZ;
-        for (auto const value : {true, false}) {
-                auto const is = [value](bool b) -> bool { return b == value; };
-                disagreements += static_cast<std::size_t>(s.count(value) != static_cast<std::size_t>(std::ranges::count(m, value)));
-                // And against the generic algorithm over the sequence itself, which the benchmark's ratio assumes.
-                disagreements += static_cast<std::size_t>(s.count(value) != static_cast<std::size_t>(std::ranges::count(s, value)));
-                disagreements += static_cast<std::size_t>(s.all(value) != std::ranges::all_of(m, is));
-                disagreements += static_cast<std::size_t>(s.any(value) != std::ranges::any_of(m, is));
-                disagreements += static_cast<std::size_t>(s.none(value) != std::ranges::none_of(m, is));
-        }
-        // The argument defaults to the true arm, which is where std::bitset's four already are.
-        disagreements += static_cast<std::size_t>(s.count() != s.count(true));
-        disagreements += static_cast<std::size_t>(s.all() != s.all(true));
-        disagreements += static_cast<std::size_t>(s.any() != s.any(true));
-        disagreements += static_cast<std::size_t>(s.none() != s.none(true));
-        // The four identities the false arms are, spelled here because they are the implementation.
-        disagreements += static_cast<std::size_t>(s.count(false) != s.size() - s.count(true));
-        disagreements += static_cast<std::size_t>(s.all(false) != s.none(true));
-        disagreements += static_cast<std::size_t>(s.any(false) != not s.all(true));
-        disagreements += static_cast<std::size_t>(s.none(false) != s.all(true));
+        auto disagreements = static_cast<std::size_t>(xstd::bit_count(s) != std::ranges::count(m, true));
+        // And against the generic algorithm over the sequence itself, which the benchmark's ratio assumes.
+        disagreements += static_cast<std::size_t>(xstd::bit_count(s) != std::ranges::count(s, true));
+        disagreements += static_cast<std::size_t>(xstd::bit_all_of(s) != std::ranges::all_of(m, std::identity()));
+        disagreements += static_cast<std::size_t>(xstd::bit_any_of(s) != std::ranges::any_of(m, std::identity()));
+        disagreements += static_cast<std::size_t>(xstd::bit_none_of(s) != std::ranges::none_of(m, std::identity()));
         return disagreements;
 }
 
@@ -545,7 +533,15 @@ BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// std::mismatch's answer over the machinery operator== is made of: the position, or size() where equal.
+// Where an iterator into s stands, as an index.
+template<class S, class I>
+[[nodiscard]] auto position_of(S const& s, I it)
+        -> std::size_t
+{
+        return static_cast<std::size_t>(it - s.begin());
+}
+
+// std::mismatch's answer over the machinery operator== is made of: the position, or end() where equal.
 BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
 {
         auto disagreements = 0UZ;
@@ -557,18 +553,18 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
                         auto const my       = write_pattern(y, q);
                         auto const [i, j]   = std::ranges::mismatch(mx, my);
                         auto const expected = static_cast<std::size_t>(i - mx.begin());
-                        disagreements += static_cast<std::size_t>(x.mismatch(y) != expected);
-                        // Symmetric, and equal values answer the width rather than any position in it.
-                        disagreements += static_cast<std::size_t>(y.mismatch(x) != expected);
-                        disagreements += static_cast<std::size_t>(x.mismatch(x) != x.size());
+                        disagreements += static_cast<std::size_t>(position_of(x, xstd::bit_mismatch(x, y).in1) != expected);
+                        // Symmetric, and equal values answer the end rather than any position before it.
+                        disagreements += static_cast<std::size_t>(position_of(y, xstd::bit_mismatch(y, x).in1) != expected);
+                        disagreements += static_cast<std::size_t>(xstd::bit_mismatch(x, x).in1 != x.end());
                 }
         }
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// Dependent, so a constrained-away member is a false rather than a hard error.
+// Dependent, so a constrained-away overload is a false rather than a hard error.
 template<class S>
-constexpr bool can_mismatch = requires (S const& a) { a.mismatch(a); };
+constexpr bool can_mismatch = requires (S const& a) { xstd::bit_mismatch(a, a); };
 
 // What for_each accepts, likewise dependent.
 template<class S, class F>
@@ -608,12 +604,11 @@ struct bool_probe
         }
 };
 
-// A window's blocks are not its own, so it has no mismatch; nor has an owner over storage without the entry.
-BOOST_AUTO_TEST_CASE(MismatchIsTheOwnersOverStorageThatHasTheEntry)
+// Every sequence has a mismatch: a window's a bool at a time, its end blocks not being its own.
+BOOST_AUTO_TEST_CASE(EverySequenceHasAMismatch)
 {
-        static_assert(can_mismatch<Owner>);
-        static_assert(can_mismatch<View>);
-        static_assert(not can_mismatch<View::subspan_type>);
+        static_assert(can_mismatch<Owner> and can_mismatch<View> and can_mismatch<View::subspan_type>);
+        BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
 // for_each hands the functor what the iterator dereferences to, and stops where a bool functor says to.
@@ -662,7 +657,7 @@ BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
         for (auto const r : a) {
                 r = true;
         }
-        BOOST_CHECK_EQUAL(a.count(), a.size());
+        BOOST_CHECK_EQUAL(xstd::bit_count(a), std::ranges::ssize(a));
 
         // And the overload resolution the constraint cannot reach: an lvalue at the call would take the reference.
         auto took_a_reference = false;
@@ -682,7 +677,7 @@ BOOST_AUTO_TEST_CASE(APackedArrayExchangesBytesWithAFieldOfBits)
         }
 
         auto const a = xstd::bit_convert<xstd::bit_array<N>>(src);
-        BOOST_CHECK_EQUAL(a.count(), src.count());
+        BOOST_CHECK_EQUAL(static_cast<std::size_t>(xstd::bit_count(a)), src.count());
         for (auto const i : std::views::iota(0UZ, N)) {
                 BOOST_CHECK_EQUAL(a[i], src.test(i));
         }
@@ -755,7 +750,7 @@ BOOST_AUTO_TEST_CASE(RawBlocksAreElementsUnderThisReading)
         auto const a = xstd::bit_array<64>(xstd::from_blocks, std::array<std::uint64_t, 1>{5ULL});
         // Combined with `and`: a bare proxy is an ambiguous initializer for Boost.Test's assertion_result.
         BOOST_CHECK(a[0] and not a[1] and a[2]);
-        BOOST_CHECK_EQUAL(a.count(), 2UZ);
+        BOOST_CHECK_EQUAL(xstd::bit_count(a), 2);
 
         static_assert([] -> bool {
                 auto const b = std::array<std::uint64_t, 2>{0xF0F0ULL, 3ULL};

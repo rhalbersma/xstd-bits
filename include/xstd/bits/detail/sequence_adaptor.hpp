@@ -1107,51 +1107,6 @@ public:
         using members_type::max_size;
         using members_type::size;
 
-        // The sequence reading's aggregates, with the bool [alg.count] and [alg.all.of] give them.
-        [[nodiscard]] constexpr auto count(value_type value = true) const noexcept
-                -> size_type
-        {
-                auto const n = count_true();
-                return value ? n : size() - n;
-        }
-
-        [[nodiscard]] constexpr auto all(value_type value = true) const noexcept
-                -> bool
-        {
-                return value ? all_true() : none_true();
-        }
-
-        [[nodiscard]] constexpr auto any(value_type value = true) const noexcept
-                -> bool
-        {
-                return value ? any_true() : not all_true();
-        }
-
-        [[nodiscard]] constexpr auto none(value_type value = true) const noexcept
-                -> bool
-        {
-                return value ? none_true() : all_true();
-        }
-
-        // std::mismatch's answer over the orderings' machinery: the first differing block and its xor.
-        [[nodiscard]] constexpr auto mismatch(sequence_adaptor const& other) const noexcept
-                -> size_type
-                requires (not is_window) and requires (bits_type const& b) { b.first_difference(b); }
-        {
-                assert(size() == other.size());
-                // A zero width has no blocks to ask about, and answers its own width, which is nought.
-                if (empty()) {
-                        return 0UZ;
-                }
-                auto const [index, diff] = bits().first_difference(other.bits());
-                using block_type         = bits_type::block_type;
-                constexpr auto digits    = bits_type::bits_per_block;
-                if (diff == block_type{}) {
-                        return size();
-                }
-                return (index * digits) + countr_zero(diff);
-        }
-
         // Growth, [vector]'s members: the storage computes the ceiling and this reading picks length_error.
         constexpr auto resize(size_type n)
                 -> void
@@ -1378,24 +1333,6 @@ public:
                 self.bits().flip();
         }
 
-        // std::ranges::rotate(*this, begin() + n % size()): bit i takes bit (i + n) % size(), and empty is left alone.
-        constexpr auto rotate(this auto&& self, size_type n) noexcept
-                -> auto&
-                requires (not is_window) and requires { self.bits().rotate(n); }
-        {
-                self.bits().rotate(n);
-                return self;
-        }
-
-        // std::ranges::reverse(*this), a block at a time.
-        constexpr auto reverse(this auto&& self) noexcept
-                -> auto&
-                requires (not is_window) and requires { self.bits().reverse(); }
-        {
-                self.bits().reverse();
-                return self;
-        }
-
         // [vector.bool]'s swap of two proxies, beside the owner's swap of two containers that it would otherwise hide.
         using members_type::swap;
 
@@ -1413,49 +1350,6 @@ private:
                 -> derived_type&
         {
                 return static_cast<derived_type&>(*this);
-        }
-
-        // count, any, none and all a tier each: the storage's own on a whole one, the window's blocks on a window.
-        [[nodiscard]] constexpr auto count_true() const noexcept
-                -> size_type
-        {
-                if constexpr (not is_window) {
-                        return bits().count();
-                } else {
-                        return bits().count(offset(), size());
-                }
-        }
-
-        [[nodiscard]] constexpr auto any_true() const noexcept
-                -> bool
-        {
-                if constexpr (not is_window) {
-                        return bits().any();
-                } else {
-                        return bits().any(offset(), size());
-                }
-        }
-
-        // Its own helper rather than not any_true(), so a storage spelling none() is asked in its blocks.
-        [[nodiscard]] constexpr auto none_true() const noexcept
-                -> bool
-        {
-                if constexpr (not is_window) {
-                        return bits().none();
-                } else {
-                        return not bits().any(offset(), size());
-                }
-        }
-
-        // Not count() == size(): a clear position ends it, which is what a block that is not all ones says in one test.
-        [[nodiscard]] constexpr auto all_true() const noexcept
-                -> bool
-        {
-                if constexpr (not is_window) {
-                        return bits().all();
-                } else {
-                        return bits().all(offset(), size());
-                }
         }
 
         // The blocks of this window against another's at its own alignment, masked to what it holds.

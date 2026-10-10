@@ -6,6 +6,8 @@
 #include <test/sequence/ordering.hpp>               // ordering_agrees_with_vector_bool
 #include <test/sequence/rotation.hpp>               // permutation_sweep, permutes_ten_bits
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
+#include <xstd/bits/algorithm/bit_reverse.hpp>      // bit_reverse
+#include <xstd/bits/algorithm/bit_rotate.hpp>       // bit_rotate
 #include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/bit_span.hpp>                   // bit_span
@@ -13,6 +15,7 @@
 #include <xstd/bits/detail/ownership.hpp>           // storage
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
 #include <boost/test/unit_test.hpp>                 // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <algorithm>                                // count
 #include <array>                                    // array
 #include <concepts>                                 // constructible_from, convertible_to, derived_from, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                  // size_t
@@ -143,7 +146,7 @@ BOOST_AUTO_TEST_CASE(AViewCombinesWithAnySourceOfItsBlocks)
         auto c = xstd::bit_array<16>();
         c[9]   = true;
         view ^= xstd::bit_span(c).subspan(8UZ, 8UZ);
-        BOOST_CHECK(not a[1] and a[2] and a.count() == 1UZ);
+        BOOST_CHECK(not a[1] and a[2] and std::ranges::count(a, true) == 1);
 }
 
 // A view is mutable through: writing a position through the view writes the bit.
@@ -197,8 +200,7 @@ BOOST_AUTO_TEST_CASE(ItRotatesAndReversesWhatItViews)
 {
         auto block       = std::uint8_t{};
         auto const whole = xstd::bit_span(block);
-        static_assert(std::same_as<decltype(whole.rotate(0UZ)), decltype(whole)&>);
-        static_assert(noexcept(whole.rotate(0UZ)) and noexcept(whole.reverse()));
+        static_assert(noexcept(xstd::bit_rotate(whole, whole.begin())) and noexcept(xstd::bit_reverse(whole)));
 
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::uint8_t{}, as_span()), 0);
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::array<std::uint8_t, 3>(), as_span()), 0);

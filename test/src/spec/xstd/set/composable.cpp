@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/for_each_type.hpp>   // for_each_type
-#include <test/set/composable.hpp>  // proper_subset, proper_superset, set_difference, set_intersection, set_symmetric_difference, set_union, subset, superset
+#include <test/set/composable.hpp>  // includes, set_difference, set_intersection, set_symmetric_difference, set_union
 #include <test/set/exhaustive.hpp>  // static_width
 #include <test/spec/input.hpp>      // context
 #include <test/spec/rejection.hpp>  // has_and_assign, has_bit_and, has_bit_or, has_bit_xor, has_complement, has_minus, has_minus_assign, has_or_assign, has_xor_assign
@@ -23,46 +23,13 @@ namespace inputs = test::spec::set::inputs;
 
 // Each member operator is its algorithm over the keys, which a set without the member skips.
 
-// xstd set: constexpr bool is_subset_of(const X& other) const;
-BOOST_AUTO_TEST_CASE(IsSubsetOf)
+// xstd algorithm: constexpr bool bit_includes(const X& s1, const type_identity_t<X>& s2) noexcept;
+BOOST_AUTO_TEST_CASE(BitIncludes)
 {
         test::for_each_type<test::spec::set::all>([]<class T> -> void {
                 for (auto const [from, a, b] : inputs::pairs_with_doubletons<T>()) {
                         auto const on_failure = context(from, a, b);
-                        composable::subset()(a, b);
-                }
-        });
-}
-
-// xstd set: constexpr bool is_proper_subset_of(const X& other) const;
-BOOST_AUTO_TEST_CASE(IsProperSubsetOf)
-{
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
-                for (auto const [from, a, b] : inputs::pairs_with_doubletons<T>()) {
-                        auto const on_failure = context(from, a, b);
-                        composable::proper_subset()(a, b);
-                }
-        });
-}
-
-// xstd set: constexpr bool is_superset_of(const X& other) const;
-BOOST_AUTO_TEST_CASE(IsSupersetOf)
-{
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
-                for (auto const [from, a, b] : inputs::pairs_with_doubletons<T>()) {
-                        auto const on_failure = context(from, a, b);
-                        composable::superset()(a, b);
-                }
-        });
-}
-
-// xstd set: constexpr bool is_proper_superset_of(const X& other) const;
-BOOST_AUTO_TEST_CASE(IsProperSupersetOf)
-{
-        test::for_each_type<test::spec::set::all>([]<class T> -> void {
-                for (auto const [from, a, b] : inputs::pairs_with_doubletons<T>()) {
-                        auto const on_failure = context(from, a, b);
-                        composable::proper_superset()(a, b);
+                        composable::includes()(a, b);
                 }
         });
 }

@@ -113,8 +113,8 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltAndOrderedLikeAStdSet)
         auto t = s;
         t.insert(1);
         BOOST_CHECK(t < s);
-        BOOST_CHECK(s.is_subset_of(t) and t.is_superset_of(s));
-        BOOST_CHECK(intersects(t, s));
+        BOOST_CHECK(xstd::bit_includes(t, s));
+        BOOST_CHECK(not xstd::bit_disjoint(t, s));
 
         // The view over it refers into the owner's std::vector of blocks, as over every owner.
         auto const v = xstd::bit_set_view(t);
@@ -134,11 +134,8 @@ BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
         BOOST_CHECK(std::is_eq(narrow <=> wide));
         BOOST_CHECK_EQUAL(digest(narrow), digest(wide));
         BOOST_CHECK(digest(narrow) != digest(T({1})));
-        BOOST_CHECK(narrow.is_subset_of(wide) and wide.is_subset_of(narrow));
-        BOOST_CHECK(not narrow.is_proper_subset_of(wide));
-        BOOST_CHECK(narrow.is_superset_of(wide) and wide.is_superset_of(narrow));
-        BOOST_CHECK(not wide.is_proper_superset_of(narrow));
-        BOOST_CHECK(intersects(narrow, wide));
+        BOOST_CHECK(xstd::bit_includes(wide, narrow) and xstd::bit_includes(narrow, wide));
+        BOOST_CHECK(not xstd::bit_disjoint(narrow, wide));
 }
 
 // The compound operators and predicates at two differing widths, against the answers over the elements.
@@ -155,18 +152,12 @@ BOOST_AUTO_TEST_CASE(TheSetOperationsIgnoreTheWidth)
         BOOST_CHECK((a - b) == T({1, 200}));
         BOOST_CHECK((b - a) == T({5}));
         BOOST_CHECK(a < b);
-        BOOST_CHECK(b.is_proper_subset_of(a | b));
-        BOOST_CHECK(intersects(a | b, b));
-        BOOST_CHECK(not b.is_subset_of(a));
-        BOOST_CHECK(not a.is_subset_of(b));
-        BOOST_CHECK(not a.is_proper_subset_of(b));
-        BOOST_CHECK(not b.is_proper_subset_of(a));
+        BOOST_CHECK(xstd::bit_includes(a | b, b) and not xstd::bit_includes(b, a | b));
+        BOOST_CHECK(not xstd::bit_disjoint(a | b, b));
+        BOOST_CHECK(not xstd::bit_includes(a, b) and not xstd::bit_includes(b, a));
         auto const both = a | b;
-        BOOST_CHECK(both.is_proper_superset_of(b) and both.is_superset_of(a));
-        BOOST_CHECK(not a.is_superset_of(b) and not b.is_superset_of(a));
-        BOOST_CHECK(not a.is_proper_superset_of(b) and not b.is_proper_superset_of(a));
-        BOOST_CHECK(not intersects(T({5}), a));
-        BOOST_CHECK(not intersects(a, T({5})));
+        BOOST_CHECK(xstd::bit_includes(both, b) and xstd::bit_includes(both, a) and not xstd::bit_includes(b, both));
+        BOOST_CHECK(xstd::bit_disjoint(T({5}), a) and xstd::bit_disjoint(a, T({5})));
 }
 
 // The shifts translate: left grows the width to hold the result, right empties past it, neither preconditioned.

@@ -308,7 +308,7 @@ BOOST_AUTO_TEST_CASE(AStaticWindowCarriesItsWidthInItsType)
 
         // A masked block at a time, as a dynamic window fills.
         v.subspan<8, 8>().fill(true);
-        BOOST_CHECK_EQUAL(a.count(), 8UZ);
+        BOOST_CHECK_EQUAL(std::ranges::count(a, true), 8);
         BOOST_CHECK(a[8] and a[15] and not a[7] and not a[16]);
 }
 

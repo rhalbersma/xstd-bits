@@ -80,11 +80,11 @@ auto main()
         // The sequence reading.
         auto array = xstd::bit_array<64>();
         array[7]   = true;
-        check(array.count() == 1);
+        check(xstd::bit_count(array) == 1);
 
         auto vector = xstd::bit_vector(64);
         vector[63]  = true;
-        check(vector.size() == 64 and vector.count() == 1);
+        check(vector.size() == 64 and xstd::bit_count(vector) == 1);
 
         // A fixed width into a run-time one, the width carried along.
         auto const converted = xstd::bit_convert<xstd::bit_vector>(array);
@@ -103,12 +103,12 @@ auto main()
         check(view.size() == 2);
 
         auto span = xstd::bit_span(owner);
-        check(span.count() == 2);
+        check(xstd::bit_count(span) == 2);
         check(span[9] and not span[10]);
 
         auto const window = span.subspan(8, 8);
         check(window.size() == 8);
-        check(window.count() == 1);
+        check(xstd::bit_count(window) == 1);
 
         // Const blocks reach a read-only view, and the const is part of the type.
         auto const& frozen = owner;
