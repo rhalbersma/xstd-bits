@@ -15,7 +15,7 @@
 #include <algorithm>                                         // min
 #include <array>                                             // array
 #include <bit>                                               // popcount
-#include <concepts>                                          // same_as
+#include <concepts>                                          // default_initializable, same_as
 #include <cstddef>                                           // size_t
 #include <new>                                               // bad_alloc
 #include <span>                                              // dynamic_extent, span
@@ -243,6 +243,14 @@ template<class To, class From>
 concept foreign_convertible = requires (From const& from) {
         { bit_target<To>::convert(from) } -> std::same_as<To>;
 };
+
+// What bit_convert takes: equal fixed widths, run-time into fixed, anything into a run-time owner or foreign type.
+template<class From, class To>
+concept bit_convertible =
+        (fixed_target<To> and fixed_width<From> and bit_width_v<To> == bit_width_v<From>) or
+        (fixed_target<To> and bit_convert_source<From> and (not fixed_width<From>)) or
+        (owner<To> and (not std::is_const_v<To>) and std::default_initializable<To> and owned_bits_t<To>::has_stored_size and bit_convert_source<From>) or
+        foreign_convertible<To, From>;
 
 // An rvalue whose blocks To takes as they are, moved rather than copied, into a capacity that holds all of them.
 template<class To, class From>
