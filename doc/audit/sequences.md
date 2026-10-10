@@ -230,15 +230,15 @@ A row's `outcome` is one of:
 | `[vector.bool.pspc]` | 7 | `reference::operator=`, three overloads | Effects | answered | P2321R2's `const`-qualified overload is checked where the library has it. |
 | `[vector.bool.pspc]` | 8 | `reference::operator=`, three overloads | Returns | answered |  |
 | `[vector.bool.pspc]` | 9 | `reference::operator bool() const` | Returns | answered |  |
-| `[vector.bool.pspc]` | 10 | `reference::flip()` | Effects | answered |  |
+| `[vector.bool.pspc]` | 10 | `reference::flip()` | Effects | answered | Asked of `std::vector<bool>`, and asserted absent from every packed column: one element is negated by assignment. |
 | `[vector.bool.pspc]` | 11 | `swap`, three hidden friends | Effects | answered | P3612R1's hidden friends, reached by argument-dependent lookup; asked of every packed column, and of `std::vector<bool>` where its library has them, which MSVC 2022's STL does not. |
-| `[vector.bool.pspc]` | 12 | `flip()` | Effects | answered |  |
+| `[vector.bool.pspc]` | 12 | `flip()` | Effects | answered | Asked of `std::vector<bool>`, and asserted absent from every packed column: a bulk negation is the valarray reading's `!`. |
 | `[vector.bool.pspc]` | 13 | `hash<vector<bool, Allocator>>` | — | answered |  |
 | `[vector.bool.pspc]` | 14 | `is-vector-bool-reference<T>` | — | no-requirement | An exposition-only variable, observed only through `[vector.bool.fmt]`. |
 | `[vector.bool.fmt]` | 1 | `formatter::parse(ParseContext& ctx)` | — | answered |  |
 | `[vector.bool.fmt]` | 2 | `formatter::format(const T& ref, FormatContext& ctx) const` | — | answered |  |
-| `[depr.vector.bool.swap]` | 1 | `static swap(reference x, reference y)` | — | answered | Checked as the static member existing on every column. |
-| `[depr.vector.bool.swap]` | 2 | `static swap(reference x, reference y)` | Effects | answered |  |
+| `[depr.vector.bool.swap]` | 1 | `static swap(reference x, reference y)` | — | answered | Checked as the static member existing on `std::vector<bool>`, and absent from every packed column, whose proxies swap through their hidden friends. |
+| `[depr.vector.bool.swap]` | 2 | `static swap(reference x, reference y)` | Effects | answered | Asked of `std::vector<bool>` alone. |
 | `[inplace.vector.overview]` | 1 | `class inplace_vector` | — | answered | A packed column is random access rather than contiguous: a bit has no address, the recorded forced departure. |
 | `[inplace.vector.overview]` | 2 | — | — | answered |  |
 | `[inplace.vector.overview]` | 3 | — | — | answered | Asked where the bounded columns hold their blocks in `std::inplace_vector`. Before C++26 they use Boost's `static_vector`, which is not constant-evaluable. |

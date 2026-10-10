@@ -1259,7 +1259,7 @@ public:
                 return three_way<sequence_reading_tag>(x.bits(), y.bits());
         }
 
-        // No bitwise operators, flip() or shifts: std::valarray<bool> combines elements, and std::shift_left moves them.
+        // No bitwise operators, flip() or shifts: std::valarray<bool> combines elements, std::shift_left moves them.
 
 private:
         // The container built on this vehicle, which is what its value-returning operators hand back.

@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(ReferenceSwap)
 BOOST_AUTO_TEST_CASE(Flip)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
-                // std::vector<bool>'s alone: a bulk negation is xstd::bit_valarray's operator!, not a sequence's member.
+                // std::vector<bool>'s alone: a bulk negation is xstd::bit_valarray's operator!, not a sequence member.
                 static_assert(is_std_vector_bool_v<T> == requires (T c) { c.flip(); });
                 if constexpr (is_std_vector_bool_v<T>) {
                         for (auto const [from, a] : inputs::sequences<T>()) {

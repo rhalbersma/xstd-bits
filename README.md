@@ -43,11 +43,17 @@ already resembled, speaking that container's vocabulary, with one interface acro
 hybrid itself is not reproduced: there is no bitset type here. `std::bitset<N>` and `boost::dynamic_bitset`
 interoperate through `xstd::bit_convert` instead.
 
-| reading  | standard counterpart                                                       | packed here as                                  |
-| :------- | :------------------------------------------------------------------------- | :---------------------------------------------- |
-| sequence | `std::array<bool, N>`, `std::inplace_vector<bool, N>`, `std::vector<bool>` | `bit_array`, `bit_bounded_vector`, `bit_vector` |
-| set      | `std::set<std::size_t>`                                                    | `bit_fixed_set`, `bit_bounded_set`, `bit_set`   |
-| string   | `std::string`                                                              | `bit_string` (planned)                          |
+| reading  | standard counterpart                                                       | packed here as                                              |
+| :------- | :------------------------------------------------------------------------- | :---------------------------------------------------------- |
+| sequence | `std::array<bool, N>`, `std::inplace_vector<bool, N>`, `std::vector<bool>` | `bit_array`, `bit_bounded_vector`, `bit_vector`             |
+| valarray | `std::valarray<bool>`                                                      | `bit_fixed_valarray`, `bit_bounded_valarray`, `bit_valarray` |
+| set      | `std::set<std::size_t>`                                                    | `bit_fixed_set`, `bit_bounded_set`, `bit_set`               |
+| string   | `std::string`                                                              | `bit_string` (planned)                                      |
+
+The valarray reading is the sequence read elementwise: `std::bitset`'s `&`, `|`, `^`, `~` and shifts on a row of
+bools are what `std::valarray<bool>` spells, so they live there, beside its comparisons that answer an array of bools,
+its `sum`, `min` and `max`, and its `shift`, `cshift` and `apply`. The sequences keep their counterparts' interfaces
+and nothing more.
 
 Every one of them reads its raw blocks through `from_blocks`, and converts to and from anything else that has
 bit storage through `xstd::bit_convert` — the general form of what `to_ullong` does for one word. Position `i`
@@ -56,23 +62,23 @@ value and throws `std::overflow_error` for a position the target cannot hold, an
 small or dynamic owner, which adopts the blocks outright from an rvalue holding the same container. Because
 positions are kept, a `std::bitset`'s `to_string()` reads reversed against its positions.
 
-xstd-bits is **eight containers**: two readings of a block of bits — an ordered set of `std::size_t` and a sequence of `bool` — over four storages, which differ in whether size and capacity are static or dynamic: both static, a dynamic size within a static capacity, a dynamic size kept inline up to a static capacity and on the heap past it, and both dynamic. Three views give either reading of bits that something else owns.
+xstd-bits is **eleven containers**: two readings of a block of bits — an ordered set of `std::size_t` and a sequence of `bool` — over four storages, which differ in whether size and capacity are static or dynamic: both static, a dynamic size within a static capacity, a dynamic size kept inline up to a static capacity and on the heap past it, and both dynamic; and the sequence's elementwise reading, the valarray, over three of them. Three views give the set or the sequence reading of bits that something else owns.
 
 ### Which one do I want?
 
 `std::bitset` is a Swiss Army knife: one tool that does everything passably. xstd-bits is a set of chef's knives instead, each shaped for one job and all forged from the same block storage, so the choice is made once, where the variable is declared. Three questions make it.
 
-**1. Do you ask *which* positions hold, or *what* each position holds?** Membership, keys, flags and iterating over what is present are the **set** reading, which speaks `std::set`. Indexing, a `bool` at each place, and rotating or reversing a row are the **sequence** reading, which speaks `std::vector<bool>`.
+**1. Do you ask *which* positions hold, or *what* each position holds?** Membership, keys, flags and iterating over what is present are the **set** reading, which speaks `std::set`. Indexing, a `bool` at each place, and rotating or reversing a row are the **sequence** reading, which speaks `std::vector<bool>`. A row combined whole, `a & b`, `~a`, `a << n` and `a < b` element by element, is the **valarray** reading, which speaks `std::valarray<bool>`, and is where `std::bitset`'s bitwise operators went.
 
 **2. How is the width known?** And **3. Do you own the bits?**
 
-| the width is…                                     | set                     | sequence                             |
-| :------------------------------------------------ | :---------------------- | :----------------------------------- |
-| fixed at compile time                             | `bit_fixed_set<N>`      | `bit_array<N>`                       |
-| at most `N`, never more                           | `bit_bounded_set<N>`    | `bit_bounded_vector<N>`              |
-| usually at most `N`, inline; more on the heap     | `bit_small_set<N>`      | `bit_small_vector<N>`                |
-| known only at run time                            | `bit_set`               | `bit_vector`                         |
-| whatever bits someone else owns                   | `bit_set_view`          | `bit_span`, and `bit_subspan` for a part of it |
+| the width is…                                     | set                     | sequence                             | valarray                  |
+| :------------------------------------------------ | :---------------------- | :----------------------------------- | :------------------------ |
+| fixed at compile time                             | `bit_fixed_set<N>`      | `bit_array<N>`                       | `bit_fixed_valarray<N>`   |
+| at most `N`, never more                           | `bit_bounded_set<N>`    | `bit_bounded_vector<N>`              | `bit_bounded_valarray<N>` |
+| usually at most `N`, inline; more on the heap     | `bit_small_set<N>`      | `bit_small_vector<N>`                | —                         |
+| known only at run time                            | `bit_set`               | `bit_vector`                         | `bit_valarray`            |
+| whatever bits someone else owns                   | `bit_set_view`          | `bit_span`, and `bit_subspan` for a part of it | `bit_span` over one, as `std::span<bool>` over a `std::valarray<bool>` |
 
 Three specializations of the fixed set cover the keys a set most often holds:
 
@@ -82,18 +88,18 @@ Three specializations of the fixed set cover the keys a set most often holds:
 
 The block is a separate and later choice. Every name above holds `std::size_t` blocks. `bit_least<X>` and `bit_fast<X>` take the smallest and the fastest block that holds the width, and `bit_align<X>` rounds the width up to whole blocks; `bit_rebind<Block, X>` names any block outright.
 
-**Migrating.** `std::vector<bool>` and `std::set<std::size_t>` become `bit_vector` and `bit_set` by changing the type: each answers its counterpart's interface, so the code around it stays. The sources whose interface differs, `std::bitset`, integer flag words, enumeration flags and Qt's `QFlags`, `boost::dynamic_bitset` and itsy_bitsy, each have a before-and-after table in [doc/migration.md](doc/migration.md).
+**Migrating.** `std::vector<bool>` and `std::set<std::size_t>` become `bit_vector` and `bit_set` by changing the type: each answers its counterpart's interface, so the code around it stays. A `std::bitset<N>` combined with `&`, `|`, `^`, `~` and shifts becomes a `bit_fixed_valarray<N>`, and a `boost::dynamic_bitset` a `bit_valarray`. The sources whose interface differs, `std::bitset`, integer flag words, enumeration flags and Qt's `QFlags`, `boost::dynamic_bitset` and itsy_bitsy, each have a before-and-after table in [doc/migration.md](doc/migration.md).
 
 ### Each one is the packing of a standard container, and speaks that container's vocabulary
 
-The relationship is the one `std::flat_set` has to `std::set`: **a different representation under the same interface**, departing from it only where the representation forces a departure. `xstd::bit_vector` answers `std::vector<bool>`'s synopsis line for line; `xstd::bit_array<N>` answers `std::array<bool, N>`'s, `xstd::bit_bounded_vector<N>` answers `std::inplace_vector<bool, N>`'s, and the three sets answer `std::set<std::size_t>`'s. Each is held to its counterpart by a checklist that spells that counterpart's synopsis out as a `requires`-expression and is asserted **on the counterpart first**, so a line the model itself cannot answer can never be asked of the packing.
+The relationship is the one `std::flat_set` has to `std::set`: **a different representation under the same interface**, departing from it only where the representation forces a departure. `xstd::bit_vector` answers `std::vector<bool>`'s synopsis line for line, less its two `flip()`s and its deprecated static `swap`; `xstd::bit_array<N>` answers `std::array<bool, N>`'s, `xstd::bit_bounded_vector<N>` answers `std::inplace_vector<bool, N>`'s, and the three sets answer `std::set<std::size_t>`'s. Each is held to its counterpart by a checklist that spells that counterpart's synopsis out as a `requires`-expression and is asserted **on the counterpart first**, so a line the model itself cannot answer can never be asked of the packing.
 
 The yardstick is the [current working draft](https://eel.is/c++draft/), not the standard the library compiles as. Where C++23 and the draft disagree the draft wins, and [design.md](doc/design.md) records which paper moved each line.
 
 Three things the packing genuinely forces, and nothing else:
 
 - **No nodes.** A position is a bit in a block, so there is nothing to unlink and hand over: `node_type`, `extract`, `insert(node_type&&)` and `merge` have no meaning here. `std::flat_set` drops the same four for the same reason.
-- **A proxy reference.** A bit has no address, so `operator[]` returns a proxy, `pointer` names nothing, and `data()` goes with it. `std::vector<bool>` makes exactly this trade. The views lose what `std::span` builds on an address: its constructors from a contiguous iterator, an array or a contiguous range of `bool`, which a view over the blocks or the owner stands in for, and `size_bytes()` and `as_bytes`, a window's bits sharing their bytes with bits it does not view. Everything the standard asks *of* the proxy is here — the const-qualified assignment of [P2321R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2321r2.html), `flip()`, and the three hidden-friend `swap`s of [P3612R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3612r1.html).
+- **A proxy reference.** A bit has no address, so `operator[]` returns a proxy, `pointer` names nothing, and `data()` goes with it. `std::vector<bool>` makes exactly this trade. The views lose what `std::span` builds on an address: its constructors from a contiguous iterator, an array or a contiguous range of `bool`, which a view over the blocks or the owner stands in for, and `size_bytes()` and `as_bytes`, a window's bits sharing their bytes with bits it does not view. The proxy has the const-qualified assignment of [P2321R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2321r2.html) and the three hidden-friend `swap`s of [P3612R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3612r1.html). `[vector.bool]`'s extras are left out, by choice rather than force: `flip()` on the container and on the proxy, which negating is `v[i] = not v[i]` and the valarray's `!`, and the static `swap(reference, reference)` the standard now deprecates.
 - **Different invalidation — mostly the other way.** An iterator here is a container and an index, not a pointer into the blocks, so growth that reallocates the blocks leaves it valid. That is `std::set`'s guarantee over storage that is `std::flat_set`'s.
 
 Everything else is addition rather than subtraction: the bitwise operators, `find_first`/`find_next`, the byte exchange, and the views that give you a second reading of bits you already own. What `std::ranges` spells as an algorithm stays one, a block at a time and outside the containers: `xstd::bit_count`, `bit_all_of`, `bit_any_of`, `bit_none_of`, `bit_mismatch`, `bit_reverse` and `bit_rotate` over a sequence, and `xstd::bit_includes` and `bit_disjoint` over two sets, each with the signature and result of the `std::ranges` algorithm it is named after.
@@ -243,10 +249,10 @@ The same spelling works for every other owner and set view, with `xstd::hasher` 
 
 ## Headers
 
-Eight containers: two readings of a block of bits, each over four storages.
-The reading picks the vocabulary, the storage picks whether size and capacity
+Eleven containers: two readings of a block of bits, each over four storages, and the elementwise reading of
+the sequence over three. The reading picks the vocabulary, the storage picks whether size and capacity
 are static or dynamic. Each name is a class with the constructors of the standard
-container it packs. These eight owners, the three views and the algorithms over them are the public surface;
+container it packs. These eleven owners, the three views and the algorithms over them are the public surface;
 the adaptor each reading is built on is internal, under `<xstd/bits/detail/>`.
 
 | Header | Additions | Description | Reference |
@@ -262,6 +268,9 @@ the adaptor each reading is built on is internal, under `<xstd/bits/detail/>`.
 | `<xstd/bits/bit_array.hpp>` | `bit_array` <br> `basic_bit_array` | Sequence of `bool`, static size and capacity | [array] |
 | `<xstd/bits/bit_bounded_vector.hpp>` | `bit_bounded_vector` <br> `basic_bit_bounded_vector` | Sequence of `bool`, dynamic size within a static capacity | [inplace.vector] |
 | `<xstd/bits/bit_vector.hpp>` | `bit_vector` <br> `basic_bit_vector` | Sequence of `bool`, dynamic size and capacity | [vector.bool] |
+| `<xstd/bits/bit_fixed_valarray.hpp>` | `bit_fixed_valarray` <br> `basic_bit_fixed_valarray` | `std::valarray<bool>` at a static size: every operator elementwise, `&`, `\|`, `^`, `&&`, `\|\|` and the six comparisons each returning an array, `!` and `~` both logical not, `sum`, `min` and `max` as or, and and or, `shift`, `cshift` and `apply`, and `std::bitset`'s `<<` and `>>`; constexpr, and structural at whole blocks | [valarray] |
+| `<xstd/bits/bit_bounded_valarray.hpp>` | `bit_bounded_valarray` <br> `basic_bit_bounded_valarray` | The same at a dynamic size within a static capacity, `std::bad_alloc` past it | [valarray] |
+| `<xstd/bits/bit_valarray.hpp>` | `bit_valarray` <br> `basic_bit_valarray` | The same at a dynamic size on the heap | [valarray] |
 | `<xstd/bits/ext/boost.hpp>` | `bit_small_set` <br> `bit_small_vector` <br> and their `basic_` forms | Both readings, dynamic size staying inline within a static capacity | [`boost::container::small_vector`](https://www.boost.org/doc/libs/release/doc/html/boost/container/small_vector.html) |
 | `<xstd/bits/bit_set_view.hpp>` | `bit_set_view` | Set reading of bits another container owns, or of unsigned blocks in place: `bit_set_view(board)` is a `bit_set_view<std::uint64_t>` | none |
 | `<xstd/bits/bit_span.hpp>` <br> `<xstd/bits/bit_subspan.hpp>` | `bit_span` <br> `bit_subspan` | Sequence reading over borrowed bits, whole or sliced, or over unsigned blocks in place: `bit_span(blocks)` | [views.span] |
@@ -295,7 +304,7 @@ This library's concepts and type transformations have no standard counterpart, s
 
 This library depends on the C++ Standard Library, on [xstd-ints](https://github.com/rhalbersma/xstd-ints) and [xstd-misc](https://github.com/rhalbersma/xstd-misc) (both fetched automatically via CMake `FetchContent` when not already installed), on [Boost.Hash2](https://github.com/boostorg/hash2) for the hashing support, and on [Boost.Container](https://github.com/boostorg/container) for the bounded column where the standard library has no `std::inplace_vector`. It is continuously being tested with the following conforming [C++23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf) compilers, against all three mainstream standard libraries (libstdc++, the MSVC STL, and libc++). Following the model of [apt.llvm.org](https://apt.llvm.org/), we support the latest two stable releases of each compiler, plus its current development branch.
 
-Two standards are in play and they answer different questions. **C++23 is what the library compiles as** — that is the language it requires, and the tests build at C++26 as well — on GCC 16, GCC 17-SVN and MinGW 16, the three rungs whose libstdc++ carries `<inplace_vector>`. The bounded column exists at either standard and on every standard library: its blocks are a `std::inplace_vector` where the library has one and a `boost::container::static_vector` everywhere else. Only over `std::inplace_vector` are the bounded owners usable in a constant expression, and `XSTD_BITS_HAS_CONSTEXPR_BOUNDED` is defined exactly there, for code to test with `#ifdef`; over `static_vector` their copies are not `noexcept` either, as `static_vector`'s own are not, while their `swap` is `noexcept` over both, as `[inplace.vector.modifiers]` declares it. **The current [working draft](https://eel.is/c++draft/) is what the interfaces are measured against**, because a counterpart's synopsis is a moving target and the newest one is the one worth answering. So `std::bitset`'s `basic_string_view` constructor ([P2697R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2697r1.pdf)) and its `charT` Constraints ([LWG 4294](https://cplusplus.github.io/LWG/issue4294)) are here even though C++23 has neither, and the proxy carries the hidden-friend `swap`s of [P3612R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3612r1.html) beside the static `swap(reference, reference)` that paper moved to `[depr.vector.bool.swap]`.
+Two standards are in play and they answer different questions. **C++23 is what the library compiles as** — that is the language it requires, and the tests build at C++26 as well — on GCC 16, GCC 17-SVN and MinGW 16, the three rungs whose libstdc++ carries `<inplace_vector>`. The bounded column exists at either standard and on every standard library: its blocks are a `std::inplace_vector` where the library has one and a `boost::container::static_vector` everywhere else. Only over `std::inplace_vector` are the bounded owners usable in a constant expression, and `XSTD_BITS_HAS_CONSTEXPR_BOUNDED` is defined exactly there, for code to test with `#ifdef`; over `static_vector` their copies are not `noexcept` either, as `static_vector`'s own are not, while their `swap` is `noexcept` over both, as `[inplace.vector.modifiers]` declares it. **The current [working draft](https://eel.is/c++draft/) is what the interfaces are measured against**, because a counterpart's synopsis is a moving target and the newest one is the one worth answering. So `std::bitset`'s `basic_string_view` constructor ([P2697R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2697r1.pdf)) and its `charT` Constraints ([LWG 4294](https://cplusplus.github.io/LWG/issue4294)) are here even though C++23 has neither, and the proxy carries the hidden-friend `swap`s of [P3612R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3612r1.html) and not the static `swap(reference, reference)` that paper moved to `[depr.vector.bool.swap]`.
 
 Note that the benchmarks and unit tests depend on [Boost](https://www.boost.io/), [Google Benchmark](https://github.com/google/benchmark) and [range-v3](https://github.com/ericniebler/range-v3). 
 

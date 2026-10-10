@@ -181,6 +181,7 @@ public:
         }
 
         // [valarray.assign]: a scalar assigned to every element, and a list as the array it constructs.
+        // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [valarray.assign] returns.
         constexpr auto operator=(value_type const& value) noexcept
                 -> Derived&
         {
@@ -188,6 +189,7 @@ public:
                 return self();
         }
 
+        // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [valarray.assign] returns.
         constexpr auto operator=(std::initializer_list<value_type> il)
                 -> Derived&
         {
@@ -222,7 +224,7 @@ public:
                 return m_bits.size();
         }
 
-        // The sum of bools is their disjunction; an empty array's is false, where [valarray.members] leaves it undefined.
+        // The sum of bools is their disjunction; an empty array's is false, which [valarray.members] leaves undefined.
         [[nodiscard]] constexpr auto sum() const noexcept
                 -> value_type
         {
@@ -292,7 +294,7 @@ public:
                 m_bits.fill(value);
         }
 
-        // [valarray.unary] at bool: logical not, which ~ spells too, where valarray<bool>'s promotes and is never false.
+        // [valarray.unary] at bool: logical not, which ~ spells too; valarray<bool>'s ~ promotes, and is never false.
         [[nodiscard]] constexpr auto operator!() const noexcept(copies_without_throwing)
                 -> Derived
         {
@@ -426,7 +428,7 @@ public:
                 return v.elements().end();
         }
 
-        // [valarray.binary]'s logical five and [valarray.comparison]'s six, each over two arrays and an array and a scalar.
+        // [valarray.binary]'s logical five and [valarray.comparison]'s six, over two arrays or an array and a scalar.
         [[nodiscard]] friend constexpr auto operator&(Derived const& x, Derived const& y) noexcept(copies_without_throwing)
                 -> Derived
         {
