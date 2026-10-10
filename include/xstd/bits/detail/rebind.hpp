@@ -10,7 +10,7 @@
 
 namespace xstd::bits::detail {
 
-// A fixed-width owner's block and width, and the same owner over another of each; each owner specializes it.
+// An owner's block, and the same owner over another; one whose width is a template argument names it and resizes too.
 template<class Owner>
 struct rebind
 {};
@@ -18,18 +18,20 @@ struct rebind
 template<class Owner>
 concept rebindable = requires {
         typename rebind<Owner>::block_type;
+        typename rebind<Owner>::template with_block<typename rebind<Owner>::block_type>;
+};
+
+template<class Owner>
+concept resizable = rebindable<Owner> and requires {
         rebind<Owner>::width;
+        typename rebind<Owner>::template with_width<rebind<Owner>::width>;
 };
 
 template<rebindable Owner>
 using rebind_block_t = rebind<Owner>::block_type;
 
-template<rebindable Owner>
-constexpr std::size_t rebind_width_v = rebind<Owner>::width;
-
-// Every argument but the block and the width passes through, so the owner's own constraints judge the new pair.
-template<rebindable Owner, class Block, std::size_t N>
-using rebind_t = rebind<Owner>::template type<Block, N>;
+template<resizable Owner>
+inline constexpr std::size_t rebind_width_v = rebind<Owner>::width;
 
 } // namespace xstd::bits::detail
 

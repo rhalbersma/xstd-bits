@@ -94,8 +94,11 @@ struct bits::detail::rebind<basic_bit_bounded_set<Key, Block, N, KeyMapping, Com
         using block_type                   = Block;
         static constexpr std::size_t width = N;
 
-        template<class OtherBlock, std::size_t M>
-        using type = basic_bit_bounded_set<Key, OtherBlock, M, KeyMapping, Compare>;
+        template<class OtherBlock>
+        using with_block = basic_bit_bounded_set<Key, OtherBlock, N, KeyMapping, Compare>;
+
+        template<std::size_t M>
+        using with_width = basic_bit_bounded_set<Key, Block, M, KeyMapping, Compare>;
 };
 
 } // namespace xstd
