@@ -20,7 +20,7 @@ namespace xstd::bits::detail {
 
 // Storage over blocks someone else owns: a span and nothing else, so copying it copies no bits.
 template<class Bits>
-concept view_storage = borrowed_block_span<typename std::remove_const_t<Bits>::block_container_type>;
+concept borrowed_storage = borrowed_block_span<typename std::remove_const_t<Bits>::block_container_type>;
 
 // A view's copy of storage that is itself a view; its blocks are not its own, so a const view still writes them.
 template<class Bits>
@@ -130,11 +130,11 @@ public:
 
 // What a view holds: a pointer to storage, or a copy of storage that is itself a view.
 template<class Bits>
-using storage_ref_t = std::conditional_t<view_storage<Bits>, storage_copy<Bits>, Bits*>;
+using storage_ref_t = std::conditional_t<borrowed_storage<Bits>, storage_copy<Bits>, Bits*>;
 
 // What an iterator or proxy holds: a pointer to storage, or a hold on the blocks that storage is a view of.
 template<class Bits>
-using storage_ptr_t = std::conditional_t<view_storage<Bits>, block_ptr<Bits>, Bits*>;
+using storage_ptr_t = std::conditional_t<borrowed_storage<Bits>, block_ptr<Bits>, Bits*>;
 
 } // namespace xstd::bits::detail
 

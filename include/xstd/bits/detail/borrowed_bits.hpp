@@ -6,15 +6,16 @@
 #ifndef XSTD_BITS_DETAIL_BORROWED_BITS_HPP
 #define XSTD_BITS_DETAIL_BORROWED_BITS_HPP
 
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/bit_block_range.hpp>     // bit_block_range
-#include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
-#include <cstddef>                                  // size_t
-#include <memory>                                   // addressof
-#include <ranges>                                   // borrowed_range
-#include <span>                                     // dynamic_extent, span
-#include <type_traits>                              // conditional_t, is_const_v, is_lvalue_reference_v, remove_const_t, remove_reference_t
-#include <utility>                                  // declval
+#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
+#include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container
+#include <xstd/bits/detail/bit_block_range.hpp>            // bit_block_range
+#include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
+#include <cstddef>                                         // size_t
+#include <memory>                                          // addressof
+#include <ranges>                                          // borrowed_range
+#include <span>                                            // dynamic_extent, span
+#include <type_traits>                                     // conditional_t, is_const_v, is_lvalue_reference_v, remove_const_t, remove_reference_t
+#include <utility>                                         // declval
 
 // Bits in blocks someone else owns, which bit_set_view and bit_span hold by value and read and write in place.
 namespace xstd::bits::detail {
@@ -34,29 +35,53 @@ concept borrowable_block = std::is_lvalue_reference_v<W> and xstd::unsigned_inte
 template<class W>
 concept borrowable_blocks = bit_block_range<W> and (std::is_lvalue_reference_v<W> or std::ranges::borrowed_range<W>);
 
-template<class W>
-struct borrowed_bits_for;
+template<class T, class Bits>
+using const_as_t = std::conditional_t<std::is_const_v<T>, Bits const, Bits>;
 
-// A const block or const blocks make const storage, which is how a view over them is read-only.
-template<borrowable_block W>
-struct borrowed_bits_for<W>
+// A view's storage: someone else's blocks by span, or the storage of an owner over the same blocks it refers into.
+template<class Blocks, std::size_t N>
+struct view_storage_for
 {
-        using block_type = std::remove_reference_t<W>;
-        using bits_type  = borrowed_bits<std::remove_const_t<block_type>, 1>;
-        using type       = std::conditional_t<std::is_const_v<block_type>, bits_type const, bits_type>;
+        using type = const_as_t<Blocks, bit_block_container<std::remove_const_t<Blocks>, N>>;
+};
+
+template<xstd::unsigned_integer Block, std::size_t N>
+struct view_storage_for<Block, N>
+{
+        using type = const_as_t<Block, borrowed_bits<std::remove_const_t<Block>, 1>>;
+};
+
+template<class Block, std::size_t E, std::size_t N>
+struct view_storage_for<std::span<Block, E>, N>
+{
+        using type = const_as_t<Block, borrowed_bits<std::remove_const_t<Block>, E>>;
+};
+
+template<class Blocks, std::size_t N>
+using view_storage_t = view_storage_for<Blocks, N>::type;
+
+// The blocks a guide deduces from what it is handed: a block as itself, a range as the span that lends it.
+template<class W>
+struct lent_blocks;
+
+template<borrowable_block W>
+struct lent_blocks<W>
+{
+        using type = std::remove_reference_t<W>;
 };
 
 template<borrowable_blocks W>
-struct borrowed_bits_for<W>
+struct lent_blocks<W>
 {
-        using span_type = block_span_t<std::remove_reference_t<W>>;
-        using bits_type = borrowed_bits<std::remove_const_t<typename span_type::element_type>, span_type::extent>;
-        using type      = std::conditional_t<std::is_const_v<typename span_type::element_type>, bits_type const, bits_type>;
+        using type = block_span_t<std::remove_reference_t<W>>;
 };
 
-// The storage a view deduces from the blocks it is handed, const where they are.
 template<class W>
-using borrowed_bits_t = borrowed_bits_for<W>::type;
+using lent_blocks_t = lent_blocks<W>::type;
+
+// The storage a view deduces from the blocks it is handed, const where they are: the view's storage over them.
+template<class W>
+using borrowed_bits_t = view_storage_t<lent_blocks_t<W>, xstd::bit_blocks_extent_v<lent_blocks_t<W>>>;
 
 // The blocks as storage; const blocks are lent writable, and the const storage deduced for them keeps them unwritten.
 template<class W>
