@@ -80,7 +80,6 @@ target_sources(
         include/xstd/bits/bit_concepts/bit_block_range.hpp
         include/xstd/bits/bit_concepts/bit_blocks.hpp
         include/xstd/bits/bit_concepts/bit_constructible_from.hpp
-        include/xstd/bits/bit_concepts/bit_convertible.hpp
         include/xstd/bits/bit_concepts/bit_convertible_to.hpp
         include/xstd/bits/bit_concepts/bit_index_mapping.hpp
         include/xstd/bits/bit_concepts/bit_mask_mapping.hpp
