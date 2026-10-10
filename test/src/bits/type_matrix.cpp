@@ -23,7 +23,8 @@
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK_MESSAGE
 #include <algorithm>                                     // min
 #include <array>                                         // array
-#include <concepts>                                      // constructible_from, copyable, default_initializable, equality_comparable, same_as, three_way_comparable
+#include <compare>                                       // three_way_comparable
+#include <concepts>                                      // constructible_from, copyable, default_initializable, equality_comparable, same_as
 #include <cstddef>                                       // size_t
 #include <cstdint>                                       // uint8_t
 #include <format>                                        // formattable
