@@ -135,7 +135,6 @@ target_sources(
         include/xstd/bits/detail/storage_ptr.hpp
         include/xstd/bits/detail/views.hpp
         include/xstd/bits/detail/blocks.hpp
-        include/xstd/bits/detail/zero_width.hpp
         include/xstd/bits/detail/owner_members.hpp
         include/xstd/bits/detail/ownership.hpp
         include/xstd/bits/detail/rebind.hpp
