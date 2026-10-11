@@ -16,7 +16,7 @@
 #include <array>                                    // array
 #include <concepts>                                 // constructible_from, convertible_to, derived_from, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint8_t
+#include <cstdint>                                  // uint64_t, uint8_t
 #include <ranges>                                   // iota
 #include <utility>                                  // declval
 #include <vector>                                   // vector
@@ -30,6 +30,9 @@ using Blocks  = std::array<std::size_t, 1>;
 
 template<class T>
 using view_of = decltype(xstd::bit_span(std::declval<T&>()));
+
+template<class T, class U>
+concept combines_with = requires (T& t, U const& u) { t &= u; t |= u; t ^= u; };
 
 // The view over whatever a test hands it, blocks or an owner: what the permutations are applied through.
 struct as_span
@@ -91,6 +94,37 @@ BOOST_AUTO_TEST_CASE(TheViewNeitherComparesNorOrders)
 {
         static_assert(not std::equality_comparable<view_of<Storage>>);
         static_assert(not std::totally_ordered<view_of<Storage>>);
+}
+
+// As std::span, a view of mutable bits is implicitly one of const bits, and a window keeps span's rule between extents.
+BOOST_AUTO_TEST_CASE(AViewOfMutableBitsIsAViewOfConstBits)
+{
+        static_assert(std::convertible_to<xstd::bit_span<Blocks, 8>, xstd::bit_span<Blocks const, 8>>);
+        static_assert(not std::convertible_to<xstd::bit_span<Blocks const, 8>, xstd::bit_span<Blocks, 8>>);
+        static_assert(std::convertible_to<view_of<std::uint64_t>, view_of<std::uint64_t const>>);
+
+        using window              = decltype(std::declval<xstd::bit_span<Blocks, 8>&>().subspan(0UZ, 4UZ));
+        using const_window        = decltype(std::declval<xstd::bit_span<Blocks const, 8>&>().subspan(0UZ, 4UZ));
+        using static_window       = decltype(std::declval<xstd::bit_span<Blocks, 8>&>().subspan<0, 4>());
+        using const_static_window = decltype(std::declval<xstd::bit_span<Blocks const, 8>&>().subspan<0, 4>());
+        static_assert(std::convertible_to<window, const_window> and not std::convertible_to<const_window, window>);
+        static_assert(std::convertible_to<static_window, const_static_window> and std::convertible_to<static_window, const_window>);
+        static_assert(std::constructible_from<const_static_window, window> and not std::convertible_to<window, const_static_window>);
+
+        auto a                                  = xstd::bit_array<8>();
+        a[3]                                    = true;
+        xstd::bit_span<Blocks const, 8> const c = xstd::bit_span(a);
+        const_window const w                    = xstd::bit_span(a).subspan(2UZ, 4UZ);
+        BOOST_CHECK(c[3] and w[1]);
+}
+
+// Like span it has no bitwise operators, which are an owner's, and over its own type alone.
+BOOST_AUTO_TEST_CASE(TheBitwiseOperatorsAreAnOwners)
+{
+        static_assert(combines_with<xstd::bit_array<8>, xstd::bit_array<8>>);
+        static_assert(not combines_with<view_of<xstd::bit_array<8>>, view_of<xstd::bit_array<8>>> and not combines_with<view_of<xstd::bit_array<8>>, xstd::bit_array<8>>);
+        static_assert(not combines_with<xstd::bit_array<8>, view_of<xstd::bit_array<8>>>);
+        BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
 // A view is mutable through: writing a position through the view writes the bit.

@@ -595,6 +595,13 @@ public:
                 : members_type(std::in_place, &c.m_bits)
         {}
 
+        // span's qualification conversion: a view of mutable bits is implicitly a view of the same bits as const.
+        template<class OtherDerived>
+                requires (not is_owner) and std::is_const_v<Bits>
+        [[nodiscard]] constexpr explicit(false) set_adaptor(set_adaptor<std::remove_const_t<Bits>, Store, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept // NOLINT(misc-explicit-constructor)
+                : set_adaptor(other.bits())
+        {}
+
         // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [set] and [vector] return here.
         constexpr auto operator=(std::initializer_list<value_type> il)
                 -> derived_type&
@@ -613,10 +620,10 @@ public:
                 return x.bits() == y.bits();
         }
 
-        // Everything else: the storage's set equality, which answers at any two widths.
+        // Everything else: the storage's set equality, which answers at any two widths and over lent blocks.
         [[nodiscard]] friend constexpr auto operator==(set_adaptor const& x, set_adaptor const& y) noexcept
                 -> bool
-                requires std::equality_comparable<bits_type>
+                requires (not(is_owner and has_static_width))
         {
                 return set_equal(x.bits(), y.bits());
         }
@@ -936,6 +943,45 @@ public:
         constexpr auto operator-=(this auto&& self, set_adaptor const& other) noexcept
                 -> auto&
                 requires requires { self.bits() -= other.bits(); }
+        {
+                self.bits() -= other.bits();
+                return self;
+        }
+
+        // A view of ours takes any other set over this storage and keys, owner or view, by the storage's spelling.
+        template<class OtherBits, storage OtherStore, class OtherDerived>
+        constexpr auto operator&=(this auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept
+                -> auto&
+                requires (not is_owner) and std::same_as<std::remove_const_t<OtherBits>, std::remove_const_t<Bits>> and (not std::same_as<set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare>, set_adaptor>) and requires { self.bits() &= other.bits(); }
+        {
+                self.bits() &= other.bits();
+                return self;
+        }
+
+        template<class OtherBits, storage OtherStore, class OtherDerived>
+        constexpr auto operator|=(this auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept(has_static_width)
+                -> auto&
+                requires (not is_owner) and std::same_as<std::remove_const_t<OtherBits>, std::remove_const_t<Bits>> and (not std::same_as<set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare>, set_adaptor>) and requires { self.bits().grow_to_admit(other.bits()); self.bits() |= other.bits(); }
+        {
+                self.bits().grow_to_admit(other.bits());
+                self.bits() |= other.bits();
+                return self;
+        }
+
+        template<class OtherBits, storage OtherStore, class OtherDerived>
+        constexpr auto operator^=(this auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept(has_static_width)
+                -> auto&
+                requires (not is_owner) and std::same_as<std::remove_const_t<OtherBits>, std::remove_const_t<Bits>> and (not std::same_as<set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare>, set_adaptor>) and requires { self.bits().grow_to_admit(other.bits()); self.bits() ^= other.bits(); }
+        {
+                self.bits().grow_to_admit(other.bits());
+                self.bits() ^= other.bits();
+                return self;
+        }
+
+        template<class OtherBits, storage OtherStore, class OtherDerived>
+        constexpr auto operator-=(this auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept
+                -> auto&
+                requires (not is_owner) and std::same_as<std::remove_const_t<OtherBits>, std::remove_const_t<Bits>> and (not std::same_as<set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare>, set_adaptor>) and requires { self.bits() -= other.bits(); }
         {
                 self.bits() -= other.bits();
                 return self;
