@@ -260,7 +260,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
                         -> bool
                 {
                         assert(lhs.m_ptr == rhs.m_ptr);
-                        if constexpr (is_zero_width) {
+                        if constexpr (Bits::extent == 0UZ) {
                                 return true;
                         } else {
                                 return lhs.m_idx == rhs.m_idx;
