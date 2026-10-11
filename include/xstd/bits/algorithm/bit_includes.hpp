@@ -6,7 +6,8 @@
 #ifndef XSTD_BITS_ALGORITHM_BIT_INCLUDES_HPP
 #define XSTD_BITS_ALGORITHM_BIT_INCLUDES_HPP
 
-#include <xstd/bits/detail/algorithm.hpp> // reads_keys, storage_access
+#include <xstd/bits/detail/algorithm.hpp> // reads_keys
+#include <xstd/bits/detail/ownership.hpp> // storage_access
 #include <type_traits>                    // type_identity_t
 
 namespace xstd {

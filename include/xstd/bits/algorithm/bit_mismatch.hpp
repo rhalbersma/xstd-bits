@@ -6,7 +6,8 @@
 #ifndef XSTD_BITS_ALGORITHM_BIT_MISMATCH_HPP
 #define XSTD_BITS_ALGORITHM_BIT_MISMATCH_HPP
 
-#include <xstd/bits/detail/algorithm.hpp> // first_mismatch, reads_bools, storage_access, whole_sequence
+#include <xstd/bits/detail/algorithm.hpp> // first_mismatch, reads_bools, whole_sequence
+#include <xstd/bits/detail/ownership.hpp> // storage_access
 #include <algorithm>                      // mismatch, mismatch_result
 #include <concepts>                       // same_as
 #include <cstddef>                        // ptrdiff_t
