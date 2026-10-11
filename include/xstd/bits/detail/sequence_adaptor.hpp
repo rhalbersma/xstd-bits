@@ -15,7 +15,7 @@
 #include <xstd/bits/detail/comparisons.hpp>                  // sequence_three_way
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
-#include <xstd/bits/detail/intrin.hpp>                       // countr_zero, popcount
+#include <xstd/bits/detail/intrin.hpp>                       // countr_zero
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ptr_t, storage_ref_t
@@ -67,54 +67,6 @@ constexpr auto walk_blocks(Bits const& c, std::size_t offset, std::size_t size, 
                         }
                 }
         }
-}
-
-// The three aggregates over a window, masked to what it holds: a block at a time, not a test per bit.
-template<class Bits>
-[[nodiscard]] constexpr auto count_blocks(Bits const& c, std::size_t offset, std::size_t size) noexcept
-        -> std::size_t
-{
-        using block_type      = Bits::block_type;
-        constexpr auto digits = Bits::bits_per_block;
-
-        auto n = 0UZ;
-        for (auto k = 0UZ; k < size; k += digits) {
-                auto const mask = partial_block_mask<block_type>(std::ranges::min(digits, size - k));
-                n += popcount(static_cast<block_type>(c.block_at(offset + k) & mask));
-        }
-        return n;
-}
-
-template<class Bits>
-[[nodiscard]] constexpr auto any_blocks(Bits const& c, std::size_t offset, std::size_t size) noexcept
-        -> bool
-{
-        using block_type      = Bits::block_type;
-        constexpr auto digits = Bits::bits_per_block;
-
-        for (auto k = 0UZ; k < size; k += digits) {
-                auto const mask = partial_block_mask<block_type>(std::ranges::min(digits, size - k));
-                if (static_cast<block_type>(c.block_at(offset + k) & mask) != block_type{}) {
-                        return true;
-                }
-        }
-        return false;
-}
-
-template<class Bits>
-[[nodiscard]] constexpr auto all_blocks(Bits const& c, std::size_t offset, std::size_t size) noexcept
-        -> bool
-{
-        using block_type      = Bits::block_type;
-        constexpr auto digits = Bits::bits_per_block;
-
-        for (auto k = 0UZ; k < size; k += digits) {
-                auto const mask = partial_block_mask<block_type>(std::ranges::min(digits, size - k));
-                if (static_cast<block_type>(c.block_at(offset + k) & mask) != mask) {
-                        return false;
-                }
-        }
-        return true;
 }
 
 // The storage's block type: P0634 makes an alias-declaration type-only, where a template argument is not.
@@ -1482,7 +1434,7 @@ private:
                 if constexpr (not is_window) {
                         return bits().count();
                 } else {
-                        return sequence::count_blocks(bits(), offset(), size());
+                        return bits().count(offset(), size());
                 }
         }
 
@@ -1492,7 +1444,7 @@ private:
                 if constexpr (not is_window) {
                         return bits().any();
                 } else {
-                        return sequence::any_blocks(bits(), offset(), size());
+                        return bits().any(offset(), size());
                 }
         }
 
@@ -1503,7 +1455,7 @@ private:
                 if constexpr (not is_window) {
                         return bits().none();
                 } else {
-                        return not sequence::any_blocks(bits(), offset(), size());
+                        return not bits().any(offset(), size());
                 }
         }
 
@@ -1514,7 +1466,7 @@ private:
                 if constexpr (not is_window) {
                         return bits().all();
                 } else {
-                        return sequence::all_blocks(bits(), offset(), size());
+                        return bits().all(offset(), size());
                 }
         }
 
