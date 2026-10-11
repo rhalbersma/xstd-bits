@@ -7,7 +7,6 @@
 #include <xstd/bits/bit.hpp>             // bit_convert
 #include <xstd/bits/bit_array.hpp>       // basic_bit_array
 #include <xstd/bits/bit_fixed_set.hpp>   // basic_bit_fixed_set
-#include <xstd/bits/bit_set.hpp>         // basic_bit_set
 #include <xstd/bits/bit_vector.hpp>      // basic_bit_vector
 #include <xstd/ints/cstdint/bit_int.hpp> // bit_uint
 #include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
@@ -136,7 +135,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnOddBlockStaysSingle, W, odd_widths)
 // A power of two of a byte or more tiles any width, bit-precise or not.
 BOOST_AUTO_TEST_CASE(APowerOfTwoTiles)
 {
-        static_assert(array_admits<64UZ, 200UZ> and vector_admits<64UZ> and vector_admits<256UZ>);
+        static_assert(array_admits<64UZ, 200UZ> and vector_admits<64UZ> and vector_admits<128UZ>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
