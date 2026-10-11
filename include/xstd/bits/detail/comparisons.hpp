@@ -117,7 +117,7 @@ template<class Reading, bit_block_container_type Bits>
                 }
                 auto const offset = bits::detail::countr_zero(diff);
                 // Copied, not captured: Clang 18 cannot read a captured structured binding in a constant expression.
-                return at_first_difference<Reading>(bits::detail::intersects(x[index], shl(block_type{1}, offset)), x, y, [index = index, offset](Bits const& b) -> bool { return b.any_above(index, offset); });
+                return at_first_difference<Reading>(bits::detail::intersects(x[index], shl(block_type{1}, offset)), x, y, [block = index, offset](Bits const& b) -> bool { return b.any_above(block, offset); });
         }
 }
 
