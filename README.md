@@ -245,7 +245,7 @@ the adaptor each reading is built on is internal, under `<xstd/bits/detail/>`.
 | `<xstd/bits/from_blocks.hpp>` | `from_blocks` <br> `from_blocks_t` | The tag that says an argument's blocks are read as bits, so a static width deduces from them | [range.utility.conv] |
 | `<xstd/bits/bit_concepts/bit_constructible_from.hpp>` | `bit_constructible_from` | The concept for blocks an owner takes as they are, through the tag | none |
 | `<xstd/bits/bit.hpp>` <br> `<xstd/bits/bit/bit_convert.hpp>` | `bit_convert` | Positions from anything that has bit storage into anything else that does, at any two widths: ours, blocks, a `std::bitset` | none |
-| `<xstd/bits/bit_concepts/bit_convertible.hpp>` <br> `<xstd/bits/bit_concepts/bit_convertible_to.hpp>` | `bit_convertible` <br> `bit_convertible_to` | The constraint `bit_convert` puts on the two types, and the concept for a valid call | none |
+| `<xstd/bits/bit_concepts/bit_convertible_to.hpp>` | `bit_convertible_to` | The concept for a valid `bit_convert<To>(from)` call, taking the source first as `std::convertible_to` does, so `bit_convertible_to<To> auto` constrains a source | none |
 | `<xstd/bits/ext/boost/dynamic_bitset.hpp>` | `bit_convert` | Both ways between `boost::dynamic_bitset` and the owners, by block range; opt-in, outside every umbrella | [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/release/libs/dynamic_bitset/) |
 
 `<xstd/bits.hpp>` exports the whole surface, so one include brings everything above.
@@ -277,7 +277,7 @@ Note that the benchmarks and unit tests depend on [Boost](https://www.boost.io/)
 
 The library is header-only and its CMake target carries everything a consumer needs: the include directories, the `xstd-ints`, `xstd-misc`, `Boost::container` and `Boost::hash2` dependencies, and `cxx_std_23`. Link `xstd::bits` and you are done — there is no `target_include_directories` or `CMAKE_CXX_STANDARD` to set on your side.
 
-All three methods below are built by the [Consumption workflow](.github/workflows/consumption.yml), on every pull request and on every push to `main`, so what is written here is what is tested.
+All three methods below are built by the [Consumption workflow](.github/workflows/consumption.yml), on every pull request, so what is written here is what is tested.
 
 ### `find_package`, against an installed copy
 
