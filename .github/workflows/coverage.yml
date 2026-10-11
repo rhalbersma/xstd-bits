@@ -15,8 +15,6 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
   # The Codecov CLI only queues an upload, so the daily re-upload self-heals a report dropped on their side.
