@@ -12,8 +12,9 @@
 #include <xstd/bits/bit_key_mapping.hpp>                      // bit_key_mapping
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>    // bit_blocks_extent_v
 #include <xstd/bits/bit_type_traits/bit_least.hpp>            // least_block_t
-#include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container, num_blocks_v
+#include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container
 #include <xstd/bits/detail/bit_layout.hpp>                    // byte_count, bytes_bits
+#include <xstd/bits/detail/num_blocks.hpp>                    // holds_width, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                     // storage, storage_access
 #include <xstd/bits/detail/rebind.hpp>                        // rebind
 #include <xstd/bits/detail/set_adaptor.hpp>                   // admits_width, disjoint, intersects, key_direction, set_adaptor
@@ -39,6 +40,7 @@ namespace xstd {
 
 // The fixed-width set: the basic name leaves the key and the block open, the short one makes both std::size_t.
 template<class Key, xstd::unsigned_integer Block, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>>
+        requires bits::detail::holds_width<Block, N>
 class basic_bit_fixed_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>, Key, KeyMapping, Compare>
 {
         using base_type = bits::detail::set_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, bits::detail::storage::owned, basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>, Key, KeyMapping, Compare>;

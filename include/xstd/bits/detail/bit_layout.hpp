@@ -80,7 +80,7 @@ concept bit_layout = fixed_blocks_source<Bits, N> or container_source<Bits, N>;
 
 // The shifts, in one place: they say where a position goes rather than assuming a byte order.
 template<class Blocks>
-inline constexpr auto bytes_per_block = block_digits<Blocks> / bits_per_byte;
+inline constexpr auto bytes_per_block = byte_count<block_digits<Blocks>>;
 
 // The bytes a range of blocks holds as positions, its value bits alone, at every block width.
 template<class Blocks>

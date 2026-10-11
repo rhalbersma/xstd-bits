@@ -7,6 +7,7 @@
 #define XSTD_BITS_BIT_VECTOR_HPP
 
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
+#include <xstd/bits/detail/num_blocks.hpp>                   // tiling_block
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
@@ -30,6 +31,7 @@ namespace xstd {
 
 // The sequence reading over a heap of blocks: std::vector<bool> under the name Hinnant proposed for it.
 template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
+        requires bits::detail::tiling_block<Block>
 class basic_bit_vector : public bits::detail::sequence_adaptor<bits::detail::bit_block_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_vector<Block, Allocator>>
 {
         using base_type = bits::detail::sequence_adaptor<bits::detail::bit_block_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_vector<Block, Allocator>>;

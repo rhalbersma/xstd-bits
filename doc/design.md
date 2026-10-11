@@ -2772,8 +2772,16 @@ parameter for `std::bitset` and a `small_bitset<N>` over the smallest of `std::u
 it chooses by `N % 64`, so a 72-bit `small_bitset` is nine one-byte blocks where `bit_least<bit_fixed_set<72>>` is two
 words. [type_safe](https://github.com/foonathan/type_safe)'s `flag_set<Enum>` stores its flags in the smallest of
 `std::uint_least8_t` to `std::uint_least64_t` that holds them, and takes no more than 64. `bit_enum_set` is
-`bit_least` over an enumeration's fixed set, as above. A fourth transformation, `bit_precise<X>` over C23's
-`unsigned _BitInt(N)` as one block of exactly `N` bits, is planned separately and is not part of this design yet.
+`bit_least` over an enumeration's fixed set, as above.
+
+A block need not be a power of two. One that is, of a byte or more, tiles any width: no position and no byte
+straddles two blocks, so every owner and view takes it. Any other width, C23's `unsigned _BitInt(17)` or
+`unsigned _BitInt(127)` spelled `xstd::bit_uint<N>`, holds one fixed-width value: `bit_array` and `bit_fixed_set`
+take it for a width up to its own, in a single block, and the bounded, small and growing owners refuse it, since a
+second block would put a position across two of them. Clang on x86-64 stores such a block in the next standard
+integer size, so `_BitInt(23)` takes the four bytes of a `std::uint32_t` and nine padding bits the library never
+reads; what the block buys is the exact width in the type, not fewer bytes. A fourth transformation, `bit_precise<X>`,
+naming that block from the width, is planned separately.
 
 Other libraries either pick the block themselves, from the width, or take it from the user as a template argument:
 
