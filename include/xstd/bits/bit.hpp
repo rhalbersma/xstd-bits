@@ -7,6 +7,6 @@
 #define XSTD_BITS_BIT_HPP
 
 // The conversion between everything that has bit storage, and the concept that constrains it.
-#include <xstd/bits/bit/bit_convert.hpp> // IWYU pragma: export; bit_convert, bit_convertible
+#include <xstd/bits/bit/bit_convert.hpp> // IWYU pragma: export; bit_convert
 
 #endif // XSTD_BITS_BIT_HPP

@@ -35,6 +35,9 @@ BOOST_AUTO_TEST_CASE(BitConvertibleToNamesEveryWidthButAViewTarget)
         static_assert(xstd::bit_convertible_to<xstd::bit_vector, xstd::bit_bounded_set<64>> and xstd::bit_convertible_to<std::uint64_t, xstd::bit_set>);
         static_assert(xstd::bit_convertible_to<xstd::bit_span<std::vector<std::uint64_t>>, xstd::bit_vector> and xstd::bit_convertible_to<xstd::bit_set_view<std::vector<std::uint64_t> const>, xstd::bit_array<64>>);
 
+        // A reference or a const source is the same conversion as the type it names.
+        static_assert(xstd::bit_convertible_to<xstd::bit_set const&, xstd::bit_vector> and xstd::bit_convertible_to<xstd::bit_set&&, xstd::bit_vector>);
+
         // Two fixed widths that differ are no conversion at all, rather than a narrowing or a widening one.
         static_assert(not xstd::bit_convertible_to<std::uint32_t, xstd::bit_array<20>> and not xstd::bit_convertible_to<std::uint64_t, std::bitset<63>>);
         static_assert(not xstd::bit_convertible_to<std::bitset<65>, xstd::bit_array<64>> and not xstd::bit_convertible_to<xstd::bit_fixed_set<64>, xstd::bit_fixed_set<65>>);
