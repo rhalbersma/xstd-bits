@@ -16,6 +16,7 @@
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
 #include <xstd/bits/detail/intrin.hpp>                       // countr_zero
+#include <xstd/bits/detail/owner_members.hpp>                // owner_members
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ptr_t, storage_ref_t
@@ -29,7 +30,7 @@
 #include <algorithm>                                         // copy, min, remove_if
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
-#include <concepts>                                          // constructible_from, derived_from, invocable, same_as, swap, swappable
+#include <concepts>                                          // constructible_from, derived_from, invocable, same_as
 #include <cstddef>                                           // ptrdiff_t, size_t
 #include <format>                                            // format, formatter
 #include <functional>                                        // hash
@@ -42,7 +43,7 @@
 #include <span>                                              // dynamic_extent
 #include <stdexcept>                                         // out_of_range
 #include <tuple>                                             // tuple_element, tuple_size
-#include <type_traits>                                       // bool_constant, conditional_t, false_type, integral_constant, is_const_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                                       // bool_constant, conditional_t, false_type, integral_constant, is_const_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                           // as_const, declval, forward, in_place, move, pair
 
 // The sequence reading, [array] over a bit_block_container, owning it or referring to it.
@@ -117,10 +118,12 @@ namespace sequence {
 
 // The storage an owner has or a view's handle into another's, in a base public exactly where the owner is structural.
 template<class Bits, storage Store, window W, class Derived, std::size_t E>
-using members_t = adapted_bits<
-        std::conditional_t<owns(Store), Bits, std::conditional_t<W == window::sub, window_ptr<Bits, E != std::dynamic_extent>, storage_ref_t<Bits>>>,
-        std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, sequence_adaptor<Bits, Store, W, Derived, E>>, xstd::empty_base_type<>>,
-        owns(Store) and std::remove_const_t<Bits>::is_structural>;
+using members_t = owner_members<
+        adapted_bits<
+                std::conditional_t<owns(Store), Bits, std::conditional_t<W == window::sub, window_ptr<Bits, E != std::dynamic_extent>, storage_ref_t<Bits>>>,
+                std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, sequence_adaptor<Bits, Store, W, Derived, E>>, xstd::empty_base_type<>>,
+                owns(Store) and std::remove_const_t<Bits>::is_structural>,
+        std::remove_const_t<Bits>, sequence_adaptor<Bits, Store, W, Derived, E>, owns(Store)>;
 
 // Growth is the owner's over storage that grows: a view must never resize what it does not own.
 template<class Bits, storage Store>
@@ -772,28 +775,8 @@ public:
                 : sequence_adaptor(il.begin(), il.end(), alloc)
         {}
 
-        [[nodiscard]] constexpr auto get_allocator() const noexcept
-                requires is_owner and requires (bits_type const& b) { b.get_allocator(); }
-        {
-                return m_bits.get_allocator();
-        }
-
-        // flat_set's door onto its representation, at a run-time width: the blocks come in and go out whole.
+        // The blocks a from_blocks constructor takes, and what an owner's replace and extract trade in.
         using block_container_type = bits_type::block_container_type;
-
-        constexpr auto replace(block_container_type&& blocks) noexcept(noexcept(m_bits.replace(std::move(blocks))))
-                -> void
-                requires is_owner and requires (bits_type& b, block_container_type&& c) { b.replace(std::move(c)); }
-        {
-                m_bits.replace(std::move(blocks));
-        }
-
-        [[nodiscard]] constexpr auto extract() && noexcept(noexcept(std::move(m_bits).extract()))
-                -> block_container_type
-                requires is_owner and requires (bits_type&& b) { std::move(b).extract(); }
-        {
-                return std::move(m_bits).extract();
-        }
 
         // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [set] and [vector] return here.
         constexpr auto operator=(std::initializer_list<value_type> il)
@@ -1043,22 +1026,6 @@ public:
                                 self.bits().assign(i, u);
                         }
                 }
-        }
-
-        // The non-member beside it: ranges::swap finds this and never the member.
-        friend constexpr auto swap(sequence_adaptor& x, sequence_adaptor& y) noexcept(noexcept(x.swap(y)))
-                -> void
-                requires is_owner
-        {
-                x.swap(y);
-        }
-
-        // The storage's own swap through the customization point, std::bitset having no member to call.
-        constexpr auto swap(sequence_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
-                -> void
-                requires is_owner and std::swappable<Bits>
-        {
-                std::ranges::swap(this->m_bits, other.m_bits);
         }
 
         // iterators, spelled over what the accessor hands this self: deep const for an owner, shallow for a view.
@@ -1411,6 +1378,9 @@ public:
                 return self;
         }
 
+        // [vector.bool]'s swap of two proxies, beside the owner's swap of two containers that it would otherwise hide.
+        using members_type::swap;
+
         static constexpr auto swap(reference x, reference y) noexcept
                 -> void
         {
@@ -1567,7 +1537,7 @@ private:
                 -> sequence_adaptor
         {
                 if constexpr (is_allocator_aware) {
-                        return sequence_adaptor(get_allocator());
+                        return sequence_adaptor(this->get_allocator());
                 } else {
                         return sequence_adaptor();
                 }

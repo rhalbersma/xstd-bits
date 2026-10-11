@@ -21,6 +21,7 @@
 #include <xstd/bits/detail/hash.hpp>                          // hash_append_keys
 #include <xstd/bits/detail/intrin.hpp>                        // countl_zero, countr_zero
 #include <xstd/bits/detail/is_key.hpp>                        // is_key
+#include <xstd/bits/detail/owner_members.hpp>                 // owner_members
 #include <xstd/bits/detail/ownership.hpp>                     // owned_bits_t, owned_storage, owner_of, owns, reads, set_reading_tag, storage, storage_access
 #include <xstd/bits/detail/shift.hpp>                         // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                   // storage_ptr_t, storage_ref_t
@@ -34,7 +35,7 @@
 #include <algorithm>                                          // all_of, find_if, max, min, partition_point
 #include <cassert>                                            // assert
 #include <compare>                                            // strong_ordering
-#include <concepts>                                           // constructible_from, convertible_to, equality_comparable, invocable, same_as, swappable, totally_ordered
+#include <concepts>                                           // constructible_from, convertible_to, equality_comparable, invocable, same_as, totally_ordered
 #include <cstddef>                                            // ptrdiff_t, size_t
 #include <format>                                             // format, formatter
 #include <functional>                                         // greater, hash, less
@@ -44,7 +45,7 @@
 #include <source_location>                                    // source_location
 #include <span>                                               // dynamic_extent
 #include <stdexcept>                                          // out_of_range
-#include <type_traits>                                        // conditional_t, false_type, integral_constant, is_enum_v, is_invocable_r_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                                        // conditional_t, false_type, integral_constant, is_enum_v, is_invocable_r_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                            // declval, forward, in_place, move, pair
 
 // The set reading, [set] over a bit_block_container, owning it or referring to it.
@@ -126,10 +127,12 @@ namespace set {
 
 // The storage an owner has or a view's handle into another's, in a base public exactly where the owner is structural.
 template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare>
-using members_t = adapted_bits<
-        std::conditional_t<owns(Store), Bits, storage_ref_t<Bits>>,
-        std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>>, xstd::empty_base_type<>>,
-        owns(Store) and std::remove_const_t<Bits>::is_structural>;
+using members_t = owner_members<
+        adapted_bits<
+                std::conditional_t<owns(Store), Bits, storage_ref_t<Bits>>,
+                std::conditional_t<owns(Store), allocator_base_type<std::remove_const_t<Bits>, set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>>, xstd::empty_base_type<>>,
+                owns(Store) and std::remove_const_t<Bits>::is_structural>,
+        std::remove_const_t<Bits>, set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>, owns(Store)>;
 
 // The positions an owner can hold where its type fixes them, its width or its capacity, else dynamic_extent.
 template<class Bits, storage Store>
@@ -866,45 +869,8 @@ public:
                 return last;
         }
 
-        // The non-member beside it: ranges::swap finds this and never the member.
-        friend constexpr auto swap(set_adaptor& x, set_adaptor& y) noexcept(noexcept(x.swap(y)))
-                -> void
-                requires is_owner
-        {
-                x.swap(y);
-        }
-
-        // The storage's own swap through the customization point, std::bitset having no member to call.
-        constexpr auto swap(set_adaptor& other) noexcept(std::is_nothrow_swappable_v<Bits>)
-                -> void
-                requires is_owner and std::swappable<Bits>
-        {
-                std::ranges::swap(this->m_bits, other.m_bits);
-        }
-
-        // Asking the storage, as the other two adaptors do: a set over an allocating storage has one to show.
-        [[nodiscard]] constexpr auto get_allocator() const noexcept
-                requires is_owner and requires (Bits const& b) { b.get_allocator(); }
-        {
-                return m_bits.get_allocator();
-        }
-
-        // flat_set's door onto its representation, at a run-time width: the blocks come in and go out whole.
+        // The blocks a from_blocks constructor takes, and what an owner's replace and extract trade in.
         using block_container_type = Bits::block_container_type;
-
-        constexpr auto replace(block_container_type&& blocks) noexcept(noexcept(m_bits.replace(std::move(blocks))))
-                -> void
-                requires is_owner and requires (Bits& b, block_container_type&& c) { b.replace(std::move(c)); }
-        {
-                m_bits.replace(std::move(blocks));
-        }
-
-        [[nodiscard]] constexpr auto extract() && noexcept(noexcept(std::move(m_bits).extract()))
-                -> block_container_type
-                requires is_owner and requires (Bits&& b) { std::move(b).extract(); }
-        {
-                return std::move(m_bits).extract();
-        }
 
         constexpr auto clear(this auto&& self) noexcept
                 -> void
