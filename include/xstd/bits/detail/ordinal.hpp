@@ -33,12 +33,16 @@ template<ordinal_key Key>
 template<ordinal_key Key>
 using ordinal_t = decltype(detail::ordinal(Key()));
 
+// A key's ordinal made unsigned, where key arithmetic wraps rather than overflows and where a key's bits are a block.
+template<ordinal_key Key>
+using unsigned_ordinal_t = xstd::make_unsigned_t<ordinal_t<Key>>;
+
 // Unsigned, so the distance from the most negative key is exact rather than an overflow.
 template<ordinal_key Key>
 [[nodiscard]] constexpr auto key_distance(Key from, Key to) noexcept
         -> std::size_t
 {
-        using unsigned_type = xstd::make_unsigned_t<ordinal_t<Key>>;
+        using unsigned_type = unsigned_ordinal_t<Key>;
         return static_cast<std::size_t>(static_cast<unsigned_type>(static_cast<unsigned_type>(detail::ordinal(to)) - static_cast<unsigned_type>(detail::ordinal(from))));
 }
 

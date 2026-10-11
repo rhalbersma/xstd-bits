@@ -6,9 +6,8 @@
 #ifndef XSTD_BITS_BIT_KEY_MAPPING_HPP
 #define XSTD_BITS_BIT_KEY_MAPPING_HPP
 
-#include <xstd/bits/detail/ordinal.hpp>            // are_consecutive, key_distance, ordinal, ordinal_key, ordinal_t
+#include <xstd/bits/detail/ordinal.hpp>            // are_consecutive, key_distance, ordinal, ordinal_key, ordinal_t, unsigned_ordinal_t
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
-#include <xstd/ints/type_traits/make_unsigned.hpp> // make_unsigned_t
 #include <algorithm>                               // ranges::adjacent_find, ranges::lower_bound
 #include <concepts>                                // same_as
 #include <cstddef>                                 // size_t
@@ -50,7 +49,7 @@ struct bit_range_mapping
         [[nodiscard]] static constexpr auto from_index(std::size_t index) noexcept
                 -> Key
         {
-                using unsigned_type = xstd::make_unsigned_t<bits::detail::ordinal_t<Key>>;
+                using unsigned_type = bits::detail::unsigned_ordinal_t<Key>;
                 return static_cast<Key>(static_cast<unsigned_type>(static_cast<unsigned_type>(bits::detail::ordinal(First)) + static_cast<unsigned_type>(index)));
         }
 };
