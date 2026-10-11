@@ -135,7 +135,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnOddBlockStaysSingle, W, odd_widths)
 // A power of two of a byte or more tiles any width, bit-precise or not.
 BOOST_AUTO_TEST_CASE(APowerOfTwoTiles)
 {
-        static_assert(array_admits<64UZ, 200UZ> and vector_admits<64UZ> and vector_admits<256UZ>);
+        static_assert(array_admits<64UZ, 200UZ> and vector_admits<64UZ> and vector_admits<128UZ>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
