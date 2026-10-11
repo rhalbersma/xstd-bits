@@ -15,7 +15,6 @@
 #include <xstd/bits/detail/comparisons.hpp>                  // three_way
 #include <xstd/bits/detail/functor.hpp>                      // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
-#include <xstd/bits/detail/intrin.hpp>                       // countr_zero
 #include <xstd/bits/detail/owner_members.hpp>                // owner_members
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl, shr
