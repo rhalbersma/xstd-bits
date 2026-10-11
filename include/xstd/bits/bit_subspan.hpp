@@ -9,7 +9,8 @@
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>           // bit_blocks
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
 #include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container, bit_block_container_type
-#include <xstd/bits/detail/blocks.hpp>                     // blocks_of_t, blocks_width_v, view_storage_t
+#include <xstd/bits/detail/blocks.hpp>                     // blocks_of_t, blocks_width_v
+#include <xstd/bits/detail/borrowed_bits.hpp>              // view_storage_t
 #include <xstd/bits/detail/ownership.hpp>                  // owned_bits_t, owner_reading, sequence_reading_tag, storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>           // sequence_adaptor
 #include <xstd/bits/detail/views.hpp>                      // window_of
