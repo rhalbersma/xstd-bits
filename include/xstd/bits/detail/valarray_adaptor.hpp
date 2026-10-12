@@ -292,7 +292,8 @@ public:
                 -> void
                 requires (not is_fixed)
         {
-                m_bits.resize(Bits::check_addressable_width(n));
+                // The new elements are made with the value, then the old ones take it.
+                m_bits.resize(Bits::check_addressable_width(n), value);
                 m_bits.fill(value);
         }
 
@@ -315,24 +316,21 @@ public:
         constexpr auto operator&=(Derived const& other) noexcept
                 -> Derived&
         {
-                assert(size() == other.size());
-                m_bits &= other.m_bits;
+                m_bits.transform(other.m_bits, valarray::bit_and);
                 return self();
         }
 
         constexpr auto operator|=(Derived const& other) noexcept
                 -> Derived&
         {
-                assert(size() == other.size());
-                m_bits |= other.m_bits;
+                m_bits.transform(other.m_bits, valarray::bit_or);
                 return self();
         }
 
         constexpr auto operator^=(Derived const& other) noexcept
                 -> Derived&
         {
-                assert(size() == other.size());
-                m_bits ^= other.m_bits;
+                m_bits.transform(other.m_bits, valarray::bit_xor);
                 return self();
         }
 

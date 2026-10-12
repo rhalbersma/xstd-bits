@@ -80,11 +80,11 @@ template<class V>
         }
 }
 
-// Clear, full, alternating either way, and two scrambles, so every kernel sees each pair of bools at every size.
+// Clear, full, alternating either way, two scrambles, and the last bit alone either way, at every size.
 [[nodiscard]] inline auto patterns(std::size_t n)
         -> std::vector<model>
 {
-        auto result = std::vector<model>(6UZ, model(n));
+        auto result = std::vector<model>(8UZ, model(n));
         auto state  = std::uint64_t{0x9E37'79B9'7F4A'7C15};
         for (auto const i : std::views::iota(0UZ, n)) {
                 state ^= state << 13U;
@@ -95,6 +95,8 @@ template<class V>
                 result[3][i] = i % 2UZ == 1UZ;
                 result[4][i] = (state & 1U) != 0U;
                 result[5][i] = (state & 6U) == 6U;
+                result[6][i] = i + 1UZ == n;
+                result[7][i] = i + 1UZ != n;
         }
         return result;
 }
