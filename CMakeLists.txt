@@ -79,6 +79,7 @@ target_sources(
         include/xstd/bits/bit_algorithm/bit_count.hpp
         include/xstd/bits/bit_algorithm/bit_disjoint.hpp
         include/xstd/bits/bit_algorithm/bit_includes.hpp
+        include/xstd/bits/bit_algorithm/bit_intersects.hpp
         include/xstd/bits/bit_algorithm/bit_mismatch.hpp
         include/xstd/bits/bit_algorithm/bit_none_of.hpp
         include/xstd/bits/bit_algorithm/bit_reverse.hpp

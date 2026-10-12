@@ -12,6 +12,7 @@
 #include <xstd/bits/bit/bit_convert.hpp>               // bit_convert
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>    // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>    // bit_includes
+#include <xstd/bits/bit_algorithm/bit_intersects.hpp>  // bit_intersects
 #include <xstd/bits/bit_bounded_set.hpp>               // basic_bit_bounded_set
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp> // bit_mask_mapping
 #include <xstd/bits/bit_fixed_set.hpp>                 // basic_bit_fixed_set, bit_fixed_set
@@ -248,7 +249,7 @@ BOOST_AUTO_TEST_CASE(AViewIsShallow)
 
         Reader const r(c);
         BOOST_CHECK(r.contains(42UZ) and keys(r) == keys(v));
-        BOOST_CHECK(xstd::bit_includes(r, r) and not xstd::bit_disjoint(r, r));
+        BOOST_CHECK(xstd::bit_includes(r, r) and xstd::bit_intersects(r, r));
 }
 
 BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
@@ -307,7 +308,7 @@ BOOST_AUTO_TEST_CASE(TheSetPredicatesAgreeAcrossStorages)
         auto const y = S(b);
 
         BOOST_CHECK(xstd::bit_includes(y, x) and not xstd::bit_includes(x, y));
-        BOOST_CHECK(not xstd::bit_disjoint(x, y) and xstd::bit_disjoint(x, S(e)));
+        BOOST_CHECK(xstd::bit_intersects(x, y) and xstd::bit_disjoint(x, S(e)));
         BOOST_CHECK(x != y and x < y);
         BOOST_CHECK((x <=> y) == std::strong_ordering::less);
 
@@ -949,8 +950,8 @@ BOOST_AUTO_TEST_CASE(SubsetAndIntersectionAcrossWidthsCompareBlocks)
         BOOST_CHECK(xstd::bit_includes(narrow, wide_same));
 
         // Meeting in a shared block, and not meeting at all.
-        BOOST_CHECK(not xstd::bit_disjoint(narrow, wide));
-        BOOST_CHECK(not xstd::bit_disjoint(wide, narrow));
+        BOOST_CHECK(xstd::bit_intersects(narrow, wide));
+        BOOST_CHECK(xstd::bit_intersects(wide, narrow));
 
         auto const elsewhere = grown_to(300UZ, {7UZ, 280UZ});
         BOOST_CHECK(xstd::bit_disjoint(narrow, elsewhere));
@@ -1382,7 +1383,7 @@ BOOST_AUTO_TEST_CASE(DisjointIsNotIntersectsAndTheSupersetIsTheSubsetReadTheOthe
         auto const wide   = xstd::bit_set({1UZ, 100UZ});
         auto const narrow = xstd::bit_set({1UZ});
         auto const empty  = xstd::bit_set();
-        BOOST_CHECK(xstd::bit_includes(wide, narrow) and not xstd::bit_includes(narrow, wide) and not xstd::bit_disjoint(wide, narrow));
+        BOOST_CHECK(xstd::bit_includes(wide, narrow) and not xstd::bit_includes(narrow, wide) and xstd::bit_intersects(wide, narrow));
         BOOST_CHECK(xstd::bit_includes(narrow, empty) and not xstd::bit_includes(empty, narrow) and xstd::bit_disjoint(narrow, empty));
         BOOST_CHECK(xstd::bit_includes(empty, empty));
         static_assert(noexcept(xstd::bit_disjoint(wide, narrow)) and noexcept(xstd::bit_includes(wide, narrow)));

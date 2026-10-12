@@ -1136,8 +1136,8 @@ two values with neither as its subject, and the member spelling put one of them 
 not have -- the same asymmetry a member `operator<=>` would carry. Each is a template constrained on
 `bit_block_container_type`, in the storage's own namespace, so the adaptors reach it by ordinary lookup and a caller
 holding two storages by ADL. Both adaptors are constrained on the same concept, so every storage they adapt has
-these primitives, and `set_adaptor`'s `<=>` calls them with no fallback, as `xstd::bit_includes` and
-`xstd::bit_disjoint` call the storage's `is_subset_of` and `intersects`.
+these primitives, and `set_adaptor`'s `<=>` calls them with no fallback, as `xstd::bit_includes`,
+`xstd::bit_intersects` and `xstd::bit_disjoint` call the storage's `is_subset_of` and `intersects`.
 
 They left the storage because they are readings and it is not. What they are built from stays: `first_difference`,
 `any_above`, `any_block_set`, `padded_block`, `padded_first_difference`, `padded_any_above`, `block`, `test` and
@@ -1158,8 +1158,9 @@ so the question is free.
 
 **Which reading keeps a member is then decided by the counterpart, not by taste.** `std::set`
 has nothing of the kind, so `set_adaptor` keeps neither a member nor a friend, and a reading asks the question
-through the algorithm `xstd::bit_disjoint`, named for the empty `set_intersection` it predicts
+through the algorithm `xstd::bit_intersects`, named for the `set_intersection` it predicts
 ([algorithms-not-members](#algorithms-not-members)) — which is also the spelling the analogy above asks for.
+`xstd::bit_disjoint` asks the negation, so neither question is written with a `not`.
 
 Where a member and a friend both exist, **the friend forwards to the member and never the other way**, and that
 is a language rule rather than a preference. A member of the name ends unqualified lookup before ADL begins
@@ -1167,8 +1168,8 @@ is a language rule rather than a preference. A member of the name ends unqualifi
 finds the enclosing class's own member, fails to match it, and never reaches the storage's friend. No spelling
 recovers it, a hidden friend having no qualified name either, and the same wall stands between a member and its
 *own* class's friend. Both measured, not assumed. So the storage carries the pair `swap` already carries — a
-member that does the work and a hidden friend that forwards. `xstd::bit_disjoint`, a free function outside
-every class, calls the member.
+member that does the work and a hidden friend that forwards. `xstd::bit_intersects` and `xstd::bit_disjoint`, free
+functions outside every class, call the member.
 
 `is_subset_of` is the storage's member and has no friend, since `a ⊆ b` is not `b ⊆ a` and the member spelling
 states that correctly. A reading asks it through `xstd::bit_includes(b, a)`, in `std::ranges::includes`'s order of
@@ -1238,18 +1239,19 @@ what it may not do is answer differently.
 
 ### the-set-queries
 
-A set answers one question of a key, as a member, and two of another set, as algorithms, each named after what
+A set answers one question of a key, as a member, and three of another set, as algorithms, each named after what
 the standard library already spells:
 
 | query | true where | spelled | named after |
 | :--- | :--- | :--- | :--- |
 | `contains(k)` | `k` is an element | member | `std::set::contains`, the predicate form of `find` |
 | `xstd::bit_includes(x, y)` | every element of `y` is one of `x`'s | algorithm | `std::ranges::includes(x, y)` |
+| `xstd::bit_intersects(x, y)` | some element is in both | algorithm | `std::ranges::set_intersection`, its result nonempty |
 | `xstd::bit_disjoint(x, y)` | no element is in both | algorithm | `std::ranges::set_intersection`, its result empty |
 
 `contains` is total, as `std::set`'s is: a key past the width, and a value that is no key of the mapping at all, are
-no element. The two over sets are all-of and none-of, and every other relation between two sets is one of them, its
-operands swapped, or a `not`:
+no element. The three over sets are all-of, any-of and none-of, and every other relation between two sets is one of
+them, its operands swapped, or a conjunction of two:
 
 | relation | spelled |
 | :--- | :--- |
@@ -1257,22 +1259,23 @@ operands swapped, or a `not`:
 | `x ⊆ y`, subset | `xstd::bit_includes(y, x)` |
 | `x ⊋ y`, proper superset | `xstd::bit_includes(x, y) and not xstd::bit_includes(y, x)` |
 | `x ⊊ y`, proper subset | `xstd::bit_includes(y, x) and not xstd::bit_includes(x, y)` |
-| some element is in both | `not xstd::bit_disjoint(x, y)` |
+| some element is in both | `xstd::bit_intersects(x, y)` |
+| no element is in both | `xstd::bit_disjoint(x, y)` |
 
-Both are free functions because `std::ranges` spells each as one, an algorithm over two ranges rather than a member
-of either, and they take its order of arguments: `includes(x, y)` asks whether `y` lies within `x`. Each reads the
+All three are free functions because `std::ranges` spells each as one, an algorithm over two ranges rather than a
+member of either, and they take its order of arguments: `includes(x, y)` asks whether `y` lies within `x`. Each reads the
 blocks a step at a time, at any two run-time widths, and is `noexcept`. The second argument is
 `std::type_identity_t<S> const&`, outside deduction, so it converts to the first's type, and a flag set takes a mask
 there ([flag-types](#flag-types)). [P0125R0](https://wg21.link/p0125r0) proposes the four containments for
 `std::bitset` as members, and `boost::dynamic_bitset` has `is_subset_of`, `is_proper_subset_of` and `intersects`;
-here each relation has the one spelling above, built from the two algorithms `std::ranges` already names
+here each relation has the one spelling above, built from the algorithms `std::ranges` already names
 ([algorithms-not-members](#algorithms-not-members)).
 
 Other libraries spell the six differently, and a dash marks a question a library has no name for:
 
 | | subset | proper subset | superset | proper superset | overlap | no overlap |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| xstd-bits | `bit_includes(b, a)` | `bit_includes(b, a) and not bit_includes(a, b)` | `bit_includes(a, b)` | `bit_includes(a, b) and not bit_includes(b, a)` | `not bit_disjoint(a, b)` | `bit_disjoint(a, b)` |
+| xstd-bits | `bit_includes(b, a)` | `bit_includes(b, a) and not bit_includes(a, b)` | `bit_includes(a, b)` | `bit_includes(a, b) and not bit_includes(b, a)` | `bit_intersects(a, b)` | `bit_disjoint(a, b)` |
 | `boost::dynamic_bitset` | `a.is_subset_of(b)` | `a.is_proper_subset_of(b)` | — | — | `a.intersects(b)` | — |
 | `std::bitset` | — | — | — | — | — | — |
 | `std::ranges` | — | — | `includes(a, b)` | — | — | — |
@@ -1293,8 +1296,8 @@ bitflags 2.13.2's [`Flags`](https://docs.rs/bitflags/2.13.2/bitflags/trait.Flags
 Boost names the subset direction alone, and `std::ranges::includes` and bitflags' `contains` the superset direction
 alone, each with its operands swapped for the other. Here the superset direction is the one named, in
 `std::ranges::includes`'s order, and the subset is that call with its operands swapped. Boost and bitflags name only
-the positive overlap and Python, Rust and Swift only the negative one; this library names the negative one, the
-empty `set_intersection`, and the positive one is its `not`.
+the positive overlap and Python, Rust and Swift only the negative one; this library names both, a nonempty and an
+empty `set_intersection`, so neither is spelled as the other's `not`.
 
 ### degenerate-widths
 
@@ -2270,6 +2273,7 @@ is the specification, and the tests hold each algorithm to it; what the prefix a
 | `bit_reverse(r)` | `reverse(r)` | sequence | no |
 | `bit_rotate(r, middle)` | `rotate(r, middle)` | sequence | no |
 | `bit_includes(s1, s2)` | `includes(s1, s2)` | set | — |
+| `bit_intersects(s1, s2)` | `set_intersection(s1, s2, out)`, writing a key | set | — |
 | `bit_disjoint(s1, s2)` | `set_intersection(s1, s2, out)`, writing nothing | set | — |
 
 **Free, because the counterpart has no such member.** `std::vector<bool>` has no `count`, `std::array` no `rotate`
@@ -2293,9 +2297,9 @@ that read take a window too. `bit_mismatch` takes two operands of one type, and 
 at a time, at two run-time sizes as well, stopping at the shorter's end as `std::ranges::mismatch` does; two windows
 it compares a `bool` at a time through `std::ranges::mismatch` itself.
 
-**The second set converts.** `bit_includes` and `bit_disjoint` take `S const& s1, std::type_identity_t<S> const& s2`:
+**The second set converts.** `bit_includes`, `bit_intersects` and `bit_disjoint` take `S const& s1, std::type_identity_t<S> const& s2`:
 `S` deduces from the first argument alone, and the second converts to it. That puts a flag set's mask on the second
-side, `xstd::bit_includes(perms, fs::perms::owner_read)`, and never first ([flag-types](#flag-types)). Both answer
+side, `xstd::bit_includes(perms, fs::perms::owner_read)`, and never first ([flag-types](#flag-types)). All three answer
 at any two run-time widths ([width-is-capacity](#width-is-capacity)), and every other relation between two sets is
 spelled from them ([the-set-queries](#the-set-queries)).
 
@@ -2945,7 +2949,7 @@ refines `sized_bit_index_mapping` with `M::to_block`, which takes any value of `
 holding its bits at their positions, and `M::from_block`, which reads one back; `bit_flag_mapping` models it and no
 other mapping does. Under that concept alone, `basic_bit_fixed_set` declares the members a flag type has: the
 conversion from the mask and to it, the union of a braced list and the mixed operators; through the conversion,
-`xstd::bit_includes` and `xstd::bit_disjoint` take a mask as the other set. A set of positions or of listed enumerators has none of them, and a flag set
+`xstd::bit_includes`, `xstd::bit_intersects` and `xstd::bit_disjoint` take a mask as the other set. A set of positions or of listed enumerators has none of them, and a flag set
 over another block, `bit_fast<bit_flag_set<Mask>>` or `basic_bit_fixed_set<Mask, std::uint8_t, 16, bit_flag_mapping<Mask, 16>>`
 over two bytes, or in ascending order, has all of them.
 `examples/include/xstd/filesystem.hpp` is one line, `using perms = bit_flag_set<std::filesystem::perms, 16>;`,
@@ -3040,7 +3044,7 @@ taking the mask as it is, beside the adaptor's member set forms, which a mask ca
 **`contains(k)` is `std::set`'s membership of one flag.** A value of several bits, or of none, is no key, so it is no
 element either: `contains` answers `false`, `count` zero, `find` `end()` and `erase` zero, and over an enumeration the
 bounds place it by the mask's order. Writing one stays `bit_flag_mapping`'s precondition, there being no single position to write. All-of
-is `xstd::bit_includes(p, m)`, none-of `xstd::bit_disjoint(p, m)` and any-of its `not`: each takes its second argument
+is `xstd::bit_includes(p, m)`, any-of `xstd::bit_intersects(p, m)` and none-of `xstd::bit_disjoint(p, m)`: each takes its second argument
 as `std::type_identity_t` of the first's type, outside deduction, so a mask converts there and the flag type declares
 nothing of its own for them ([algorithms-not-members](#algorithms-not-members)). A mask never stands first, so
 `m ⊇ p` is `xstd::bit_includes(xfs::perms(m), p)`, the conversion written out. There is no `operator[]` and no
@@ -3515,7 +3519,7 @@ adaptor can default `==` there and nowhere else.
 
 The **storage** answers at any two widths, and the adaptor calls it or the comparisons built on it. `set_equal`,
 `set_three_way`, `is_subset_of` and `intersects` each carry their own width-crossing arm, so the read operations
-in `set_adaptor`, and `xstd::bit_includes` and `xstd::bit_disjoint` over it, are calls with no `same_width` test
+in `set_adaptor`, and `xstd::bit_includes`, `xstd::bit_intersects` and `xstd::bit_disjoint` over it, are calls with no `same_width` test
 between them -- only the four compound
 operators still ask, because they mutate. The logic belongs where the blocks and the invariant are, and putting
 it there is also what keeps the adaptors alike, where `sequence_adaptor` had nothing at all. At two run-time widths that differ, `==`,
@@ -5488,7 +5492,7 @@ The interface for the class template `xstd::bit_fixed_set<N>` is the coherent un
 
 1. An almost **drop-in** implementation of the full interface of `std::set<int>`.
 2. An almost complete **translation** of the [`std::bitset<N>`](http://en.cppreference.com/w/cpp/utility/bitset) member functions to the [`std::set<int>`](http://en.cppreference.com/w/cpp/container/set) naming convention.
-3. The single-pass and short-circuiting **set predicates** from [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/1_80_0/libs/dynamic_bitset/dynamic_bitset.html), as the free algorithms `xstd::bit_includes` and `xstd::bit_disjoint`.
+3. The single-pass and short-circuiting **set predicates** from [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/1_80_0/libs/dynamic_bitset/dynamic_bitset.html), as the free algorithms `xstd::bit_includes`, `xstd::bit_intersects` and `xstd::bit_disjoint`.
 4. The bitwise operators from [`std::bitset<N>`](http://en.cppreference.com/w/cpp/utility/bitset) and [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/1_80_0/libs/dynamic_bitset/dynamic_bitset.html) reimagined as composable and data-parallel **set algorithms**.
 
 The **full** interface of `xstd::bit_fixed_set` is `constexpr`.
@@ -5549,13 +5553,13 @@ Formatting a set needs nothing beyond the standard library: `std::format` and `s
 
 ### 3 Set predicates from `boost::dynamic_bitset`
 
-The set predicates `is_subset_of`, `is_proper_subset_of` and `intersects` from `boost::dynamic_bitset` have **identical semantics** in `xstd::bit_fixed_set`, spelled through the free algorithms `xstd::bit_includes` and `xstd::bit_disjoint`, named after `std::ranges::includes` and the empty `std::ranges::set_intersection` and taking their arguments in that order. Note that these set predicates are not present in `std::bitset`. Efficient emulation of these set predicates for `std::bitset` is not possible using **single-pass** and **short-circuiting** semantics.
+The set predicates `is_subset_of`, `is_proper_subset_of` and `intersects` from `boost::dynamic_bitset` have **identical semantics** in `xstd::bit_fixed_set`, spelled through the free algorithms `xstd::bit_includes` and `xstd::bit_intersects`, named after `std::ranges::includes` and a nonempty `std::ranges::set_intersection` and taking their arguments in that order. Note that these set predicates are not present in `std::bitset`. Efficient emulation of these set predicates for `std::bitset` is not possible using **single-pass** and **short-circuiting** semantics.
 
 | `xstd::bit_fixed_set<N>`                                    | `boost::dynamic_bitset<>`  | `std::bitset<N>`             |
 | :-----------------------                                    | :------------------------  | :---------------             |
 | `xstd::bit_includes(b, a)`                                  | `a.is_subset_of(b)`        | `(a & ~b).none()`            |
 | `xstd::bit_includes(b, a) and not xstd::bit_includes(a, b)` | `a.is_proper_subset_of(b)` | `(a & ~b).none() and a != b` |
-| `not xstd::bit_disjoint(a, b)`                              | `a.intersects(b)`          | `(a & b).any()`              |
+| `xstd::bit_intersects(a, b)`                                | `a.intersects(b)`          | `(a & b).any()`              |
 
 ### 4 The bitwise operators from `std::bitset` and `boost::dynamic_bitset` reimagined as set algorithms
 

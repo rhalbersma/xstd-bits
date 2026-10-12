@@ -16,7 +16,8 @@
 #include <xstd/bits/bit_algorithm/bit_rotate.hpp>   // IWYU pragma: export; bit_rotate
 
 // The set reading's, over keys.
-#include <xstd/bits/bit_algorithm/bit_includes.hpp> // IWYU pragma: export; bit_includes
-#include <xstd/bits/bit_algorithm/bit_disjoint.hpp> // IWYU pragma: export; bit_disjoint
+#include <xstd/bits/bit_algorithm/bit_includes.hpp>   // IWYU pragma: export; bit_includes
+#include <xstd/bits/bit_algorithm/bit_intersects.hpp> // IWYU pragma: export; bit_intersects
+#include <xstd/bits/bit_algorithm/bit_disjoint.hpp>   // IWYU pragma: export; bit_disjoint
 
 #endif // XSTD_BITS_BIT_ALGORITHM_HPP

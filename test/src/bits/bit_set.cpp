@@ -3,36 +3,37 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>                     // all_block_types
-#include <test/set/ascending.hpp>                   // yields_ascending_keys
-#include <test/set/strong_index.hpp>                // agrees_with_std_set_of_strong_indices, strong_index
-#include <xstd/bits/bit_algorithm/bit_disjoint.hpp> // bit_disjoint
-#include <xstd/bits/bit_algorithm/bit_includes.hpp> // bit_includes
-#include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
-#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping, bit_range_mapping
-#include <xstd/bits/bit_set.hpp>                    // bit_set
-#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/ownership.hpp>           // storage
-#include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                                // equal, ranges::equal
-#include <array>                                    // array
-#include <bitset>                                   // bitset
-#include <compare>                                  // is_eq
-#include <concepts>                                 // same_as
-#include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint8_t
-#include <format>                                   // format
-#include <functional>                               // greater, hash, less
-#include <initializer_list>                         // initializer_list
-#include <iterator>                                 // iter_value_t
-#include <memory>                                   // allocator
-#include <ranges>                                   // equal, iota, reverse, to
-#include <set>                                      // set
-#include <type_traits>                              // is_constructible_v
-#include <utility>                                  // move
-#include <vector>                                   // vector
+#include <test/block_types.hpp>                       // all_block_types
+#include <test/set/ascending.hpp>                     // yields_ascending_keys
+#include <test/set/strong_index.hpp>                  // agrees_with_std_set_of_strong_indices, strong_index
+#include <xstd/bits/bit_algorithm/bit_disjoint.hpp>   // bit_disjoint
+#include <xstd/bits/bit_algorithm/bit_includes.hpp>   // bit_includes
+#include <xstd/bits/bit_algorithm/bit_intersects.hpp> // bit_intersects
+#include <xstd/bits/bit_fixed_set.hpp>                // basic_bit_fixed_set
+#include <xstd/bits/bit_key_mapping.hpp>              // bit_key_mapping, bit_range_mapping
+#include <xstd/bits/bit_set.hpp>                      // bit_set
+#include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
+#include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container
+#include <xstd/bits/detail/ownership.hpp>             // storage
+#include <xstd/bits/detail/set_adaptor.hpp>           // set_adaptor
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                                  // equal, ranges::equal
+#include <array>                                      // array
+#include <bitset>                                     // bitset
+#include <compare>                                    // is_eq
+#include <concepts>                                   // same_as
+#include <cstddef>                                    // size_t
+#include <cstdint>                                    // uint8_t
+#include <format>                                     // format
+#include <functional>                                 // greater, hash, less
+#include <initializer_list>                           // initializer_list
+#include <iterator>                                   // iter_value_t
+#include <memory>                                     // allocator
+#include <ranges>                                     // equal, iota, reverse, to
+#include <set>                                        // set
+#include <type_traits>                                // is_constructible_v
+#include <utility>                                    // move
+#include <vector>                                     // vector
 
 BOOST_AUTO_TEST_SUITE(BitSet)
 
@@ -116,7 +117,7 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltAndOrderedLikeAStdSet)
         t.insert(1);
         BOOST_CHECK(t < s);
         BOOST_CHECK(xstd::bit_includes(t, s));
-        BOOST_CHECK(not xstd::bit_disjoint(t, s));
+        BOOST_CHECK(xstd::bit_intersects(t, s));
 
         // The view over it refers into the owner's std::vector of blocks, as over every owner.
         auto const v = xstd::bit_set_view(t);
@@ -137,7 +138,7 @@ BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
         BOOST_CHECK_EQUAL(digest(narrow), digest(wide));
         BOOST_CHECK(digest(narrow) != digest(T({1})));
         BOOST_CHECK(xstd::bit_includes(wide, narrow) and xstd::bit_includes(narrow, wide));
-        BOOST_CHECK(not xstd::bit_disjoint(narrow, wide));
+        BOOST_CHECK(xstd::bit_intersects(narrow, wide));
 }
 
 // The compound operators and predicates at two differing widths, against the answers over the elements.
@@ -155,7 +156,7 @@ BOOST_AUTO_TEST_CASE(TheSetOperationsIgnoreTheWidth)
         BOOST_CHECK((b - a) == T({5}));
         BOOST_CHECK(a < b);
         BOOST_CHECK(xstd::bit_includes(a | b, b) and not xstd::bit_includes(b, a | b));
-        BOOST_CHECK(not xstd::bit_disjoint(a | b, b));
+        BOOST_CHECK(xstd::bit_intersects(a | b, b));
         BOOST_CHECK(not xstd::bit_includes(a, b) and not xstd::bit_includes(b, a));
         auto const both = a | b;
         BOOST_CHECK(xstd::bit_includes(both, b) and xstd::bit_includes(both, a) and not xstd::bit_includes(b, both));
