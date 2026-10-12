@@ -74,6 +74,7 @@ target_sources(
         include/xstd/bits/detail/valarray_adaptor.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_algorithm.hpp
+        include/xstd/bits/bit_algorithm/detail/block_includes.hpp
         include/xstd/bits/bit_algorithm/bit_all_of.hpp
         include/xstd/bits/bit_algorithm/bit_any_of.hpp
         include/xstd/bits/bit_algorithm/bit_count.hpp
@@ -127,6 +128,7 @@ target_sources(
         include/xstd/bits/detail/allocator_base_type.hpp
         include/xstd/bits/detail/bounded_blocks.hpp
         include/xstd/bits/detail/bit_block_container.hpp
+        include/xstd/bits/detail/block_intersects.hpp
         include/xstd/bits/detail/comparisons.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp
         include/xstd/bits/detail/functor.hpp
@@ -141,7 +143,6 @@ target_sources(
         include/xstd/bits/ext/boost/bit_small_vector.hpp
         include/xstd/bits/ext/boost/dynamic_bitset.hpp
         include/xstd/bits/ext/boost/detail/dynamic_bitset.hpp
-        include/xstd/bits/detail/pred.hpp
         include/xstd/bits/detail/bit_layout.hpp
         include/xstd/bits/detail/bit_convertible.hpp
         include/xstd/bits/detail/bit_blocks_capacity.hpp

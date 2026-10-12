@@ -70,8 +70,16 @@ BOOST_AUTO_TEST_CASE(AgreesWithTheModelOnStdSet)
 {
         BOOST_CHECK_EQUAL(disagreements<xstd::bit_fixed_set<6>>(6UZ), 0);
         BOOST_CHECK_EQUAL((disagreements<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 10>>(6UZ)), 0);
+        BOOST_CHECK_EQUAL((disagreements<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 20>>(6UZ)), 0);
         BOOST_CHECK_EQUAL((disagreements<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 6, xstd::bit_key_mapping<std::size_t>, std::greater<>>>(6UZ)), 0);
         BOOST_CHECK_EQUAL(disagreements<xstd::bit_set>(6UZ), 0);
+}
+
+// Width zero holds no key, so no key meets another.
+BOOST_AUTO_TEST_CASE(WidthZero)
+{
+        auto const none = xstd::bit_fixed_set<0>();
+        BOOST_CHECK(not xstd::bit_intersects(none, none));
 }
 
 // Run-time widths that differ: the shorter's missing blocks hold no key.

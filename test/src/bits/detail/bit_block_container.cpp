@@ -174,21 +174,11 @@ public:
         auto relational()
                 -> void
         {
-                auto subset  = true;
                 auto differs = false;
-                auto meets   = false;
                 for (auto const i : std::views::iota(0UZ, m_n)) {
-                        subset  = subset and (not m_mx[i] or m_my[i]);
                         differs = differs or (m_mx[i] != m_my[i]);
-                        meets   = meets or (m_mx[i] and m_my[i]);
                 }
-                disagree(m_x.is_subset_of(m_y), subset);
                 disagree(set_equal(m_x, m_y), not differs);
-                disagree(m_x.intersects(m_y), meets);
-
-                // The hidden friend answers the member, and both operand orders alike: a meets b when b meets a.
-                disagree(intersects(m_x, m_y), meets);
-                disagree(intersects(m_y, m_x), meets);
         }
 
         // On packed bits the set and pointwise sequence operations are one instruction, so one model answers both.

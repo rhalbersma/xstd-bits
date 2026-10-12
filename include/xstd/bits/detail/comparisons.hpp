@@ -7,9 +7,9 @@
 #define XSTD_BITS_DETAIL_COMPARISONS_HPP
 
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container_type
+#include <xstd/bits/detail/block_intersects.hpp>    // block_intersects
 #include <xstd/bits/detail/intrin.hpp>              // countr_zero
 #include <xstd/bits/detail/ownership.hpp>           // sequence_reading_tag, set_reading_tag
-#include <xstd/bits/detail/pred.hpp>                // intersects
 #include <xstd/bits/detail/shift.hpp>               // shl
 #include <algorithm>                                // equal, max, min
 #include <compare>                                  // strong_ordering
@@ -92,7 +92,7 @@ template<class Reading, bit_block_container_type Bits>
         }
         auto const diff   = static_cast<block_type>(x.padded_block(index) ^ y.padded_block(index));
         auto const offset = static_cast<std::size_t>(bits::detail::countr_zero(diff));
-        return at_first_difference<Reading>(bits::detail::intersects(x.padded_block(index), shl(block_type{1}, offset)), x, y, [&](Bits const& b) -> bool { return b.padded_any_above(index, offset); });
+        return at_first_difference<Reading>(bits::detail::block_intersects(x.padded_block(index), shl(block_type{1}, offset)), x, y, [&](Bits const& b) -> bool { return b.padded_any_above(index, offset); });
 }
 
 // lexicographical_compare_three_way over a set's ascending keys or a sequence's bools, a block at a time.
@@ -120,7 +120,7 @@ template<class Reading, bit_block_container_type Bits>
                 }
                 auto const offset = bits::detail::countr_zero(diff);
                 // Copied, not captured: Clang 18 cannot read a captured structured binding in a constant expression.
-                return at_first_difference<Reading>(bits::detail::intersects(x[index], shl(block_type{1}, offset)), x, y, [block = index, offset](Bits const& b) -> bool { return b.any_above(block, offset); });
+                return at_first_difference<Reading>(bits::detail::block_intersects(x[index], shl(block_type{1}, offset)), x, y, [block = index, offset](Bits const& b) -> bool { return b.any_above(block, offset); });
         }
 }
 
