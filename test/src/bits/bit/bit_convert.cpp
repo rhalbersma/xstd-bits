@@ -23,6 +23,7 @@
 #include <xstd/bits/from_blocks.hpp>                     // from_blocks
 #include <xstd/ints/memory.hpp>                          // align_up
 #include <test/for_each_type.hpp>                        // for_each_type
+#include <test/whole_blocks.hpp>                         // block_bits, whole_blocks
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <array>                                         // array
 #include <bitset>                                        // bitset
@@ -281,11 +282,11 @@ BOOST_AUTO_TEST_CASE(EveryPositionCrossesBetweenReadingsColumnsAndBlockWidths)
         });
 }
 
-// A set's universe is its whole blocks: three positions over three 64-bit blocks are a sequence of 192.
+// A set's universe is its whole blocks: positions up to 129 are a sequence of three 64-bit blocks, or five 32-bit ones.
 BOOST_AUTO_TEST_CASE(ASetSourceGivesASequenceItsWholeBlocks)
 {
         auto const v = xstd::bit_convert<xstd::bit_vector>(xstd::bit_set{3, 64, 129});
-        BOOST_CHECK_EQUAL(v.size(), 192UZ);
+        BOOST_CHECK_EQUAL(v.size(), test::whole_blocks(130UZ));
         BOOST_CHECK(positions(v) == (std::vector<std::size_t>{3, 64, 129}));
 
         // Never past what the set can hold: a fixed or bounded set of 100 is a sequence of 100.
@@ -293,12 +294,12 @@ BOOST_AUTO_TEST_CASE(ASetSourceGivesASequenceItsWholeBlocks)
         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_bounded_set<100>{99}).size(), 100UZ);
 }
 
-// A set target covers the source's width in whole blocks of its own, so a sequence of 70 comes back as 72 or 128.
+// A set target covers the source's width in whole blocks of its own: 70 bits come back as 72, or whole size_t blocks.
 BOOST_AUTO_TEST_CASE(ASetTargetTakesWholeBlocksOfItsOwn)
 {
         auto const v = make<xstd::bit_vector>(70, {0, 69});
         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::uint8_t>>(v)).size(), 72UZ);
-        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::bit_set>(v)).size(), 128UZ);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::bit_set>(v)).size(), test::whole_blocks(70UZ));
 }
 
 // A whole view of a run-time width converts as the owner it views: a sequence at its size, a set at its whole blocks.
@@ -349,17 +350,18 @@ BOOST_AUTO_TEST_CASE(AnRvalueOfTheSameBlocksIsAdoptedWithoutACopy)
         auto blocks            = std::vector<std::size_t>{0b101, 0, 1};
         auto const* const data = blocks.data();
         auto v                 = xstd::bit_vector(xstd::from_blocks, std::move(blocks));
-        v.resize(130);
+        // Two blocks and two bits, inside the three adopted, so nothing reallocates.
+        v.resize((2UZ * test::block_bits) + 2UZ);
 
         auto s             = xstd::bit_convert<xstd::bit_set>(std::move(v));
         auto const emptied = v.empty(); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
         BOOST_CHECK(emptied);
-        BOOST_CHECK(positions(s) == (std::vector<std::size_t>{0, 2, 128}));
+        BOOST_CHECK(positions(s) == (std::vector<std::size_t>{0, 2, 2UZ * test::block_bits}));
 
         // Adopted whole, a sequence target still takes the source's width: the set's whole blocks.
         auto back = xstd::bit_convert<xstd::bit_vector>(std::move(s));
         BOOST_CHECK(s.empty()); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
-        BOOST_CHECK_EQUAL(back.size(), 192UZ);
+        BOOST_CHECK_EQUAL(back.size(), 3UZ * test::block_bits);
         BOOST_CHECK(std::move(back).extract().data() == data);
 
         // A sequence to a sequence keeps its width exactly.

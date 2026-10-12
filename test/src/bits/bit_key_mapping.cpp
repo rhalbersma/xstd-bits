@@ -8,11 +8,14 @@
 #include <test/set/lookup.hpp>                                // lookup_mismatches
 #include <test/set/order_isomorphism.hpp>                     // is_order_isomorphism, is_order_isomorphism_onto
 #include <test/set/strong_index.hpp>                          // offset_mapping, strong_index
+#include <test/uint128.hpp>                                   // TEST_HAS_UINT128
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>       // bit_index_mapping
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
 #include <xstd/bits/bit_fixed_set.hpp>                        // basic_bit_fixed_set
 #include <xstd/bits/bit_key_mapping.hpp>                      // bit_find_mapping, bit_key_mapping, bit_range_mapping, enum_traits
 #include <xstd/bits/detail/set_adaptor.hpp>                   // admits_width
+#include <xstd/ints/cstdint.hpp>                              // int128
+#include <xstd/ints/limits.hpp>                               // numeric_limits
 #include <boost/test/unit_test.hpp>                           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                          // min, ranges::find
 #include <array>                                              // array
@@ -195,6 +198,20 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ARangeHoldsTheNKeysFromFirstAndNoOther, Key, range
         BOOST_CHECK_EQUAL((is_key_mismatches<from_middle, Key>(Key(middle - 20), Key(middle + 120), middle, Key(middle + 99))), 0UZ);
         BOOST_CHECK(not from_lowest::is_key(std::numeric_limits<Key>::max()));
         BOOST_CHECK(not from_middle::is_key(lowest) and not from_middle::is_key(std::numeric_limits<Key>::max()));
+}
+
+// A key wider than std::size_t whose distance from First exceeds it stays outside rather than wrapping in.
+BOOST_AUTO_TEST_CASE(AFarKeyWiderThanThePositionStaysOutside)
+{
+        using wide = xstd::bit_range_mapping<std::int64_t, std::int64_t{-50}, 100UZ>;
+        BOOST_CHECK(not wide::is_key(std::numeric_limits<std::int64_t>::min()));
+        BOOST_CHECK(wide::is_key(std::int64_t{49}));
+#ifdef TEST_HAS_UINT128
+        using wider = xstd::bit_range_mapping<xstd::int128, xstd::int128{-50}, 100UZ>;
+        BOOST_CHECK(not wider::is_key(xstd::numeric_limits<xstd::int128>::min()));
+        BOOST_CHECK(not wider::is_key(static_cast<xstd::int128>(xstd::int128{-50} + (xstd::int128{1} << 64U))));
+        BOOST_CHECK(wider::is_key(xstd::int128{49}));
+#endif
 }
 
 // A range over the whole of a type holds every value, the most negative and the most positive alike.

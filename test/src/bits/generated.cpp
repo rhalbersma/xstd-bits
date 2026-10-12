@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/whole_blocks.hpp>    // block_bits
 #include <xstd/bits.hpp>            // bit_array, bit_set, bit_fixed_set, bit_vector, and the bounded column
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <compare>                  // three_way_comparable
@@ -309,7 +310,7 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthHandsItsBlocksOutAndTakesThemBack)
         // Every position of the blocks is one: the sequence is two whole blocks wide.
         auto v = xstd::bit_vector();
         v.replace(std::vector<std::size_t>{1UZ, 0UZ});
-        BOOST_CHECK_EQUAL(v.size(), 128UZ);
+        BOOST_CHECK_EQUAL(v.size(), 2UZ * test::block_bits);
         BOOST_CHECK(v[0] and not v[1]);
 
         // A static width has nothing to hand over, and a view does not own what it would hand.

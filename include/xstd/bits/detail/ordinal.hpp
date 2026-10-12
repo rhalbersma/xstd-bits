@@ -7,9 +7,11 @@
 #define XSTD_BITS_DETAIL_ORDINAL_HPP
 
 #include <xstd/ints/concepts/integer.hpp>          // integer
+#include <xstd/ints/limits/numeric_limits.hpp>     // numeric_limits
 #include <xstd/ints/type_traits/make_unsigned.hpp> // make_unsigned_t
 #include <algorithm>                               // ranges::all_of
 #include <cstddef>                                 // size_t
+#include <limits>                                  // numeric_limits
 #include <ranges>                                  // begin, iota, range_difference_t, range_value_t, size
 #include <type_traits>                             // is_enum_v
 #include <utility>                                 // to_underlying
@@ -37,13 +39,20 @@ using ordinal_t = decltype(detail::ordinal(Key()));
 template<ordinal_key Key>
 using unsigned_ordinal_t = xstd::make_unsigned_t<ordinal_t<Key>>;
 
-// Unsigned, so the distance from the most negative key is exact rather than an overflow.
+// Unsigned, so the distance from the most negative key is exact; past std::size_t it saturates rather than wraps.
 template<ordinal_key Key>
 [[nodiscard]] constexpr auto key_distance(Key from, Key to) noexcept
         -> std::size_t
 {
         using unsigned_type = unsigned_ordinal_t<Key>;
-        return static_cast<std::size_t>(static_cast<unsigned_type>(static_cast<unsigned_type>(detail::ordinal(to)) - static_cast<unsigned_type>(detail::ordinal(from))));
+        auto const distance = static_cast<unsigned_type>(static_cast<unsigned_type>(detail::ordinal(to)) - static_cast<unsigned_type>(detail::ordinal(from)));
+        if constexpr (xstd::numeric_limits<unsigned_type>::digits > std::numeric_limits<std::size_t>::digits) {
+                constexpr auto widest = std::numeric_limits<std::size_t>::max();
+                if (distance > static_cast<unsigned_type>(widest)) {
+                        return widest;
+                }
+        }
+        return static_cast<std::size_t>(distance);
 }
 
 // Each key one above the one before, so a key's rank is its distance from the first.

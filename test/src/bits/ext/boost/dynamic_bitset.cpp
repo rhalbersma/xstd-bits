@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/whole_blocks.hpp>                         // whole_blocks
 #include <xstd/bits/bit_array.hpp>                       // bit_array
 #include <xstd/bits/bit_bounded_set.hpp>                 // basic_bit_bounded_set, bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>              // bit_bounded_vector
@@ -68,7 +69,7 @@ BOOST_AUTO_TEST_CASE(ADynamicBitsetConvertsInKeepingItsSizeAndPositions)
 
         // A set target takes whole blocks of its own, and a wider source block lands on narrower ones.
         auto const wide = make<std::uint64_t>(70, {0, 69});
-        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::bit_set>(wide)).size(), 128UZ);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::bit_set>(wide)).size(), test::whole_blocks(70UZ));
         BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(wide)) == (std::vector<std::size_t>{0, 69}));
 
         // An empty one is an empty sequence.
@@ -91,7 +92,7 @@ BOOST_AUTO_TEST_CASE(AnOwnerConvertsOutKeepingItsWidthAndPositions)
         auto const octets = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(make<std::uint8_t>(13, {12}));
         BOOST_CHECK(positions(xstd::bit_convert<boost::dynamic_bitset<std::uint64_t>>(octets)) == (std::vector<std::size_t>{12}));
 
-        BOOST_CHECK_EQUAL(xstd::bit_convert<boost::dynamic_bitset<>>(xstd::bit_set{3, 64, 129}).size(), 192UZ);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<boost::dynamic_bitset<>>(xstd::bit_set{3, 64, 129}).size(), test::whole_blocks(130UZ));
         BOOST_CHECK(xstd::bit_convert<boost::dynamic_bitset<>>(xstd::bit_vector()).empty());
         BOOST_CHECK(positions(xstd::bit_convert<boost::dynamic_bitset<std::uint16_t>>(std::bitset<70>(0b101))) == (std::vector<std::size_t>{0, 2}));
 
