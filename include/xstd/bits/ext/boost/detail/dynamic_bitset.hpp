@@ -6,8 +6,8 @@
 #ifndef XSTD_BITS_EXT_BOOST_DETAIL_DYNAMIC_BITSET_HPP
 #define XSTD_BITS_EXT_BOOST_DETAIL_DYNAMIC_BITSET_HPP
 
-#include <xstd/bits/detail/bit_convertible.hpp>    // bit_convert_source, bit_source, bit_target, value_bytes
-#include <xstd/bits/detail/bit_layout.hpp>         // block_byte, bytes_per_block, or_block_byte
+#include <xstd/bits/detail/bit_convertible.hpp>    // bit_convert_source, bit_source, bit_target
+#include <xstd/bits/detail/bit_layout.hpp>         // block_byte, bytes_per_block, or_block_byte, value_bytes
 #include <boost/dynamic_bitset/dynamic_bitset.hpp> // dynamic_bitset, from_block_range, to_block_range
 #include <algorithm>                               // max, min
 #include <concepts>                                // same_as

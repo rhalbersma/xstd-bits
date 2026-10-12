@@ -6,27 +6,29 @@
 #include <test/array_storage.hpp>                     // array_storage
 #include <test/block_types.hpp>                       // block_types, digits_v, graded_extents
 #include <test/uint128.hpp>                           // IWYU pragma: keep; TEST_HAS_UINT128, uint128
-#include <xstd/bits/detail/owned_bit_blocks.hpp>      // owned_bit_blocks
 #include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container
 #include <xstd/bits/detail/bounded_blocks.hpp>        // bounded_blocks
-#include <xstd/bits/detail/comparisons.hpp>           // sequence_three_way, set_equal, set_three_way
+#include <xstd/bits/detail/comparisons.hpp>           // set_equal, three_way
+#include <xstd/bits/detail/owned_bit_blocks.hpp>      // owned_bit_blocks
+#include <xstd/bits/detail/ownership.hpp>             // sequence_reading_tag, set_reading_tag
 #include <xstd/bits/detail/range_const_reference.hpp> // fallback::range_const_reference_t, range_const_reference_t
 #include <xstd/bits/from_blocks.hpp>                  // from_blocks
 #include <xstd/ints/memory.hpp>                       // align_up
 #include <boost/test/unit_test.hpp>                   // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <algorithm>                                  // count, lexicographical_compare_three_way, min, reverse
+#include <algorithm>                                  // all_of, any_of, count, lexicographical_compare_three_way, min, reverse
 #include <array>                                      // array
 #include <bitset>                                     // bitset
 #include <compare>                                    // strong_ordering
 #include <concepts>                                   // same_as
 #include <cstddef>                                    // ptrdiff_t, size_t
 #include <cstdint>                                    // uint8_t, uint64_t
+#include <functional>                                 // identity
 #include <initializer_list>                           // initializer_list
 #include <limits>                                     // numeric_limits
 #include <memory>                                     // addressof, allocator
 #include <version>                                    // IWYU pragma: keep; __cpp_lib_ranges_as_const
 #include <new>                                        // bad_alloc
-#include <ranges>                                     // begin, iota, range_const_reference_t, size
+#include <ranges>                                     // begin, iota, range_const_reference_t, size, transform
 #include <span>                                       // dynamic_extent
 #include <stdexcept>                                  // length_error
 #include <tuple>                                      // get, tuple
@@ -1255,13 +1257,13 @@ auto disagreements(BB const& empty)
                 for (auto const& y : values) {
                         auto const sx = set_reading(x);
                         auto const sy = set_reading(y);
-                        if (std::lexicographical_compare_three_way(sx.begin(), sx.end(), sy.begin(), sy.end()) != set_three_way(x, y)) {
+                        if (std::lexicographical_compare_three_way(sx.begin(), sx.end(), sy.begin(), sy.end()) != three_way<xstd::bits::detail::set_reading_tag>(x, y)) {
                                 ++n;
                         }
                         // No comparator: vector<bool>'s proxy converts to bool, so it is three_way_comparable.
                         auto const qx = reference(x);
                         auto const qy = reference(y);
-                        if (std::lexicographical_compare_three_way(qx.begin(), qx.end(), qy.begin(), qy.end()) != sequence_three_way(x, y)) {
+                        if (std::lexicographical_compare_three_way(qx.begin(), qx.end(), qy.begin(), qy.end()) != three_way<xstd::bits::detail::sequence_reading_tag>(x, y)) {
                                 ++n;
                         }
                 }
@@ -1305,7 +1307,7 @@ BOOST_AUTO_TEST_CASE(TheTwoOrderingsDisagree)
                 for (auto const i : q) {
                         y.set(i);
                 }
-                return {set_three_way(x, y), sequence_three_way(x, y)};
+                return {three_way<xstd::bits::detail::set_reading_tag>(x, y), three_way<xstd::bits::detail::sequence_reading_tag>(x, y)};
         };
 
         // {0} against {1}: [0] < [1]; [1,0] > [0,1].
@@ -1329,12 +1331,12 @@ BOOST_AUTO_TEST_CASE(TheSetOrderingPutsAPrefixFirst)
         auto const y = T();
 
         // {} is a prefix of {1}, so it sorts below -- the opposite of what holding the lower position would say.
-        BOOST_CHECK(set_three_way(x, y) == std::strong_ordering::greater);
+        BOOST_CHECK(three_way<xstd::bits::detail::set_reading_tag>(x, y) == std::strong_ordering::greater);
 
         // And with something above that position, the clause no longer applies.
         auto z = T();
         z.set(8);
-        BOOST_CHECK(set_three_way(x, z) == std::strong_ordering::less);
+        BOOST_CHECK(three_way<xstd::bits::detail::set_reading_tag>(x, z) == std::strong_ordering::less);
 }
 
 // Dependent, so a storage without an allocator answers false rather than hard-errors.
@@ -1488,6 +1490,12 @@ auto check_ranged_forms(std::size_t n, std::size_t len)
 {
         auto e = block_at_sample<T>();
         auto r = reference(e);
+
+        // The ranged queries first, over the sample's own pattern, against the model's slice of it.
+        auto const slice = std::views::iota(n, n + len) | std::views::transform([&](std::size_t i) -> bool { return r[i]; });
+        BOOST_CHECK_EQUAL(e.count(n, len), static_cast<std::size_t>(std::ranges::count(slice, true)));
+        BOOST_CHECK_EQUAL(e.any(n, len), std::ranges::any_of(slice, std::identity()));
+        BOOST_CHECK_EQUAL(e.all(n, len), std::ranges::all_of(slice, std::identity()));
 
         e.set(n, len, true);
         for (auto const i : std::views::iota(n, n + len)) {

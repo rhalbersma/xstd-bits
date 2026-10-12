@@ -6,15 +6,16 @@
 #ifndef TEST_SEQUENCE_ROTATION_HPP
 #define TEST_SEQUENCE_ROTATION_HPP
 
-#include <algorithm> // count, equal, reverse, rotate
-#include <cstddef>   // ptrdiff_t, size_t
-#include <cstdint>   // uint64_t
-#include <limits>    // numeric_limits
-#include <memory>    // addressof
-#include <ranges>    // iota
-#include <vector>    // vector
+#include <xstd/bits/algorithm/bit_count.hpp>   // bit_count
+#include <xstd/bits/algorithm/bit_reverse.hpp> // bit_reverse
+#include <xstd/bits/algorithm/bit_rotate.hpp>  // bit_rotate
+#include <algorithm>                           // count, equal, reverse, rotate
+#include <cstddef>                             // ptrdiff_t, size_t
+#include <cstdint>                             // uint64_t
+#include <ranges>                              // begin, end, iota, next
+#include <vector>                              // vector
 
-// rotate and reverse on a sequence, against std::ranges::rotate and std::ranges::reverse over its bits.
+// bit_rotate and bit_reverse on a sequence, against std::ranges::rotate and std::ranges::reverse over its bits.
 namespace test::sequence {
 
 // Up to the first width every pattern is enumerated, and up to the second every turn; past each, a sample.
@@ -67,19 +68,19 @@ inline constexpr auto every_turn_width          = 64UZ;
         return patterns;
 }
 
-// Bits 0 and 8 of a blank ten: rotate(1) takes them to 9 and 7, rotate(7) on to 2 and 0, and reverse() back to 7 and 9.
+// Bits 0 and 8 of a blank ten: a turn by 1 takes them to 9 and 7, by 7 on to 2 and 0, and reversal back to 7 and 9.
 template<class S>
 [[nodiscard]] constexpr auto permutes_ten_bits(S a)
         -> bool
 {
         a[0] = true;
         a[8] = true;
-        a.rotate(1UZ);
-        auto const turned_once = a[9] and a[7] and a.count() == 2UZ;
-        a.rotate(7UZ);
-        auto const turned_twice = a[2] and a[0] and a.count() == 2UZ;
-        a.reverse();
-        return turned_once and turned_twice and a[7] and a[9] and a.count() == 2UZ;
+        xstd::bit_rotate(a, std::ranges::next(std::ranges::begin(a), 1));
+        auto const turned_once = a[9] and a[7] and xstd::bit_count(a) == 2;
+        xstd::bit_rotate(a, std::ranges::next(std::ranges::begin(a), 7));
+        auto const turned_twice = a[2] and a[0] and xstd::bit_count(a) == 2;
+        xstd::bit_reverse(a);
+        return turned_once and turned_twice and a[7] and a[9] and xstd::bit_count(a) == 2;
 }
 
 // The object a permutation is applied through: the owner itself, unless a test hands in a view over it.
@@ -111,7 +112,7 @@ template<class S>
 [[nodiscard]] auto holds(S const& got, std::vector<bool> const& want)
         -> bool
 {
-        return std::ranges::equal(got, want) and got.count() == static_cast<std::size_t>(std::ranges::count(want, true));
+        return std::ranges::equal(got, want) and xstd::bit_count(got) == std::ranges::count(want, true);
 }
 
 // Bit i takes bit (i + turn) % size(), by index: libstdc++ 15's ranges::rotate loses a vector<bool> bit, GCC PR 121913.
@@ -125,7 +126,7 @@ template<class S>
         return out;
 }
 
-// The bits as ints, rotated by std::ranges::rotate to begin() + turn, which pins the direction rotate(n) turns.
+// The bits as ints, rotated by std::ranges::rotate to begin() + turn, which pins the direction bit_rotate turns.
 [[nodiscard]] inline auto rotated_ints(std::vector<bool> const& model, std::size_t turn)
         -> std::vector<int>
 {
@@ -134,39 +135,40 @@ template<class S>
         return ints;
 }
 
-// Named, never a temporary: clang 23 crashes on a deducing-this call with an rvalue self.
+// A turn by n and back by size() - n, with the subrange bit_rotate answers: where the old first element now sits.
 template<class O, class Through>
 [[nodiscard]] auto rotation_disagreements(O const& o, std::vector<bool> const& model, std::size_t n, Through through)
         -> int
 {
-        auto const turn = model.empty() ? 0UZ : n % model.size();
-        auto const ints = rotated_ints(model, turn);
+        auto const turn = static_cast<std::ptrdiff_t>(n);
+        auto const ints = rotated_ints(model, n);
 
         auto r              = o;
         auto&& rs           = through(r);
-        auto const* const p = std::addressof(rs.rotate(n));
-        auto const by_index = holds(rs, turned(model, turn)) and p == std::addressof(rs);
+        auto const first    = std::ranges::begin(rs);
+        auto const last     = std::ranges::end(rs);
+        auto const result   = xstd::bit_rotate(rs, std::ranges::next(first, turn));
+        auto const by_index = holds(rs, turned(model, n)) and result.begin() == std::ranges::next(last, -turn) and result.end() == last;
         auto const as_ints  = std::ranges::equal(rs, ints, {}, [](bool b) noexcept -> int { return static_cast<int>(b); });
-        rs.rotate(model.size() - turn);
+        xstd::bit_rotate(rs, std::ranges::next(last, -turn));
         auto const restored = holds(rs, model);
         return static_cast<int>(not by_index) + static_cast<int>(not as_ints) + static_cast<int>(not restored);
 }
 
-// Every turn in [0, 2 size()] of a narrow width; of a wider one, those within one of a multiple of sixteen.
+// Every turn in [0, size()] of a narrow width; of a wider one, those within one of a multiple of sixteen, and the ends.
 [[nodiscard]] inline auto rotation_turns(std::size_t width)
         -> std::vector<std::size_t>
 {
         auto turns = std::vector<std::size_t>();
-        for (auto const n : std::views::iota(0UZ, (2UZ * width) + 1UZ)) {
-                if (width <= every_turn_width or (n + 1UZ) % 16UZ <= 2UZ) {
+        for (auto const n : std::views::iota(0UZ, width + 1UZ)) {
+                if (width <= every_turn_width or (n + 1UZ) % 16UZ <= 2UZ or n == width) {
                         turns.push_back(n);
                 }
         }
-        turns.push_back(std::numeric_limits<std::size_t>::max());
         return turns;
 }
 
-// Each turn and its complement, one that wraps size_t among them, and the reversal twice, each disagreement counted.
+// Each turn and its complement, and the reversal twice, each disagreement counted.
 template<class O, class Through>
 [[nodiscard]] auto permutation_disagreements(O const& o, Through through)
         -> int
@@ -181,9 +183,9 @@ template<class O, class Through>
 
         auto reversed = model;
         std::ranges::reverse(reversed);
-        auto const* const vr = std::addressof(seq.reverse());
-        disagreements += static_cast<int>(not holds(seq, reversed) or vr != std::addressof(seq));
-        seq.reverse();
+        auto const last = xstd::bit_reverse(seq);
+        disagreements += static_cast<int>(not holds(seq, reversed) or last != std::ranges::end(seq));
+        xstd::bit_reverse(seq);
         disagreements += static_cast<int>(not holds(seq, model));
         return disagreements;
 }

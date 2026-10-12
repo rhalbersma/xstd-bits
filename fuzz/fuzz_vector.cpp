@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <fuzz/decoder.hpp>                         // checker, decoder, run, throws
+#include <xstd/bits/algorithm.hpp>                  // bit_all_of, bit_any_of, bit_count, bit_mismatch, bit_none_of
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector, bit_bounded_vector
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
@@ -16,7 +17,7 @@
 #include <functional>                               // hash
 #include <iterator>                                 // next
 #include <new>                                      // bad_alloc
-#include <ranges>                                   // from_range, iota, reverse
+#include <ranges>                                   // from_range, iota, reverse, ssize
 #include <stdexcept>                                // out_of_range
 #include <tuple>                                    // tuple
 #include <type_traits>                              // type_identity
@@ -98,7 +99,7 @@ template<class X, class I>
         return static_cast<std::size_t>(it - x.begin());
 }
 
-// A copy of y at x's size, so the elementwise operators see two operands of one size.
+// A copy of y at x's size, so bit_mismatch sees two operands of one size.
 template<class X>
 auto align(X& z, model& mz, std::size_t size)
         -> void
@@ -145,7 +146,7 @@ auto fuzz_one(fuzz::decoder& in)
                 auto const& y   = xs[j];
                 auto const& my  = ms[j];
                 auto const size = m.size();
-                switch (in.byte() % 20U) {
+                switch (in.byte() % 18U) {
                         case 0: {
                                 check.step("operator[], at, reference");
                                 if (size != 0UZ) {
@@ -158,8 +159,9 @@ auto fuzz_one(fuzz::decoder& in)
                                                         break;
                                                 }
                                                 case 1: {
-                                                        x.at(pos).flip();
-                                                        m.at(pos).flip();
+                                                        auto const val = not m.at(pos);
+                                                        x.at(pos)      = val;
+                                                        m.at(pos)      = val;
                                                         break;
                                                 }
                                                 default: {
@@ -179,81 +181,29 @@ auto fuzz_one(fuzz::decoder& in)
                                 break;
                         }
                         case 2: {
-                                check.step("flip(), fill");
-                                if (in.boolean()) {
-                                        x.flip();
-                                        m.flip();
-                                } else {
-                                        auto const val = in.boolean();
-                                        x.fill(val);
-                                        std::ranges::fill(m, val);
-                                }
+                                check.step("fill");
+                                auto const val = in.boolean();
+                                x.fill(val);
+                                std::ranges::fill(m, val);
                                 break;
                         }
                         case 3: {
-                                check.step("&=, |=, ^=");
-                                auto z  = y;
-                                auto mz = my;
-                                align(z, mz, size);
-                                auto const op = in.byte() % 3U;
-                                switch (op) {
-                                        case 0: {
-                                                x &= z;
-                                                break;
-                                        }
-                                        case 1: {
-                                                x |= z;
-                                                break;
-                                        }
-                                        default: {
-                                                x ^= z;
-                                                break;
-                                        }
-                                }
-                                for (auto const k : std::views::iota(0UZ, size)) {
-                                        m[k] = op == 0U ? (m[k] and mz[k]) : (op == 1U ? (m[k] or mz[k]) : (m[k] != mz[k]));
-                                }
-                                break;
-                        }
-                        case 4: {
-                                check.step("~, &, |, ^");
-                                auto z  = y;
-                                auto mz = my;
-                                align(z, mz, size);
-                                auto mnot = m;
-                                mnot.flip();
-                                auto mand = m;
-                                auto mor  = m;
-                                auto mxor = m;
-                                for (auto const k : std::views::iota(0UZ, size)) {
-                                        mand[k] = m[k] and mz[k];
-                                        mor[k]  = m[k] or mz[k];
-                                        mxor[k] = m[k] != mz[k];
-                                }
-                                expect_equal(check, ~x, mnot);
-                                expect_equal(check, x & z, mand);
-                                expect_equal(check, x | z, mor);
-                                expect_equal(check, x ^ z, mxor);
-                                break;
-                        }
-                        case 5: {
-                                check.step("count, all, any, none, mismatch");
-                                auto const val = in.boolean();
-                                auto const n   = static_cast<std::size_t>(std::ranges::count(m, val));
-                                check.expect(x.count(val) == n, "count");
-                                check.expect(x.all(val) == (n == size), "all");
-                                check.expect(x.any(val) == (n != 0UZ), "any");
-                                check.expect(x.none(val) == (n == 0UZ), "none");
+                                check.step("bit_count, bit_all_of, bit_any_of, bit_none_of, bit_mismatch");
+                                auto const n = std::ranges::count(m, true);
+                                check.expect(xstd::bit_count(x) == n, "bit_count");
+                                check.expect(xstd::bit_all_of(x) == (n == std::ranges::ssize(m)), "bit_all_of");
+                                check.expect(xstd::bit_any_of(x) == (n != 0), "bit_any_of");
+                                check.expect(xstd::bit_none_of(x) == (n == 0), "bit_none_of");
                                 auto z  = y;
                                 auto mz = my;
                                 align(z, mz, size);
                                 if (z.size() == size) {
                                         auto const first = std::ranges::mismatch(m, mz).in1;
-                                        check.expect(x.mismatch(z) == static_cast<std::size_t>(first - m.begin()), "mismatch");
+                                        check.expect(xstd::bit_mismatch(x, z).in1 - x.begin() == first - m.begin(), "bit_mismatch");
                                 }
                                 break;
                         }
-                        case 6: {
+                        case 4: {
                                 check.step("==, <=>, hash");
                                 check.expect((x == y) == (m == my), "==");
                                 auto const order  = x <=> y;
@@ -265,7 +215,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 }
                                 break;
                         }
-                        case 7: {
+                        case 5: {
                                 check.step("swap");
                                 if (in.boolean()) {
                                         xs[0].swap(xs[1]);
@@ -275,7 +225,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 std::swap(ms[0], ms[1]);
                                 break;
                         }
-                        case 8: {
+                        case 6: {
                                 check.step("copy, move");
                                 if (in.boolean()) {
                                         x = y;
@@ -287,7 +237,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 expect_equal(check, X(x), m);
                                 break;
                         }
-                        case 9: {
+                        case 7: {
                                 check.step("push_back, emplace_back, pop_back");
                                 if constexpr (growing<X>) {
                                         if (in.boolean()) {
@@ -309,7 +259,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 }
                                 break;
                         }
-                        case 10: {
+                        case 8: {
                                 check.step("resize");
                                 if constexpr (growing<X>) {
                                         auto const n = in.below(top + 1UZ);
@@ -327,7 +277,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 }
                                 break;
                         }
-                        case 11: {
+                        case 9: {
                                 check.step("clear");
                                 if constexpr (growing<X>) {
                                         x.clear();
@@ -335,7 +285,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 }
                                 break;
                         }
-                        case 12: {
+                        case 10: {
                                 check.step("insert(position, value), insert(position, n, value)");
                                 if constexpr (growing<X>) {
                                         auto const pos       = in.below(size + 1UZ);
@@ -357,7 +307,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 }
                                 break;
                         }
-                        case 13: {
+                        case 11: {
                                 check.step("insert_range, insert(position, first, last)");
                                 if constexpr (growing<X>) {
                                         auto const pos = in.below(size + 1UZ);
@@ -368,7 +318,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 }
                                 break;
                         }
-                        case 14: {
+                        case 12: {
                                 check.step("erase(position), erase(first, last)");
                                 if constexpr (growing<X>) {
                                         if (size != 0UZ) {
@@ -390,7 +340,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 }
                                 break;
                         }
-                        case 15: {
+                        case 13: {
                                 check.step("assign(n, value), assign_range");
                                 if constexpr (growing<X>) {
                                         if (in.boolean()) {
@@ -406,7 +356,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 }
                                 break;
                         }
-                        case 16: {
+                        case 14: {
                                 check.step("append_range");
                                 if constexpr (growing<X>) {
                                         if (in.boolean()) {
@@ -426,7 +376,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 }
                                 break;
                         }
-                        case 17: {
+                        case 15: {
                                 check.step("reserve, shrink_to_fit, capacity");
                                 if constexpr (growing<X>) {
                                         auto const n = in.below(top + 1UZ);
@@ -440,7 +390,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 }
                                 break;
                         }
-                        case 18: {
+                        case 16: {
                                 check.step("try_push_back");
                                 if constexpr (requires { x.try_push_back(true); }) {
                                         auto const val = in.boolean();
@@ -453,7 +403,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 }
                                 break;
                         }
-                        case 19: {
+                        case 17: {
                                 check.step("construct from a size and a value, or from a range");
                                 if constexpr (growing<X>) {
                                         if (in.boolean()) {

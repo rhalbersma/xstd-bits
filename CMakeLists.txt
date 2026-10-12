@@ -30,7 +30,7 @@ if(NOT xstd-ints_FOUND)
         xstd-ints
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-ints.git
         # Pinned to a commit on xstd-ints' main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 8067321b209f4128880560ff01d692858c3b5960
+        GIT_TAG af5119956df91d7fd80e393bbdfb562c9dd78041
     )
     FetchContent_MakeAvailable(xstd-ints)
 endif()
@@ -71,7 +71,18 @@ target_sources(
         include/xstd/bits.hpp
         include/xstd/bits/detail/sequence_adaptor.hpp
         include/xstd/bits/detail/set_adaptor.hpp
+        include/xstd/bits/detail/valarray_adaptor.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
+        include/xstd/bits/algorithm.hpp
+        include/xstd/bits/algorithm/bit_all_of.hpp
+        include/xstd/bits/algorithm/bit_any_of.hpp
+        include/xstd/bits/algorithm/bit_count.hpp
+        include/xstd/bits/algorithm/bit_disjoint.hpp
+        include/xstd/bits/algorithm/bit_includes.hpp
+        include/xstd/bits/algorithm/bit_mismatch.hpp
+        include/xstd/bits/algorithm/bit_none_of.hpp
+        include/xstd/bits/algorithm/bit_reverse.hpp
+        include/xstd/bits/algorithm/bit_rotate.hpp
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bit.hpp
         include/xstd/bits/bit/bit_convert.hpp
@@ -103,7 +114,11 @@ target_sources(
         include/xstd/bits/bit_type_traits/bit_resize.hpp
         include/xstd/bits/bit_type_traits/bit_underlying.hpp
         include/xstd/bits/bit_vector.hpp
+        include/xstd/bits/bit_valarray.hpp
+        include/xstd/bits/bit_fixed_valarray.hpp
+        include/xstd/bits/bit_bounded_valarray.hpp
         include/xstd/bits/detail/adapted_bits.hpp
+        include/xstd/bits/detail/algorithm.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
         include/xstd/bits/detail/bounded_blocks.hpp
         include/xstd/bits/detail/bit_block_container.hpp
@@ -134,7 +149,8 @@ target_sources(
         include/xstd/bits/detail/storage_ptr.hpp
         include/xstd/bits/detail/views.hpp
         include/xstd/bits/detail/blocks.hpp
-        include/xstd/bits/detail/zero_width.hpp
+        include/xstd/bits/detail/num_blocks.hpp
+        include/xstd/bits/detail/owner_members.hpp
         include/xstd/bits/detail/ownership.hpp
         include/xstd/bits/detail/rebind.hpp
 )

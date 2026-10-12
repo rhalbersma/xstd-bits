@@ -7,6 +7,7 @@
 #define XSTD_BITS_DETAIL_OWNERSHIP_HPP
 
 #include <concepts>    // derived_from, same_as
+#include <cstddef>     // size_t
 #include <type_traits> // conditional_t, is_const_v, remove_const_t
 
 namespace xstd::bits::detail {
@@ -38,6 +39,10 @@ struct set_reading_tag
 struct sequence_reading_tag
 {};
 
+// A sequence of bools whose operators act on every element at once, as std::valarray<bool>'s do.
+struct valarray_reading_tag : sequence_reading_tag
+{};
+
 // What an owner wraps: declared, never defined, so a view over a type that owns nothing is unsatisfied.
 template<class Owner>
 struct owned_storage;
@@ -63,9 +68,10 @@ using owned_bits_t = std::conditional_t<std::is_const_v<Owner>, typename owned_s
 // The storage under a reading, for the library's free functions: both adaptors befriend this, and nothing else does.
 struct storage_access
 {
+        // Const where the bits are an owner's; a const view's bits stay writable, as a const span's elements do.
         template<class Reading>
         [[nodiscard]] static constexpr auto bits(Reading const& r) noexcept
-                -> auto const&
+                -> auto&&
         {
                 return static_cast<Reading::adaptor_type const&>(r).bits();
         }
@@ -76,13 +82,23 @@ struct storage_access
         {
                 return static_cast<Reading::adaptor_type&>(r).bits();
         }
+
+        // Where a window's position zero sits in that storage.
+        template<class Reading>
+        [[nodiscard]] static constexpr auto offset(Reading const& r) noexcept
+                -> std::size_t
+        {
+                return static_cast<Reading::adaptor_type const&>(r).offset();
+        }
 };
 
-// Whether a view of reading R may refer into Owner: a refinement of R answers for R.
+// Whether a container, owner or view, reads its blocks as R: a refinement of R answers for R.
+template<class T, class R>
+concept reads = std::derived_from<typename std::remove_const_t<T>::reads_as, R>;
+
+// Whether a view of reading R may refer into Owner.
 template<class Owner, class R>
-concept owner_reading =
-        owner<Owner> and
-        std::derived_from<typename owned_storage<std::remove_const_t<Owner>>::reads, R>;
+concept owner_reading = owner<Owner> and reads<Owner, R>;
 
 // Whether a view of reading R over Bits can refer into Owner: same storage, const flowing owner to view.
 template<class Owner, class Bits, class R>

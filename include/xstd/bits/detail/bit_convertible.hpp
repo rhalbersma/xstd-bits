@@ -7,21 +7,23 @@
 #define XSTD_BITS_DETAIL_BIT_CONVERTIBLE_HPP
 
 #include <xstd/bits/bit_concepts/bit_constructible_from.hpp> // bit_constructible_from
+#include <xstd/bits/detail/algorithm.hpp>                    // count_true
 #include <xstd/bits/detail/bit_blocks_capacity.hpp>          // bit_blocks_capacity_v
-#include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, block_byte, blocks_copy_as_bytes, byte_count, bytes_bits, bytes_per_block, or_block_byte
+#include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, byte_count, bytes_bits, copy_bits
 #include <xstd/bits/detail/bit_width.hpp>                    // bit_width_v
-#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owner, owner_reading, set_reading_tag, storage_access, view
+#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owner, reads, set_reading_tag, storage_access, view
+#include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks
-#include <algorithm>                                         // copy, min
+#include <xstd/ints/limits.hpp>                              // numeric_limits
+#include <algorithm>                                         // min
 #include <array>                                             // array
-#include <bit>                                               // bit_cast, popcount
+#include <bit>                                               // popcount
 #include <concepts>                                          // default_initializable, same_as
-#include <cstddef>                                           // byte, size_t
+#include <cstddef>                                           // size_t
 #include <new>                                               // bad_alloc
-#include <ranges>                                            // iota, size
-#include <span>                                              // as_bytes, as_writable_bytes, dynamic_extent, span
+#include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // overflow_error
-#include <type_traits>                                       // is_array_v, is_const_v, is_rvalue_reference_v, remove_cvref_t, remove_reference_t
+#include <type_traits>                                       // is_array_v, is_const_v, is_integral_v, is_rvalue_reference_v, remove_cvref_t, remove_reference_t
 #include <utility>                                           // declval, forward
 
 // What xstd::bit_convert asks of its two ends, and the copy between them: position i to position i, at any widths.
@@ -37,49 +39,10 @@ concept fixed_width =
 template<class T>
 concept fixed_target = fixed_width<T> and (not view<T>) and (not std::is_array_v<T>);
 
-// Whether an owner reads its bits as a set, which decides the widths at either end.
-template<class T>
-inline constexpr bool reads_as_set = owner_reading<T, set_reading_tag>;
-
-// The bytes a range of blocks holds as positions, its value bits alone, at every block width.
-template<class Blocks>
-[[nodiscard]] constexpr auto value_bytes(Blocks const& blocks) noexcept
-        -> std::size_t
-{
-        return std::ranges::size(blocks) * bytes_per_block<Blocks>;
-}
-
-template<class Src, class T>
-constexpr auto copy_bytes_by_shifts(Src const& src, std::span<T> dst, std::size_t bytes) noexcept
-        -> void
-{
-        for (auto const j : std::views::iota(0UZ, bytes)) {
-                or_block_byte(dst, j, block_byte(src, j));
-        }
-}
-
-// Blocks to blocks at any two block widths, byte j to byte j, as far as the target reaches; the target starts clear.
-template<class Src, class T>
-constexpr auto copy_bits(Src const& src, std::span<T> dst) noexcept
-        -> void
-{
-        auto const bytes = std::ranges::min(value_bytes(src), value_bytes(dst));
-        if consteval {
-                copy_bytes_by_shifts(src, dst, bytes);
-        } else {
-                if constexpr (blocks_copy_as_bytes<Src> and blocks_copy_as_bytes<std::span<T>>) {
-                        // The object bytes in one copy, as memcpy, but over spans, where a null data() is no argument.
-                        std::ranges::copy(std::as_bytes(std::span(src)).first(bytes), std::as_writable_bytes(dst).begin());
-                } else {
-                        copy_bytes_by_shifts(src, dst, bytes);
-                }
-        }
-}
-
 // The bytes of a fixed width, byte j holding the positions [8j, 8j + 8): ours through their storage.
 template<fixed_width T>
 [[nodiscard]] constexpr auto fixed_bytes(T const& from) noexcept
-        -> std::array<std::byte, byte_count<bit_width_v<T>>>
+        -> std::array<unsigned char, byte_count<bit_width_v<T>>>
 {
         if constexpr (owner<T> or view<T>) {
                 return storage_access::bits(from).template to_bytes<byte_count<bit_width_v<T>>>();
@@ -90,14 +53,14 @@ template<fixed_width T>
 
 // A fixed width out of its bytes, through the tag where it is ours.
 template<fixed_target To>
-[[nodiscard]] constexpr auto from_fixed_bytes(std::array<std::byte, byte_count<bit_width_v<To>>> const& bytes) noexcept
+[[nodiscard]] constexpr auto from_fixed_bytes(std::array<unsigned char, byte_count<bit_width_v<To>>> const& bytes) noexcept
         -> To
 {
         constexpr auto N = bit_width_v<To>;
         if constexpr (N == 0UZ) {
                 return To();
         } else if constexpr (owner<To>) {
-                return To(xstd::from_blocks, std::bit_cast<std::array<unsigned char, byte_count<N>>>(bytes));
+                return To(xstd::from_blocks, bytes);
         } else {
                 return bytes_bits<To, N>(bytes);
         }
@@ -118,15 +81,24 @@ template<fixed_target To>
 template<class T>
 struct bit_source;
 
-// Our owners, of either reading and any column: a sequence's width is its size, a set's its whole blocks, capped.
-template<owner T>
+// A view that starts inside its storage, at an offset and a size of its own.
+template<class T>
+concept windowed_view = view<T> and requires { requires T::is_windowed; };
+
+// A whole view of a run-time width: its storage from position zero, which is its owner's, read as that owner reads it.
+template<class T>
+concept run_time_view = view<T> and (not fixed_width<T>) and (not windowed_view<T>);
+
+// Owners and whole views, of either reading: a sequence's width is its size, a set's its whole blocks, capped.
+template<class T>
+        requires owner<T> or run_time_view<T>
 struct bit_source<T>
 {
         [[nodiscard]] static constexpr auto width(T const& from) noexcept
                 -> std::size_t
         {
                 auto const& bits = storage_access::bits(from);
-                if constexpr (reads_as_set<T>) {
+                if constexpr (reads<T, set_reading_tag>) {
                         return std::ranges::min(bits.num_blocks() * bits.bits_per_block, bits.max_size());
                 } else {
                         return bits.size();
@@ -174,11 +146,7 @@ struct bit_source<T>
         [[nodiscard]] static constexpr auto blocks(T const& from) noexcept
                 -> std::array<unsigned char, byte_count<N>>
         {
-                if constexpr (byte_count<N> == 0UZ) {
-                        return {};
-                } else {
-                        return std::bit_cast<std::array<unsigned char, byte_count<N>>>(fixed_bytes(from));
-                }
+                return fixed_bytes(from);
         }
 
         template<class U>
@@ -186,6 +154,52 @@ struct bit_source<T>
                 -> void
         {
                 copy_bits(blocks(from), dst);
+        }
+};
+
+// A block as another block type, through unsigned where it would promote to int and choose a signed constructor.
+template<class U, class Block>
+[[nodiscard]] constexpr auto as_block(Block b) noexcept
+        -> U
+{
+        if constexpr (std::is_integral_v<Block> and sizeof(Block) < sizeof(unsigned)) {
+                return static_cast<U>(static_cast<unsigned>(b));
+        } else {
+                return static_cast<U>(b);
+        }
+}
+
+// A window, read a block at a time from its offset, so that position zero of the copy is its first position.
+template<windowed_view T>
+struct bit_source<T>
+{
+        [[nodiscard]] static constexpr auto width(T const& from) noexcept
+                -> std::size_t
+        {
+                return from.size();
+        }
+
+        [[nodiscard]] static constexpr auto count(T const& from) noexcept
+                -> std::size_t
+        {
+                return count_true(from);
+        }
+
+        // Steps of the narrower block, so that each one lands inside a single target block.
+        template<class U>
+        static constexpr auto copy(T const& from, std::span<U> dst) noexcept
+                -> void
+        {
+                auto const& bits         = storage_access::bits(from);
+                using block_type         = std::remove_cvref_t<decltype(bits)>::block_type;
+                constexpr auto to_digits = static_cast<std::size_t>(xstd::numeric_limits<U>::digits);
+                constexpr auto step      = std::ranges::min(std::remove_cvref_t<decltype(bits)>::bits_per_block, to_digits);
+                auto const n             = std::ranges::min(from.size(), std::size(dst) * to_digits);
+                for (auto p = 0UZ; p < n; p += step) {
+                        auto const chunk = static_cast<block_type>(bits.block_at(storage_access::offset(from) + p) & partial_block_mask<block_type>(std::ranges::min(step, n - p)));
+                        auto& block      = dst[p / to_digits];
+                        block            = static_cast<U>(block | shl(as_block<U>(chunk), p % to_digits));
+                }
         }
 };
 
@@ -202,7 +216,7 @@ template<class To>
         -> std::size_t
 {
         using bits_type = owned_bits_t<To>;
-        if constexpr (reads_as_set<To>) {
+        if constexpr (reads<To, set_reading_tag>) {
                 auto const whole = bits_type::blocks_for(width) * bits_type::bits_per_block;
                 if constexpr (bits_type::has_static_capacity) {
                         return std::ranges::min(whole, bits_type::static_capacity());
@@ -235,7 +249,7 @@ template<class To, class From>
         bits.resize(target_width<To>(width));
         source::copy(from, bits.blocks());
         bits.erase_unused();
-        if constexpr (reads_as_set<To> and owned_bits_t<To>::has_static_capacity) {
+        if constexpr (reads<To, set_reading_tag> and owned_bits_t<To>::has_static_capacity) {
                 refuse_lost_keys(bits.size(), bits.count(), width, source::count(from));
         }
         return to;
@@ -272,7 +286,7 @@ template<fixed_target To, class From>
                 bytes.back() = static_cast<unsigned char>(bytes.back() & ((1U << (N % bits_per_byte)) - 1U));
         }
         refuse_lost_positions(count_bytes(bytes), source::count(from));
-        return from_fixed_bytes<To>(std::bit_cast<std::array<std::byte, byte_count<N>>>(bytes));
+        return from_fixed_bytes<To>(bytes);
 }
 
 // A foreign target an extension converts into, declared for it to specialize.
@@ -308,7 +322,7 @@ template<class To, class From>
 {
         auto const width = bit_source<std::remove_cvref_t<From>>::width(from);
         auto to          = To(xstd::from_blocks, std::forward<From>(from).extract());
-        if constexpr (not reads_as_set<To>) {
+        if constexpr (not reads<To, set_reading_tag>) {
                 storage_access::bits(to).resize(width);
         }
         return to;

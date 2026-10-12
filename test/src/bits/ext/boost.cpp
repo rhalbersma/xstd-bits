@@ -9,7 +9,8 @@
 #include <xstd/bits/detail/owned_bit_blocks.hpp>     // owned_bit_blocks
 #include <xstd/bits/detail/resizable_bit_blocks.hpp> // resizable_bit_blocks
 #include <xstd/bits/bit_key_mapping.hpp>             // bit_key_mapping
-#include <xstd/bits/detail/bit_block_container.hpp>  // bit_block_container, num_blocks_v
+#include <xstd/bits/detail/bit_block_container.hpp>  // bit_block_container
+#include <xstd/bits/detail/num_blocks.hpp>           // num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>            // owned_bits_t
 #include <xstd/bits/detail/set_adaptor.hpp>          // set_adaptor
 #include <xstd/bits/ext/boost.hpp>                   // bit_small_set, bit_small_vector

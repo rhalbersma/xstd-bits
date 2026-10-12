@@ -8,6 +8,9 @@
 #include <test/sequence/dense.hpp>                  // yields_every_position
 #include <test/sequence/rotation.hpp>               // permutation_sweep, permutes_ten_bits
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
+#include <xstd/bits/algorithm/bit_count.hpp>        // bit_count
+#include <xstd/bits/algorithm/bit_reverse.hpp>      // bit_reverse
+#include <xstd/bits/algorithm/bit_rotate.hpp>       // bit_rotate
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_vector.hpp>                 // bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
@@ -41,7 +44,10 @@ template<class X>
 constexpr bool can_flip = requires (X x) { x.flip(); };
 
 template<class X>
-constexpr bool can_permute = requires (X x) { x.rotate(1UZ); x.reverse(); };
+constexpr bool has_static_swap = requires (X x) { X::swap(x[0], x[0]); };
+
+template<class X>
+constexpr bool can_permute = requires (X x) { xstd::bit_rotate(x, x.begin()); xstd::bit_reverse(x); };
 
 template<class X>
 constexpr bool has_range_members = requires (X x, std::vector<bool> const& r) { x.append_range(r); x.insert_range(x.cbegin(), r); x.erase(x.cbegin()); };
@@ -277,25 +283,21 @@ BOOST_AUTO_TEST_CASE(InsertingAWindowOfItselfRebuildsAsAStdVectorDoes)
         }
 }
 
-// The static swap of two proxies, and a view that flips what it views where a window does not.
-BOOST_AUTO_TEST_CASE(TheStaticSwapAndTheViewsFlipAreStdVectorBools)
+// Two proxies swap through their own swap, found by ADL; neither the owner nor a view has a static swap or a flip.
+BOOST_AUTO_TEST_CASE(TheProxiesSwapAndNothingFlips)
 {
         auto v = T(std::from_range, pattern(20));
         auto m = pattern(20);
 
-        // Ours is [vector.bool]'s static swap; the model's own is deprecated by C++26 (LWG-3638, P3612R1).
-        T::swap(v[0], v[1]);
+        swap(v[0], v[1]);
         auto const m0 = static_cast<bool>(m[0]);
         m[0]          = static_cast<bool>(m[1]);
         m[1]          = m0;
         BOOST_CHECK(std::ranges::equal(v, m));
-
-        // A view flips what it views, a window does not.
-        xstd::bit_span(v).flip();
-        m.flip();
-        BOOST_CHECK(std::ranges::equal(v, m));
+        static_assert(not has_static_swap<T>);
+        static_assert(not can_flip<T>);
+        static_assert(not can_flip<decltype(xstd::bit_span(v))>);
         static_assert(not can_flip<decltype(xstd::bit_span(v).first(2))>);
-        static_assert(can_flip<decltype(xstd::bit_span(v))>);
 }
 
 // The owner hashes as std::vector<bool> does, equal values equal; the view over it no more than std::span does.
@@ -360,7 +362,7 @@ BOOST_AUTO_TEST_CASE(SortingRandomBitsLeavesThemSorted)
                 std::ranges::sort(m);
                 BOOST_CHECK(std::is_sorted(v.begin(), v.end())); // NOLINT(modernize-use-ranges)
                 BOOST_CHECK(std::ranges::equal(v, m));
-                BOOST_CHECK_EQUAL(v.count(), ones);
+                BOOST_CHECK_EQUAL(static_cast<std::size_t>(xstd::bit_count(v)), ones);
 
                 // Descending under std::ranges::greater: every true before every false.
                 fill(v, m);
@@ -432,12 +434,10 @@ struct as_span
 
 } // namespace
 
-// rotate and reverse, as std::ranges::rotate and std::ranges::reverse move the bools, at every run-time width.
+// bit_rotate and bit_reverse, as std::ranges::rotate and std::ranges::reverse move the bools, at every run-time width.
 BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDo)
 {
-        static_assert(std::same_as<decltype(std::declval<T&>().rotate(0UZ)), T&>);
-        static_assert(std::same_as<decltype(std::declval<T&>().reverse()), T&>);
-        static_assert(noexcept(std::declval<T&>().rotate(0UZ)) and noexcept(std::declval<T&>().reverse()));
+        static_assert(noexcept(xstd::bit_rotate(std::declval<T&>(), std::declval<T&>().begin())) and noexcept(xstd::bit_reverse(std::declval<T&>())));
         static_assert(test::sequence::permutes_ten_bits(T(10)));
         BOOST_CHECK_EQUAL(permutation_sweeps<T>(), 0);
         BOOST_CHECK_EQUAL(permutation_sweeps<xstd::basic_bit_vector<std::uint64_t>>(), 0);

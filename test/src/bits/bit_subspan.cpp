@@ -3,10 +3,10 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_subspan.hpp>                // bit_subspan
-#include <xstd/bits/bit_vector.hpp>                 // bit_vector
+#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                // equal, fill
@@ -16,7 +16,7 @@
 #include <cstdint>                                  // uint8_t
 #include <functional>                               // hash
 #include <iterator>                                 // size
-#include <ranges>                                   // empty, iota, random_access_range, size
+#include <ranges>                                   // empty, random_access_range, size
 #include <span>                                     // dynamic_extent
 #include <tuple>                                    // tuple
 #include <type_traits>                              // false_type, integral_constant, is_default_constructible_v, is_member_function_pointer_v, true_type
@@ -47,9 +47,6 @@ constexpr bool has_bulk_ops = requires (X x) { x &= x; x |= x; x ^= x; };
 
 template<class X>
 constexpr bool has_shifts = requires (X x) { x <<= 1UZ; x >>= 1UZ; };
-
-template<class W, class O>
-constexpr bool combinable = requires (W w, O const& o) { w &= o; };
 
 // Twenty bits of any viewed storage: a static width has them, a run-time one is resized to them, as the sieve does.
 template<class T>
@@ -83,21 +80,21 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(has_subspan<Sub>);
         static_assert(not has_subspan<Owner>);
 
-        // Like span it neither compares nor hashes.
+        // Like span it neither compares nor hashes, and the bitwise operators are an owner's.
         static_assert(not std::equality_comparable<Sub>);
         static_assert(not std::is_default_constructible_v<std::hash<Sub>>);
+
+        // Nor, like span, does it combine or shift: elementwise logic is a valarray's.
         static_assert(can_fill<Sub>);
-        static_assert(has_bulk_ops<Sub>);
+        static_assert(not has_bulk_ops<Sub>);
         static_assert(not has_shifts<Sub>);
         static_assert(can_fill<Span>);
-        static_assert(has_bulk_ops<Span>);
+        static_assert(not has_bulk_ops<Span>);
         static_assert(not has_shifts<Span>);
 
-        // Over a const storage nothing writes: the window's bulk operators ask Bits, not the const-stripped bits_type.
+        // Over a const storage nothing writes: fill asks Bits, not the const-stripped bits_type.
         static_assert(not can_fill<CSub>);
-        static_assert(not has_bulk_ops<CSub>);
         static_assert(not can_fill<CSpan>);
-        static_assert(not has_bulk_ops<CSpan>);
         static_assert(std::ranges::random_access_range<CSub>); // reading is untouched
         static_assert(has_subspan<CSub>);
 }
@@ -128,18 +125,6 @@ BOOST_AUTO_TEST_CASE(AWindowWritesThrough)
         BOOST_CHECK(static_cast<bool>(a[9]));
 }
 
-namespace {
-
-// The bools a range holds, for the checks below.
-template<class R>
-auto bools(R const& r)
-        -> std::vector<bool>
-{
-        return std::vector<bool>(r.begin(), r.end());
-}
-
-} // namespace
-
 // fill on a window: a masked block at a time over our storage, one position at a time over a foreign one.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AWindowFillsItsPositionsAlone, T, ViewedTypes)
 {
@@ -167,91 +152,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AWindowFillsItsPositionsAlone, T, ViewedTypes)
 
 namespace {
 
-// A pattern over n positions from a seed, with a period that never aligns with a block.
-auto pattern(std::size_t n, std::size_t seed)
-        -> std::vector<bool>
-{
-        auto v = std::vector<bool>(n);
-        for (auto const i : std::views::iota(0UZ, n)) {
-                v[i] = ((i + seed) % 3 == 0) or ((i * seed) % 5 == 1);
-        }
-        return v;
-}
-
-// The four operators by number: on two bools for the model, on a window and a source for the sequence.
-auto model_op(int op, bool a, bool b)
-        -> bool
-{
-        switch (op) {
-                case 0:
-                        return a and b;
-                case 1:
-                        return a or b;
-                default:
-                        return a != b;
-        }
-}
-
-auto window_op(int op, auto const& w, auto const& o)
-        -> void
-{
-        switch (op) {
-                case 0:
-                        w &= o;
-                        break;
-                case 1:
-                        w |= o;
-                        break;
-                default:
-                        w ^= o;
-                        break;
-        }
-}
-
-// One combination: a window of the destination at off against a window of the source at other, count wide.
-auto check_combination(int op, std::size_t off, std::size_t other, std::size_t count)
-        -> void
-{
-        auto source       = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(40, 2));
-        auto dest         = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(40, 3));
-        auto model        = pattern(40, 3);
-        auto const w      = xstd::bit_span(dest).subspan(off, count);
-        auto const theirs = bools(xstd::bit_span(source).subspan(other, count));
-        window_op(op, w, xstd::bit_span(source).subspan(other, count));
-        for (auto const i : std::views::iota(0UZ, count)) {
-                model[off + i] = model_op(op, model[off + i], theirs[i]);
-        }
-        BOOST_CHECK(std::ranges::equal(dest, model));
-}
-
-} // namespace
-
-// The three bulk operators against a window at any other alignment, block by block and masked to the window.
-BOOST_AUTO_TEST_CASE(AWindowCombinesWithAnotherAtAnyAlignment)
-{
-        for (auto const op : {0, 1, 2}) {
-                for (auto const off : {0UZ, 3UZ, 8UZ, 13UZ}) {
-                        for (auto const other : {0UZ, 1UZ, 5UZ, 8UZ, 17UZ}) {
-                                for (auto const count : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 20UZ}) {
-                                        check_combination(op, off, other, count);
-                                }
-                        }
-                }
-        }
-
-        // A window against itself, block by block in place; asking clang if another block type is a source crashes it.
-        auto self          = xstd::basic_bit_vector<std::uint8_t>(std::from_range, pattern(20, 1));
-        auto const outside = bools(xstd::bit_span(self).first(3));
-        auto const w       = xstd::bit_span(self).subspan(3, 12);
-        w ^= w;
-        BOOST_CHECK(std::ranges::equal(w, std::vector<bool>(12, false)));
-        BOOST_CHECK(std::ranges::equal(xstd::bit_span(self).first(3), outside));
-        static_assert(combinable<decltype(w), decltype(w)>);
-        static_assert(combinable<decltype(w), decltype(xstd::bit_span(self))>);
-}
-
-namespace {
-
 template<class X, std::size_t Count>
 constexpr bool has_first = requires (X x) { x.template first<Count>(); };
 
@@ -272,7 +172,7 @@ BOOST_AUTO_TEST_CASE(AStaticWindowCarriesItsWidthInItsType)
 
         // A masked block at a time, as a dynamic window fills.
         v.subspan<8, 8>().fill(true);
-        BOOST_CHECK_EQUAL(a.count(), 8UZ);
+        BOOST_CHECK_EQUAL(std::ranges::count(a, true), 8);
         BOOST_CHECK(a[8] and a[15] and not a[7] and not a[16]);
 }
 

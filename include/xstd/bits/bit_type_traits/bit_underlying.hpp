@@ -7,18 +7,17 @@
 #define XSTD_BITS_BIT_TYPE_TRAITS_BIT_UNDERLYING_HPP
 
 #include <xstd/bits/bit_type_traits/bit_rebind.hpp> // bit_rebind
+#include <xstd/bits/detail/ordinal.hpp>             // ordinal_key, ordinal_t, unsigned_ordinal_t
 #include <xstd/bits/detail/rebind.hpp>              // rebindable
-#include <xstd/ints/concepts/integer.hpp>           // integer
 #include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
-#include <concepts>                                 // integral, same_as
-#include <type_traits>                              // conditional_t, is_enum_v, make_unsigned_t, type_identity, underlying_type, underlying_type_t
+#include <concepts>                                 // integral
 
 namespace xstd {
 
 // An enumeration's underlying type or an integer type made unsigned, the block a field or ABI of it already uses.
 template<class Key>
-        requires (std::is_enum_v<Key> and (not std::same_as<std::underlying_type_t<Key>, bool>) and xstd::unsigned_integer<std::make_unsigned_t<std::underlying_type_t<Key>>>) or (std::integral<Key> and xstd::integer<Key>)
-using underlying_block_t = std::make_unsigned_t<typename std::conditional_t<std::is_enum_v<Key>, std::underlying_type<Key>, std::type_identity<Key>>::type>;
+        requires bits::detail::ordinal_key<Key> and std::integral<bits::detail::ordinal_t<Key>> and xstd::unsigned_integer<bits::detail::unsigned_ordinal_t<Key>>
+using underlying_block_t = bits::detail::unsigned_ordinal_t<Key>;
 
 // The same bit set in its key's underlying block, enumeration or integer, as an existing field or ABI stores it.
 template<class Owner>

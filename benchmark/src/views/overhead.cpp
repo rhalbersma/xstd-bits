@@ -5,6 +5,7 @@
 
 // What a reading costs as a view rather than a container, over the same backend bit container.
 
+#include <xstd/bits/algorithm/bit_count.hpp>        // bit_count
 #include <xstd/bits/bit_array.hpp>                  // bit_array
 #include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
@@ -105,7 +106,7 @@ auto sequence_count_owner(benchmark::State& state)
         auto v = filled<N, xstd::bit_array<N>>();
         benchmark::DoNotOptimize(&v);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(v.count());
+                benchmark::DoNotOptimize(xstd::bit_count(v));
         }
 }
 
@@ -117,7 +118,7 @@ auto sequence_count_view_of_storage(benchmark::State& state)
         benchmark::DoNotOptimize(&blocks);
         auto const v = xstd::bit_span(blocks);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(v.count());
+                benchmark::DoNotOptimize(xstd::bit_count(v));
         }
 }
 

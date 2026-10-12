@@ -10,9 +10,10 @@
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/bit_block_range.hpp>              // bit_block_range
 #include <xstd/bits/detail/bit_blocks_capacity.hpp>          // bit_blocks_capacity_v
-#include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, container_source, fixed_blocks_source
+#include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, container_source, copy_bits, fixed_blocks_source
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
+#include <xstd/bits/detail/num_blocks.hpp>                   // holds_width, num_blocks_v, whole_blocks_width_v
 #include <xstd/bits/detail/owned_bit_blocks.hpp>             // owned_bit_blocks
 #include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of
 #include <xstd/bits/detail/resizable_bit_blocks.hpp>         // resizable_bit_blocks
@@ -21,17 +22,15 @@
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/ints/cstdlib/div.hpp>                         // div, div_result
 #include <xstd/ints/limits.hpp>                              // numeric_limits
-#include <xstd/ints/memory.hpp>                              // align_up
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <boost/container/container_fwd.hpp>                 // static_vector
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append_tag
 #include <algorithm>                                         // all_of, any_of, copy, fill, fill_n, find_if, fold_left, max, min, reverse, rotate, shift_left, shift_right
 #include <array>                                             // array
-#include <bit>                                               // endian, has_single_bit
+#include <bit>                                               // has_single_bit
 #include <cassert>                                           // assert
 #include <concepts>                                          // default_initializable, same_as
-#include <cstddef>                                           // byte, ptrdiff_t, size_t, to_integer
-#include <cstring>                                           // memcpy
+#include <cstddef>                                           // ptrdiff_t, size_t
 #include <format>                                            // format
 #include <functional>                                        // plus
 #include <iterator>                                          // next, prev
@@ -46,10 +45,6 @@
 #include <utility>                                           // exchange, forward, move, pair
 
 namespace xstd::bits::detail {
-
-// The whole blocks that N bits take, and so none at width zero.
-template<xstd::unsigned_integer Block, std::size_t N>
-inline constexpr std::size_t num_blocks_v = align_up(N, static_cast<std::size_t>(xstd::numeric_limits<Block>::digits)) / static_cast<std::size_t>(xstd::numeric_limits<Block>::digits);
 
 // The width a span of blocks implies: all of its bits, for as long as the span is that long. Above every width.
 inline constexpr auto blocks_extent = std::dynamic_extent - 1UZ;
@@ -214,7 +209,8 @@ using bit_members_t = std::conditional_t<
 
 // The one vehicle: it owns the unused-tail invariant, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>>
-        requires (bit_block_range<Blocks> and owned_bit_blocks<Blocks> and admits_owner_extent<Blocks, N>()) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)
+        requires ((bit_block_range<Blocks> and owned_bit_blocks<Blocks> and admits_owner_extent<Blocks, N>()) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)) and
+                 holds_width<std::ranges::range_value_t<Blocks>, N>
 class bit_block_container : public bit_members_t<Blocks, N>
 {
         using members_type = bit_members_t<Blocks, N>;
@@ -226,9 +222,6 @@ public:
         using block_container_type = Blocks;
 
         static constexpr auto bits_per_block = static_cast<std::size_t>(xstd::numeric_limits<block_type>::digits);
-
-        // Derived rather than written as an 8: a block's digits over its bytes is the bits in a byte.
-        static constexpr auto bits_per_byte = bits_per_block / sizeof(block_type);
 
         // A width that is a member and moves under growth; the other run-time width is the span's own length.
         static constexpr bool has_stored_size = resizable_bit_blocks<Blocks>;
@@ -271,7 +264,7 @@ private:
         // The width is this container's, so a dynamic one answers zero here rather than compute byte_count of SIZE_MAX.
         static constexpr auto bit_extent = has_static_size ? N : 0UZ;
 
-        static constexpr auto static_num_bits   = has_static_size ? align_up(N, bits_per_block) : 0UZ;
+        static constexpr auto static_num_bits   = has_static_size ? whole_blocks_width_v<block_type, N> : 0UZ;
         static constexpr auto static_num_blocks = has_static_size ? static_num_bits / bits_per_block : 0UZ;
         static constexpr auto static_last_block = static_num_blocks - 1UZ;
 
@@ -586,20 +579,10 @@ public:
         template<std::size_t E>
                 requires has_static_size
         [[nodiscard]] constexpr auto to_bytes() const noexcept
-                -> std::array<std::byte, E>
+                -> std::array<unsigned char, E>
         {
-                auto bytes = std::array<std::byte, E>();
-                if constexpr (shared_bytes<E> > 0UZ) {
-                        if consteval {
-                                to_bytes_by_shifts(bytes);
-                        } else {
-                                if constexpr (bytes_copy_as_blocks) {
-                                        std::memcpy(bytes.data(), m_blocks.data(), shared_bytes<E>);
-                                } else {
-                                        to_bytes_by_shifts(bytes);
-                                }
-                        }
-                }
+                auto bytes = std::array<unsigned char, E>();
+                copy_bits(m_blocks, std::span(bytes));
                 return bytes;
         }
 
@@ -641,6 +624,31 @@ public:
                 assert(n <= size() and len <= size() - n);
                 for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(pos, value ? ones : zero, mask); });
                 return *this;
+        }
+
+        // The ranged queries beside the ranged set, read the same way: a block at a time, masked to [n, n + len).
+        [[nodiscard]] constexpr auto count(std::size_t n, std::size_t len) const noexcept
+                -> std::size_t
+        {
+                assert(n <= size() and len <= size() - n);
+                auto c = 0UZ;
+                for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { c += popcount(static_cast<block_type>(block_at(pos) & mask)); });
+                return c;
+        }
+
+        [[nodiscard]] constexpr auto any(std::size_t n, std::size_t len) const noexcept
+                -> bool
+        {
+                assert(n <= size() and len <= size() - n);
+                return find_block(n, len, [](block_type block, block_type mask) -> bool { return static_cast<block_type>(block & mask) != zero; });
+        }
+
+        // Not count() == len: a clear position ends it, which is what a block that is not all ones says in one test.
+        [[nodiscard]] constexpr auto all(std::size_t n, std::size_t len) const noexcept
+                -> bool
+        {
+                assert(n <= size() and len <= size() - n);
+                return not find_block(n, len, [](block_type block, block_type mask) -> bool { return static_cast<block_type>(block & mask) != mask; });
         }
 
         // Its own 0, and the same instructions the hand-written version emitted.
@@ -853,6 +861,31 @@ public:
                                 this->m_blocks[i] &= static_cast<block_type>(~other.m_blocks[i]);
                         }
                 }
+                return *this;
+        }
+
+        // An elementwise kernel over two storages of one width: each block through f, then the padding cleared.
+        template<class F>
+        constexpr auto transform(bit_block_container const& other, F f) noexcept
+                -> bit_block_container&
+        {
+                assert(size() == other.size());
+                for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                        m_blocks[i] = f(m_blocks[i], other.m_blocks[i]);
+                }
+                erase_unused();
+                return *this;
+        }
+
+        // The same against one block, which is how an elementwise kernel meets a scalar.
+        template<class F>
+        constexpr auto transform(F f) noexcept
+                -> bit_block_container&
+        {
+                for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                        m_blocks[i] = f(m_blocks[i]);
+                }
+                erase_unused();
                 return *this;
         }
 
@@ -1390,55 +1423,13 @@ private:
                 }
         }
 
-        // The bits as bytes and back, said in shifts: byte j holds [8j, 8j + 8), least significant bit first.
-        template<std::size_t E>
-        static constexpr auto shared_bytes = std::ranges::min(E, static_num_blocks * sizeof(block_type));
-
-        // On a little-endian target a straight copy of those bytes is the same answer, and not byte at a time.
-        static constexpr bool bytes_copy_as_blocks = std::endian::native == std::endian::little;
-
-        // The shifts, in one place: they say where a position goes rather than assume a byte order.
-        template<std::size_t E>
-        constexpr auto assign_bytes_by_shifts(std::array<std::byte, E> const& bytes) noexcept
-                -> void
-        {
-                for (auto const j : std::views::iota(0UZ, shared_bytes<E>)) {
-                        auto const byte = static_cast<block_type>(std::to_integer<unsigned char>(bytes[j]));
-                        auto& block     = m_blocks[j / sizeof(block_type)];
-                        block           = static_cast<block_type>(block | shl(byte, bits_per_byte * (j % sizeof(block_type))));
-                }
-        }
-
-        template<std::size_t E>
-        constexpr auto to_bytes_by_shifts(std::array<std::byte, E>& bytes) const noexcept
-                -> void
-        {
-                for (auto const j : std::views::iota(0UZ, shared_bytes<E>)) {
-                        auto const block = shr(m_blocks[j / sizeof(block_type)], bits_per_byte * (j % sizeof(block_type)));
-                        bytes[j]         = static_cast<std::byte>(static_cast<unsigned char>(block));
-                }
-        }
-
         template<std::size_t E>
                 requires has_static_size
-        constexpr auto assign_bytes(std::array<std::byte, E> const& bytes) noexcept
+        constexpr auto assign_bytes(std::array<unsigned char, E> const& bytes) noexcept
                 -> void
         {
                 std::ranges::fill(m_blocks, zero);
-
-                // if constexpr, not a loop running zero times: an unenterable loop is a line no test reaches.
-                if constexpr (shared_bytes<E> > 0UZ) {
-                        // The shifts answer the two cases a copy cannot: a constant expression, and big-endian.
-                        if consteval {
-                                assign_bytes_by_shifts(bytes);
-                        } else {
-                                if constexpr (bytes_copy_as_blocks) {
-                                        std::memcpy(m_blocks.data(), bytes.data(), shared_bytes<E>);
-                                } else {
-                                        assign_bytes_by_shifts(bytes);
-                                }
-                        }
-                }
+                copy_bits(bytes, std::span(m_blocks));
 
                 // The source keeps its own tail clear, so this restores nothing where the two widths agree.
                 erase_unused();
@@ -1589,17 +1580,27 @@ private:
                 for_each_block(size() - n, n, [&](std::size_t pos, block_type mask) -> void { block_at(pos, block_at(pos + gap), mask); });
         }
 
-        // A block's bits end for end, as log2(digits) swaps of ever narrower halves.
+        // A block's bits end for end, as log2(digits) swaps of ever narrower halves where the width has them.
         [[nodiscard]] static constexpr auto reversed(block_type block) noexcept
                 -> block_type
         {
-                static_assert(std::has_single_bit(bits_per_block));
-                auto mask = shr(ones, bits_per_block / 2UZ);
-                for (auto width = bits_per_block / 2UZ; 0UZ < width; width /= 2UZ) {
-                        block = static_cast<block_type>(static_cast<block_type>(shr(block, width) & mask) | shl(static_cast<block_type>(block & mask), width));
-                        mask  = static_cast<block_type>(mask ^ shl(mask, width / 2UZ));
+                if constexpr (std::has_single_bit(bits_per_block)) {
+                        auto mask = shr(ones, bits_per_block / 2UZ);
+                        for (auto width = bits_per_block / 2UZ; 0UZ < width; width /= 2UZ) {
+                                block = static_cast<block_type>(static_cast<block_type>(shr(block, width) & mask) | shl(static_cast<block_type>(block & mask), width));
+                                mask  = static_cast<block_type>(mask ^ shl(mask, width / 2UZ));
+                        }
+                        return block;
+                } else {
+                        // A width with no halves to swap, as a bit-precise block may have: one position at a time.
+                        auto reversed_block = zero;
+                        for (auto const i : std::views::iota(0UZ, bits_per_block)) {
+                                if (bits::detail::intersects(block, shl(unit, i))) {
+                                        reversed_block = static_cast<block_type>(reversed_block | shl(unit, left_bit - i));
+                                }
+                        }
+                        return reversed_block;
                 }
-                return block;
         }
 
         [[nodiscard]] constexpr auto last_block() const noexcept
@@ -1617,6 +1618,19 @@ private:
                         auto const count = std::ranges::min(bits_per_block, n + len - pos);
                         f(pos, partial_block_mask<block_type>(count));
                 }
+        }
+
+        // Whether a block of [n, n + len), masked to the range, satisfies pred; the first that does ends the walk.
+        template<class Pred>
+        [[nodiscard]] constexpr auto find_block(std::size_t n, std::size_t len, Pred pred) const noexcept
+                -> bool
+        {
+                for (auto pos = n; pos < n + len; pos += bits_per_block) {
+                        if (pred(block_at(pos), partial_block_mask<block_type>(std::ranges::min(bits_per_block, n + len - pos)))) {
+                                return true;
+                        }
+                }
+                return false;
         }
 
         [[nodiscard]] constexpr auto all_but_last_are_ones() const noexcept

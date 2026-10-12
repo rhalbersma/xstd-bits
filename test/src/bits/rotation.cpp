@@ -3,20 +3,21 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/sequence/rotation.hpp> // as_owner, rotated_ints, rotation_patterns, with_pattern
-#include <xstd/bits/bit_array.hpp>    // basic_bit_array, bit_array
-#include <xstd/bits/bit_vector.hpp>   // basic_bit_vector, bit_vector
-#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                  // equal, rotate
-#include <array>                      // array
-#include <cstddef>                    // ptrdiff_t, size_t
-#include <cstdint>                    // uint64_t, uint8_t
-#include <iterator>                   // iter_reference_t
-#include <numeric>                    // gcd
-#include <ranges>                     // begin, end, iota, iterator_t, next, size
-#include <type_traits>                // is_reference_v
-#include <utility>                    // index_sequence, make_index_sequence
-#include <vector>                     // vector
+#include <test/sequence/rotation.hpp>         // as_owner, rotated_ints, rotation_patterns, with_pattern
+#include <xstd/bits/algorithm/bit_rotate.hpp> // bit_rotate
+#include <xstd/bits/bit_array.hpp>            // basic_bit_array, bit_array
+#include <xstd/bits/bit_vector.hpp>           // basic_bit_vector, bit_vector
+#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                          // equal, rotate
+#include <array>                              // array
+#include <cstddef>                            // ptrdiff_t, size_t
+#include <cstdint>                            // uint64_t, uint8_t
+#include <iterator>                           // iter_reference_t
+#include <numeric>                            // gcd
+#include <ranges>                             // begin, end, iota, iterator_t, next, size
+#include <type_traits>                        // is_reference_v
+#include <utility>                            // index_sequence, make_index_sequence
+#include <vector>                             // vector
 
 BOOST_AUTO_TEST_SUITE(Rotation)
 
@@ -68,10 +69,10 @@ template<class S>
 }
 
 template<class S>
-[[nodiscard]] auto by_member(S s, std::size_t turn)
+[[nodiscard]] auto by_algorithm(S s, std::size_t turn)
         -> S
 {
-        s.rotate(turn);
+        xstd::bit_rotate(s, std::ranges::next(std::ranges::begin(s), static_cast<std::ptrdiff_t>(turn)));
         return s;
 }
 
@@ -190,12 +191,12 @@ BOOST_AUTO_TEST_CASE(StdRotateIsExactOnEveryLibrary)
         BOOST_CHECK_EQUAL(all_sweeps(inexact), 0);
 }
 
-// The member is a pass over the blocks, asking nothing of the library's proxies, so it is exact on every library.
-BOOST_AUTO_TEST_CASE(TheMemberRotateIsExactOnEveryLibrary)
+// bit_rotate is a pass over the blocks, asking nothing of the library's proxies, so it is exact on every library.
+BOOST_AUTO_TEST_CASE(BitRotateIsExactOnEveryLibrary)
 {
         auto const inexact = []<class S>(S const& s, std::vector<bool> const& pattern, std::size_t turn) -> int {
-                if constexpr (requires (S& r, std::size_t n) { r.rotate(n); }) {
-                        return static_cast<int>(mismatches(by_member(s, turn), test::sequence::rotated_ints(pattern, turn)) != 0UZ);
+                if constexpr (requires (S& r) { xstd::bit_rotate(r, std::ranges::begin(r)); }) {
+                        return static_cast<int>(mismatches(by_algorithm(s, turn), test::sequence::rotated_ints(pattern, turn)) != 0UZ);
                 } else {
                         return 0;
                 }

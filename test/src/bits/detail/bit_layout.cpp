@@ -3,12 +3,14 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, byte_count, bytes_bits, container_source, fixed_bit_blocks, fixed_blocks_source
+#include <test/ext_int128.hpp>             // IWYU pragma: keep; TEST_HAS_BOOST_INT128, uint128
+#include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, block_copies_as_bytes, byte_count, bytes_bits, container_source, fixed_bit_blocks, fixed_blocks_source
 #include <xstd/bits/detail/bit_width.hpp>  // bit_width_v
 #include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                           // array, to_array
+#include <bit>                             // endian
 #include <bitset>                          // bitset
-#include <cstddef>                         // byte, size_t
+#include <cstddef>                         // size_t
 #include <cstdint>                         // uint8_t, uint16_t, uint32_t, uint64_t
 #include <ranges>                          // iota
 #include <span>                            // dynamic_extent, span
@@ -118,7 +120,7 @@ BOOST_AUTO_TEST_CASE(OnePositionLightsOneBitOfOneByte)
                 bs.set(i);
                 auto const bytes = detail::bit_bytes<N>(bs);
                 for (auto const j : std::views::iota(0UZ, bytes.size())) {
-                        BOOST_CHECK(bytes[j] == (j == i / 8UZ ? static_cast<std::byte>(1U << (i % 8UZ)) : std::byte{}));
+                        BOOST_CHECK(bytes[j] == (j == i / 8UZ ? static_cast<unsigned char>(1U << (i % 8UZ)) : 0U));
                 }
         }
 }
@@ -188,7 +190,7 @@ BOOST_AUTO_TEST_CASE(BlocksAndBytesAreEachOthersInverse)
         static_assert([] -> bool {
                 auto const blocks = Blocks{0x0000'0000'0000'FF01ULL, 0x0000'0000'0000'0002ULL};
                 auto const bytes  = detail::bit_bytes<N>(blocks);
-                return bytes[0] == std::byte{0x01} and bytes[1] == std::byte{0xFF} and bytes[2] == std::byte{0x00} and bytes[8] == std::byte{0x02};
+                return bytes[0] == 0x01U and bytes[1] == 0xFFU and bytes[2] == 0x00U and bytes[8] == 0x02U;
         }());
 
         // Two block widths over the same positions spell the same bytes, which is the whole claim.
@@ -277,6 +279,38 @@ BOOST_AUTO_TEST_CASE(TheCopyAndTheShiftsAgree)
                 static_assert(back_folded == kept);
                 BOOST_CHECK(back_copied == kept);
         }
+}
+
+namespace {
+
+// Two blocks of a 128-bit class against the same bits in four std::uint64_t blocks, crossing either way.
+template<class Block>
+auto check_class_block()
+        -> void
+{
+        static_assert(not detail::block_copies_as_bytes<Block>);
+        constexpr auto N  = 256UZ;
+        auto const plain  = std::array<std::uint64_t, 4>{0x0123'4567'89AB'CDEFULL, 0xFEDC'BA98'7654'3210ULL, 1ULL, 0x8000'0000'0000'0000ULL};
+        auto const blocks = std::array<Block, 2>{(Block{plain[1]} << 64U) | Block{plain[0]}, (Block{plain[3]} << 64U) | Block{plain[2]}};
+        BOOST_CHECK(detail::bit_bytes<N>(blocks) == detail::bit_bytes<N>(plain));
+        auto const back = detail::bytes_bits<std::array<Block, 2>, N>(detail::bit_bytes<N>(plain));
+        BOOST_CHECK(back == blocks);
+}
+
+} // namespace
+
+// A class block keeps the layout its author chose, so it crosses by its value and spells the bytes built-ins do.
+BOOST_AUTO_TEST_CASE(AClassBlockCrossesByItsValue)
+{
+        static_assert(detail::block_copies_as_bytes<std::uint64_t> == (std::endian::native == std::endian::little));
+        static_assert(not detail::block_copies_as_bytes<std::bitset<64>>);
+#ifdef TEST_HAS_ABSL_INT128
+        check_class_block<absl::uint128>();
+#endif
+#ifdef TEST_HAS_BOOST_INT128
+        check_class_block<boost::int128::uint128>();
+#endif
+        BOOST_CHECK(true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

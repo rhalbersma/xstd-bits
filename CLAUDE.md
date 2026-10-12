@@ -48,6 +48,8 @@ you. A file that already deviates is a file to fix, not the convention speaking.
 file publishes a surface rather than naming what it needs, and its order is the one a reader
 should meet it in: a macro before what expands it, a type before the functions returning it, and
 whatever grouping the comments mark. Alphabetizing that throws away the argument it was making.
+Where no such dependency orders a run of peers, they are alphabetical: the sequence a paper or a
+proposal lists them in is not an argument the header makes.
 
 A trailing `//` names what each include is for, and that comment, an `IWYU pragma` and a `NOLINT`
 belong to the line rather than to the position: move the whole line or none of it. Reordering

@@ -5,14 +5,17 @@
 
 #include <test/bit_exchange.hpp>                    // converts_between, converts_from, converts_to, exchanges_from_bits
 #include <test/block_types.hpp>                     // graded_extents
+#include <xstd/bits/algorithm.hpp>                  // bit_all_of, bit_any_of, bit_count, bit_mismatch, bit_none_of
 #include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
-#include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
+#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
+#include <xstd/bits/bit_set.hpp>                    // bit_set
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_subspan.hpp>                // bit_subspan
-#include <xstd/bits/bit_vector.hpp>                 // bit_vector
+#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, storage
-#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
+#include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, reads, sequence_reading_tag, set_reading_tag, storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>    // blit_source, sequence_adaptor
 #include <xstd/bits/from_blocks.hpp>                // from_blocks
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
@@ -22,9 +25,10 @@
 #include <concepts>                                 // copyable, equality_comparable, regular, same_as, totally_ordered
 #include <cstddef>                                  // ptrdiff_t, size_t
 #include <cstdint>                                  // uint8_t, uint32_t, uint64_t
+#include <functional>                               // identity
 #include <iterator>                                 // reverse_iterator
 #include <limits>                                   // numeric_limits
-#include <ranges>                                   // equal, iota, random_access_range, transform
+#include <ranges>                                   // equal, iota, random_access_range, ssize, transform
 #include <span>                                     // dynamic_extent
 #include <stdexcept>                                // length_error, out_of_range
 #include <type_traits>                              // is_const_v, is_constructible_v, is_convertible_v
@@ -47,6 +51,9 @@ constexpr bool can_write = requires (S s) { s[0] = true; };
 
 template<class S>
 constexpr bool can_swap = requires (S s) { s.swap(s); };
+
+template<class S>
+constexpr bool has_bulk_operators = requires (S s) { s &= s; } or requires (S s) { s |= s; } or requires (S s) { s ^= s; } or requires (S s) { s & s; } or requires (S s) { ~s; } or requires (S s) { s.flip(); };
 
 template<class Seq>
 [[nodiscard]] auto bools(Seq const& s)
@@ -211,48 +218,43 @@ BOOST_AUTO_TEST_CASE(AViewIsARangeInBothDirectionsAndAtThrowsPastTheEnd)
         BOOST_CHECK(r.at(99) == true);
 }
 
-BOOST_AUTO_TEST_CASE(TheBulkOperatorsAreTheStoragesOwn)
+// No bulk operators and no flip, on an owner or a view: elementwise logic is the valarray reading's.
+BOOST_AUTO_TEST_CASE(ThereAreNoBulkOperators)
 {
+        static_assert(not has_bulk_operators<Owner> and not has_bulk_operators<View>);
         auto x = Owner();
         auto y = Owner();
-        x[1] = x[2] = true;
-        y[2] = y[3] = true;
-
-        auto z = x;
-        z &= y;
-        BOOST_CHECK(z[2] and not z[1] and not z[3]);
-        z = x;
-        z |= y;
-        BOOST_CHECK(z[1] and z[2] and z[3]);
-        z = x;
-        z ^= y;
-        BOOST_CHECK(z[1] and not z[2] and z[3]);
-
-        // The binary forms, each its compound over a copy, and the complement as flip()'s value.
-        auto t = x;
-        t &= y;
-        BOOST_CHECK((x & y) == t);
-        t = x;
-        t |= y;
-        BOOST_CHECK((x | y) == t);
-        t = x;
-        t ^= y;
-        BOOST_CHECK((x ^ y) == t);
-        t = x;
-        t.flip();
-        BOOST_CHECK((~x) == t);
-        BOOST_CHECK(x[1] and x[2]); // and none of them wrote through
-        BOOST_CHECK((~~x) == x);
-        BOOST_CHECK(((x & y) | (x ^ y)) == (x | y)); // one identity, over packed bits
-
-        auto c = Storage();
-        auto d = Storage();
-        d.set(1);
-        View const v(c);
-        v |= View(d);
-        BOOST_CHECK(c.test(1) and not c.test(2));
+        x[1]   = true;
+        y[3]   = true;
         swap(x, y);
         BOOST_CHECK(x[3] and y[1]);
+}
+
+// An owner and a view read by block as their adaptor does, in their own block type alone; a set or a foreign range not.
+BOOST_AUTO_TEST_CASE(ABlitSourceIsASequenceOfTheSameBlockType)
+{
+        using xstd::bits::detail::blit_source;
+        using bytes = xstd::basic_bit_vector<std::uint8_t>;
+        static_assert(blit_source<bytes, std::uint8_t> and blit_source<xstd::basic_bit_array<std::uint8_t, 9>, std::uint8_t>);
+        static_assert(blit_source<xstd::basic_bit_bounded_vector<std::uint8_t, 9>, std::uint8_t>);
+        static_assert(blit_source<xstd::bit_span<std::array<std::uint8_t, 2>>, std::uint8_t>);
+        static_assert(not blit_source<bytes, std::uint64_t>);
+        static_assert(not blit_source<xstd::bit_set, std::size_t> and not blit_source<std::vector<bool>, std::size_t>);
+        static_assert(not blit_source<bytes::reference, std::uint8_t> and not blit_source<bytes::iterator, std::uint8_t>);
+        BOOST_CHECK(true);
+}
+
+// Every container states its reading through its adaptor, an owner and a view alike, and only that one.
+BOOST_AUTO_TEST_CASE(EveryContainerReadsAsItsAdaptorDoes)
+{
+        using xstd::bits::detail::reads;
+        using xstd::bits::detail::sequence_reading_tag;
+        using xstd::bits::detail::set_reading_tag;
+        static_assert(reads<xstd::bit_vector, sequence_reading_tag> and reads<xstd::bit_array<9> const, sequence_reading_tag>);
+        static_assert(reads<xstd::bit_span<std::array<std::uint8_t, 2>>, sequence_reading_tag> and not reads<xstd::bit_vector, set_reading_tag>);
+        static_assert(reads<xstd::bit_set, set_reading_tag> and not reads<xstd::bit_set, sequence_reading_tag>);
+        static_assert(not reads<xstd::bit_vector::reference, sequence_reading_tag> and not reads<std::vector<bool>, sequence_reading_tag>);
+        BOOST_CHECK(true);
 }
 
 // The ordering invariant on the trait's entry, the only ordering an owner has.
@@ -449,26 +451,12 @@ template<class Seq>
 auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m)
         -> std::size_t
 {
-        auto disagreements = 0UZ;
-        for (auto const value : {true, false}) {
-                auto const is = [value](bool b) -> bool { return b == value; };
-                disagreements += static_cast<std::size_t>(s.count(value) != static_cast<std::size_t>(std::ranges::count(m, value)));
-                // And against the generic algorithm over the sequence itself, which the benchmark's ratio assumes.
-                disagreements += static_cast<std::size_t>(s.count(value) != static_cast<std::size_t>(std::ranges::count(s, value)));
-                disagreements += static_cast<std::size_t>(s.all(value) != std::ranges::all_of(m, is));
-                disagreements += static_cast<std::size_t>(s.any(value) != std::ranges::any_of(m, is));
-                disagreements += static_cast<std::size_t>(s.none(value) != std::ranges::none_of(m, is));
-        }
-        // The argument defaults to the true arm, which is where std::bitset's four already are.
-        disagreements += static_cast<std::size_t>(s.count() != s.count(true));
-        disagreements += static_cast<std::size_t>(s.all() != s.all(true));
-        disagreements += static_cast<std::size_t>(s.any() != s.any(true));
-        disagreements += static_cast<std::size_t>(s.none() != s.none(true));
-        // The four identities the false arms are, spelled here because they are the implementation.
-        disagreements += static_cast<std::size_t>(s.count(false) != s.size() - s.count(true));
-        disagreements += static_cast<std::size_t>(s.all(false) != s.none(true));
-        disagreements += static_cast<std::size_t>(s.any(false) != not s.all(true));
-        disagreements += static_cast<std::size_t>(s.none(false) != s.all(true));
+        auto disagreements = static_cast<std::size_t>(xstd::bit_count(s) != std::ranges::count(m, true));
+        // And against the generic algorithm over the sequence itself, which the benchmark's ratio assumes.
+        disagreements += static_cast<std::size_t>(xstd::bit_count(s) != std::ranges::count(s, true));
+        disagreements += static_cast<std::size_t>(xstd::bit_all_of(s) != std::ranges::all_of(m, std::identity()));
+        disagreements += static_cast<std::size_t>(xstd::bit_any_of(s) != std::ranges::any_of(m, std::identity()));
+        disagreements += static_cast<std::size_t>(xstd::bit_none_of(s) != std::ranges::none_of(m, std::identity()));
         return disagreements;
 }
 
@@ -516,7 +504,15 @@ BOOST_AUTO_TEST_CASE(TheAggregatesAgreeWithTheModelOnAWindowOfOurs)
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// std::mismatch's answer over the machinery operator== is made of: the position, or size() where equal.
+// Where an iterator into s stands, as an index.
+template<class S, class I>
+[[nodiscard]] auto position_of(S const& s, I it)
+        -> std::size_t
+{
+        return static_cast<std::size_t>(it - s.begin());
+}
+
+// std::mismatch's answer over the machinery operator== is made of: the position, or end() where equal.
 BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
 {
         auto disagreements = 0UZ;
@@ -528,18 +524,18 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
                         auto const my       = write_pattern(y, q);
                         auto const [i, j]   = std::ranges::mismatch(mx, my);
                         auto const expected = static_cast<std::size_t>(i - mx.begin());
-                        disagreements += static_cast<std::size_t>(x.mismatch(y) != expected);
-                        // Symmetric, and equal values answer the width rather than any position in it.
-                        disagreements += static_cast<std::size_t>(y.mismatch(x) != expected);
-                        disagreements += static_cast<std::size_t>(x.mismatch(x) != x.size());
+                        disagreements += static_cast<std::size_t>(position_of(x, xstd::bit_mismatch(x, y).in1) != expected);
+                        // Symmetric, and equal values answer the end rather than any position before it.
+                        disagreements += static_cast<std::size_t>(position_of(y, xstd::bit_mismatch(y, x).in1) != expected);
+                        disagreements += static_cast<std::size_t>(xstd::bit_mismatch(x, x).in1 != x.end());
                 }
         }
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// Dependent, so a constrained-away member is a false rather than a hard error.
+// Dependent, so a constrained-away overload is a false rather than a hard error.
 template<class S>
-constexpr bool can_mismatch = requires (S const& a) { a.mismatch(a); };
+constexpr bool can_mismatch = requires (S const& a) { xstd::bit_mismatch(a, a); };
 
 // What for_each accepts, likewise dependent.
 template<class S, class F>
@@ -579,12 +575,11 @@ struct bool_probe
         }
 };
 
-// A window's blocks are not its own, so it has no mismatch; nor has an owner over storage without the entry.
-BOOST_AUTO_TEST_CASE(MismatchIsTheOwnersOverStorageThatHasTheEntry)
+// Every sequence has a mismatch: a window's a bool at a time, its end blocks not being its own.
+BOOST_AUTO_TEST_CASE(EverySequenceHasAMismatch)
 {
-        static_assert(can_mismatch<Owner>);
-        static_assert(can_mismatch<View>);
-        static_assert(not can_mismatch<View::subspan_type>);
+        static_assert(can_mismatch<Owner> and can_mismatch<View> and can_mismatch<View::subspan_type>);
+        BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
 // for_each hands the functor what the iterator dereferences to, and stops where a bool functor says to.
@@ -633,7 +628,7 @@ BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
         for (auto const r : a) {
                 r = true;
         }
-        BOOST_CHECK_EQUAL(a.count(), a.size());
+        BOOST_CHECK_EQUAL(xstd::bit_count(a), std::ranges::ssize(a));
 
         // And the overload resolution the constraint cannot reach: an lvalue at the call would take the reference.
         auto took_a_reference = false;
@@ -653,7 +648,7 @@ BOOST_AUTO_TEST_CASE(APackedArrayExchangesBytesWithAFieldOfBits)
         }
 
         auto const a = xstd::bit_convert<xstd::bit_array<N>>(src);
-        BOOST_CHECK_EQUAL(a.count(), src.count());
+        BOOST_CHECK_EQUAL(static_cast<std::size_t>(xstd::bit_count(a)), src.count());
         for (auto const i : std::views::iota(0UZ, N)) {
                 BOOST_CHECK_EQUAL(a[i], src.test(i));
         }
@@ -686,10 +681,10 @@ BOOST_AUTO_TEST_CASE(TheSequenceExchangeIsNamedBothWays)
         static_assert(not test::converts_from<T, std::bitset<N - 1UZ>>);
 }
 
-// A window is the one shape that must not convert: its position zero is not the storage's.
-BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
+// A window converts from its own first position, which is not the storage's, so it is read from its offset.
+BOOST_AUTO_TEST_CASE(AWindowConvertsFromItsOffsetAndAPlainViewAsAFieldOfBits)
 {
-        static_assert(not test::converts_to<xstd::bit_subspan<std::array<std::uint64_t, 2>, std::dynamic_extent, 100>, std::bitset<100>>);
+        static_assert(test::converts_to<xstd::bit_subspan<std::array<std::uint64_t, 2>, std::dynamic_extent, 100>, std::bitset<100>>);
         static_assert(test::converts_to<View, std::bitset<100>>);
         static_assert(test::converts_to<Reader, std::bitset<100>>);
 
@@ -702,6 +697,10 @@ BOOST_AUTO_TEST_CASE(AWindowIsNotAFieldOfBitsButAPlainViewIs)
         auto const out              = xstd::bit_convert<std::bitset<100>>(view);
         BOOST_CHECK_EQUAL(out.count(), 2UZ);
         BOOST_CHECK(out.test(0) and out.test(Storage::extent - 1UZ));
+
+        // The window over the last three positions starts at the storage's last position but two.
+        auto const tail = xstd::bit_convert<std::bitset<3>>(view.last(3UZ));
+        BOOST_CHECK(tail.test(2) and tail.count() == 1UZ);
 
         // A view never gains the INBOUND direction, which would write through bits it does not own.
         static_assert(not test::converts_from<View, std::bitset<100>>);
@@ -722,7 +721,7 @@ BOOST_AUTO_TEST_CASE(RawBlocksAreElementsUnderThisReading)
         auto const a = xstd::bit_array<64>(xstd::from_blocks, std::array<std::uint64_t, 1>{5ULL});
         // Combined with `and`: a bare proxy is an ambiguous initializer for Boost.Test's assertion_result.
         BOOST_CHECK(a[0] and not a[1] and a[2]);
-        BOOST_CHECK_EQUAL(a.count(), 2UZ);
+        BOOST_CHECK_EQUAL(xstd::bit_count(a), 2);
 
         static_assert([] -> bool {
                 auto const b = std::array<std::uint64_t, 2>{0xF0F0ULL, 3ULL};
