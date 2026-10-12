@@ -95,7 +95,7 @@ struct shape_of<xstd::basic_bit_fixed_set<std::size_t, Block, N>>
         static constexpr auto width = N;
 };
 
-// GCC 15 names two specializations for equal values once an all-zero block lies between their set bits; GCC 16 one.
+// GCC 15 mangles away implicit non-trailing zero blocks (PR c++/121231), splitting equal values; GCC 16 does not.
 #if defined(__GNUC__) and not defined(__clang__) and __GNUC__ < 16
 inline constexpr bool splits_equal_values_across_zero_blocks = true;
 #else
