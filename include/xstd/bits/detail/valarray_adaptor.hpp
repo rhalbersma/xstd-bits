@@ -201,7 +201,9 @@ public:
                 -> reference
         {
                 assert(n < size());
-                return elements()[n];
+                // Named first: Clang 23's lifetime analysis crashes on a prvalue subscripted through deducing this.
+                auto view = elements();
+                return view[n];
         }
 
         [[nodiscard]] constexpr auto operator[](size_type n) const noexcept
