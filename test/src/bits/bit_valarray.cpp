@@ -145,9 +145,10 @@ BOOST_AUTO_TEST_CASE(ItIsUsableInConstantExpressions)
 {
         static_assert([] -> bool {
                 auto const v = xstd::bit_valarray{true, false, true};
-                auto const u = v;
+                auto u       = v;
+                u[1]         = true;
                 auto const w = (v.cshift(1) | v) == true;
-                return w.min() and v.sum() and not(u < v).max();
+                return w.min() and v.sum() and u.min() and not v[1];
         }());
 }
 
