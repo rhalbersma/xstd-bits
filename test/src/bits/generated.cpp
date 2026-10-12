@@ -9,7 +9,9 @@
 #include <concepts>                 // copyable, default_initializable, movable, ranges::swap, swappable, totally_ordered
 #include <cstddef>                  // size_t
 #include <functional>               // less
+#include <limits>                   // numeric_limits
 #include <memory_resource>          // polymorphic_allocator
+#include <ranges>                   // range_value_t
 #include <scoped_allocator>         // scoped_allocator_adaptor
 #include <type_traits>              // is_nothrow_copy_assignable_v, is_nothrow_copy_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, is_trivially_copyable_v
 #include <utility>                  // declval, move, swap
@@ -282,7 +284,9 @@ template<class T>
 auto blocks_go_in_and_come_out_whole()
         -> bool
 {
-        auto const original = typename T::block_container_type{0b1011UZ, 1UZ << 63U};
+        using block         = std::ranges::range_value_t<typename T::block_container_type>;
+        auto const top_bit  = static_cast<block>(block{1} << static_cast<unsigned>(std::numeric_limits<block>::digits - 1));
+        auto const original = typename T::block_container_type{0b1011UZ, top_bit};
         auto owner          = T();
         auto blocks         = original;
         owner.replace(std::move(blocks));

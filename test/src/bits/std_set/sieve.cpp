@@ -9,6 +9,7 @@
 #include <boost/test/unit_test.hpp>    // BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_AUTO_TEST_CASE_TEMPLATE
 #include <cstddef>                     // size_t
 #include <format>                      // format
+#include <limits>                      // numeric_limits
 #include <opt/set/detail/isqrt.hpp>    // isqrt
 #include <opt/set/sieve.hpp>           // filter_twins, generate_candidates, incremental_sieve, sift_primes0, sift_primes1, sift_primes_incremental, sift_primes_segmented
 #include <ranges>                      // iota
@@ -139,10 +140,12 @@ BOOST_AUTO_TEST_CASE(TheIntegerSquareRootIsExactAndTotal)
                 BOOST_CHECK_EQUAL(opt::detail::isqrt((r * r) + 1UZ), r);
         }
 
-        // And at widths where a floating-point isqrt would start rounding the wrong way.
+        // And at widths where a floating-point isqrt would start rounding the wrong way, as far as size_t reaches.
         BOOST_CHECK_EQUAL(opt::detail::isqrt(1UZ << 20UZ), 1UZ << 10UZ);
-        BOOST_CHECK_EQUAL(opt::detail::isqrt((1UZ << 52UZ) - 1UZ), (1UZ << 26UZ) - 1UZ);
-        BOOST_CHECK_EQUAL(opt::detail::isqrt(1UZ << 52UZ), 1UZ << 26UZ);
+        if constexpr (std::numeric_limits<std::size_t>::digits > 52) {
+                BOOST_CHECK_EQUAL(opt::detail::isqrt((1UZ << 52UZ) - 1UZ), (1UZ << 26UZ) - 1UZ);
+                BOOST_CHECK_EQUAL(opt::detail::isqrt(1UZ << 52UZ), 1UZ << 26UZ);
+        }
 }
 
 // generate_candidates is total in n: below two there is nothing to sift, which is an answer.

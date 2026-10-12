@@ -33,7 +33,11 @@ concept block_basis =
 // Each flag held to the basis it claims.
 static_assert(not(has_uint128 and has_msvc_int128));
 
-static_assert(not has_uint128 or block_basis<xstd::uint128>);
+#ifdef TEST_HAS_UINT128
+
+static_assert(block_basis<xstd::uint128>);
+
+#endif
 #ifdef TEST_HAS_MSVC_INT128
 
 static_assert(block_basis<xstd::uint128>);

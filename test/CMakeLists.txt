@@ -55,6 +55,10 @@ set(cxx_compile_options_warnings
         -Wno-ctad-maybe-unsupported         # std::reverse_iterator(it) uses the standard's own deduction guide
         -Wno-zero-as-null-pointer-constant  # triggered by <=> comparisons against 0
     >
+    # Four-byte pointers beside 64-bit members pad the test fixtures, whose layout nothing reads; 64-bit legs keep the check.
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<EQUAL:${CMAKE_SIZEOF_VOID_P},4>>:
+        -Wno-padded
+    >
     $<$<CXX_COMPILER_ID:GNU>:
         -Wall
         -Wextra
