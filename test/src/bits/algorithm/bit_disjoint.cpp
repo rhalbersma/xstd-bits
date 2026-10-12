@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(AgreesWithTheModelOnStdSet)
 {
         BOOST_CHECK_EQUAL(disagreements<xstd::bit_fixed_set<6>>(6UZ), 0);
         BOOST_CHECK_EQUAL((disagreements<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 10>>(6UZ)), 0);
-        BOOST_CHECK_EQUAL((disagreements<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 6, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>>(6UZ)), 0);
+        BOOST_CHECK_EQUAL((disagreements<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 6, xstd::bit_key_mapping<std::size_t>, std::greater<>>>(6UZ)), 0);
         BOOST_CHECK_EQUAL(disagreements<xstd::bit_set>(6UZ), 0);
 }
 

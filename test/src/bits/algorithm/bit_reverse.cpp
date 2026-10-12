@@ -54,11 +54,11 @@ BOOST_AUTO_TEST_CASE(ReversesAsRangesReverse)
 // A whole view reverses the bits it views, and the padding stays clear for the owner's count to see.
 BOOST_AUTO_TEST_CASE(AWholeViewReversesWhatItViews)
 {
-        auto a          = xstd::basic_bit_array<std::uint8_t, 13>();
-        a[0]            = true;
-        auto const last = xstd::bit_reverse(xstd::bit_span(a));
+        auto a = xstd::basic_bit_array<std::uint8_t, 13>();
+        a[0]   = true;
+        xstd::bit_reverse(xstd::bit_span(a));
         BOOST_CHECK(a[12] and std::ranges::count(a, true) == 1);
-        static_assert(std::same_as<decltype(last), std::ranges::iterator_t<decltype(xstd::bit_span(a))> const>);
+        static_assert(std::same_as<decltype(xstd::bit_reverse(xstd::bit_span(a))), std::ranges::iterator_t<decltype(xstd::bit_span(a))>>);
 }
 
 // Not a window, which shares its end blocks, nor anything const, and an rvalue owner's end dangles as in std::ranges.

@@ -16,6 +16,7 @@
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
 #include <boost/test/unit_test.hpp>                 // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <array>                                    // array
+#include <compare>                                  // strong_ordering
 #include <concepts>                                 // constructible_from, convertible_to, derived_from, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint64_t, uint8_t
@@ -89,6 +90,18 @@ BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
         auto a = xstd::bit_array<8>();
         a[3]   = true;
         BOOST_CHECK(takes_a_span(a));
+}
+
+// Its iterators order by position, each way round and against themselves.
+BOOST_AUTO_TEST_CASE(ItsIteratorsOrderByPosition)
+{
+        auto block       = std::uint8_t{};
+        auto const s     = xstd::bit_span(block);
+        auto const first = s.begin();
+        auto const last  = s.end();
+        BOOST_CHECK((first <=> last) == std::strong_ordering::less);
+        BOOST_CHECK((last <=> first) == std::strong_ordering::greater);
+        BOOST_CHECK((first <=> first) == std::strong_ordering::equal);
 }
 
 // Like span it neither compares nor orders, where the owner it views does both.
