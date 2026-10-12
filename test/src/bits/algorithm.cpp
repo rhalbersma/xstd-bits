@@ -7,7 +7,8 @@
 #include <xstd/bits/bit_array.hpp>     // bit_array
 #include <xstd/bits/bit_fixed_set.hpp> // bit_fixed_set
 #include <boost/test/unit_test.hpp>    // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <ranges>                      // begin, next
+#include <iterator>                    // next
+#include <ranges>                      // begin
 
 BOOST_AUTO_TEST_SUITE(Algorithm)
 

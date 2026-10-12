@@ -13,7 +13,8 @@
 #include <concepts>                           // same_as
 #include <cstddef>                            // ptrdiff_t, size_t
 #include <cstdint>                            // uint8_t
-#include <ranges>                             // begin, dangling, end, iota, iterator_t, next, size
+#include <iterator>                           // next
+#include <ranges>                             // begin, dangling, end, iota, iterator_t, size
 #include <utility>                            // declval, forward
 #include <vector>                             // vector
 
