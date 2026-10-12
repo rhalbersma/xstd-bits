@@ -17,7 +17,7 @@
 #include <cassert>                                   // assert
 #include <cstddef>                                   // size_t
 #include <initializer_list>                          // initializer_list
-#include <type_traits>                               // is_nothrow_copy_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v
+#include <type_traits>                               // conditional_t, is_nothrow_copy_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v
 #include <utility>                                   // in_place, move
 
 // The valarray reading, [valarray] at bool over a bit_block_container it owns: every operator acts elementwise.
@@ -70,6 +70,16 @@ class valarray_adaptor : public adapted_bits<Bits, xstd::empty_base_type<>, Bits
         static constexpr bool is_fixed = Bits::has_static_size;
 
         static constexpr bool copies_without_throwing = std::is_nothrow_copy_constructible_v<Bits>;
+
+        // No caller can make one, so a constructor taking it cannot be called.
+        class unreachable
+        {
+                unreachable() = default;
+        };
+
+        // Types rather than constraints, since MSVC drops an inherited constructor's requires-clause candidate.
+        using count_type   = std::conditional_t<is_fixed, unreachable, std::size_t>;
+        using adopted_type = std::conditional_t<Bits::has_stored_size, typename Bits::block_container_type, unreachable>;
 
         // The elements as the sequence reading hands them out: a whole view, whose proxies and iterators are these.
         using elements_type       = sequence_adaptor<Bits, storage::borrowed, window::all>;
@@ -134,14 +144,12 @@ public:
         // [valarray.cons], the sizes taken at run time where the storage has one.
         [[nodiscard]] valarray_adaptor() = default;
 
-        [[nodiscard]] constexpr explicit valarray_adaptor(size_type n)
-                requires (not is_fixed)
+        [[nodiscard]] constexpr explicit valarray_adaptor(count_type n)
                 : members_type(std::in_place, Bits::check_addressable_width(n))
         {}
 
         // The value first and the count second, the order [valarray.cons] gives them.
-        [[nodiscard]] constexpr valarray_adaptor(value_type const& value, size_type n)
-                requires (not is_fixed)
+        [[nodiscard]] constexpr valarray_adaptor(value_type const& value, count_type n)
                 : valarray_adaptor(n)
         {
                 m_bits.fill(value);
@@ -167,8 +175,7 @@ public:
         }
 
         // Not in [valarray]: flat_set's adopting constructor at a run-time size, every bit of the blocks a position.
-        [[nodiscard]] constexpr valarray_adaptor(xstd::from_blocks_t, block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<block_container_type>)
-                requires Bits::has_stored_size
+        [[nodiscard]] constexpr valarray_adaptor(xstd::from_blocks_t, adopted_type blocks) noexcept(std::is_nothrow_move_constructible_v<adopted_type>)
                 : members_type(std::in_place, xstd::from_blocks, std::move(blocks))
         {}
 
