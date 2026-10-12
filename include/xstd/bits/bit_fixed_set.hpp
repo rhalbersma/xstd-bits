@@ -127,55 +127,6 @@ public:
                 x.swap(y);
         }
 
-        // The base's queries again, here so a mask converts: on either side of the friends, as the members' argument.
-        [[nodiscard]] friend constexpr auto intersects(basic_bit_fixed_set const& x, basic_bit_fixed_set const& y) noexcept
-                -> bool
-                requires is_mask
-        {
-                return intersects(static_cast<base_type const&>(x), static_cast<base_type const&>(y));
-        }
-
-        [[nodiscard]] friend constexpr auto disjoint(basic_bit_fixed_set const& x, basic_bit_fixed_set const& y) noexcept
-                -> bool
-                requires is_mask
-        {
-                return disjoint(static_cast<base_type const&>(x), static_cast<base_type const&>(y));
-        }
-
-        // A member hides the base's of its name, so these bring the base's set forms back beside the mask ones.
-        using base_type::is_proper_subset_of;
-        using base_type::is_proper_superset_of;
-        using base_type::is_subset_of;
-        using base_type::is_superset_of;
-
-        [[nodiscard]] constexpr auto is_subset_of(basic_bit_fixed_set const& other) const noexcept
-                -> bool
-                requires is_mask
-        {
-                return base_type::is_subset_of(other);
-        }
-
-        [[nodiscard]] constexpr auto is_proper_subset_of(basic_bit_fixed_set const& other) const noexcept
-                -> bool
-                requires is_mask
-        {
-                return base_type::is_proper_subset_of(other);
-        }
-
-        [[nodiscard]] constexpr auto is_superset_of(basic_bit_fixed_set const& other) const noexcept
-                -> bool
-                requires is_mask
-        {
-                return base_type::is_superset_of(other);
-        }
-
-        [[nodiscard]] constexpr auto is_proper_superset_of(basic_bit_fixed_set const& other) const noexcept
-                -> bool
-                requires is_mask
-        {
-                return base_type::is_proper_superset_of(other);
-        }
-
         // Total, as the binary & and - are: the value's bits at or above N meet nothing in this set.
         friend constexpr auto operator&=(basic_bit_fixed_set& lhs, key_type const& rhs) noexcept
                 -> basic_bit_fixed_set&

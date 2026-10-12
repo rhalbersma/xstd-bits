@@ -7,6 +7,7 @@
 #define XSTD_BITS_DETAIL_BIT_CONVERTIBLE_HPP
 
 #include <xstd/bits/bit_concepts/bit_constructible_from.hpp> // bit_constructible_from
+#include <xstd/bits/detail/algorithm.hpp>                    // count_true
 #include <xstd/bits/detail/bit_blocks_capacity.hpp>          // bit_blocks_capacity_v
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, byte_count, bytes_bits, copy_bits
 #include <xstd/bits/detail/bit_width.hpp>                    // bit_width_v
@@ -181,7 +182,7 @@ struct bit_source<T>
         [[nodiscard]] static constexpr auto count(T const& from) noexcept
                 -> std::size_t
         {
-                return from.count();
+                return count_true(from);
         }
 
         // Steps of the narrower block, so that each one lands inside a single target block.

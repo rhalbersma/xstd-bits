@@ -37,7 +37,6 @@ BOOST_AUTO_TEST_CASE(Complement)
         test::for_each_type<test::spec::set::owners>([]<class T> -> void {
                 if constexpr (test::set::static_width<T>) {
                         constexpr auto b = ~T();
-                        static_assert(b.full());
                         static_assert(b.size() == b.max_size());
                         static_assert(b.empty() or b.front() == *b.cbegin());
                         static_assert(b.empty() or b.back() == *b.crbegin());

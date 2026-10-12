@@ -5,7 +5,9 @@
 
 #include <test/sequence/ordering.hpp>               // ordering_agrees_with_vector_bool
 #include <test/sequence/rotation.hpp>               // permutation_sweep, permutes_ten_bits
-#include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/algorithm/bit_reverse.hpp>      // bit_reverse
+#include <xstd/bits/algorithm/bit_rotate.hpp>       // bit_rotate
+#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/bit_span.hpp>                   // bit_span
@@ -14,6 +16,7 @@
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
 #include <boost/test/unit_test.hpp>                 // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <array>                                    // array
+#include <compare>                                  // strong_ordering
 #include <concepts>                                 // constructible_from, convertible_to, derived_from, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint64_t, uint8_t
@@ -87,6 +90,18 @@ BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
         auto a = xstd::bit_array<8>();
         a[3]   = true;
         BOOST_CHECK(takes_a_span(a));
+}
+
+// Its iterators order by position, each way round and against themselves.
+BOOST_AUTO_TEST_CASE(ItsIteratorsOrderByPosition)
+{
+        auto block       = std::uint8_t{};
+        auto const s     = xstd::bit_span(block);
+        auto const first = s.begin();
+        auto const last  = s.end();
+        BOOST_CHECK((first <=> last) == std::strong_ordering::less);
+        BOOST_CHECK((last <=> first) == std::strong_ordering::greater);
+        BOOST_CHECK((first <=> first) == std::strong_ordering::equal);
 }
 
 // Like span it neither compares nor orders, where the owner it views does both.
@@ -178,8 +193,7 @@ BOOST_AUTO_TEST_CASE(ItRotatesAndReversesWhatItViews)
 {
         auto block       = std::uint8_t{};
         auto const whole = xstd::bit_span(block);
-        static_assert(std::same_as<decltype(whole.rotate(0UZ)), decltype(whole)&>);
-        static_assert(noexcept(whole.rotate(0UZ)) and noexcept(whole.reverse()));
+        static_assert(noexcept(xstd::bit_rotate(whole, whole.begin())) and noexcept(xstd::bit_reverse(whole)));
 
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::uint8_t{}, as_span()), 0);
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::array<std::uint8_t, 3>(), as_span()), 0);

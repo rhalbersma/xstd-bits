@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <fuzz/decoder.hpp>                         // checker, decoder, run, throws
+#include <xstd/bits/algorithm.hpp>                  // bit_all_of, bit_any_of, bit_count, bit_mismatch, bit_none_of
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector, bit_bounded_vector
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
@@ -16,7 +17,7 @@
 #include <functional>                               // hash
 #include <iterator>                                 // next
 #include <new>                                      // bad_alloc
-#include <ranges>                                   // from_range, iota, reverse
+#include <ranges>                                   // from_range, iota, reverse, ssize
 #include <stdexcept>                                // out_of_range
 #include <tuple>                                    // tuple
 #include <type_traits>                              // type_identity
@@ -237,19 +238,18 @@ auto fuzz_one(fuzz::decoder& in)
                                 break;
                         }
                         case 5: {
-                                check.step("count, all, any, none, mismatch");
-                                auto const val = in.boolean();
-                                auto const n   = static_cast<std::size_t>(std::ranges::count(m, val));
-                                check.expect(x.count(val) == n, "count");
-                                check.expect(x.all(val) == (n == size), "all");
-                                check.expect(x.any(val) == (n != 0UZ), "any");
-                                check.expect(x.none(val) == (n == 0UZ), "none");
+                                check.step("bit_count, bit_all_of, bit_any_of, bit_none_of, bit_mismatch");
+                                auto const n = std::ranges::count(m, true);
+                                check.expect(xstd::bit_count(x) == n, "bit_count");
+                                check.expect(xstd::bit_all_of(x) == (n == std::ranges::ssize(m)), "bit_all_of");
+                                check.expect(xstd::bit_any_of(x) == (n != 0), "bit_any_of");
+                                check.expect(xstd::bit_none_of(x) == (n == 0), "bit_none_of");
                                 auto z  = y;
                                 auto mz = my;
                                 align(z, mz, size);
                                 if (z.size() == size) {
                                         auto const first = std::ranges::mismatch(m, mz).in1;
-                                        check.expect(x.mismatch(z) == static_cast<std::size_t>(first - m.begin()), "mismatch");
+                                        check.expect(xstd::bit_mismatch(x, z).in1 - x.begin() == first - m.begin(), "bit_mismatch");
                                 }
                                 break;
                         }

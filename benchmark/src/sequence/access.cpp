@@ -5,12 +5,13 @@
 
 // The sequence row: xstd::bit_vector against std::vector<bool>, which is the whole comparison.
 
-#include <xstd/bits/bit_vector.hpp> // bit_vector
-#include <algorithm>                // count
-#include <benchmark/benchmark.h>    // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
-#include <cstddef>                  // size_t
-#include <cstdint>                  // int64_t, uint64_t
-#include <vector>                   // vector
+#include <xstd/bits/algorithm/bit_count.hpp> // bit_count
+#include <xstd/bits/bit_vector.hpp>          // bit_vector
+#include <algorithm>                         // count
+#include <benchmark/benchmark.h>             // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
+#include <cstddef>                           // size_t
+#include <cstdint>                           // int64_t, uint64_t
+#include <vector>                            // vector
 
 namespace {
 
@@ -73,15 +74,15 @@ auto bm_sequential_count(benchmark::State& state)
         state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(n / 8UZ));
 }
 
-// The same sweep asked of the sequence reading: one popcount per block, and the loop is ours either way.
+// The same sweep asked through xstd::bit_count: one popcount per block, and the loop is ours either way.
 template<class T>
-auto bm_sequential_count_member(benchmark::State& state)
+auto bm_sequential_bit_count(benchmark::State& state)
         -> void
 {
         auto const n = bits(state);
         auto const v = filled<T>(n);
         for (auto _ : state) {
-                auto c = v.count();
+                auto c = xstd::bit_count(v);
                 benchmark::DoNotOptimize(c);
         }
         state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(n / 8UZ));
@@ -115,7 +116,7 @@ auto bm_construct(benchmark::State& state)
 
 BM_LADDER(bm_random_read);
 BM_LADDER(bm_sequential_count);
-BM_LADDER_OURS(bm_sequential_count_member);
+BM_LADDER_OURS(bm_sequential_bit_count);
 
 // Construction allocates and zeroes the whole slice, so it stops four rungs short of the others.
 #define BM_BUILD_LADDER(fn) \
