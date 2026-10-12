@@ -3,8 +3,9 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/for_each_type.hpp>                        // for_each_type
 #include <xstd/bits/bit/bit_convert.hpp>                 // bit_convert
+#include <xstd/bits/bit/detail/bit_convertible.hpp>      // adopts_from, bit_source, fixed_target, fixed_width
+#include <xstd/bits/bit/detail/bit_width.hpp>            // bit_width_v
 #include <xstd/bits/bit_algorithm/bit_count.hpp>         // bit_count
 #include <xstd/bits/bit_array.hpp>                       // basic_bit_array, bit_array
 #include <xstd/bits/bit_bounded_set.hpp>                 // basic_bit_bounded_set, bit_bounded_set
@@ -16,13 +17,12 @@
 #include <xstd/bits/bit_span.hpp>                        // bit_span
 #include <xstd/bits/bit_subspan.hpp>                     // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector, bit_vector
-#include <xstd/bits/detail/bit_convertible.hpp>          // adopts_from, bit_source, fixed_target, fixed_width
-#include <xstd/bits/detail/bit_width.hpp>                // bit_width_v
 #include <xstd/bits/detail/ownership.hpp>                // owner, view
 #include <xstd/bits/ext/boost/bit_small_set.hpp>         // basic_bit_small_set, bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp>      // basic_bit_small_vector, bit_small_vector
 #include <xstd/bits/from_blocks.hpp>                     // from_blocks
 #include <xstd/ints/memory.hpp>                          // align_up
+#include <test/for_each_type.hpp>                        // for_each_type
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <array>                                         // array
 #include <bitset>                                        // bitset

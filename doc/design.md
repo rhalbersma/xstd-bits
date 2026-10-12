@@ -12,7 +12,7 @@ out of. This file holds what has landed.
 The library has two layers and one extension point.
 
 **Storage** is blocks of unsigned integers, owned by `bit_block_container`. It knows widths, blocks and the
-primitives every reading is built from — `first_difference`, `any_above`, `is_subset_of` and the like —
+primitives every reading is built from — `first_difference`, `any_above`, `any_block_set` and the like —
 and it compares only memberwise: it names no ordering, because the readings order the same bits
 differently.
 
@@ -1137,7 +1137,7 @@ not have -- the same asymmetry a member `operator<=>` would carry. Each is a tem
 `bit_block_container_type`, in the storage's own namespace, so the adaptors reach it by ordinary lookup and a caller
 holding two storages by ADL. Both adaptors are constrained on the same concept, so every storage they adapt has
 these primitives, and `set_adaptor`'s `<=>` calls them with no fallback, as `xstd::bit_includes`,
-`xstd::bit_intersects` and `xstd::bit_disjoint` call the storage's `is_subset_of` and `intersects`.
+`xstd::bit_intersects` and `xstd::bit_disjoint` walk the storage's blocks.
 
 They left the storage because they are readings and it is not. What they are built from stays: `first_difference`,
 `any_above`, `any_block_set`, `padded_block`, `padded_first_difference`, `padded_any_above`, `block`, `test` and
@@ -1162,19 +1162,15 @@ through the algorithm `xstd::bit_intersects`, named for the `set_intersection` i
 ([algorithms-not-members](#algorithms-not-members)) — which is also the spelling the analogy above asks for.
 `xstd::bit_disjoint` asks the negation, so neither question is written with a `not`.
 
-Where a member and a friend both exist, **the friend forwards to the member and never the other way**, and that
-is a language rule rather than a preference. A member of the name ends unqualified lookup before ADL begins
-([basic.lookup.argdep]/1), so from inside a member `intersects` the call `intersects(m_bits, rhs.m_bits)`
-finds the enclosing class's own member, fails to match it, and never reaches the storage's friend. No spelling
-recovers it, a hidden friend having no qualified name either, and the same wall stands between a member and its
-*own* class's friend. Both measured, not assumed. So the storage carries the pair `swap` already carries — a
-member that does the work and a hidden friend that forwards. `xstd::bit_intersects` and `xstd::bit_disjoint`, free
-functions outside every class, call the member.
-
-`is_subset_of` is the storage's member and has no friend, since `a ⊆ b` is not `b ⊆ a` and the member spelling
-states that correctly. A reading asks it through `xstd::bit_includes(b, a)`, in `std::ranges::includes`'s order of
-arguments. A proper subset and either superset are no primitive of the storage at all: `xstd::bit_includes(a, b)`
-is the superset, and each proper form is one inclusion without the other, both answered across two widths.
+Neither inclusion nor intersection is a storage member. `xstd::bit_includes` and `xstd::bit_intersects` walk the two
+storages' blocks themselves, keeping the storage's hand-unrolled one- and two-block arms through its public
+`static_num_blocks`, and ask each pair of blocks through `block_includes` and `block_intersects`: the one-block
+predicates, named for their unit as the public algorithms are, `bit_` for the whole and `block_` for one block.
+`block_intersects` sits in `detail/`, since the containers' single-bit tests ask it too; `block_includes` sits in
+`bit_algorithm/detail/`, since only `bit_includes` does. `block_includes(a, b)` takes `std::ranges::includes`'s order
+of arguments: every position of `b` is one of `a`. A proper subset and either superset are no primitive at all:
+`xstd::bit_includes(a, b)` is the superset, and each proper form is one inclusion without the other, both answered
+across two widths.
 
 Both orderings are answered a block at a time, from two pieces:
 
@@ -1314,7 +1310,7 @@ is an uncovered branch, and gcovr scores instantiations separately:
 
 Everything wider shares the general arms. A single block still needs the block-loop specialisations -- a
 one-block instantiation cannot take a loop's exit branch -- which is why `first_difference` and `any_above`
-each spell out the one- and two-block cases the way `find_front` and `intersects` do.
+each spell out the one- and two-block cases the way `find_front` and `xstd::bit_intersects` do.
 
 Each caller of a scan carries the width-zero arm ahead of the call, and `is_zero_width` is the one
 predicate they all ask: at width zero every answer is zero -- the total answer, `size()` -- and the storage's
@@ -1457,7 +1453,7 @@ gcovr counts branch slots **per template instantiation and never merges them**. 
 instantiation can never enter is a branch never taken, whatever every other instantiation does.
 
 So a degenerate width does not get an unreachable loop; it gets **different code**, via `if constexpr` on
-`static_num_blocks == 1` and `== 2` in `bit_block_container`, and on `static_block_count` and `extent == 0`
+`static_num_blocks == 1` and `== 2` in `bit_block_container` and in the set queries that read it, and on `static_block_count` and `extent == 0`
 in the storage's own scans. The block count is derived from the width rather than declared for exactly this
 reason: nothing new has to be supplied to know it, the block layout being fixed already.
 
@@ -2292,8 +2288,8 @@ so these take the `bit_` prefix instead, and a call says which of the two it is.
 **One door to the blocks.** An algorithm reaches the storage through `storage_access`, the one friend both adaptors
 declare, as libc++'s overloads reach `vector<bool>`'s words through the `__bit_iterator` they are written against.
 Nothing else about the container is opened: each algorithm asks the storage member that answers it, `count`, `all`,
-`any`, `none`, `first_difference`, `reverse`, `rotate`, `is_subset_of` or `intersects`, over a whole sequence's
-blocks, and over a window's blocks masked at its ends ([windows](#windows)).
+`any`, `none`, `first_difference`, `reverse` or `rotate`, over a whole sequence's blocks, and over a window's blocks
+masked at its ends ([windows](#windows)); `bit_includes` and `bit_intersects` read the blocks themselves.
 
 **Whole sequences and windows.** `bit_reverse` and `bit_rotate` write, and take an owner or a whole view, never a
 window or a `const` sequence: a window shares its end blocks with positions outside it. The five
@@ -3471,9 +3467,9 @@ of them.
 
 **Structural**, and the reason that decides it: the invariant is not a reading's operation, so the ceiling of
 [what-a-sequence-may-add](#what-a-sequence-may-add) does not reach it. It exists to serve the storage's own
-blockwise reads -- `operator==`, `count`, `all`, `any`, `none`, `is_subset_of`, `intersects` and
-`first_difference` are every one of them storage members that read a whole block and would have to mask without
-it, and `set_equal` and the orderings are built on them. Moving the restoration up would put the obligation in the adaptors and the
+blockwise reads -- `operator==`, `count`, `all`, `any`, `none` and `first_difference` are every one of them
+storage members that read a whole block and would have to mask without it, `xstd::bit_includes` and
+`xstd::bit_intersects` read whole blocks the same way, and `set_equal` and the orderings are built on them. Moving the restoration up would put the obligation in the adaptors and the
 dependency in one storage, and a missed call would be silent. Three dirtying operations across two adaptors
 is six places to be right instead of four, to save a masked store on a one-block set.
 
@@ -3532,15 +3528,15 @@ At a static width the distinction is unobservable, every instance carrying the o
 adaptor can default `==` there and nowhere else.
 
 The **storage** answers at any two widths, and the adaptor calls it or the comparisons built on it. `set_equal`,
-`set_three_way`, `is_subset_of` and `intersects` each carry their own width-crossing arm, so the read operations
+`set_three_way`, `xstd::bit_includes` and `xstd::bit_intersects` each carry their own width-crossing arm, so the read operations
 in `set_adaptor`, and `xstd::bit_includes`, `xstd::bit_intersects` and `xstd::bit_disjoint` over it, are calls with no `same_width` test
 between them -- only the four compound
 operators still ask, because they mutate. The logic belongs where the blocks and the invariant are, and putting
 it there is also what keeps the adaptors alike, where `sequence_adaptor` had nothing at all. At two run-time widths that differ, `==`,
-`is_subset_of` and `intersects` all ask whole **blocks** rather than walking positions. Only the blocks both
+`bit_includes` and `bit_intersects` all ask whole **blocks** rather than walking positions. Only the blocks both
 storages have can disagree; above them the answer is the invariant, capacity holding no element. So `==` wants
-the shared blocks equal and the longer one's remainder clear, `is_subset_of` wants each of our shared blocks
-inside the matching one and nothing of ours above their last block, and `intersects` is the negation of every
+the shared blocks equal and the longer one's remainder clear, `bit_includes(a, b)` wants each of `b`'s shared blocks
+inside `a`'s and nothing of `b`'s above `a`'s last block, and `bit_intersects` is the negation of every
 shared pair being disjoint -- their blocks above ours never need a look. Positions were the obvious spelling and
 the wrong one, a walk over the elements being a `find_next` per position where this is one load per sixty-four.
 Measured over two thousand elements held at two different run-time widths, each in the case that denies the
@@ -3550,8 +3546,8 @@ timing loop:
 | | positions | blocks |
 | --- | --- | --- |
 | `==`, equal | 11.04us | 0.07us |
-| `is_subset_of`, a subset | 9.39us | 0.05us |
-| `intersects`, disjoint | 10.35us | 0.05us |
+| `bit_includes`, a subset | 9.39us | 0.05us |
+| `bit_intersects`, disjoint | 10.35us | 0.05us |
 
 The padding above `size()` being zero is what lets a whole block stand in for the positions it holds, which is
 the same invariant the orderings already rest on. The shared prefix needs no index arithmetic: `std::views::zip` stops at the
@@ -4439,7 +4435,7 @@ std::ranges::none_of(v, std::logical_not())  == xstd::bit_all_of(v)
 ```
 
 Short-circuiting survives them: asking whether every bool is `false` really does stop at the first set bit, because
-it *is* `bit_none_of`. So there are four helpers in `detail/algorithm.hpp` -- `count_true`, `any_true`, `all_true`,
+it *is* `bit_none_of`. So there are four helpers in `bit_algorithm/detail/algorithm.hpp` -- `count_true`, `any_true`, `all_true`,
 `none_true` -- and the algorithms are spelled over those, each helper choosing its tier once: the storage's own
 member over a whole sequence, and a masked block at a time over a window ([windows](#windows)). `none_true` is a
 helper of its own rather than `not any_true`, so the storage is asked in its own blocks; `bit_block_container` spells
@@ -4790,10 +4786,10 @@ tree does it in `test/block_types.hpp`, above every container header. The same r
 `test::block_basis` can be spelled, which is why it sits in that header rather than in one of its own: a
 separate header could not be relied on to sort below the adapters.
 
-**A Block being a class breaks two assumptions that a scalar hid.** `bits::detail::pred`'s `intersects`
-returned `lhs & rhs` into a `bool`, which copy-initializes and so needs an **implicit** conversion; an integer
-class offers only an explicit `operator bool`. Its two neighbours never needed the cast, `not` and `!=` both
-reaching `bool` by a **contextual** conversion, which an explicit operator satisfies.
+**A Block being a class breaks two assumptions that a scalar hid.** A one-block predicate returning `lhs & rhs`
+into a `bool` copy-initializes, and so needs an **implicit** conversion; an integer class offers only an explicit
+`operator bool`. So `block_intersects` and `block_includes` compare against a zero `Block`, while `not` and `!=`
+reach `bool` by a **contextual** conversion, which an explicit operator satisfies.
 
 And the proxies. Both of them convert to their `value_type` and to nothing else — `bool` for the sequence
 proxy, the key for the set proxy — which is the shape
@@ -5254,8 +5250,8 @@ spelling; this spelling has nothing to guard. It is public because that totality
 `size()` first and answers false without looking at an element, which is the one case this asks about.
 Taking the prefix as an **iterator pair** keeps the answer and gets the algorithm, which lowers to a
 `memcmp` on trivially comparable contiguous blocks where `all_of` over a zip stays an element loop —
-2.15us to 1.29us over 4700 blocks. The other two block walks cannot follow: `is_subset_of` and
-`intersects` do bitwise work per block and have no such algorithm.
+2.15us to 1.29us over 4700 blocks. The other two block walks cannot follow: `bit_includes` and
+`bit_intersects` do bitwise work per block and have no such algorithm.
 
 ### The saturating sum, and whose ceiling it is
 
@@ -5304,14 +5300,6 @@ at a time. Over the eight kilobytes of 2^16 positions, measured in one process s
 machine's own: **9.70us by shifts against 0.07us by memcpy**, a factor of about a hundred and
 forty-five. The shifts answer the two cases a copy cannot — a constant expression, where `memcpy` does
 not exist, and a big-endian target, where those bytes are not these blocks.
-
-### A member named `intersects` stops ADL
-
-`intersects` is to `set_intersection` what `contains` is to `find` — a predicate over the free
-two-range algorithm, not a lookup asked of one value — so the symmetric spelling is a hidden friend
-beside the member. `bit_block_container` carries a **member** named `intersects`, boost's spelling, and a
-member of that name stops ADL at the call site ([basic.lookup.argdep]/1: ordinary lookup finding a class
-member ends the search). So from inside that member the friend is unreachable by any spelling. Measured, not assumed.
 
 ### The one unreachable line
 

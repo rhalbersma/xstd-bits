@@ -3,19 +3,19 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/ext_int128.hpp>             // IWYU pragma: keep; TEST_HAS_BOOST_INT128, uint128
-#include <xstd/bits/detail/bit_layout.hpp> // bit_bytes, bit_layout, block_copies_as_bytes, byte_count, bytes_bits, container_source, fixed_bit_blocks, fixed_blocks_source
-#include <xstd/bits/detail/bit_width.hpp>  // bit_width_v
-#include <boost/test/unit_test.hpp>        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <array>                           // array, to_array
-#include <bit>                             // endian
-#include <bitset>                          // bitset
-#include <cstddef>                         // size_t
-#include <cstdint>                         // uint8_t, uint16_t, uint32_t, uint64_t
-#include <ranges>                          // iota
-#include <span>                            // dynamic_extent, span
-#include <string>                          // string
-#include <vector>                          // vector
+#include <xstd/bits/bit/detail/bit_width.hpp> // bit_width_v
+#include <xstd/bits/detail/bit_layout.hpp>    // bit_bytes, bit_layout, block_copies_as_bytes, byte_count, bytes_bits, container_source, fixed_bit_blocks, fixed_blocks_source
+#include <test/ext_int128.hpp>                // IWYU pragma: keep; TEST_HAS_BOOST_INT128, uint128
+#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <array>                              // array, to_array
+#include <bit>                                // endian
+#include <bitset>                             // bitset
+#include <cstddef>                            // size_t
+#include <cstdint>                            // uint8_t, uint16_t, uint32_t, uint64_t
+#include <ranges>                             // iota
+#include <span>                               // dynamic_extent, span
+#include <string>                             // string
+#include <vector>                             // vector
 
 BOOST_AUTO_TEST_SUITE(BitLayout)
 

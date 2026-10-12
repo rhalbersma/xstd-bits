@@ -124,7 +124,7 @@ target_sources(
         include/xstd/bits/bit_fixed_valarray.hpp
         include/xstd/bits/bit_bounded_valarray.hpp
         include/xstd/bits/detail/adapted_bits.hpp
-        include/xstd/bits/detail/algorithm.hpp
+        include/xstd/bits/bit_algorithm/detail/algorithm.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
         include/xstd/bits/detail/bounded_blocks.hpp
         include/xstd/bits/detail/bit_block_container.hpp
@@ -144,12 +144,12 @@ target_sources(
         include/xstd/bits/ext/boost/dynamic_bitset.hpp
         include/xstd/bits/ext/boost/detail/dynamic_bitset.hpp
         include/xstd/bits/detail/bit_layout.hpp
-        include/xstd/bits/detail/bit_convertible.hpp
+        include/xstd/bits/bit/detail/bit_convertible.hpp
         include/xstd/bits/detail/bit_blocks_capacity.hpp
         include/xstd/bits/detail/bit_block_range.hpp
         include/xstd/bits/detail/owned_bit_blocks.hpp
         include/xstd/bits/detail/resizable_bit_blocks.hpp
-        include/xstd/bits/detail/bit_width.hpp
+        include/xstd/bits/bit/detail/bit_width.hpp
         include/xstd/bits/detail/range_const_reference.hpp
         include/xstd/bits/detail/shift.hpp
         include/xstd/bits/detail/storage_ptr.hpp

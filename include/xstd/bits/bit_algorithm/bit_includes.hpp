@@ -6,8 +6,8 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_INCLUDES_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_INCLUDES_HPP
 
+#include <xstd/bits/bit_algorithm/detail/algorithm.hpp>      // reads_keys
 #include <xstd/bits/bit_algorithm/detail/block_includes.hpp> // block_includes
-#include <xstd/bits/detail/algorithm.hpp>                    // reads_keys
 #include <xstd/bits/detail/ownership.hpp>                    // storage_access
 #include <algorithm>                                         // all_of
 #include <ranges>                                            // zip

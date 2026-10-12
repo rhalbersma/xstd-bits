@@ -6,12 +6,12 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_INTERSECTS_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_INTERSECTS_HPP
 
-#include <xstd/bits/detail/algorithm.hpp>        // reads_keys
-#include <xstd/bits/detail/block_intersects.hpp> // block_intersects
-#include <xstd/bits/detail/ownership.hpp>        // storage_access
-#include <algorithm>                             // any_of
-#include <ranges>                                // zip
-#include <type_traits>                           // remove_cvref_t, type_identity_t
+#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // reads_keys
+#include <xstd/bits/detail/block_intersects.hpp>        // block_intersects
+#include <xstd/bits/detail/ownership.hpp>               // storage_access
+#include <algorithm>                                    // any_of
+#include <ranges>                                       // zip
+#include <type_traits>                                  // remove_cvref_t, type_identity_t
 
 namespace xstd {
 
