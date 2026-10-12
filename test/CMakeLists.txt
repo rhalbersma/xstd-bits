@@ -78,7 +78,8 @@ set(cxx_compile_options_warnings
 )
 
 set(cxx_compile_options_optimization
-    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>:
+    # The build machine's processor only where the tests run on it: a cross build, such as Emscripten's, has no native.
+    $<$<AND:$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>,$<NOT:$<BOOL:${CMAKE_CROSSCOMPILING}>>>:
         -march=native
     >
     # MinGW emits 32-byte stores to a 16-byte aligned stack; the assembler rewrites them unaligned (#54, GCC PR target/54412).

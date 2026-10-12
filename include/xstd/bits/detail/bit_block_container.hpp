@@ -161,13 +161,11 @@ public:
 template<class Blocks, std::size_t N>
 concept zero_capacity = resizable_bit_blocks<Blocks> and N == 0UZ and bit_blocks_capacity_v<Blocks> == 0UZ;
 
-// The width is a size_t unless the blocks out-align one, when it fills what would be padding.
+// A size_t, unless the blocks out-align one and a block is as wide, when the width fills what would be padding.
 template<class Blocks>
-using stored_width_t = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, std::ranges::range_value_t<Blocks>>;
-
-// The width is a size_t unless the blocks out-align one, when it fills what would be padding.
-template<class Blocks>
-using stored_width_t = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, std::ranges::range_value_t<Blocks>>;
+using stored_width_t = std::conditional_t<
+        (alignof(std::size_t) >= alignof(Blocks) or sizeof(std::ranges::range_value_t<Blocks>) < sizeof(std::size_t)),
+        std::size_t, std::ranges::range_value_t<Blocks>>;
 
 // The width a vehicle over these blocks stores: one that moves under growth, where it is not always zero.
 template<class Blocks, std::size_t N>
@@ -283,7 +281,7 @@ private:
         // Whether reordering the positions can move a bit: two of them, or a run-time width that can reach two.
         static constexpr bool can_permute = has_static_size ? N > 1UZ : not has_zero_capacity;
 
-        static_assert(sizeof(stored_width_t<Blocks>) >= sizeof(std::size_t) and alignof(stored_width_t<Blocks>) >= alignof(Blocks));
+        static_assert(sizeof(stored_width_t<Blocks>) >= sizeof(std::size_t));
 
         // cl rejects a member of the explicit object parameter in a trailing return type (C2228).
         template<class Self>
