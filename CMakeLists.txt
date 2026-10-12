@@ -84,6 +84,10 @@ target_sources(
         include/xstd/bits/bit_algorithm/bit_none_of.hpp
         include/xstd/bits/bit_algorithm/bit_reverse.hpp
         include/xstd/bits/bit_algorithm/bit_rotate.hpp
+        include/xstd/bits/bit_algorithm/bit_set_difference.hpp
+        include/xstd/bits/bit_algorithm/bit_set_intersection.hpp
+        include/xstd/bits/bit_algorithm/bit_set_symmetric_difference.hpp
+        include/xstd/bits/bit_algorithm/bit_set_union.hpp
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bit.hpp
         include/xstd/bits/bit/bit_convert.hpp

@@ -20,4 +20,10 @@
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp> // IWYU pragma: export; bit_intersects
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>   // IWYU pragma: export; bit_disjoint
 
+// The set reading's results, each the set range-v3's view of its name would hold, which an operator spells.
+#include <xstd/bits/bit_algorithm/bit_set_intersection.hpp>         // IWYU pragma: export; bit_set_intersection
+#include <xstd/bits/bit_algorithm/bit_set_union.hpp>                // IWYU pragma: export; bit_set_union
+#include <xstd/bits/bit_algorithm/bit_set_difference.hpp>           // IWYU pragma: export; bit_set_difference
+#include <xstd/bits/bit_algorithm/bit_set_symmetric_difference.hpp> // IWYU pragma: export; bit_set_symmetric_difference
+
 #endif // XSTD_BITS_BIT_ALGORITHM_HPP

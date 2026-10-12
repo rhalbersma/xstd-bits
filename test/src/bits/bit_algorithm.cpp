@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_algorithm.hpp> // bit_all_of, bit_any_of, bit_count, bit_disjoint, bit_includes, bit_intersects, bit_mismatch, bit_none_of, bit_reverse, bit_rotate
+#include <xstd/bits/bit_algorithm.hpp> // bit_all_of, bit_any_of, bit_count, bit_disjoint, bit_includes, bit_intersects, bit_mismatch, bit_none_of, bit_reverse, bit_rotate, bit_set_difference, bit_set_intersection, bit_set_symmetric_difference, bit_set_union
 #include <xstd/bits/bit_array.hpp>     // bit_array
 #include <xstd/bits/bit_fixed_set.hpp> // bit_fixed_set
 #include <boost/test/unit_test.hpp>    // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
@@ -25,6 +25,8 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesEveryAlgorithm)
                 return xstd::bit_count(a) == 2 and a[0] and a[2] and xstd::bit_any_of(a) and not xstd::bit_all_of(a) and xstd::bit_none_of(b) and xstd::bit_mismatch(a, b).in1 == std::ranges::begin(a);
         }());
         static_assert(xstd::bit_includes(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}) and xstd::bit_disjoint(xstd::bit_fixed_set<8>{1}, xstd::bit_fixed_set<8>{2}) and xstd::bit_intersects(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}));
+        static_assert(xstd::bit_set_union(xstd::bit_fixed_set<8>{1}, xstd::bit_fixed_set<8>{2}) == xstd::bit_fixed_set<8>{1, 2} and xstd::bit_set_intersection(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}) == xstd::bit_fixed_set<8>{2});
+        static_assert(xstd::bit_set_difference(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}) == xstd::bit_fixed_set<8>{1} and xstd::bit_set_symmetric_difference(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2, 3}) == xstd::bit_fixed_set<8>{1, 3});
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
