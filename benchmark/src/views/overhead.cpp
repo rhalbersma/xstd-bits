@@ -5,7 +5,7 @@
 
 // What a reading costs as a view rather than a container, over the same backend bit container.
 
-#include <xstd/bits/algorithm/bit_count.hpp>        // bit_count
+#include <xstd/bits/bit_algorithm/bit_count.hpp>    // bit_count
 #include <xstd/bits/bit_array.hpp>                  // bit_array
 #include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view

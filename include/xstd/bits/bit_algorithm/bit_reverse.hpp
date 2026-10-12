@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_ALGORITHM_BIT_REVERSE_HPP
-#define XSTD_BITS_ALGORITHM_BIT_REVERSE_HPP
+#ifndef XSTD_BITS_BIT_ALGORITHM_BIT_REVERSE_HPP
+#define XSTD_BITS_BIT_ALGORITHM_BIT_REVERSE_HPP
 
 #include <xstd/bits/detail/algorithm.hpp> // whole_sequence
 #include <xstd/bits/detail/ownership.hpp> // storage_access
@@ -24,4 +24,4 @@ constexpr auto bit_reverse(R&& r) noexcept
 
 } // namespace xstd
 
-#endif // XSTD_BITS_ALGORITHM_BIT_REVERSE_HPP
+#endif // XSTD_BITS_BIT_ALGORITHM_BIT_REVERSE_HPP

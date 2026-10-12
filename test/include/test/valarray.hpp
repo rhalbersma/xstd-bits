@@ -6,37 +6,37 @@
 #ifndef TEST_VALARRAY_HPP
 #define TEST_VALARRAY_HPP
 
-#include <xstd/bits/algorithm/bit_all_of.hpp>   // bit_all_of
-#include <xstd/bits/algorithm/bit_any_of.hpp>   // bit_any_of
-#include <xstd/bits/algorithm/bit_count.hpp>    // bit_count
-#include <xstd/bits/algorithm/bit_mismatch.hpp> // bit_mismatch
-#include <xstd/bits/algorithm/bit_none_of.hpp>  // bit_none_of
-#include <xstd/bits/algorithm/bit_reverse.hpp>  // bit_reverse
-#include <xstd/bits/algorithm/bit_rotate.hpp>   // bit_rotate
-#include <xstd/bits/bit/bit_convert.hpp>        // bit_convert
-#include <xstd/bits/bit_array.hpp>              // basic_bit_array
-#include <xstd/bits/bit_bounded_valarray.hpp>   // basic_bit_bounded_valarray
-#include <xstd/bits/bit_fixed_valarray.hpp>     // basic_bit_fixed_valarray
-#include <xstd/bits/bit_span.hpp>               // bit_span
-#include <xstd/bits/bit_valarray.hpp>           // basic_bit_valarray
-#include <xstd/bits/bit_vector.hpp>             // bit_vector
-#include <xstd/bits/from_blocks.hpp>            // from_blocks, from_blocks_t
-#include <xstd/ints/limits.hpp>                 // numeric_limits
-#include <boost/test/unit_test.hpp>             // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_TEST_CONTEXT
-#include <algorithm>                            // count, equal, min, mismatch, reverse
-#include <bitset>                               // bitset
-#include <climits>                              // INT_MAX, INT_MIN
-#include <concepts>                             // constructible_from, convertible_to, copyable, equality_comparable, same_as
-#include <cstddef>                              // ptrdiff_t, size_t
-#include <cstdint>                              // uint64_t
-#include <format>                               // format
-#include <functional>                           // hash
-#include <iterator>                             // contiguous_iterator
-#include <ranges>                               // begin, contiguous_range, end, iota, iterator_t, random_access_range, range_value_t, size, sized_range, ssize
-#include <span>                                 // dynamic_extent
-#include <type_traits>                          // is_default_constructible_v
-#include <utility>                              // declval, move
-#include <vector>                               // vector
+#include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
+#include <xstd/bits/bit_algorithm/bit_all_of.hpp>   // bit_all_of
+#include <xstd/bits/bit_algorithm/bit_any_of.hpp>   // bit_any_of
+#include <xstd/bits/bit_algorithm/bit_count.hpp>    // bit_count
+#include <xstd/bits/bit_algorithm/bit_mismatch.hpp> // bit_mismatch
+#include <xstd/bits/bit_algorithm/bit_none_of.hpp>  // bit_none_of
+#include <xstd/bits/bit_algorithm/bit_reverse.hpp>  // bit_reverse
+#include <xstd/bits/bit_algorithm/bit_rotate.hpp>   // bit_rotate
+#include <xstd/bits/bit_array.hpp>                  // basic_bit_array
+#include <xstd/bits/bit_bounded_valarray.hpp>       // basic_bit_bounded_valarray
+#include <xstd/bits/bit_fixed_valarray.hpp>         // basic_bit_fixed_valarray
+#include <xstd/bits/bit_span.hpp>                   // bit_span
+#include <xstd/bits/bit_valarray.hpp>               // basic_bit_valarray
+#include <xstd/bits/bit_vector.hpp>                 // bit_vector
+#include <xstd/bits/from_blocks.hpp>                // from_blocks, from_blocks_t
+#include <xstd/ints/limits.hpp>                     // numeric_limits
+#include <boost/test/unit_test.hpp>                 // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_TEST_CONTEXT
+#include <algorithm>                                // count, equal, min, mismatch, reverse
+#include <bitset>                                   // bitset
+#include <climits>                                  // INT_MAX, INT_MIN
+#include <concepts>                                 // constructible_from, convertible_to, copyable, equality_comparable, same_as
+#include <cstddef>                                  // ptrdiff_t, size_t
+#include <cstdint>                                  // uint64_t
+#include <format>                                   // format
+#include <functional>                               // hash
+#include <iterator>                                 // contiguous_iterator
+#include <ranges>                                   // begin, contiguous_range, end, iota, iterator_t, random_access_range, range_value_t, size, sized_range, ssize
+#include <span>                                     // dynamic_extent
+#include <type_traits>                              // is_default_constructible_v
+#include <utility>                                  // declval, move
+#include <vector>                                   // vector
 
 // Every member and operator of the three valarrays, each held to the same operation on a std::vector<bool>.
 namespace test::valarray {

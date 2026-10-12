@@ -2253,7 +2253,7 @@ direction, beside `valarray`'s own `shift` ([the-valarray-reading](#the-valarray
 
 A container here has its standard counterpart's members, and no member that `std::ranges` spells as an algorithm.
 Every block-wise operation the standard expresses as an algorithm over the elements lives in
-`<xstd/bits/algorithm/bit_*.hpp>`, one header each, exported together by `<xstd/bits/algorithm.hpp>` and by
+`<xstd/bits/bit_algorithm/bit_*.hpp>`, one header each, exported together by `<xstd/bits/bit_algorithm.hpp>` and by
 `<xstd/bits.hpp>`, as a free function named `xstd::bit_` and the algorithm's name. Each takes the arguments the
 `std::ranges` algorithm takes and returns what it returns: `xstd::bit_count` a `range_difference_t`, signed as
 `std::ranges::count`'s is, `xstd::bit_mismatch` a `std::ranges::mismatch_result`, `xstd::bit_rotate` a

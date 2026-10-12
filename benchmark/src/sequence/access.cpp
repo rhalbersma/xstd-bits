@@ -5,13 +5,13 @@
 
 // The sequence row: xstd::bit_vector against std::vector<bool>, which is the whole comparison.
 
-#include <xstd/bits/algorithm/bit_count.hpp> // bit_count
-#include <xstd/bits/bit_vector.hpp>          // bit_vector
-#include <algorithm>                         // count
-#include <benchmark/benchmark.h>             // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
-#include <cstddef>                           // size_t
-#include <cstdint>                           // int64_t, uint64_t
-#include <vector>                            // vector
+#include <xstd/bits/bit_algorithm/bit_count.hpp> // bit_count
+#include <xstd/bits/bit_vector.hpp>              // bit_vector
+#include <algorithm>                             // count
+#include <benchmark/benchmark.h>                 // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE1, BENCHMARK_MAIN, State
+#include <cstddef>                               // size_t
+#include <cstdint>                               // int64_t, uint64_t
+#include <vector>                                // vector
 
 namespace {
 

@@ -3,31 +3,31 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>       // for_each_window, patterned
-#include <xstd/bits/algorithm/bit_any_of.hpp> // bit_any_of
-#include <xstd/bits/bit_array.hpp>            // basic_bit_array, bit_array
-#include <xstd/bits/bit_fixed_set.hpp>        // bit_fixed_set
-#include <xstd/bits/bit_span.hpp>             // bit_span
-#include <xstd/bits/bit_vector.hpp>           // bit_vector
-#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                          // any_of
-#include <cstdint>                            // uint8_t
-#include <functional>                         // identity
-#include <vector>                             // vector
+#include <test/algorithm/sequences.hpp>            // for_each_window, patterned
+#include <xstd/bits/bit_algorithm/bit_none_of.hpp> // bit_none_of
+#include <xstd/bits/bit_array.hpp>                 // basic_bit_array, bit_array
+#include <xstd/bits/bit_fixed_set.hpp>             // bit_fixed_set
+#include <xstd/bits/bit_span.hpp>                  // bit_span
+#include <xstd/bits/bit_vector.hpp>                // bit_vector
+#include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                               // none_of
+#include <cstdint>                                 // uint8_t
+#include <functional>                              // identity
+#include <vector>                                  // vector
 
-BOOST_AUTO_TEST_SUITE(BitAnyOf)
+BOOST_AUTO_TEST_SUITE(BitNoneOf)
 
 namespace {
 
 template<class R>
-concept quantifiable = requires (R const& r) { xstd::bit_any_of(r); };
+concept quantifiable = requires (R const& r) { xstd::bit_none_of(r); };
 
-// The algorithm and std::ranges::any_of with the identity predicate, on one sequence.
+// The algorithm and std::ranges::none_of with the identity predicate, on one sequence.
 template<class R>
 [[nodiscard]] constexpr auto agrees(R const& r)
         -> bool
 {
-        return xstd::bit_any_of(r) == std::ranges::any_of(r, std::identity());
+        return xstd::bit_none_of(r) == std::ranges::none_of(r, std::identity());
 }
 
 } // namespace
@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE(AgreesWithRangesOverOwnersAndViews)
                 BOOST_CHECK(agrees(test::algorithm::patterned(xstd::bit_vector(n))));
                 BOOST_CHECK(agrees(xstd::bit_span(last)));
         }
-        static_assert(xstd::bit_any_of(xstd::bit_array<0>()) == false);
+        static_assert(xstd::bit_none_of(xstd::bit_array<0>()) == true);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
