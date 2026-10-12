@@ -16,6 +16,7 @@ namespace xstd {
 template<class Mapping, class Key>
 concept bit_index_mapping = requires (Key key, std::size_t index) {
         { Mapping::to_index(key) } -> std::same_as<std::size_t>;
+        // Exactly Key: a mapping for a wider key takes a narrower one in, and hands back a value of the wrong type.
         { Mapping::from_index(index) } -> std::same_as<Key>;
 };
 
