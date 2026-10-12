@@ -7,6 +7,7 @@
 #define TEST_SET_ORDER_ISOMORPHISM_HPP
 
 #include <xstd/bits/detail/is_key.hpp> // is_key
+#include <algorithm>                   // all_of
 #include <concepts>                    // totally_ordered
 #include <cstddef>                     // size_t
 #include <ranges>                      // iota
@@ -19,18 +20,17 @@ template<class Mapping, class Key>
 [[nodiscard]] constexpr auto is_order_isomorphism_onto(std::size_t n)
         -> bool
 {
-        for (auto const i : std::views::iota(0UZ, n)) {
+        return std::ranges::all_of(std::views::iota(0UZ, n), [](std::size_t i) -> bool {
                 auto const key = Mapping::from_index(i);
                 if (not xstd::bits::detail::is_key<Mapping>(key) or Mapping::to_index(key) != i) {
                         return false;
                 }
                 if constexpr (std::totally_ordered<Key>) {
-                        if (i != 0UZ and not(Mapping::from_index(i - 1UZ) < key)) {
-                                return false;
-                        }
+                        return i == 0UZ or Mapping::from_index(i - 1UZ) < key;
+                } else {
+                        return true;
                 }
-        }
-        return true;
+        });
 }
 
 // A sized mapping onto all of its positions.
