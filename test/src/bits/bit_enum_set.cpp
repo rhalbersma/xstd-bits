@@ -11,6 +11,7 @@
 #include <xstd/bits/bit_enum_set.hpp>              // bit_enum_set
 #include <xstd/bits/bit_fixed_set.hpp>             // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_key_mapping.hpp>           // bit_key_mapping, bit_range_mapping, enum_traits
+#include <xstd/bits/bit_set.hpp>                   // basic_bit_set
 #include <xstd/bits/bit_type_traits/bit_least.hpp> // bit_least
 #include <xstd/bits/from_blocks.hpp>               // from_blocks
 #include <xstd/misc/concepts.hpp>                  // proxy_iterator, proxy_reference
@@ -443,6 +444,19 @@ BOOST_AUTO_TEST_CASE(ToUnderlyingReadsTheKeyThroughTheProxy)
         static_assert(takes_to_underlying<std::ranges::range_reference_t<xstd::bit_enum_set<piece>>>);
         static_assert(not takes_to_underlying<std::ranges::range_reference_t<xstd::bit_fixed_set<8>>>);
         static_assert(not takes_to_underlying<std::ranges::range_reference_t<xstd::bit_array<8>>>);
+}
+
+// A dynamic width grows to toggle an enumerator in, as insert grows, and toggling it again erases it without shrinking.
+BOOST_AUTO_TEST_CASE(ADynamicWidthTogglesAnEnumeratorIn)
+{
+        using test::set::piece;
+        auto x = xstd::basic_bit_set<piece, std::uint8_t>();
+        BOOST_CHECK(&(x ^= piece::king) == &x);
+        BOOST_CHECK(x.contains(piece::king));
+        BOOST_CHECK_EQUAL(x.size(), 1UZ);
+        x ^= piece::king;
+        BOOST_CHECK(not x.contains(piece::king));
+        BOOST_CHECK(x.empty());
 }
 
 BOOST_AUTO_TEST_SUITE_END()
