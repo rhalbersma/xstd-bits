@@ -6,14 +6,14 @@
 #ifndef TEST_SEQUENCE_ROTATION_HPP
 #define TEST_SEQUENCE_ROTATION_HPP
 
-#include <xstd/bits/algorithm/bit_count.hpp>   // bit_count
-#include <xstd/bits/algorithm/bit_reverse.hpp> // bit_reverse
-#include <xstd/bits/algorithm/bit_rotate.hpp>  // bit_rotate
-#include <algorithm>                           // count, equal, reverse, rotate
-#include <cstddef>                             // ptrdiff_t, size_t
-#include <cstdint>                             // uint64_t
-#include <ranges>                              // begin, end, iota, next
-#include <vector>                              // vector
+#include <xstd/bits/bit_algorithm/bit_count.hpp>   // bit_count
+#include <xstd/bits/bit_algorithm/bit_reverse.hpp> // bit_reverse
+#include <xstd/bits/bit_algorithm/bit_rotate.hpp>  // bit_rotate
+#include <algorithm>                               // count, equal, reverse, rotate
+#include <cstddef>                                 // ptrdiff_t, size_t
+#include <cstdint>                                 // uint64_t
+#include <ranges>                                  // begin, end, iota, next
+#include <vector>                                  // vector
 
 // bit_rotate and bit_reverse on a sequence, against std::ranges::rotate and std::ranges::reverse over its bits.
 namespace test::sequence {

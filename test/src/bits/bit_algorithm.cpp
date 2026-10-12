@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/algorithm.hpp>     // bit_all_of, bit_any_of, bit_count, bit_disjoint, bit_includes, bit_mismatch, bit_none_of, bit_reverse, bit_rotate
+#include <xstd/bits/bit_algorithm.hpp> // bit_all_of, bit_any_of, bit_count, bit_disjoint, bit_includes, bit_mismatch, bit_none_of, bit_reverse, bit_rotate
 #include <xstd/bits/bit_array.hpp>     // bit_array
 #include <xstd/bits/bit_fixed_set.hpp> // bit_fixed_set
 #include <boost/test/unit_test.hpp>    // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK

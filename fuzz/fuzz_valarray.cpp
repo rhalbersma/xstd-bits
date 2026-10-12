@@ -4,8 +4,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <fuzz/decoder.hpp>                   // checker, decoder, run
-#include <xstd/bits/algorithm.hpp>            // bit_all_of, bit_any_of, bit_count, bit_none_of
 #include <xstd/bits/bit/bit_convert.hpp>      // bit_convert
+#include <xstd/bits/bit_algorithm.hpp>        // bit_all_of, bit_any_of, bit_count, bit_none_of
 #include <xstd/bits/bit_bounded_valarray.hpp> // basic_bit_bounded_valarray, bit_bounded_valarray
 #include <xstd/bits/bit_fixed_valarray.hpp>   // basic_bit_fixed_valarray, bit_fixed_valarray
 #include <xstd/bits/bit_valarray.hpp>         // basic_bit_valarray, bit_valarray

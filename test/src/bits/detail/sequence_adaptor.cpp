@@ -5,8 +5,8 @@
 
 #include <test/bit_exchange.hpp>                    // converts_between, converts_from, converts_to, exchanges_from_bits
 #include <test/block_types.hpp>                     // graded_extents
-#include <xstd/bits/algorithm.hpp>                  // bit_all_of, bit_any_of, bit_count, bit_mismatch, bit_none_of
 #include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
+#include <xstd/bits/bit_algorithm.hpp>              // bit_all_of, bit_any_of, bit_count, bit_mismatch, bit_none_of
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
 #include <xstd/bits/bit_set.hpp>                    // bit_set

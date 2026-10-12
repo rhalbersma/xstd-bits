@@ -3,29 +3,29 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <fuzz/decoder.hpp>                      // checker, decoder, run, throws
-#include <xstd/bits/algorithm/bit_disjoint.hpp>  // bit_disjoint
-#include <xstd/bits/algorithm/bit_includes.hpp>  // bit_includes
-#include <xstd/bits/bit_bounded_set.hpp>         // basic_bit_bounded_set, bit_bounded_set
-#include <xstd/bits/bit_fixed_set.hpp>           // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_set.hpp>                 // basic_bit_set, bit_set
-#include <xstd/bits/ext/boost/bit_small_set.hpp> // basic_bit_small_set
-#include <algorithm>                             // includes, set_difference, set_intersection, set_symmetric_difference, set_union
-#include <array>                                 // array
-#include <compare>                               // is_eq, is_lt
-#include <cstddef>                               // size_t
-#include <cstdint>                               // uint8_t, uint64_t
-#include <functional>                            // hash
-#include <iterator>                              // inserter
-#include <limits>                                // numeric_limits
-#include <new>                                   // bad_alloc
-#include <ranges>                                // iota, reverse
-#include <set>                                   // erase_if, set
-#include <stdexcept>                             // length_error, out_of_range
-#include <tuple>                                 // tuple
-#include <type_traits>                           // type_identity
-#include <utility>                               // move, swap
-#include <vector>                                // vector
+#include <fuzz/decoder.hpp>                         // checker, decoder, run, throws
+#include <xstd/bits/bit_algorithm/bit_disjoint.hpp> // bit_disjoint
+#include <xstd/bits/bit_algorithm/bit_includes.hpp> // bit_includes
+#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set, bit_bounded_set
+#include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
+#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
+#include <algorithm>                                // includes, set_difference, set_intersection, set_symmetric_difference, set_union
+#include <array>                                    // array
+#include <compare>                                  // is_eq, is_lt
+#include <cstddef>                                  // size_t
+#include <cstdint>                                  // uint8_t, uint64_t
+#include <functional>                               // hash
+#include <iterator>                                 // inserter
+#include <limits>                                   // numeric_limits
+#include <new>                                      // bad_alloc
+#include <ranges>                                   // iota, reverse
+#include <set>                                      // erase_if, set
+#include <stdexcept>                                // length_error, out_of_range
+#include <tuple>                                    // tuple
+#include <type_traits>                              // type_identity
+#include <utility>                                  // move, swap
+#include <vector>                                   // vector
 
 namespace {
 

@@ -73,16 +73,16 @@ target_sources(
         include/xstd/bits/detail/set_adaptor.hpp
         include/xstd/bits/detail/valarray_adaptor.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
-        include/xstd/bits/algorithm.hpp
-        include/xstd/bits/algorithm/bit_all_of.hpp
-        include/xstd/bits/algorithm/bit_any_of.hpp
-        include/xstd/bits/algorithm/bit_count.hpp
-        include/xstd/bits/algorithm/bit_disjoint.hpp
-        include/xstd/bits/algorithm/bit_includes.hpp
-        include/xstd/bits/algorithm/bit_mismatch.hpp
-        include/xstd/bits/algorithm/bit_none_of.hpp
-        include/xstd/bits/algorithm/bit_reverse.hpp
-        include/xstd/bits/algorithm/bit_rotate.hpp
+        include/xstd/bits/bit_algorithm.hpp
+        include/xstd/bits/bit_algorithm/bit_all_of.hpp
+        include/xstd/bits/bit_algorithm/bit_any_of.hpp
+        include/xstd/bits/bit_algorithm/bit_count.hpp
+        include/xstd/bits/bit_algorithm/bit_disjoint.hpp
+        include/xstd/bits/bit_algorithm/bit_includes.hpp
+        include/xstd/bits/bit_algorithm/bit_mismatch.hpp
+        include/xstd/bits/bit_algorithm/bit_none_of.hpp
+        include/xstd/bits/bit_algorithm/bit_reverse.hpp
+        include/xstd/bits/bit_algorithm/bit_rotate.hpp
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bit.hpp
         include/xstd/bits/bit/bit_convert.hpp

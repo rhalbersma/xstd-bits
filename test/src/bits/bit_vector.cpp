@@ -7,10 +7,10 @@
 #include <test/sanitizer.hpp>                       // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
 #include <test/sequence/dense.hpp>                  // yields_every_position
 #include <test/sequence/rotation.hpp>               // permutation_sweep, permutes_ten_bits
+#include <xstd/bits/bit_algorithm/bit_count.hpp>    // bit_count
+#include <xstd/bits/bit_algorithm/bit_reverse.hpp>  // bit_reverse
+#include <xstd/bits/bit_algorithm/bit_rotate.hpp>   // bit_rotate
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
-#include <xstd/bits/algorithm/bit_count.hpp>        // bit_count
-#include <xstd/bits/algorithm/bit_reverse.hpp>      // bit_reverse
-#include <xstd/bits/algorithm/bit_rotate.hpp>       // bit_rotate
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_vector.hpp>                 // bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container

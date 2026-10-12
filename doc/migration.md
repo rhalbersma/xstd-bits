@@ -95,7 +95,7 @@ auto meets = (b & other).any();
 </td><td>
 
 ```cpp
-#include <xstd/bits/algorithm.hpp>
+#include <xstd/bits/bit_algorithm.hpp>
 
 auto u = s << 1;
 auto both = s & other;
@@ -134,7 +134,7 @@ b.to_string();  // "11111101", position 0 last
 </td><td>
 
 ```cpp
-#include <xstd/bits/algorithm.hpp>
+#include <xstd/bits/bit_algorithm.hpp>
 #include <xstd/bits/bit_fixed_valarray.hpp>
 
 auto v = xstd::bit_fixed_valarray<8>();
@@ -276,7 +276,7 @@ fs::permissions(path, p);
 </td><td>
 
 ```cpp
-#include <xstd/bits/algorithm.hpp>
+#include <xstd/bits/bit_algorithm.hpp>
 #include <xstd/bits/bit_flag_set.hpp>
 
 using perms = xstd::bit_flag_set<fs::perms, 16>;
@@ -359,7 +359,7 @@ b.intersects(c);
 </td><td>
 
 ```cpp
-#include <xstd/bits/algorithm.hpp>
+#include <xstd/bits/bit_algorithm.hpp>
 #include <xstd/bits/bit_set.hpp>
 
 auto s = xstd::bit_set{3, 70};
@@ -388,7 +388,7 @@ auto n = ~b;
 </td><td>
 
 ```cpp
-#include <xstd/bits/algorithm.hpp>
+#include <xstd/bits/bit_algorithm.hpp>
 #include <xstd/bits/bit.hpp>
 #include <xstd/bits/bit_valarray.hpp>
 #include <xstd/bits/bit_vector.hpp>
@@ -446,7 +446,7 @@ bits.popcount();
 </td><td>
 
 ```cpp
-#include <xstd/bits/algorithm.hpp>
+#include <xstd/bits/bit_algorithm.hpp>
 #include <xstd/bits/bit_vector.hpp>
 
 auto bits = xstd::bit_vector{false, true, true, false, false};

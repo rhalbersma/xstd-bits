@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_ALGORITHM_BIT_INCLUDES_HPP
-#define XSTD_BITS_ALGORITHM_BIT_INCLUDES_HPP
+#ifndef XSTD_BITS_BIT_ALGORITHM_BIT_INCLUDES_HPP
+#define XSTD_BITS_BIT_ALGORITHM_BIT_INCLUDES_HPP
 
 #include <xstd/bits/detail/algorithm.hpp> // reads_keys
 #include <xstd/bits/detail/ownership.hpp> // storage_access
@@ -23,4 +23,4 @@ template<bits::detail::reads_keys S>
 
 } // namespace xstd
 
-#endif // XSTD_BITS_ALGORITHM_BIT_INCLUDES_HPP
+#endif // XSTD_BITS_BIT_ALGORITHM_BIT_INCLUDES_HPP

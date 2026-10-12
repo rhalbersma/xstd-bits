@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_ALGORITHM_BIT_ANY_OF_HPP
-#define XSTD_BITS_ALGORITHM_BIT_ANY_OF_HPP
+#ifndef XSTD_BITS_BIT_ALGORITHM_BIT_ANY_OF_HPP
+#define XSTD_BITS_BIT_ALGORITHM_BIT_ANY_OF_HPP
 
 #include <xstd/bits/detail/algorithm.hpp> // any_true, reads_bools
 
@@ -20,4 +20,4 @@ template<bits::detail::reads_bools R>
 
 } // namespace xstd
 
-#endif // XSTD_BITS_ALGORITHM_BIT_ANY_OF_HPP
+#endif // XSTD_BITS_BIT_ALGORITHM_BIT_ANY_OF_HPP

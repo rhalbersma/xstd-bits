@@ -4,8 +4,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/uint128.hpp>                                  // IWYU pragma: keep; TEST_HAS_UINT128, uint128
-#include <xstd/bits/algorithm/bit_count.hpp>                 // bit_count
 #include <xstd/bits/bit/bit_convert.hpp>                     // bit_convert
+#include <xstd/bits/bit_algorithm/bit_count.hpp>             // bit_count
 #include <xstd/bits/bit_array.hpp>                           // basic_bit_array, bit_array
 #include <xstd/bits/bit_concepts/bit_constructible_from.hpp> // bit_constructible_from
 #include <xstd/bits/bit_fixed_set.hpp>                       // basic_bit_fixed_set, bit_fixed_set

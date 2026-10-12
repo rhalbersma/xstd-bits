@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/algorithm.hpp>       // bit_count, bit_reverse, bit_rotate
 #include <xstd/bits/bit.hpp>             // bit_convert
+#include <xstd/bits/bit_algorithm.hpp>   // bit_count, bit_reverse, bit_rotate
 #include <xstd/bits/bit_array.hpp>       // basic_bit_array
 #include <xstd/bits/bit_fixed_set.hpp>   // basic_bit_fixed_set
 #include <xstd/bits/bit_vector.hpp>      // basic_bit_vector

@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_ALGORITHM_BIT_COUNT_HPP
-#define XSTD_BITS_ALGORITHM_BIT_COUNT_HPP
+#ifndef XSTD_BITS_BIT_ALGORITHM_BIT_COUNT_HPP
+#define XSTD_BITS_BIT_ALGORITHM_BIT_COUNT_HPP
 
 #include <xstd/bits/detail/algorithm.hpp> // count_true, reads_bools
 #include <ranges>                         // range_difference_t
@@ -21,4 +21,4 @@ template<bits::detail::reads_bools R>
 
 } // namespace xstd
 
-#endif // XSTD_BITS_ALGORITHM_BIT_COUNT_HPP
+#endif // XSTD_BITS_BIT_ALGORITHM_BIT_COUNT_HPP

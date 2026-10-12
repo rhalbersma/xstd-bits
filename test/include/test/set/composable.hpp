@@ -6,12 +6,12 @@
 #ifndef TEST_SET_COMPOSABLE_HPP
 #define TEST_SET_COMPOSABLE_HPP
 
-#include <xstd/bits/algorithm/bit_includes.hpp> // bit_includes
-#include <boost/test/unit_test.hpp>             // BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <range/v3/view/set_algorithm.hpp>      // set_difference, set_intersection, set_symmetric_difference, set_union
-#include <algorithm>                            // includes
-#include <cstddef>                              // size_t
-#include <ranges>                               // filter, to, transform
+#include <xstd/bits/bit_algorithm/bit_includes.hpp> // bit_includes
+#include <boost/test/unit_test.hpp>                 // BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <range/v3/view/set_algorithm.hpp>          // set_difference, set_intersection, set_symmetric_difference, set_union
+#include <algorithm>                                // includes
+#include <cstddef>                                  // size_t
+#include <ranges>                                   // filter, to, transform
 
 namespace test::set::composable {
 
