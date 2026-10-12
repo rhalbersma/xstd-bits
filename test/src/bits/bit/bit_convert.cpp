@@ -364,15 +364,16 @@ BOOST_AUTO_TEST_CASE(AnRvalueOfTheSameBlocksIsAdoptedWithoutACopy)
         BOOST_CHECK_EQUAL(back.size(), 3UZ * test::block_bits);
         BOOST_CHECK(std::move(back).extract().data() == data);
 
-        // A sequence to a sequence keeps its width exactly.
+        // A sequence to a sequence keeps its width exactly: one block and six bits, inside the two adopted.
         auto two               = std::vector<std::size_t>(2);
         auto const* const wide = two.data();
         auto w                 = xstd::bit_vector(xstd::from_blocks, std::move(two));
-        w.resize(70);
-        w[69]     = true;
-        auto same = xstd::bit_convert<xstd::bit_vector>(std::move(w));
-        BOOST_CHECK_EQUAL(same.size(), 70UZ);
-        BOOST_CHECK(same[69] and not same[68]);
+        auto const width       = test::block_bits + 6UZ;
+        w.resize(width);
+        w[width - 1UZ] = true;
+        auto same      = xstd::bit_convert<xstd::bit_vector>(std::move(w));
+        BOOST_CHECK_EQUAL(same.size(), width);
+        BOOST_CHECK(same[width - 1UZ] and not same[width - 2UZ]);
         BOOST_CHECK(std::move(same).extract().data() == wide);
 }
 
@@ -469,7 +470,7 @@ BOOST_AUTO_TEST_CASE(ABoundedTargetTooSmallThrowsWhatItsGrowthThrows)
         // A sequence target takes the source's width, which must fit.
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_bounded_vector<100>>(xstd::bit_vector(101))), std::bad_alloc);
         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_bounded_vector<100>>(xstd::bit_vector(100)).size(), 100UZ);
-        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_bounded_vector<100>>(xstd::bit_set{3, 64})), std::bad_alloc);
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_bounded_vector<100>>(xstd::bit_set{3, 100})), std::bad_alloc);
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_bounded_vector<100>>(std::bitset<128>())), std::bad_alloc);
 
         // A set target is capped at its capacity, and throws only for a key beyond it.

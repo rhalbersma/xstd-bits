@@ -237,5 +237,5 @@ foreach(t ${targets})
         ${cxx_compile_options_mbig_obj}
     )
 
-    add_test(${target_id} ${target_id})
+    add_test(NAME ${target_id} COMMAND ${target_id})
 endforeach()
