@@ -2275,6 +2275,10 @@ is the specification, and the tests hold each algorithm to it; what the prefix a
 | `bit_includes(s1, s2)` | `includes(s1, s2)` | set | — |
 | `bit_intersects(s1, s2)` | `set_intersection(s1, s2, out)`, writing a key | set | — |
 | `bit_disjoint(s1, s2)` | `set_intersection(s1, s2, out)`, writing nothing | set | — |
+| `bit_set_intersection(s1, s2)` | range-v3's `views::set_intersection(s1, s2)`, as a set | set | — |
+| `bit_set_union(s1, s2)` | range-v3's `views::set_union(s1, s2)`, as a set | set | — |
+| `bit_set_difference(s1, s2)` | range-v3's `views::set_difference(s1, s2)`, as a set | set | — |
+| `bit_set_symmetric_difference(s1, s2)` | range-v3's `views::set_symmetric_difference(s1, s2)`, as a set | set | — |
 
 **Free, because the counterpart has no such member.** `std::vector<bool>` has no `count`, `std::array` no `rotate`
 and `std::set` no `is_subset_of`, and a member would answer a question the counterpart's synopsis does not ask, in
@@ -2302,6 +2306,16 @@ it compares a `bool` at a time through `std::ranges::mismatch` itself.
 side, `xstd::bit_includes(perms, fs::perms::owner_read)`, and never first ([flag-types](#flag-types)). All three answer
 at any two run-time widths ([width-is-capacity](#width-is-capacity)), and every other relation between two sets is
 spelled from them ([the-set-queries](#the-set-queries)).
+
+**The set operations return a set, and an operator spells each.** `std::ranges::set_intersection` and its three
+siblings write through an output iterator, and that form already works on these sets, element by element. What the
+blocks add is the result as a value, the shape range-v3 gives its lazy `views::set_intersection`,
+`views::set_union`, `views::set_difference` and `views::set_symmetric_difference`, so `xstd::bit_set_intersection`,
+`bit_set_union`, `bit_set_difference` and `bit_set_symmetric_difference` take their names and return the set those
+views would hold, a block at a time. The operators `&`, `|`, `-` and `^` are their shorthand, the notation set
+theory already uses, and each algorithm returns exactly what its operator does. Only an owner has a result to hold,
+so a view, which writes through to blocks it does not own, takes neither; the second argument converts to the
+first's type, as for the queries, so `xstd::bit_set_union(perms, fs::perms::owner_read)` adds a flag.
 
 ### rotation-and-reversal
 
@@ -5573,10 +5587,10 @@ With the exception of `operator~`, the non-member bitwise operators can be reima
 | `xstd::bit_fixed_set<N>`      | `std::set<int>` with the range-v3 set algorithm views                                                |
 | :----------------       | :----------------------------------------------------------------------------------------------------|
 | `xstd::bit_includes(b, a)` | `std::ranges::includes(b, a)`                                                                     |
-| <code>a &vert; b</code> | <code>ranges::views::set_union(a, b)                &vert; std::ranges::to&lt;std::set&gt;() </code> |
-| `a & b`                 | <code>ranges::views::set_intersection(a, b)         &vert; std::ranges::to&lt;std::set&gt;() </code> |
-| `a - b`                 | <code>ranges::views::set_difference(a, b)           &vert; std::ranges::to&lt;std::set&gt;() </code> |
-| `a ^ b`                 | <code>ranges::views::set_symmetric_difference(a, b) &vert; std::ranges::to&lt;std::set&gt;() </code> |
+| <code>a &vert; b</code>, `xstd::bit_set_union(a, b)` | <code>ranges::views::set_union(a, b)                &vert; std::ranges::to&lt;std::set&gt;() </code> |
+| `a & b`, `xstd::bit_set_intersection(a, b)` | <code>ranges::views::set_intersection(a, b)         &vert; std::ranges::to&lt;std::set&gt;() </code> |
+| `a - b`, `xstd::bit_set_difference(a, b)` | <code>ranges::views::set_difference(a, b)           &vert; std::ranges::to&lt;std::set&gt;() </code> |
+| `a ^ b`, `xstd::bit_set_symmetric_difference(a, b)` | <code>ranges::views::set_symmetric_difference(a, b) &vert; std::ranges::to&lt;std::set&gt;() </code> |
 
 The bitwise shift operators of `xstd::bit_fixed_set<N>` can be reimagined as set **transformations** that add or subtract a non-negative constant to all set elements, followed by **filtering** out elements that would fall outside the range `[0, N)`. This can also be formulated in a composable way for `std::set<int>`, albeit without the data-parallelism that `xstd::bit_fixed_set<N>` provides.
 
