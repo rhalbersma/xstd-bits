@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(TwoRunTimeWidthsCompareTheirKeys)
         }
 }
 
-// A view asks what it views; a flag converts to its flag set as the second argument; sequences and mixed sets are no sets.
+// A view asks what it views; a flag converts to its flag set; sequences and mixed sets are no sets.
 BOOST_AUTO_TEST_CASE(WhatItAsks)
 {
         auto blocks     = std::uint64_t{0b1010};
@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE(WhatItAsks)
         auto const keys = std::set<std::size_t>({1UZ, 3UZ});
         BOOST_CHECK_EQUAL(xstd::bit_disjoint(view, view), model(keys, keys));
         using perms = xstd::bit_flag_set<std::filesystem::perms, 16>;
-        BOOST_CHECK(not xstd::bit_disjoint(perms(std::filesystem::perms::owner_all), std::filesystem::perms::owner_read));
+        BOOST_CHECK(xstd::bit_disjoint(perms(std::filesystem::perms::owner_all), std::filesystem::perms::others_read));
         static_assert(askable<xstd::bit_fixed_set<8>, xstd::bit_fixed_set<8>> and not askable<xstd::bit_fixed_set<8>, xstd::bit_fixed_set<9>>);
         static_assert(not askable<xstd::bit_array<8>, xstd::bit_array<8>> and not askable<std::set<int>, std::set<int>>);
 }

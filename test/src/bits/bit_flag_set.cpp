@@ -9,6 +9,7 @@
 #include <xstd/bits/bit/bit_convert.hpp>                // bit_convert
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>     // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>     // bit_includes
+#include <xstd/bits/bit_algorithm/bit_intersects.hpp>   // bit_intersects
 #include <xstd/bits/bit_enum_set.hpp>                   // bit_enum_set
 #include <xstd/bits/bit_fixed_set.hpp>                  // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_flag_mapping.hpp>               // bit_flag_mapping
@@ -568,7 +569,7 @@ auto operator_mismatches(block_t<X> w, typename X::key_type b)
         mismatches += static_cast<std::size_t>(mask_type(x ^ b) != either or mask_type(b ^ x) != either);
         mismatches += static_cast<std::size_t>(mask_type(x - b) != m_only or mask_type(b - x) != b_only);
         mismatches += static_cast<std::size_t>((x == b) != (m == b) or (x <=> X(b)) != (m <=> b));
-        mismatches += static_cast<std::size_t>(xstd::bit_includes(x, b) != ((w & v) == v) or not xstd::bit_disjoint(x, b) != ((w & v) != block_type{}));
+        mismatches += static_cast<std::size_t>(xstd::bit_includes(x, b) != ((w & v) == v) or xstd::bit_intersects(x, b) != ((w & v) != block_type{}));
         mismatches += static_cast<std::size_t>(xstd::bit_includes(X(b), x) != ((w & v) == w) or (xstd::bit_includes(X(b), x) and not xstd::bit_includes(x, b)) != ((w & v) == w and w != v));
         mismatches += static_cast<std::size_t>((xstd::bit_includes(x, b) and not xstd::bit_includes(X(b), x)) != ((w & v) == v and w != v));
         return mismatches;
@@ -762,7 +763,7 @@ BOOST_AUTO_TEST_CASE(AMultiBitValueIsAMaskNotAKey)
         BOOST_CHECK((fs::perms::owner_all - p) == (fs::perms::owner_write | fs::perms::owner_exec));
         BOOST_CHECK(xstd::bit_includes(p, xfs::perms(fs::perms::group_all)) and not xstd::bit_includes(p, xfs::perms(fs::perms::owner_all)));
         BOOST_CHECK(xstd::bit_includes(p, xfs::perms(fs::perms::none)));
-        BOOST_CHECK(not xstd::bit_disjoint(p, xfs::perms(fs::perms::owner_all)));
+        BOOST_CHECK(xstd::bit_intersects(p, xfs::perms(fs::perms::owner_all)));
 
         // As a key it names no flag, so the set holds no such element, and erasing it leaves the set as it was.
         auto x = p;
@@ -876,7 +877,7 @@ BOOST_AUTO_TEST_CASE(TheInheritedSetInterfaceWorks)
         BOOST_CHECK(p == fs::perms::none);
 }
 
-// contains is std::set's membership of one flag; all-of is bit_includes, any-of and none-of bit_disjoint, a flag converting.
+// contains is std::set's membership of one flag; all-of is bit_includes, any-of bit_intersects, none-of bit_disjoint.
 // contains is std::set's membership of one flag; all-of is is_superset_of, any-of intersects and none-of disjoint.
 BOOST_AUTO_TEST_CASE(ContainsIsMembershipOfOneFlag)
 {
@@ -884,11 +885,11 @@ BOOST_AUTO_TEST_CASE(ContainsIsMembershipOfOneFlag)
         static_assert(std::same_as<decltype(p.contains(fs::perms::owner_read)), bool>);
         BOOST_CHECK(p.contains(fs::perms::owner_read) and not p.contains(fs::perms::owner_write));
         BOOST_CHECK(xstd::bit_includes(p, xfs::perms(fs::perms::owner_read)) == p.contains(fs::perms::owner_read));
-        BOOST_CHECK(not xstd::bit_includes(p, xfs::perms(fs::perms::owner_all)) and not xstd::bit_disjoint(p, xfs::perms(fs::perms::owner_all)));
-        BOOST_CHECK(not p.contains(fs::perms::owner_all) and not xstd::bit_includes(p, fs::perms::owner_all) and not xstd::bit_disjoint(p, fs::perms::owner_all));
+        BOOST_CHECK(not xstd::bit_includes(p, xfs::perms(fs::perms::owner_all)) and xstd::bit_intersects(p, xfs::perms(fs::perms::owner_all)));
+        BOOST_CHECK(not p.contains(fs::perms::owner_all) and not xstd::bit_includes(p, fs::perms::owner_all) and xstd::bit_intersects(p, fs::perms::owner_all));
         BOOST_CHECK(xstd::bit_includes(p, fs::perms::owner_read | fs::perms::group_write) and xstd::bit_includes(xfs::perms(fs::perms::all), p));
         BOOST_CHECK(not xstd::bit_includes(p, fs::perms::all) and xstd::bit_includes(xfs::perms(fs::perms::owner_read | fs::perms::group_write), p));
-        BOOST_CHECK(xstd::bit_disjoint(p, fs::perms::others_all) and not xstd::bit_disjoint(p, fs::perms::group_all));
+        BOOST_CHECK(xstd::bit_disjoint(p, fs::perms::others_all) and xstd::bit_intersects(p, fs::perms::group_all));
         static_assert(noexcept(xstd::bit_includes(p, p)) and noexcept(xstd::bit_includes(p, fs::perms::all)));
         static_assert(noexcept(xstd::bit_disjoint(p, p)) and noexcept(xstd::bit_disjoint(p, fs::perms::all)));
         p.insert(fs::perms::owner_write);
@@ -1055,7 +1056,7 @@ BOOST_AUTO_TEST_CASE(ANarrowerWidthReadsTheLowPositionsOfABitset)
         BOOST_CHECK(not(narrow_bitset_flags(xstd::from_blocks, std::uint16_t{0x001}) == high));
         BOOST_CHECK(narrow_bitset_flags(xstd::from_blocks, std::uint16_t{0x001}) == std::bitset<16>(0x001));
         BOOST_CHECK(std::bitset<16>(~narrow_bitset_flags()) == std::bitset<16>(0x0FFF));
-        BOOST_CHECK(not xstd::bit_disjoint(p, narrow_bitset_flags(std::bitset<16>(0x001))));
+        BOOST_CHECK(xstd::bit_intersects(p, narrow_bitset_flags(std::bitset<16>(0x001))));
 }
 
 // An integer type is a bitmask type, [bitmask.types]/1, and keys a flag type below its sign bit; bool and char do not.
@@ -1091,7 +1092,7 @@ BOOST_AUTO_TEST_CASE(AnIntegerFlagTypeIteratesHighestFirstAndContainsOneBitValue
         BOOST_CHECK(std::ranges::equal(p, std::to_array({0x4000'0000, 4, 1})) and p.front() == 0x4000'0000 and p.back() == 1);
         BOOST_CHECK(p.contains(4) and p.contains(1) and not p.contains(2) and not p.contains(5) and not p.contains(0));
         BOOST_CHECK(p.find(5) == p.end() and p.count(5) == 0UZ); // NOLINT(readability-container-contains): find and count are the members under test
-        BOOST_CHECK(xstd::bit_includes(p, 5) and not xstd::bit_disjoint(p, 6) and xstd::bit_disjoint(p, 2) and not xstd::bit_includes(p, 7));
+        BOOST_CHECK(xstd::bit_includes(p, 5) and xstd::bit_intersects(p, 6) and xstd::bit_disjoint(p, 2) and not xstd::bit_includes(p, 7));
         BOOST_CHECK((xstd::bit_includes(xstd::bit_flag_set<int>(0x4000'0007), p) and not xstd::bit_includes(p, 0x4000'0007)) and (xstd::bit_includes(p, 4) and not xstd::bit_includes(xstd::bit_flag_set<int>(4), p)) and xstd::bit_includes(xstd::bit_flag_set<int>(0x4000'0005), p));
 
         auto x = p;

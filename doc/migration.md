@@ -100,7 +100,7 @@ auto meets = (b & other).any();
 auto u = s << 1;
 auto both = s & other;
 auto subset = xstd::bit_includes(other, s);
-auto meets = not xstd::bit_disjoint(s, other);
+auto meets = xstd::bit_intersects(s, other);
 ```
 
 </td></tr>
@@ -368,7 +368,7 @@ for (auto i : s) {
         use(i);
 }
 xstd::bit_includes(c, s);
-not xstd::bit_disjoint(s, c);
+xstd::bit_intersects(s, c);
 ```
 
 </td></tr>
