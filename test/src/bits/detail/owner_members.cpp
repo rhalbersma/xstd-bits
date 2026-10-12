@@ -51,14 +51,6 @@ BOOST_AUTO_TEST_CASE(EveryOwnerSwaps)
         BOOST_CHECK_EQUAL(x.size(), 2UZ);
 }
 
-// [vector.bool]'s static swap of two proxies still stands beside the owner's swap of two containers.
-BOOST_AUTO_TEST_CASE(TheSequenceKeepsItsProxySwap)
-{
-        auto v = xstd::bit_vector{true, false};
-        xstd::bit_vector::swap(v[0], v[1]);
-        BOOST_CHECK(not v[0] and v[1]);
-}
-
 // An owner swaps with its own type only: the two readings over one storage never meet.
 BOOST_AUTO_TEST_CASE(TwoReadingsDoNotSwap)
 {

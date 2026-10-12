@@ -133,12 +133,11 @@ BOOST_AUTO_TEST_CASE(AViewOfMutableBitsIsAViewOfConstBits)
         BOOST_CHECK(c[3] and w[1]);
 }
 
-// Like span it has no bitwise operators, which are an owner's, and over its own type alone.
-BOOST_AUTO_TEST_CASE(TheBitwiseOperatorsAreAnOwners)
+// Like std::span it has no bitwise operators, and neither has the owner: elementwise logic is a valarray's.
+BOOST_AUTO_TEST_CASE(NeitherTheViewNorTheOwnerCombines)
 {
-        static_assert(combines_with<xstd::bit_array<8>, xstd::bit_array<8>>);
-        static_assert(not combines_with<view_of<xstd::bit_array<8>>, view_of<xstd::bit_array<8>>> and not combines_with<view_of<xstd::bit_array<8>>, xstd::bit_array<8>>);
-        static_assert(not combines_with<xstd::bit_array<8>, view_of<xstd::bit_array<8>>>);
+        static_assert(not combines_with<view_of<xstd::bit_array<8>>, xstd::bit_array<8>> and not combines_with<view_of<xstd::bit_array<8>>, view_of<xstd::bit_array<8> const>>);
+        static_assert(not combines_with<xstd::bit_array<8>, xstd::bit_array<8>> and not combines_with<view_of<xstd::bit_array<8>>, view_of<xstd::bit_array<8>>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

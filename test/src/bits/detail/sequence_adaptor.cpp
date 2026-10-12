@@ -52,6 +52,9 @@ constexpr bool can_write = requires (S s) { s[0] = true; };
 template<class S>
 constexpr bool can_swap = requires (S s) { s.swap(s); };
 
+template<class S>
+constexpr bool has_bulk_operators = requires (S s) { s &= s; } or requires (S s) { s |= s; } or requires (S s) { s ^= s; } or requires (S s) { s & s; } or requires (S s) { ~s; } or requires (S s) { s.flip(); };
+
 template<class Seq>
 [[nodiscard]] auto bools(Seq const& s)
         -> std::vector<bool>
@@ -104,10 +107,6 @@ concept le_comparable = requires (T a, T b) { a <= b; };
 
 template<class T>
 concept ge_comparable = requires (T a, T b) { a >= b; };
-
-// Dependent, so an absent operator is a substitution failure rather than a hard error.
-template<class X>
-concept or_assignable = requires (X x) { x |= x; };
 
 } // namespace
 
@@ -219,41 +218,14 @@ BOOST_AUTO_TEST_CASE(AViewIsARangeInBothDirectionsAndAtThrowsPastTheEnd)
         BOOST_CHECK(r.at(99) == true);
 }
 
-BOOST_AUTO_TEST_CASE(TheBulkOperatorsAreTheStoragesOwn)
+// No bulk operators and no flip, on an owner or a view: elementwise logic is the valarray reading's.
+BOOST_AUTO_TEST_CASE(ThereAreNoBulkOperators)
 {
+        static_assert(not has_bulk_operators<Owner> and not has_bulk_operators<View>);
         auto x = Owner();
         auto y = Owner();
-        x[1] = x[2] = true;
-        y[2] = y[3] = true;
-
-        auto z = x;
-        z &= y;
-        BOOST_CHECK(z[2] and not z[1] and not z[3]);
-        z = x;
-        z |= y;
-        BOOST_CHECK(z[1] and z[2] and z[3]);
-        z = x;
-        z ^= y;
-        BOOST_CHECK(z[1] and not z[2] and z[3]);
-
-        // The binary forms, each its compound over a copy, and the complement as flip()'s value.
-        auto t = x;
-        t &= y;
-        BOOST_CHECK((x & y) == t);
-        t = x;
-        t |= y;
-        BOOST_CHECK((x | y) == t);
-        t = x;
-        t ^= y;
-        BOOST_CHECK((x ^ y) == t);
-        t = x;
-        t.flip();
-        BOOST_CHECK((~x) == t);
-        BOOST_CHECK(x[1] and x[2]); // and none of them wrote through
-        BOOST_CHECK((~~x) == x);
-        BOOST_CHECK(((x & y) | (x ^ y)) == (x | y)); // one identity, over packed bits
-
-        static_assert(not or_assignable<View>);
+        x[1]   = true;
+        y[3]   = true;
         swap(x, y);
         BOOST_CHECK(x[3] and y[1]);
 }

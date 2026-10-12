@@ -2076,19 +2076,18 @@ have no subviews either; they assert their preconditions rather than throw, and 
 to-the-end sentinel. A window is a view in `std::ranges`' sense and borrowed like `span`, and like `span` it
 neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-precedent)).
 
-A window's end blocks are shared with what lies outside it, so its `fill` is masked blocks: over a window of
-ours it is `bit_block_container::set(pos, len, value)`, a block at a time through `block_at`, and one position at
-a time over a window of anything else. A sequence view has none of the bitwise operators, as `std::span` has none:
-`&=`, `|=` and `^=` are an owner's, over its own type alone, as a value's are. A `bit_set_view` keeps the set
-reading's, and takes any set over the same storage and keys, owner or view, through the storage's own operators.
-No sequence has shifts, window or whole ([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)).
+A window's end blocks are shared with what lies outside it, so its one bulk operation is masked blocks: `fill`
+over a window of ours is `bit_block_container::set(pos, len, value)`, a block at a time through `block_at`, and
+one position at a time over a window of anything else. Like `std::span`, no view combines: elementwise logic is
+the valarray reading's, over an owner ([the-valarray-reading](#the-valarray-reading)), and no sequence has shifts,
+window or whole ([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)).
 
 **A window over a const storage writes nothing, and the predicate has to be asked of the right type to say so.**
 `bits_type` is `Bits` with the const stripped, because a view over a const owner names `Bits const` and the
-typedef wants the storage's own name, so a write asked of `bits_type` is always possible. `fill` asks through the
-storage expression instead, which carries the const, and drops out of overload resolution on a const window.
-`set_adaptor`'s const view was never affected: every one of its mutators constrains through the storage
-expression.
+typedef wants the storage's own name. Asking whether *that* takes a write is always yes, so a writer is
+constrained through the storage expression itself, which carries the const: `fill` drops out of overload
+resolution on a const window rather than failing inside its body. `set_adaptor`'s const view does the same: every
+one of its mutators constrains through the storage expression.
 
 ### static-windows
 
@@ -2196,9 +2195,10 @@ the tail moves down a block at a time, ascending, each write landing below every
 width shrinks behind it. A rebuild allocates, and `[vector.modifiers]`/5 lets an erase throw only what the
 element's copy, move or assignment throws, which for a `bool` is nothing.
 
-`flip()` is `[vector.bool]`'s, a bulk operation like the three operators beside it, so an owner and a whole
-view have it and a window does not; the static `swap(reference, reference)` is the proxies' own swap under
-the name the standard gives it.
+`[vector.bool]`'s `flip()` and its static `swap(reference, reference)` are left out. Negating every element is a
+bulk operation, the valarray reading's `!` ([the-valarray-reading](#the-valarray-reading)), negating one is
+`v[i] = not v[i]`, and two proxies swap through their own hidden friends, which the static member, deprecated by
+[P3612R1](https://wg21.link/P3612R1), only renamed.
 
 ### what-a-sequence-may-add
 
@@ -2211,11 +2211,12 @@ The ceiling: **the sequence adaptor adds an operation only where the sequence re
 and the spelling is the one that reading already uses.** Two questions, and a candidate answers both or it
 does not cross:
 
-- *Does a sequence of `bool` want this?* `flip()` is `[vector.bool]`'s own. The elementwise operators are
-  `std::valarray<bool>`'s, the standard's one model for a bulk logical operation over bools
-  ([the-elementwise-reading](#the-elementwise-reading)). A **difference** answers no: no standard sequence
-  of bools spells `a and not b`, and `valarray<bool>`'s `operator-=` is arithmetic. A **shift** answers no
-  twice over.
+- *Does a sequence of `bool` want this?* The elementwise operators are `std::valarray<bool>`'s, the standard's
+  one model for a bulk logical operation over bools, and no sequence container of the standard has them: they
+  answer no here and are the valarray reading's instead ([the-valarray-reading](#the-valarray-reading)). So is
+  `[vector.bool]`'s `flip()`, the one bulk operation `std::vector<bool>` has. A **difference** answers no
+  anywhere: no standard sequence of bools spells `a and not b`, and `valarray<bool>`'s `operator-=` is
+  arithmetic. A **shift** answers no twice over.
 - *Is this the name that reading gives it?* `<<=` fails here even where the operation is wanted, because a
   sequence already spells moving elements `std::shift_left` and `std::shift_right`, in the opposite
   direction.
@@ -2232,7 +2233,7 @@ The four ways a reading answers an operation are all visible in the current surf
 | | |
 |---|---|
 | one name, a different thing per reading | `size()` -- the sequence's element count, the set's **cardinality** |
-| one reading alone | `flip()`, the sequence's, after `[vector.bool]`, where the set complements through `~` alone |
+| one reading alone | `cshift` and `apply`, the valarray's, after `[valarray.members]` |
 | one reading spelling it otherwise | the set's cardinality `size()` is `xstd::bit_count` over the sequence, an algorithm rather than a member |
 | one reading declining it | `-=` and the shifts on the set, not the sequence |
 
@@ -2244,8 +2245,9 @@ because the set reading asks for them, and means by them what `[bitset.members]`
 it already spells moving elements, and spells it the other way round: `operator<<=` is implemented with
 `std::shift_right` and `operator>>=` with `std::shift_left`, because a sequence's low index is its front
 where a bit string's low bit is its right. Exposing the operators would have `v <<= 1` mean the opposite of
-the algorithm whose name the sequence reading already owns. So `flip()` and the three
-compound operators cross to the sequence adaptor and the shifts do not.
+the algorithm whose name the sequence reading already owns. So the shifts stay off the sequence reading. A row
+of bools reaches them through the valarray reading, which declares them `std::bitset`'s, in the bit string's
+direction, beside `valarray`'s own `shift` ([the-valarray-reading](#the-valarray-reading)).
 
 ### algorithms-not-members
 
@@ -2286,7 +2288,7 @@ Nothing else about the container is opened: each algorithm asks the storage memb
 blocks, and over a window's blocks masked at its ends ([windows](#windows)).
 
 **Whole sequences and windows.** `bit_reverse` and `bit_rotate` write, and take an owner or a whole view, never a
-window or a `const` sequence: a window shares its end blocks with positions outside it, as for `flip()`. The five
+window or a `const` sequence: a window shares its end blocks with positions outside it. The five
 that read take a window too. `bit_mismatch` takes two operands of one type, and compares two whole sequences a block
 at a time, at two run-time sizes as well, stopping at the shorter's end as `std::ranges::mismatch` does; two windows
 it compares a `bool` at a time through `std::ranges::mismatch` itself.
@@ -2318,7 +2320,7 @@ up to the size. One algorithm says both, in the direction `std::rotate` already 
 for a reader to map onto front and back. It is the mismatch that keeps the shift operators off the sequence reading:
 a direction named for a bit string reads backwards on a sequence.
 
-An owner and a whole view take them and a window does not, as with `flip()`: a window shares its end blocks with
+An owner and a whole view take them and a window does not: a window shares its end blocks with
 what lies outside it, and its rotation would be a masked walk of its own. The set reading does not take them
 either; `std::set` has no counterpart, and a rotation of keys has no meaning there that a shift does not already
 give.
@@ -2340,25 +2342,81 @@ and libc++ do not ([GCC PR 121913](https://gcc.gnu.org/PR121913), fixed in 16 an
 is a pass over the blocks that never asks the standard library to move a proxy, so it is exact on every library, and
 the tests build their own rotations by index for the same reason.
 
-### the-elementwise-reading
+### the-valarray-reading
 
-What `&=` means on a sequence of bools is **elementwise logical**, not bitwise: `a &= b` is
-`a[i] = a[i] and b[i]` over every position. `std::valarray<bool>` is the standard's one model for that, and
-the only standard container that spells it -- neither `std::vector<bool>` nor `std::array<bool, N>` has the
-operator at all. On packed bits the elementwise operation is the set operation's own instruction, so serving
-the reading costs nothing, which is why the operators sit on the sequence adaptor rather than waiting for a
-`bit_valarray` to be written.
+The containers here are principled versions of the standard's: `bit_vector` is what an unspecialized
+`std::vector<bool>` would be, `bit_array<N>` `std::array<bool, N>` and `bit_bounded_vector<N>`
+`std::inplace_vector<bool, N>`. None of those has a bitwise operator, so none of ours does. What `&=` means on a
+row of bools is **elementwise logical**, `a[i] = a[i] and b[i]` at every position, and the one standard type
+that spells it is `std::valarray<bool>`, R's logical vector. That is a reading of its own, the sequence read
+elementwise, with its own three owners over the sequence's storages:
 
-Three, and not the storage's four. A **difference** has no elementwise reading: `valarray<bool>`'s own
-`operator-=` is arithmetic, and `a and not b` is set vocabulary, so `-=` stays on the set adaptor
-and comes off the sequence reading with the shifts
-([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)). The binary `&` `|` `^` are each their compound over a
-copy and `~` is `flip()`'s value, all four on an **owner** alone: a view's copy refers to the very storage it
-views, so a value returned by one would write through to it.
+| | `std::valarray<bool>` packed |
+| :--- | :--- |
+| static size, `std::bitset<N>` read elementwise | `bit_fixed_valarray<N>` |
+| run-time size within a capacity `N` | `bit_bounded_valarray<N>` |
+| run-time size on the heap, `boost::dynamic_bitset` read elementwise | `bit_valarray` |
 
-`bit_vector` is therefore `[vector.bool]`'s synopsis plus `flip()`'s value form, three compound operators,
-three binary ones and `fill`, its counts and queries being algorithms ([algorithms-not-members](#algorithms-not-members))
--- and nothing that needs a bit to have an address.
+All three are one `valarray_adaptor` over the storage, whose reading tag refines the sequence's: the algorithms of
+[algorithms-not-members](#algorithms-not-members) and `xstd::bit_convert` take a valarray as they take a sequence, and
+a `bit_span` views one as a `std::span<bool>` views a `std::valarray<bool>`. Its proxy and iterators are the
+sequence's, handed out through a whole view of its own storage. On packed bits every elementwise operation is
+the set operation's own instruction a block at a time, so the reading costs nothing to serve.
+
+**The interface is `[valarray]`'s at `T = bool`, line by line.** `value_type`, and the proxy `reference` that
+stands in for `T&`; the default, count, value-and-count (the value first, as `[valarray.cons]` orders them) and
+list constructors; assignment from an array, a `bool` filling every element, and a list; `operator[]`, a proxy
+where `valarray` hands out `T&` and a `bool` where it hands out `const T&`; `swap`, `size`, `sum`, `min`, `max`,
+`shift`, `cshift`, `apply` in both shapes and `resize`, which assigns its value to every element as
+`[valarray.members]` says; `!`, `&=`, `|=` and `^=` against an array and a scalar; `&`, `|`, `^`, `&&`, `||` and
+the six comparisons over two arrays and over an array and a scalar on either side; `swap`, `begin` and `end` as
+non-members, which makes it a random-access range, and no member `begin` or `end`. A static size has no count
+constructors and no `resize`, and takes `std::array`'s list initialization and a built-in array of bools as
+`bit_array` does. Each array operator asserts that its operands have one size, the precondition `[valarray]` makes
+undefined behaviour. Everything is `constexpr` as far as the storage is: the fixed one entirely, and structural at
+whole blocks; the heap one in a constant expression as `std::vector` is; the bounded one where its blocks are a
+`std::inplace_vector`. Besides `[valarray]`, the owners take `from_blocks` as every owner does.
+
+**The deviations, each one forced by `bool` or chosen for it:**
+
+- **`~` is logical not.** `valarray<bool>::operator~` applies `~` to each element, which promotes `bool` to `int`
+  and converts `~0` and `~1` back to `true`: an array of all `true`, whatever it held. Nobody wants that, and
+  `std::bitset`'s users mean complement, so `~` is `!` here.
+- **`std::bitset`'s shifts are kept, in its sense.** `[valarray.cassign]`'s `<<=` and `>>=` shift each element's
+  value, which on a `bool` is arithmetic again. Here `v <<= n` moves position `i` to `i + n`, zeros filling in, and
+  `v >>= n` moves position `i + n` to `i`, each emptying the array at `n >= size()`, with `<<` and `>>` returning
+  copies: the operators `std::bitset` and `boost::dynamic_bitset` code is written with. `valarray`'s own `shift(n)`
+  stays beside them in its own sense, element `i` taking element `i + n`, so `v << n` is `v.shift(-n)`.
+- **Empty reductions are defined.** `[valarray.members]` leaves `sum`, `min` and `max` of an empty array undefined;
+  here `sum()` and `max()` are `false`, the identity of or, and `min()` is `true`, the identity of and.
+- **No arithmetic.** `+`, `-`, `*`, `/`, `%`, unary `+` and `-`, and their compound forms are left out, as are the
+  `<cmath>` functions: on `bool` each either promotes out of the type or is one of the logical operators again.
+- **Comparisons answer arrays.** `==`, `!=`, `<`, `<=`, `>` and `>=` return the array of elementwise answers, as
+  `valarray`'s do, so the type is not `equality_comparable`, has no `<=>` and no `std::hash`, exactly like
+  `std::valarray`. Whole-array equality is `(v == w).min()`, or `xstd::bit_mismatch`.
+- **`apply` is asked twice.** A function of one `bool` is one of four, so `apply(func)` calls `func(false)` and
+  `func(true)` once each and applies the answer a block at a time: a constant, the identity or a negation.
+- **No pointer constructor and no slices.** `valarray(const T*, size_t)` needs no packed form, a list or
+  `xstd::bit_convert` taking its place. `slice_array`, `gslice_array`, `mask_array` and `indirect_array`, and the
+  subscripts that make them, are deferred: each is a view with the valarray's operators, and a `bit_subspan`
+  already covers the contiguous slice.
+
+**The kernels.** Each operator is one bitwise expression over a block of either side, after which the padding past
+`size()` is cleared, so a count over whole blocks stays right. A scalar is a block of all ones or all zeros.
+
+| operator | per block | padding cleared |
+| :--- | :--- | :--- |
+| `a & b`, `a && b` | `a & b` | no need |
+| `a \| b`, `a \|\| b` | `a \| b` | no need |
+| `a ^ b`, `a != b` | `a ^ b` | no need |
+| `a == b` | `~(a ^ b)` | yes |
+| `a < b` | `~a & b` | no need |
+| `a > b` | `a & ~b` | no need |
+| `a <= b` | `~a \| b` | yes |
+| `a >= b` | `a \| ~b` | yes |
+
+The storage applies one kernel to every block through `transform`, against another storage of one width or
+against a scalar's block, and clears the padding once at the end, whether the kernel needed it or not.
 
 ### the-sequence-contract
 
@@ -3123,8 +3181,7 @@ to hold, the rest of the body is a branch no test can take.
 P0843 declined to repeat `vector<bool>`, so `std::inplace_vector<bool, N>` holds real `bool`s and is a model
 only up to its reference. The `[inplace.vector]` clauses assert each declaration on it first where the standard
 library has it, exactly as the `[vector]` ones do ([the-sequence-contract](#the-sequence-contract)); what the
-packing adds, `flip`, `reference::flip` and `hash`, is under `test/src/spec/xstd/inplace_vector/`, asserted to
-be there exactly where `test::proxy_reference` holds.
+packing adds, `hash`, is under `test/src/spec/xstd/inplace_vector/`.
 
 **Testing both storages takes two standards.** `__cpp_lib_inplace_vector` is a C++26 macro, and the library asks
 for C++23, where every library in the matrix holds the column in `boost::container::static_vector`. The two
@@ -4478,8 +4535,8 @@ reach a proxy only through them, and it is where `vector<bool>` historically fel
 overloads on the proxy are the pre-ranges spelling of the same thing, for `std::sort` and everything else
 still built on `std::iter_swap`. `format_as` is fmt's protocol in the same sense.
 
-The sequence proxy borrows nothing else from `[template.bitset.general]`: no `flip()` and no `operator~`. Those belong to
-`std::bitset::reference`, a bitset's proxy rather than a sequence's.
+The sequence proxy borrows nothing else, from `[vector.bool]` or `[template.bitset.general]`: no `flip()` and no
+`operator~`. One element is negated by `v[i] = not v[i]`, and a whole array by the valarray reading's `!`.
 
 ### formatting-the-proxies
 
@@ -4853,8 +4910,8 @@ Asking whether a bulk operator accepts a view over a foreign storage -- `ours &=
 a `requires`-expression or written out -- crashes clang 18 and clang 20 alike with an internal error, and it
 did so before the windowed operators existed, so the trigger is the whole view's `&=` seeing a foreign
 `sequence_adaptor` as its argument. gcc rejects the expression as it should. The expression is ill-formed
-either way, since a sequence view has no bulk operators and an owner's take its own type alone, so nothing in
-the library or the tests spells it; the crash is recorded here so nobody
+either way, since bulk on a view takes a source of the destination's own block type, so nothing in the library
+or the tests spells it; the crash is recorded here so nobody
 adds the assertion that would.
 
 ### the-coverage-gate

@@ -39,6 +39,10 @@ struct set_reading_tag
 struct sequence_reading_tag
 {};
 
+// A sequence of bools whose operators act on every element at once, as std::valarray<bool>'s do.
+struct valarray_reading_tag : sequence_reading_tag
+{};
+
 // What an owner wraps: declared, never defined, so a view over a type that owns nothing is unsatisfied.
 template<class Owner>
 struct owned_storage;

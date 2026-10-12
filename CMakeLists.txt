@@ -71,6 +71,7 @@ target_sources(
         include/xstd/bits.hpp
         include/xstd/bits/detail/sequence_adaptor.hpp
         include/xstd/bits/detail/set_adaptor.hpp
+        include/xstd/bits/detail/valarray_adaptor.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/algorithm.hpp
         include/xstd/bits/algorithm/bit_all_of.hpp
@@ -113,6 +114,9 @@ target_sources(
         include/xstd/bits/bit_type_traits/bit_resize.hpp
         include/xstd/bits/bit_type_traits/bit_underlying.hpp
         include/xstd/bits/bit_vector.hpp
+        include/xstd/bits/bit_valarray.hpp
+        include/xstd/bits/bit_fixed_valarray.hpp
+        include/xstd/bits/bit_bounded_valarray.hpp
         include/xstd/bits/detail/adapted_bits.hpp
         include/xstd/bits/detail/algorithm.hpp
         include/xstd/bits/detail/allocator_base_type.hpp

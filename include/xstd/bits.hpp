@@ -23,6 +23,11 @@
 #include <xstd/bits/bit_span.hpp>           // IWYU pragma: export; bit_span
 #include <xstd/bits/bit_subspan.hpp>        // IWYU pragma: export; bit_subspan
 
+// The valarray reading, a sequence whose operators act on every element at once.
+#include <xstd/bits/bit_fixed_valarray.hpp>   // IWYU pragma: export; bit_fixed_valarray
+#include <xstd/bits/bit_bounded_valarray.hpp> // IWYU pragma: export; bit_bounded_valarray
+#include <xstd/bits/bit_valarray.hpp>         // IWYU pragma: export; bit_valarray
+
 // The set reading.
 #include <xstd/bits/bit_key_mapping.hpp> // IWYU pragma: export; bit_find_mapping, bit_key_mapping, bit_range_mapping, enum_traits
 #include <xstd/bits/bit_fixed_set.hpp>   // IWYU pragma: export; bit_fixed_set

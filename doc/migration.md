@@ -1,8 +1,8 @@
 # Migrating to xstd-bits
 
 Two migrations need no page. `std::vector<bool>` becomes `xstd::bit_vector` and `std::set<std::size_t>` becomes
-`xstd::bit_set` by changing the type: each answers its counterpart's synopsis line for line, so the code around it
-stays as it is ([README](../README.md#which-one-do-i-want)).
+`xstd::bit_set` by changing the type: each answers its counterpart's synopsis line for line, `[vector.bool]`'s
+`flip()` and deprecated static `swap` aside, so the code around it stays as it is ([README](../README.md#which-one-do-i-want)).
 
 This page is for the sources whose interface differs: `std::bitset`, integer flag words, enumeration flags and Qt's
 `QFlags`, `boost::dynamic_bitset` and itsy_bitsy. Each section is a *Tony Table*, the before-and-after form WG21
@@ -17,6 +17,8 @@ both at once; here the type says which:
   `bit_bounded_set<N>`, `bit_set`, or `bit_flag_set<Mask, N>` for a bitmask type.
 - **a sequence of `bool`**: a value at each index, rotating, a row of cells. That is `bit_array<N>`,
   `bit_bounded_vector<N>` or `bit_vector`.
+- **a row combined whole**: `&`, `|`, `^`, `~` and shifts over every element at once. That is `std::valarray<bool>`'s
+  reading, `bit_fixed_valarray<N>`, `bit_bounded_valarray<N>` or `bit_valarray`.
 
 ## `std::bitset<N>` as a set of positions
 
@@ -106,12 +108,13 @@ auto meets = not xstd::bit_disjoint(s, other);
 
 ## `std::bitset<N>` as a row of `bool`
 
-`operator[]` and the whole-row operations stay. The bitwise operators work on the whole container, element by
-element over two rows of one size, as `std::valarray<bool>`'s do; the count, the queries and rotation are
-`std::ranges` algorithms run a block at a time, `xstd::bit_count`, `bit_all_of`, `bit_any_of`, `bit_none_of`
-and `bit_rotate`, and a rotation is one call rather than two shifts. A sequence has no shift operators,
-since moving elements is what `std::shift_left` and `std::shift_right` already say, and in index order `bitset`'s
-`<<` moves position `i` to `i + n`, which is `std::shift_right`.
+A row combined whole is a `bit_fixed_valarray<N>`, `std::valarray<bool>` packed: `operator[]` stays, and every
+operator works element by element over two rows of one size, or a row and a `bool`. `~` is logical not, as `!` is,
+and the comparisons answer a row of bools, so `b == c` becomes `(v == w).min()`. The count and the queries are
+`xstd::bit_count`, `bit_all_of`, `bit_any_of` and `bit_none_of`, or `valarray`'s own `sum`, `min` and `max`; a
+rotation is `cshift`. `std::bitset`'s shifts stay, in its sense: `v << n` moves position `i` to `i + n`, which is
+`valarray`'s `v.shift(-n)`. A row that is indexed and permuted rather than combined is a `bit_array<N>`, with
+`xstd::bit_rotate` and `xstd::bit_reverse`.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>
@@ -123,6 +126,7 @@ b[1] = true;
 b.flip();
 b.count();  // 7
 b.all();    // false
+b.any();    // true
 b = (b << 1) | (b >> 7);  // rotate
 b.to_string();  // "11111101", position 0 last
 ```
@@ -131,15 +135,16 @@ b.to_string();  // "11111101", position 0 last
 
 ```cpp
 #include <xstd/bits/algorithm.hpp>
-#include <xstd/bits/bit_array.hpp>
+#include <xstd/bits/bit_fixed_valarray.hpp>
 
-auto a = xstd::bit_array<8>();
-a[1] = true;
-a.flip();
-xstd::bit_count(a);   // 7
-xstd::bit_all_of(a);  // false
-xstd::bit_rotate(a, a.end() - 1);  // position i to i + 1
-std::format("{}", a);  // "[true, ...]", position 0 first
+auto v = xstd::bit_fixed_valarray<8>();
+v[1] = true;
+v = ~v;
+xstd::bit_count(v);  // 7
+v.min();             // false, or xstd::bit_all_of(v)
+v.max();             // true, or xstd::bit_any_of(v)
+v = v.cshift(-1);    // position i to i + 1
+std::format("{}", v);  // "[true, ...]", position 0 first
 ```
 
 </td></tr>
@@ -148,6 +153,7 @@ std::format("{}", a);  // "[true, ...]", position 0 first
 ```cpp
 auto r = (b & c) | (b ^ c);
 auto n = ~b;
+auto e = b == c;
 b <<= 2;  // position i to i + 2
 b >>= 1;  // position i to i - 1
 ```
@@ -155,14 +161,11 @@ b >>= 1;  // position i to i - 1
 </td><td>
 
 ```cpp
-#include <algorithm>
-
-auto r = (a & c) | (a ^ c);
-auto n = ~a;
-std::shift_right(a.begin(), a.end(), 2);
-std::fill_n(a.begin(), 2, false);
-std::shift_left(a.begin(), a.end(), 1);
-a.back() = false;
+auto r = (v & w) | (v ^ w);
+auto n = ~v;
+auto e = (v == w).min();
+v <<= 2;  // or v = v.shift(-2)
+v >>= 1;  // or v = v.shift(1)
 ```
 
 </td></tr>
@@ -332,8 +335,9 @@ xstd::bit_convert<std::uint16_t>(a);
 ## `boost::dynamic_bitset`
 
 As a set, the run-time width grows to hold a key, where `dynamic_bitset` asks for a `resize` first and `set(i)` past
-the size is out of range. As a sequence it is `std::vector<bool>`'s interface. The opt-in header converts between
-the two libraries, so a boundary can stay Boost's while the code behind it moves.
+the size is out of range. As a sequence it is `std::vector<bool>`'s interface, and its bitwise operators are
+`bit_valarray`'s, one `xstd::bit_convert` away. The opt-in header converts between the two libraries, so a boundary
+can stay Boost's while the code behind it moves.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>
@@ -385,16 +389,19 @@ auto n = ~b;
 
 ```cpp
 #include <xstd/bits/algorithm.hpp>
+#include <xstd/bits/bit.hpp>
+#include <xstd/bits/bit_valarray.hpp>
 #include <xstd/bits/bit_vector.hpp>
 
 auto v = xstd::bit_vector();
 v.push_back(true);
 v.resize(10);
-v.flip();
-xstd::bit_count(v);
-v &= c;
-v ^= c;
-auto n = ~v;
+auto a = xstd::bit_convert<xstd::bit_valarray>(v);
+a = ~a;
+xstd::bit_count(a);
+a &= c;
+a ^= c;
+auto n = ~a;
 ```
 
 </td></tr>

@@ -83,6 +83,8 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         // Like span it neither compares nor hashes, and the bitwise operators are an owner's.
         static_assert(not std::equality_comparable<Sub>);
         static_assert(not std::is_default_constructible_v<std::hash<Sub>>);
+
+        // Nor, like span, does it combine or shift: elementwise logic is a valarray's.
         static_assert(can_fill<Sub>);
         static_assert(not has_bulk_ops<Sub>);
         static_assert(not has_shifts<Sub>);
@@ -92,9 +94,7 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
 
         // Over a const storage nothing writes: fill asks Bits, not the const-stripped bits_type.
         static_assert(not can_fill<CSub>);
-        static_assert(not has_bulk_ops<CSub>);
         static_assert(not can_fill<CSpan>);
-        static_assert(not has_bulk_ops<CSpan>);
         static_assert(std::ranges::random_access_range<CSub>); // reading is untouched
         static_assert(has_subspan<CSub>);
 }
