@@ -224,6 +224,37 @@ The **segmented** sieve is the one that pays. Base primes below `√n` once, the
 
 All three agree, and the test asserts that rather than the README claiming it.
 
+### A packed `std::vector<bool>`
+
+`xstd::bit_vector` is `std::vector<bool>` with the packing declared in its name rather than hidden in a specialization: the same interface, so the code around it stays, and the same proxy reference, so the `std::ranges` algorithms run over it unchanged. What it adds is the algorithms that read the blocks rather than the bools:
+
+```cpp
+#include <xstd/bits/bit_algorithm.hpp> // bit_count, bit_rotate
+#include <xstd/bits/bit_vector.hpp>    // bit_vector
+#include <algorithm>                    // count, equal
+#include <cassert>                      // assert
+#include <format>                       // format
+#include <vector>                       // vector
+
+auto main() -> int
+{
+        auto v = xstd::bit_vector{true, false, true};
+        v.push_back(true);
+        v.resize(6);
+        v[1] = not v[1];
+        assert(std::format("{}", v) == "[true, true, true, true, false, false]");
+
+        assert(xstd::bit_count(v) == std::ranges::count(v, true));
+        xstd::bit_rotate(v, v.begin() + 4);
+        assert(std::format("{}", v) == "[false, false, true, true, true, true]");
+
+        auto const w = std::vector<bool>(v.begin(), v.end());
+        assert(std::ranges::equal(v, w));
+}
+```
+
+A sequence formats in brackets, as `std::vector<bool>` does, where a set formats in braces. `std::ranges::count(v, true)` walks the proxies a bool at a time, and `xstd::bit_count(v)` answers the same question, with the same signed result, a popcount per block; `xstd::bit_rotate(v, middle)` is `std::ranges::rotate(v, middle)` done over the blocks. [design.md](doc/design.md#the-sequence-aggregates) has the measurements.
+
 ### Hashing, and choosing the algorithm
 
 Every owner, and every set view, hashes, and equal values hash equal whatever holds them. Behind it is [Boost.Hash2](https://www.boost.org/doc/libs/release/libs/hash2/), and there are two hashers, by what they hash:
