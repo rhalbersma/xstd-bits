@@ -11,11 +11,11 @@
 #include <xstd/bits/detail/bit_block_range.hpp>              // bit_block_range
 #include <xstd/bits/detail/bit_blocks_capacity.hpp>          // bit_blocks_capacity_v
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, container_source, copy_bits, fixed_blocks_source
+#include <xstd/bits/detail/block_intersects.hpp>             // block_intersects
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
 #include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/num_blocks.hpp>                   // holds_width, num_blocks_v, whole_blocks_width_v
 #include <xstd/bits/detail/owned_bit_blocks.hpp>             // owned_bit_blocks
-#include <xstd/bits/detail/pred.hpp>                         // intersects, is_subset_of
 #include <xstd/bits/detail/resizable_bit_blocks.hpp>         // resizable_bit_blocks
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl, shr
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks_t
@@ -260,12 +260,14 @@ public:
         static constexpr auto max_addressable_num_blocks = static_cast<std::size_t>(std::numeric_limits<std::ptrdiff_t>::max()) / bits_per_block;
         static constexpr auto max_addressable_width      = max_addressable_num_blocks * bits_per_block;
 
+        // Zero where the width is carried at run time, so an algorithm unrolls only what the type fixes.
+        static constexpr auto static_num_blocks = has_static_size ? whole_blocks_width_v<block_type, N> / bits_per_block : 0UZ;
+
 private:
         // The width is this container's, so a dynamic one answers zero here rather than compute byte_count of SIZE_MAX.
         static constexpr auto bit_extent = has_static_size ? N : 0UZ;
 
         static constexpr auto static_num_bits   = has_static_size ? whole_blocks_width_v<block_type, N> : 0UZ;
-        static constexpr auto static_num_blocks = has_static_size ? static_num_bits / bits_per_block : 0UZ;
         static constexpr auto static_last_block = static_num_blocks - 1UZ;
 
         static constexpr auto left_bit = bits_per_block - 1UZ;
@@ -558,7 +560,7 @@ public:
         {
                 if constexpr (has_static_size and static_has_unused_bits) {
                         m_blocks[static_last_block] &= static_used_bits;
-                        assert(not bits::detail::intersects(m_blocks[static_last_block], static_unused_bits));
+                        assert(not bits::detail::block_intersects(m_blocks[static_last_block], static_unused_bits));
                 } else if constexpr (has_stored_size) {
                         // The run-time twin of the arm above: what the other asks the compiler, this asks the value.
                         if (has_unused_bits()) {
@@ -1140,7 +1142,7 @@ public:
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
-                auto const inserted  = not bits::detail::intersects(block, mask);
+                auto const inserted  = not bits::detail::block_intersects(block, mask);
                 block |= mask;
                 assert(test(n));
                 return inserted;
@@ -1190,7 +1192,7 @@ public:
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
-                auto const erased    = bits::detail::intersects(block, mask);
+                auto const erased    = bits::detail::block_intersects(block, mask);
                 block &= static_cast<block_type>(~mask);
                 assert(not test(n));
                 return erased;
@@ -1211,7 +1213,7 @@ public:
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
-                return bits::detail::intersects(block, mask);
+                return bits::detail::block_intersects(block, mask);
         }
 
         [[nodiscard]] constexpr auto count() const noexcept
@@ -1276,62 +1278,6 @@ public:
                 } else {
                         return std::ranges::all_of(m_blocks, [](auto block) { return block == zero; });
                 }
-        }
-
-        [[nodiscard]] constexpr auto is_subset_of(bit_block_container const& other [[maybe_unused]]) const noexcept
-                -> bool
-        {
-                if constexpr (has_static_size and N == 0) {
-                        return true;
-                } else if constexpr (has_static_size and static_num_blocks == 1) {
-                        return bits::detail::is_subset_of(this->m_blocks[0], other.m_blocks[0]);
-                } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        return bits::detail::is_subset_of(this->m_blocks[0], other.m_blocks[0]) and
-                               bits::detail::is_subset_of(this->m_blocks[1], other.m_blocks[1]);
-                } else {
-                        // zip stops at the shorter, which is exactly the blocks both storages have.
-                        auto const shared = std::ranges::all_of(
-                                std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) {
-                                        auto&& [lhs, rhs] = _;
-                                        return bits::detail::is_subset_of(lhs, rhs);
-                                }
-                        );
-                        if constexpr (has_static_size) {
-                                // One width, so the shared blocks are all the blocks.
-                                return shared;
-                        } else {
-                                // Above the shared blocks only ours can hold a position, which denies the subset.
-                                return shared and not this->any_block_set(other.num_blocks(), this->num_blocks());
-                        }
-                }
-        }
-
-        [[nodiscard]] constexpr auto intersects(bit_block_container const& other [[maybe_unused]]) const noexcept
-                -> bool
-        {
-                // Only the blocks both storages have can meet, so zip stopping at the shorter is the question.
-                if constexpr (has_static_size and N == 0) {
-                        return false;
-                } else if constexpr (has_static_size and static_num_blocks == 1) {
-                        return bits::detail::intersects(this->m_blocks[0], other.m_blocks[0]);
-                } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        return bits::detail::intersects(this->m_blocks[0], other.m_blocks[0]) or
-                               bits::detail::intersects(this->m_blocks[1], other.m_blocks[1]);
-                } else {
-                        return std::ranges::any_of(
-                                std::views::zip(this->m_blocks, other.m_blocks), [](auto&& _) {
-                                        auto&& [lhs, rhs] = _;
-                                        return bits::detail::intersects(lhs, rhs);
-                                }
-                        );
-                }
-        }
-
-        // A hidden friend beside the member: a member of this name stops ADL ([basic.lookup.argdep]/1).
-        [[nodiscard]] friend constexpr auto intersects(bit_block_container const& x, bit_block_container const& y) noexcept
-                -> bool
-        {
-                return x.intersects(y);
         }
 
         // The first block at which two values differ, with that block's xor; equal values answer a zero xor.
@@ -1595,7 +1541,7 @@ private:
                         // A width with no halves to swap, as a bit-precise block may have: one position at a time.
                         auto reversed_block = zero;
                         for (auto const i : std::views::iota(0UZ, bits_per_block)) {
-                                if (bits::detail::intersects(block, shl(unit, i))) {
+                                if (bits::detail::block_intersects(block, shl(unit, i))) {
                                         reversed_block = static_cast<block_type>(reversed_block | shl(unit, left_bit - i));
                                 }
                         }

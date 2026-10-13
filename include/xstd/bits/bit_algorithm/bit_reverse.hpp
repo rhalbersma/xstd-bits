@@ -6,9 +6,9 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_REVERSE_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_REVERSE_HPP
 
-#include <xstd/bits/detail/algorithm.hpp> // whole_sequence
-#include <xstd/bits/detail/ownership.hpp> // storage_access
-#include <ranges>                         // borrowed_iterator_t, end
+#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // whole_sequence
+#include <xstd/bits/detail/ownership.hpp>               // storage_access
+#include <ranges>                                       // borrowed_iterator_t, end
 
 namespace xstd {
 

@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_DETAIL_BIT_WIDTH_HPP
-#define XSTD_BITS_DETAIL_BIT_WIDTH_HPP
+#ifndef XSTD_BITS_BIT_DETAIL_BIT_WIDTH_HPP
+#define XSTD_BITS_BIT_DETAIL_BIT_WIDTH_HPP
 
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
 #include <xstd/bits/detail/bit_layout.hpp>                 // fixed_bit_blocks
@@ -48,4 +48,4 @@ inline constexpr auto bit_width_v = bit_width_of<T>();
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_DETAIL_BIT_WIDTH_HPP
+#endif // XSTD_BITS_BIT_DETAIL_BIT_WIDTH_HPP

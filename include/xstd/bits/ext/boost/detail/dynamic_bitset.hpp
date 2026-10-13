@@ -6,15 +6,15 @@
 #ifndef XSTD_BITS_EXT_BOOST_DETAIL_DYNAMIC_BITSET_HPP
 #define XSTD_BITS_EXT_BOOST_DETAIL_DYNAMIC_BITSET_HPP
 
-#include <xstd/bits/detail/bit_convertible.hpp>    // bit_convert_source, bit_source, bit_target
-#include <xstd/bits/detail/bit_layout.hpp>         // block_byte, bytes_per_block, or_block_byte, value_bytes
-#include <boost/dynamic_bitset/dynamic_bitset.hpp> // dynamic_bitset, from_block_range, to_block_range
-#include <algorithm>                               // max, min
-#include <concepts>                                // same_as
-#include <cstddef>                                 // ptrdiff_t, size_t
-#include <iterator>                                // output_iterator_tag
-#include <ranges>                                  // begin, end, iota, range_value_t, transform
-#include <span>                                    // span
+#include <xstd/bits/bit/detail/bit_convertible.hpp> // bit_convert_source, bit_source, bit_target
+#include <xstd/bits/detail/bit_layout.hpp>          // block_byte, bytes_per_block, or_block_byte, value_bytes
+#include <boost/dynamic_bitset/dynamic_bitset.hpp>  // dynamic_bitset, from_block_range, to_block_range
+#include <algorithm>                                // max, min
+#include <concepts>                                 // same_as
+#include <cstddef>                                  // ptrdiff_t, size_t
+#include <iterator>                                 // output_iterator_tag
+#include <ranges>                                   // begin, end, iota, range_value_t, transform
+#include <span>                                     // span
 
 // boost::dynamic_bitset's side of bit_convert, by its block ranges: Boost hands none of its storage out.
 namespace xstd::bits::detail {

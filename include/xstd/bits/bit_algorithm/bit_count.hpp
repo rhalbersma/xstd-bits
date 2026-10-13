@@ -6,8 +6,8 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_COUNT_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_COUNT_HPP
 
-#include <xstd/bits/detail/algorithm.hpp> // count_true, reads_bools
-#include <ranges>                         // range_difference_t
+#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // count_true, reads_bools
+#include <ranges>                                       // range_difference_t
 
 namespace xstd {
 

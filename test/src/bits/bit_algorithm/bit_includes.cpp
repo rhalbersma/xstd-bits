@@ -12,6 +12,7 @@
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                // includes, set_intersection
+#include <array>                                    // array
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint64_t, uint8_t
 #include <filesystem>                               // perms
@@ -34,22 +35,22 @@ template<class Set>
         return std::ranges::includes(s1, s2, s1.key_comp());
 }
 
-// Every pair of subsets of the first n keys, as masks, in a set of N positions, against the model on std::set.
-template<class S>
-[[nodiscard]] auto disagreements(std::size_t n)
+// Every pair of subsets of the given keys, as masks, against the model on std::set.
+template<class S, std::size_t K>
+[[nodiscard]] auto disagreements(std::array<std::size_t, K> const& keys)
         -> int
 {
         auto wrong = 0;
-        for (auto const x : std::views::iota(0UZ, 1UZ << n)) {
-                for (auto const y : std::views::iota(0UZ, 1UZ << n)) {
+        for (auto const x : std::views::iota(0UZ, 1UZ << K)) {
+                for (auto const y : std::views::iota(0UZ, 1UZ << K)) {
                         auto s1 = S();
                         auto s2 = S();
-                        for (auto const i : std::views::iota(0UZ, n)) {
+                        for (auto const i : std::views::iota(0UZ, K)) {
                                 if (((x >> i) & 1UZ) != 0UZ) {
-                                        s1.insert(i);
+                                        s1.insert(keys[i]);
                                 }
                                 if (((y >> i) & 1UZ) != 0UZ) {
-                                        s2.insert(i);
+                                        s2.insert(keys[i]);
                                 }
                         }
                         wrong += static_cast<int>(xstd::bit_includes(s1, s2) != model(std::set(s1.begin(), s1.end(), s1.key_comp()), std::set(s2.begin(), s2.end(), s1.key_comp())));
@@ -60,13 +61,22 @@ template<class S>
 
 } // namespace
 
-// Every pair of subsets of six keys, in one block, across a block boundary, in descending order and at run-time width.
+// Every pair of subsets of six keys: in one block, across two and three, descending, and at run-time width.
 BOOST_AUTO_TEST_CASE(AgreesWithTheModelOnStdSet)
 {
-        BOOST_CHECK_EQUAL(disagreements<xstd::bit_fixed_set<6>>(6UZ), 0);
-        BOOST_CHECK_EQUAL((disagreements<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 10>>(6UZ)), 0);
-        BOOST_CHECK_EQUAL((disagreements<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 6, xstd::bit_key_mapping<std::size_t>, std::greater<>>>(6UZ)), 0);
-        BOOST_CHECK_EQUAL(disagreements<xstd::bit_set>(6UZ), 0);
+        constexpr auto first_six = std::array{0UZ, 1UZ, 2UZ, 3UZ, 4UZ, 5UZ};
+        BOOST_CHECK_EQUAL(disagreements<xstd::bit_fixed_set<6>>(first_six), 0);
+        BOOST_CHECK_EQUAL((disagreements<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 10>>(std::array{0UZ, 2UZ, 4UZ, 7UZ, 8UZ, 9UZ})), 0);
+        BOOST_CHECK_EQUAL((disagreements<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 20>>(std::array{0UZ, 5UZ, 8UZ, 12UZ, 16UZ, 19UZ})), 0);
+        BOOST_CHECK_EQUAL((disagreements<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 6, xstd::bit_key_mapping<std::size_t>, std::greater<>>>(first_six)), 0);
+        BOOST_CHECK_EQUAL(disagreements<xstd::bit_set>(first_six), 0);
+}
+
+// Width zero holds no key, so every set includes the empty one.
+BOOST_AUTO_TEST_CASE(WidthZero)
+{
+        auto const none = xstd::bit_fixed_set<0>();
+        BOOST_CHECK(xstd::bit_includes(none, none));
 }
 
 // Run-time widths that differ: the shorter's missing blocks hold no key.

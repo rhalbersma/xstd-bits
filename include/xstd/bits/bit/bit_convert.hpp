@@ -6,9 +6,9 @@
 #ifndef XSTD_BITS_BIT_BIT_CONVERT_HPP
 #define XSTD_BITS_BIT_BIT_CONVERT_HPP
 
-#include <xstd/bits/detail/bit_convertible.hpp> // adopt_blocks, adopts_from, bit_convertible, bit_target, convert_fixed, copy_blocks, fixed_width, foreign_convertible, narrow_blocks
-#include <type_traits>                          // remove_cvref_t
-#include <utility>                              // as_const, forward
+#include <xstd/bits/bit/detail/bit_convertible.hpp> // adopt_blocks, adopts_from, bit_convertible, bit_target, convert_fixed, copy_blocks, fixed_width, foreign_convertible, narrow_blocks
+#include <type_traits>                              // remove_cvref_t
+#include <utility>                                  // as_const, forward
 
 // One conversion between everything that has bit storage, at any two widths: position i stays position i.
 namespace xstd {
