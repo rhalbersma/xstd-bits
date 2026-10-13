@@ -685,21 +685,28 @@ Width zero needs no case of its own: it holds no block, so it has no padding, an
 `num_bits - N == 0` gives it names nothing, since every arm that applies the mask asks first whether there is
 padding to clear. `used_bits()` is the same mask at a run-time width, asked only where a block exists.
 
-The width member takes the blocks' alignment where they out-align a `std::size_t`:
+The width member is a `std::size_t`, widened to the blocks' alignment where they out-align one:
 
 ```cpp
 template<class Blocks>
-using stored_width_t = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, std::ranges::range_value_t<Blocks>>;
+using stored_width_t = std::conditional_t<
+        (alignof(std::size_t) >= alignof(Blocks)), std::size_t,
+        std::conditional_t<(alignof(std::uint64_t) >= alignof(Blocks)), std::uint64_t, std::ranges::range_value_t<Blocks>>>;
 ```
 
-Only a storage holding its blocks inline out-aligns a `size_t`, and it does so by the blocks' own alignment, so
-`block_type` is both wide enough to hold any width and exactly the size of the gap it fills --
-`bit_block_container` is then its two members and nothing else, at the same size the padding cost.
-`std::array` reaches none of this, a static width carrying no member at all, and neither does `std::vector`,
-whose alignment is a pointer's whatever it holds; `bit_block_container<std::inplace_vector<xstd::uint128, K>, N>` is the one
-cell that does. The `static_assert` in `bit_block_container` holds the two facts that make `block_type` the right
-carrier, so a storage over-aligned for some other reason fails loudly rather than truncating a width. Every
-reader goes through `size()`, which converts once, so the arithmetic stays a `size_t`'s.
+A storage out-aligns a `size_t` in two ways, and each arm answers one. A storage holding its blocks inline does so
+by the blocks' own alignment, and past a `std::uint64_t`'s that is a 128-bit block, whose `block_type` is both wide
+enough to hold any width and exactly the size of the gap it fills:
+`bit_block_container<std::inplace_vector<xstd::uint128, K>, N>` is that cell. A 32-bit target whose 64-bit integers
+keep their 8-byte alignment, as wasm32's do, reaches the `std::uint64_t` arm through any storage holding one: a
+`std::vector` whose allocator carries a `std::int64_t` is 8-aligned against a 4-byte `size_t` whatever its blocks
+are, so its `block_type` may be an `unsigned char` that cannot hold the width, where a `std::uint64_t` both holds it
+and fills the gap. Either way `bit_block_container` is then its two members and nothing else, at the same size the
+padding cost. `std::array` reaches none of this, a static width carrying no member at all, and neither does a
+`std::vector` over a stateless allocator, aligned as a pointer whatever it holds. The `static_assert` in
+`bit_block_container` holds the two facts that make the chosen type the right carrier, at least a `size_t`'s size
+and at least the blocks' alignment, so a storage over-aligned for some other reason fails loudly rather than
+truncating a width. Every reader goes through `size()`, which converts once, so the arithmetic stays a `size_t`'s.
 
 ### default-construction
 
@@ -1377,7 +1384,7 @@ flavor, and a bit container hashes inside a user's Hash2-hashed aggregate as the
 
 A sequence's bools are not read through its proxies. `detail/hash.hpp` expands each 64-bit word of the bits
 into 64 bytes, through `detail/intrin.hpp`: one `_mm512_movm_epi8` where AVX-512BW is enabled, a `_pdep_u64`
-per byte where BMI2 is, and otherwise, and in a constant expression, a 256-entry table of each byte's eight
+per byte where BMI2 is on x86-64, and otherwise, and in a constant expression, a 256-entry table of each byte's eight
 bools. Eight words go to an `update`, and the last stops at the width: no padding bit is ever a bool. Chunking
 does not change a Hash2 digest, so the expansion's grain is free. A set walks its keys, costing what `std::set`
 costs, and appends each as `Key`, so its message follows the platform's `std::size_t` as the model's does.
@@ -3231,8 +3238,8 @@ set growing by `insert` ([growth](#growth)), so there a capacity is felt at the 
 The column is graded over every block the other two are, `xstd::uint128` included, which it can be because the
 width member carries its own alignment ([padding](#padding)). A 16-byte-aligned block after a `std::size_t` width
 would pad the class, and `-Wpadded` under `-Werror` rejects that; the bounded column is the only cell that can
-reach it, a static width carrying no width member at all and `std::vector`'s alignment being a
-pointer's whatever it holds.
+reach it, a static width carrying no width member at all and a `std::vector` over a stateless allocator being
+aligned as a pointer whatever it holds.
 
 ### max-size-is-the-bits
 
