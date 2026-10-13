@@ -78,21 +78,24 @@ class slice_masks
 
         std::size_t m_first;
         std::size_t m_last;
-        std::size_t m_period;
-        // Where the whole periods of the middle blocks end, and the remainder begins.
-        std::size_t m_periods_end;
+        // The table's length: the most whole periods of stride / gcd(stride, digits) blocks that digits entries hold.
+        std::size_t m_span;
+        // Where the whole table spans of the middle blocks end, and the remainder begins.
+        std::size_t m_spans_end;
         // The first block's mask, cut below the start, and the last block's, cut above the final position.
         wide_block m_first_mask;
         wide_block m_last_mask;
-        // The middle blocks' masks over one period from the second block on: they repeat every stride / gcd blocks.
+        // The middle blocks' masks from the second block on, over whole periods, so a long inner loop runs over them.
         std::array<wide_block, digits> m_masks{};
+        // Their popcounts, so a kernel asks none per block.
+        std::array<std::size_t, digits> m_counts{};
 
 public:
         [[nodiscard]] constexpr slice_masks(std::size_t start, std::size_t size, std::size_t stride) noexcept
                 : m_first(start / digits)
                 , m_last(((start + ((size - 1UZ) * stride)) / digits) + 1UZ)
-                , m_period(stride / std::gcd(stride, digits))
-                , m_periods_end(m_first + 1UZ + (((m_last - m_first - std::ranges::min(m_last - m_first, 2UZ)) / m_period) * m_period))
+                , m_span((digits / (stride / std::gcd(stride, digits))) * (stride / std::gcd(stride, digits)))
+                , m_spans_end(m_first + 1UZ + (((m_last - m_first - std::ranges::min(m_last - m_first, 2UZ)) / m_span) * m_span))
                 , m_first_mask()
                 , m_last_mask()
         {
@@ -106,40 +109,41 @@ public:
                         m_first_mask = static_cast<Block>(static_cast<Block>(m_first_mask) & tail);
                 }
                 step();
-                for (auto const p : std::views::iota(0UZ, m_period)) {
-                        m_masks[p] = shl(ones, offset);
+                for (auto const p : std::views::iota(0UZ, m_span)) {
+                        m_masks[p]  = shl(ones, offset);
+                        m_counts[p] = detail::popcount(static_cast<Block>(m_masks[p]));
                         step();
                 }
-                m_last_mask = static_cast<Block>(static_cast<Block>(m_masks[(m_last - m_first - 2UZ) % m_period]) & tail);
+                m_last_mask = static_cast<Block>(static_cast<Block>(m_masks[(m_last - m_first - 2UZ) % m_span]) & tail);
         }
 
-        // f(k, mask) for every block the slice touches, in order; the middle in whole periods, with no phase to keep.
+        // f(k, mask, popcount(mask)) for every block the slice touches: the edges cut, the middle over the table, counts made once.
         template<class F>
         constexpr auto for_each(F f) const noexcept
                 -> void
         {
-                f(m_first, static_cast<Block>(m_first_mask));
+                auto const edge = [&](std::size_t k, wide_block mask) noexcept -> void { f(k, static_cast<Block>(mask), detail::popcount(static_cast<Block>(mask))); };
+                edge(m_first, m_first_mask);
                 if (m_first + 1UZ == m_last) {
                         return;
                 }
                 auto k = m_first + 1UZ;
-                if (m_period == 1UZ) {
-                        // A stride dividing the block width: one mask for every middle block.
+                if (m_span == digits) {
+                        // A stride dividing the block width, whose period is one block: one mask and count for the middle.
                         for (auto const constant = static_cast<Block>(m_masks[0]); k + 1UZ < m_last; ++k) {
-                                f(k, constant);
+                                f(k, constant, m_counts[0]);
                         }
-                        f(k, static_cast<Block>(m_last_mask));
-                        return;
-                }
-                for (; k < m_periods_end; k += m_period) {
-                        for (auto const p : std::views::iota(0UZ, m_period)) {
-                                f(k + p, static_cast<Block>(m_masks[p]));
+                } else {
+                        for (; k < m_spans_end; k += m_span) {
+                                for (auto const p : std::views::iota(0UZ, m_span)) {
+                                        f(k + p, static_cast<Block>(m_masks[p]), m_counts[p]);
+                                }
+                        }
+                        for (auto p = 0UZ; k + 1UZ < m_last; ++k, ++p) {
+                                f(k, static_cast<Block>(m_masks[p]), m_counts[p]);
                         }
                 }
-                for (auto p = 0UZ; k + 1UZ < m_last; ++k, ++p) {
-                        f(k, static_cast<Block>(m_masks[p]));
-                }
-                f(m_last - 1UZ, static_cast<Block>(m_last_mask));
+                edge(m_last - 1UZ, m_last_mask);
         }
 };
 
@@ -159,7 +163,7 @@ public:
                 -> void
         {
                 for (auto const k : std::views::iota(0UZ, m_masks.size())) {
-                        f(k, m_masks[k]);
+                        f(k, m_masks[k], detail::popcount(m_masks[k]));
                 }
         }
 };
@@ -189,7 +193,8 @@ public:
                         auto const pos = k * digits;
                         if constexpr (digits <= word) {
                                 // A block of a power of two of at most a word lies inside one word, which every block below width has.
-                                f(k, static_cast<Block>(m_words[pos / word] >> (pos % word)));
+                                auto const mask = static_cast<Block>(m_words[pos / word] >> (pos % word));
+                                f(k, mask, detail::popcount(mask));
                         } else {
                                 // A wider block spans words, the last of which may lie past width.
                                 auto mask = Block{};
@@ -198,7 +203,7 @@ public:
                                         auto const bits  = index < m_words.size() ? static_cast<Block>(m_words[index]) : Block{};
                                         mask             = static_cast<Block>(mask | shl(bits, i * word));
                                 }
-                                f(k, mask);
+                                f(k, mask, detail::popcount(mask));
                         }
                 }
         }
@@ -263,11 +268,11 @@ constexpr auto compress_blocks(Src const& src, Masks const& masks, borrowed_bits
         auto out  = 0UZ;
         auto fill = 0UZ;
         auto acc  = Block{};
-        masks.for_each([&](std::size_t k, Block mask) noexcept -> void {
+        masks.for_each([&](std::size_t k, Block mask, std::size_t count) noexcept -> void {
                 auto const packed = compressed(src[k], mask);
                 auto const before = fill;
                 acc               = static_cast<Block>(acc | shl(packed, before));
-                fill += detail::popcount(mask);
+                fill += count;
                 if (fill >= block_width<Block>) {
                         dst[out++] = acc;
                         fill -= block_width<Block>;
@@ -286,8 +291,8 @@ constexpr auto expand_blocks(Src const& src, Masks const& masks, borrowed_bits<B
         -> void
 {
         auto stream = bit_stream<Block>(src.blocks());
-        masks.for_each([&](std::size_t k, Block mask) noexcept -> void {
-                dst[k] = f(dst[k], expanded(stream.take(detail::popcount(mask)), mask), mask);
+        masks.for_each([&](std::size_t k, Block mask, std::size_t count) noexcept -> void {
+                dst[k] = f(dst[k], expanded(stream.take(count), mask), mask);
         });
 }
 
@@ -297,7 +302,7 @@ constexpr auto fill_blocks(bool value, Masks const& masks, borrowed_bits<Block>&
         -> void
 {
         auto const splat = value ? block_ones<Block> : Block{};
-        masks.for_each([&](std::size_t k, Block mask) noexcept -> void { dst[k] = f(dst[k], static_cast<Block>(mask & splat), mask); });
+        masks.for_each([&](std::size_t k, Block mask, std::size_t /* count */) noexcept -> void { dst[k] = f(dst[k], static_cast<Block>(mask & splat), mask); });
 }
 
 // One position's bit through a block combiner, as a mask of that one position.
@@ -371,13 +376,22 @@ constexpr auto put(borrowed_bits<Block>& dst, std::size_t pos, bool value) noexc
         block            = static_cast<Block>(static_cast<Block>(block & static_cast<Block>(~mask)) | static_cast<Block>(mask & splat));
 }
 
-// The bits at index(0), ..., index(count - 1) of src, in that order, into dst from position zero.
+// The bits at index(0), ..., index(count - 1) of src, in that order, into dst from position zero: gathered in a
+// register, each block of dst stored once, full.
 template<class Src, xstd::unsigned_integer Block, class Index>
 constexpr auto gather_indices(Src const& src, std::size_t count, Index index, borrowed_bits<Block>& dst) noexcept
         -> void
 {
+        auto acc = Block{};
         for (auto const j : std::views::iota(0UZ, count)) {
-                put(dst, j, src.test(index(j)));
+                acc = static_cast<Block>(acc | shl(static_cast<Block>(static_cast<unsigned>(src.test(index(j)))), j % block_width<Block>));
+                if (j % block_width<Block> == block_width<Block> - 1UZ) {
+                        dst[j / block_width<Block>] = acc;
+                        acc                         = Block{};
+                }
+        }
+        if (count % block_width<Block> != 0UZ) {
+                dst[count / block_width<Block>] = acc;
         }
 }
 

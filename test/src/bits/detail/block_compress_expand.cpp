@@ -6,6 +6,7 @@
 #include <xstd/bits/detail/block_compress_expand.hpp> // compress_blocks, expand_blocks, scatter_and, scatter_assign, scatter_or, scatter_xor, slice_masks, stored_masks
 #include <xstd/bits/detail/borrowed_bits.hpp>         // borrowed_bits
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_TEST_CONTEXT
+#include <bit>                                        // popcount
 #include <cstddef>                                    // size_t
 #include <cstdint>                                    // uint64_t, uint8_t
 #include <limits>                                     // numeric_limits
@@ -148,7 +149,10 @@ BOOST_AUTO_TEST_CASE(SliceMasksSelectEveryStrideFromEveryStart)
                                                 expected[start + (j * stride)] = true;
                                         }
                                         auto blocks = std::vector<Block>(n / digits<Block>);
-                                        xstd::bits::detail::slice_masks<Block>(start, size, stride).for_each([&](std::size_t k, Block mask) -> void { blocks[k] = mask; });
+                                        xstd::bits::detail::slice_masks<Block>(start, size, stride).for_each([&](std::size_t k, Block mask, std::size_t count) -> void {
+                                                blocks[k] = mask;
+                                                BOOST_CHECK_EQUAL(count, static_cast<std::size_t>(std::popcount(mask)));
+                                        });
                                         BOOST_CHECK(bools_of(blocks) == expected);
                                 }
                         }
