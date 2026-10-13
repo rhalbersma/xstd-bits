@@ -1558,6 +1558,28 @@ stated again because GCC does not carry the range through `xstd::div`'s aggregat
 No CMake build type is that combination — Debug is `-O0`, and the optimized ones carry `NDEBUG` — but
 `-O2 -g` is one command away, and the bound is worth saying in any case.
 
+### gcc-nttp-implicit-zeros
+
+GCC 15 mangles a class-type template argument without the zeros it was never given
+([GCC PR 121231](https://gcc.gnu.org/PR121231), [#396](https://github.com/rhalbersma/xstd-bits/issues/396)). A value
+whose leading or interior blocks were zero-initialized and never written takes the name of another value: `{0, top}`
+is mangled as `{top}`, which reads back as `{top, 0}`, so two different values share one specialization, within one
+translation unit as well as across them. GCC 16 mangles correctly, as an ABI change (`-fabi-version=21`) that is not
+backported, and by default also emits the GCC 15 name as a compatibility alias; that alias is the correct name of the
+other value, so across translation units the linker can merge `f<{0, top}>` with `f<{top, 0}>` unless
+`-fabi-compat-version=0` drops it. Clang 22 is correct in both.
+
+The library meets it through its structural owners ([structural-at-aligned-widths](#structural-at-aligned-widths)).
+A default-constructed owner filled by `insert`, `set` or `operator[]` leaves a block implicit whenever its keys skip
+one, so a value built by insertion can name a different specialization from the equal value built from its blocks.
+Over 64-bit blocks that takes a key at or past position 64 with an empty block below it; over 32-bit blocks the keys
+`{0, 127}` of a 128-bit owner already leave two. `EqualValuesNameTheSameSpecialization` in
+`test/src/bits/structural.cpp` builds `{0, last}` both ways and asserts one specialization, and on GCC before 16 it
+skips that assertion for an owner of more than two blocks, whose interior blocks are the implicit ones. GCC mangles
+correctly once every element has been stored, so writing every block explicitly during constant evaluation, under
+`if consteval`, would keep every value the owners produce clear of the defect; that is untried, and needs a check
+that it changes nothing at run time or under MSVC.
+
 ### uint128-printing
 
 Never `BOOST_CHECK_EQUAL` on a block-typed value. It prints its operands on failure, and no standard library
