@@ -27,6 +27,15 @@ BOOST_AUTO_TEST_CASE(ItHoldsAStartASizeAndAStrideAsStdSliceDoes)
         BOOST_CHECK(xstd::bit_slice(std::slice(4UZ, 5UZ, 6UZ)) == xstd::bit_slice(4UZ, 5UZ, 6UZ));
 }
 
+// Two slices are equal only when all three numbers are, each told apart on its own.
+BOOST_AUTO_TEST_CASE(EachNumberAloneMakesTwoSlicesUnequal)
+{
+        auto const s = xstd::bit_slice(std::slice(1UZ, 2UZ, 3UZ));
+        BOOST_CHECK(s != xstd::bit_slice(9UZ, 2UZ, 3UZ));
+        BOOST_CHECK(s != xstd::bit_slice(1UZ, 9UZ, 3UZ));
+        BOOST_CHECK(s != xstd::bit_slice(1UZ, 2UZ, 9UZ));
+}
+
 // It selects what the std::slice of the same numbers selects.
 BOOST_AUTO_TEST_CASE(ItSelectsWhatTheSameStdSliceSelects)
 {

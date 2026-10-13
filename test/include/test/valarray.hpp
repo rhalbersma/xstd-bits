@@ -851,7 +851,7 @@ auto check_reads(model const& a, Selector const& selector, ReferenceSelector con
                 if (start >= n) {
                         continue;
                 }
-                for (auto const stride : {0UZ, 1UZ, 3UZ, 8UZ, 13UZ, 64UZ, 65UZ, 129UZ}) {
+                for (auto const stride : {0UZ, 1UZ, 2UZ, 3UZ, 8UZ, 64UZ, 65UZ, 129UZ}) {
                         auto const most = stride == 0UZ ? std::ranges::min(3UZ, n) : ((n - 1UZ - start) / stride) + 1UZ;
                         for (auto const size : {1UZ, most}) {
                                 result.emplace_back(start, size, stride);

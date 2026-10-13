@@ -54,7 +54,7 @@ concept valarray_owner_of = owner_reading<std::remove_cvref_t<V>, valarray_readi
         return std::ranges::count(seen, true) == std::ssize(indices);
 }
 
-// [class.slice]: start + j * stride for j < size: a run at stride one, a mask a block at a time below the block width, else one by one.
+// [class.slice]: a run at stride one, a mask per block below the block width, and one position at a time beyond it.
 class slice_selection
 {
         std::size_t m_start;
@@ -362,7 +362,10 @@ class valarray_proxy
                 auto dst = bits();
                 if constexpr (valarray_owner_of<A, Block>) {
                         assert(a.size() == size());
-                        m_selection.expand(storage_access::bits(a), dst, f);
+                        // Read through a borrowed view, so every owner over one block type runs one scatter.
+                        auto const blocks = storage_access::bits(a).blocks();
+                        auto const src    = borrowed_bits<Block>(std::span(const_cast<Block*>(blocks.data()), blocks.size())); // NOLINT(cppcoreguidelines-pro-type-const-cast): the view is only read.
+                        m_selection.expand(src, dst, f);
                 } else {
                         // Gathered first, so a proxy over the same owner reads every position before any is written.
                         auto const n = proxy_access::size(a);
