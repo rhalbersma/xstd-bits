@@ -5,7 +5,8 @@ one-line comment ending in `[design.md#anchor]` points at the section that expla
 
 Decisions still in flight live on the [open issues](https://github.com/rhalbersma/xstd-bits/issues), and
 [#80](https://github.com/rhalbersma/xstd-bits/issues/80) is the closed design plan the current shape came
-out of. This file holds what has landed.
+out of. This file holds what has landed, and, under [Future directions](#future-directions), what is designed and
+waits on something.
 
 ## Storage, readings, refinements
 
@@ -21,8 +22,8 @@ is a tag type (`set_reading_tag`, `sequence_reading_tag`) and an adaptor over th
 storage that decides what `==`, `<=>`, iterators and `operator[]` mean, with the orderings themselves in
 `detail/comparisons.hpp` as free functions over the storage's primitives.
 
-**A refinement** extends a reading without touching it: a future `string_reading_tag` derives from
-`sequence_reading_tag`, so every view and algorithm that accepts a sequence accepts a string, and
+**A refinement** extends a reading without touching it: a future `string_reading_tag`
+([the-string-reading](#the-string-reading)) derives from `sequence_reading_tag`, so every view and algorithm that accepts a sequence accepts a string, and
 `sequence_three_way` serves both. The views check a reading with `std::derived_from`, which is what keeps
 the set of readings open.
 
@@ -5717,3 +5718,363 @@ Bit-0 leftmost buys one thing: the bitstring order and the array order agree, wh
 
 **Q**: Does the `xstd::bit_fixed_set` implementation optimize for the case of a small number of blocks of storage?  
 **A**: Yes, there are three special cases for 0, 1 and 2 blocks of storage, as well as the general case of 3 or more blocks.
+
+## Future directions
+
+The containers, the views, the valarray reading and the algorithms over them are the library as it stands; the
+string reading and, beyond it, regular expressions over bits are the next layer. Each entry here is designed and
+not built: what it would add, what it waits on, the decisions already taken that it has to respect, and what the
+analysis behind it concluded. Each names the open issue that tracks the direction, where the work and its
+discussion continue; an entry leaves this section for the one describing the code when it lands.
+
+### the-string-reading
+
+`std::bitset` speaks three vocabularies, and the string is the one with no reading yet
+([#195](https://github.com/rhalbersma/xstd-bits/issues/195)). What a string adds over a sequence is not order,
+since both compare lexicographically, but **search and concatenation**: `find`, `substr`, `starts_with`, `append`
+and `+`, which prefix codes, tries, CIDR prefixes and k-mers ask of a run of bits. It builds on the sequence
+reading's algorithms, `xstd::bit_find` among them ([algorithms-not-members](#algorithms-not-members)), and calls
+its word-parallel search as an algorithm rather than owning it. The decisions already taken:
+
+- **Five names, one per column:** `bit_fixed_string<N>`, `bit_bounded_string<N>`, `bit_small_string<N>`,
+  `bit_string` and the view `bit_string_view`, on one `string_adaptor` with no window parameter. A borrowed string
+  is always windowed, because `remove_prefix` and `remove_suffix` change the view in place; an owned one never is.
+  The iterator and reference are member templates of the adaptor over the character type, as the other readings
+  nest theirs ([the-adl-firewall](#the-adl-firewall)), and an owner and its view have distinct iterator types.
+- **Character 0 is position 0**, the least significant bit of block 0, which is N0128's orientation and the
+  storage's one layout. Strings of different lengths share position 0, so `starts_with` and `<=>` stay
+  block-wise, and `push_back` and `append` work at the high end as a sequence's do. The cost is at the interop
+  boundary: a string converted from a `std::bitset` reads reversed against its `to_string()`, which the
+  declarations of the string types and of `xstd::bit_convert` state.
+- **The elements are symbols, not bits.** The class template takes the element first, as the set owners take
+  their key, then the block, then the defaulted traits and allocator:
+  `basic_bit_string<CharT, Block, Traits, Allocator>`, with `bit_string` as `basic_bit_string<char, std::size_t>`.
+  `bit_char_traits<char>` lists `symbols = "01"` in rank order and nothing else; the library derives `size`,
+  `K = std::bit_width(size - 1)` bits per character, `from_index(r) = symbols[r]` and `to_index(c)`, the protocol `sized_bit_index_mapping` names for keys
+  ([the-public-names](#the-public-names)). Symbols are distinct, checked by `static_assert`, and need not ascend,
+  so `".#"` makes `.` rank 0. The reference converts to the symbol, so a `bit_string` yields `'0'` and `'1'` with
+  `std::string`'s pitfalls included (`if (s[0])` is always true), and `bit_vector` stays the reading whose elements
+  are bits; `bit_convert` relabels one as the other in O(1). `bit_char_traits` is not `std::char_traits`:
+  `[char.traits.require]` works through pointers to stored characters one at a time, which would rule out the
+  block algorithms. A user's alphabet is a user's traits; the DNA alphabet, `symbols = "ACGT"`, is the K = 2 test
+  case and appears only in tests and examples.
+- **`<=>` is `std::string`'s order.** The first difference is found a block at a time, then the two symbols there
+  are compared: the ranks directly where the symbols ascend, the sign flipped for two descending symbols, and one
+  lookup in a table of at most 2^K entries otherwise. Display symbols are a run-time argument to `to_string`,
+  `text`, `copy` and the formatter, `s.to_string('.', '#')` or `"{:/.#}"`; element symbols are part of the type, so
+  a maze never silently equals a code word.
+- **Characters are validated where they enter.** Every constructor, `assign`, `append`, `insert` and `replace`
+  taking characters throws `std::invalid_argument` outside the symbols, as `std::bitset` does, and is explicit, as
+  `std::bitset`'s string constructor is. Parsing packs eight characters per step, the mirror of a block-wise
+  `to_string()`, and `bit_string(t).to_string() == t` for every valid `t`.
+- **`bit_fixed_string<N>` follows P3094's `std::basic_fixed_string`**, still in LEWG for C++29 and audited against
+  its latest revision: structural, the length-preserving half of the interface, static `integral_constant` size
+  members ([constant-sizes](#constant-sizes)), `+` giving `N + M`, and `bit_convert` to and from `bit_array<N>`.
+  The search members and the default constructor, all `'0'`, are recorded as departures with reasons.
+  `"0110"_bs` is a `bit_string` and `"0110"_bsv` a `bit_string_view` of static extent 4 into the template
+  parameter object, both validated at compile time, and a `bit_fixed_string` template parameter makes
+  `xstd::bit_search<"1011">(text)` a compile-time pattern without a suffix.
+- **`[string.capacity]` decides capacity in every column**, not the sequence row's bounded rules: the bounded string
+  throws `std::length_error` past `N`, as `boost::static_string<N>` does, and has no `try_` or `unchecked_` doors.
+  `+` on two bounded strings returns `bit_bounded_string<N + M>`, as Boost, Folly and P3094 all do, and never
+  throws; `+=` and `append` keep the capacity. A smaller capacity converts implicitly and a larger one explicitly,
+  checked. The small and dynamic strings keep `std::string`'s `+`.
+- **Declined:** `c_str` and `data`, a bit having no address and two symbols no terminator;
+  `resize_and_overwrite`; `[string.conversions]`; `[char.traits]`; and shifts and bitwise operators, which
+  `[strings]` does not have. `copy(char*, n, pos)` is kept, since it writes text through the symbols into the
+  caller's buffer, and it is the way out to `folly::FixedString`, `boost::static_string` and `char[]` alike.
+- **Search** is an algorithm over the sequence reading, `xstd::bit_search` after `std::ranges::search`, so
+  `bit_span` and `bit_vector` reach it too, and the string's `find`, `rfind` and `contains` call it. For a pattern of up to 64 characters, one mask per block asks
+  the question for all 64 start positions at once, `M &= P[i] ? Ti : ~Ti` over funnel-shifted text, which is
+  O(n·m/64) and `constexpr`; a longer pattern confirms the first 64 characters' candidates block by block. A
+  worst-case guarantee (Two-Way) and SIMD wait for a measurement that asks for them. The oracle is
+  `std::string::find` over the same text in `'0'` and `'1'`; the baselines are `std::string::find`, `std::search`
+  over `std::vector<bool>`, the Boyer-Moore searchers, glibc `memmem`, StringZilla and CTRE's `ctre::search`.
+- **Testing has one oracle.** Each case is written once, as characters: `"0110"s` is the `std::string` and
+  `"0110"_bs` the bit string, every operation runs on both, and nothing translates symbols in between. The audits
+  are `[string.view]` first and then `[basic.string]`, about 42 leaf subclauses between them, with the declined
+  clauses recorded as such ([the-audit](#the-audit)). The counterpart is `std::string` rather than
+  `std::basic_string`, whose `compare` goes through `traits::compare` a character at a time.
+
+The opening section plans `string_reading_tag` as a refinement of `sequence_reading_tag`, so that every view and
+algorithm taking a sequence takes a string. A sequence's elements are bools and a string's are symbols, so the
+first header settles whether a sequence algorithm reads a string's bits or the refinement stands aside. A
+multi-bit alphabet, DNA's `"ACGT"` at two bits, is the same template at `K > 1`, addressing its storage as a
+sequence of `K`-bit elements does. The work runs in this order: `bit_char_traits`; the adaptor with
+`bit_string`, `bit_string_view` and the formatters; `bit_fixed_string` and the two literals; the bounded and small
+strings; search, staged as above; compile-time patterns; the audits; and the string row in the README's tables.
+Prior art for the bounded and small strings is in [prior-art-by-column](#prior-art-by-column).
+
+### a-deterministic-perf-gate
+
+Coverage is gated at 100% of lines and branches and time at nothing: the benchmarks run under `ctest` as smoke
+tests ([the-sieve](#the-sieve)), so a change that halved a container's speed would pass every check
+([#185](https://github.com/rhalbersma/xstd-bits/issues/185)). Wall clock cannot be the gate. Over the full
+200-row ladder, pinned to one CPU with nine interleaved repetitions on a freshly booted machine, the median
+coefficient of variation is 10.7%, the 90th percentile 17.2%, and five rows of 200 come in under 5%; filtering
+for ratios that clear two sigma of the rows' combined variation leaves almost nothing. Hosted runners are worse:
+two to four shared vCPUs, no PMU, and a CPU model that changes between runs. Three gaps of 1.15x to 1.3x that the
+ladder reported did not survive one-side-per-process isolation, and one changed sign when the same code was linked
+into another binary.
+
+The gate is **instruction counts under callgrind**. The same binary on the same input retires the same count to
+the instruction, which supports a 1% threshold with no false positives. Each comparison builds the merge base and
+the head in one job and compares the ratio; wall clock stays informational, reported with its variation beside
+every median, as "no result" above a threshold, with `/proc/cpuinfo` recorded and no comparison across CPU models.
+A count says *that* something changed and not what it costs: three instructions that stall can be 9% of a count
+and 240% of the time, so a claimed win is confirmed on real hardware, and absolute timings need a self-hosted
+runner with `isolcpus`, SMT and turbo off. [what-a-view-costs](#what-a-view-costs) is the method applied once.
+
+The harness has four traps on record: valgrind 3.22 raises `SIGILL` on the AVX-512 `vpternlogq` that
+`-march=native` emits, so the gated binary builds at `-march=x86-64-v3`; a harness must assert that it ran, by
+valgrind's exit status and by counts that scale with `N`, and measuring at `N` and `kN` and differencing cancels
+startup exactly; GCC folds a naive loop into a closed form, so the operation sits between `asm volatile` sinks on
+both sides; and code layout moves wall clock between binaries, which is one more reason to compare ratios inside
+one. The results would publish as a generated file naming machine, compiler, standard library, resolved `-march`
+and date, for the README and this file to cite instead of figures whose provenance is a sentence. Whether the gate
+lives here or in a separate repository that pins the library by SHA and builds two SHAs per job is open.
+
+### spec-tests-over-archetypes
+
+The spec suite checks values thoroughly and checks that ill-formed uses are rejected, each
+`static_assert(not requires { … })` beside the clause that makes the use ill-formed
+([#273](https://github.com/rhalbersma/xstd-bits/issues/273)). Three things the standard libraries' own suites cover are still to come:
+
+- **Archetypes.** The range constructors, `insert(first, last)`, `assign(first, last)`, `from_range` and
+  `insert_range` over single-pass input iterators, forward iterators and sized sentinels, handing in exactly what
+  the clause asks and no more; the allocator-aware owners over a minimal allocator, with only the members
+  `[allocator.requirements]` makes mandatory, and over a fancy-pointer allocator, beside `std::allocator` and
+  `std::pmr::polymorphic_allocator`; and keys and values used for no more than `[associative.reqmts]` and
+  `[sequence.reqmts]` ask. `test::minimal_blocks` is the storage's archetype already
+  ([owned-bit-storage](#owned-bit-storage)).
+- **A constant-evaluation driver.** The `XSTD_CONSTEXPR_CHECK` family turns one expression into a `static_assert`
+  and a run-time check that cannot drift apart. It runs over the deterministic part of each input builder, edge
+  cases and width-gated enumerations, while the seeded random part stays at run time; its `_IF` forms gate the
+  `static_assert` on the columns usable in a constant expression, the fixed owners, the dynamic ones through a
+  transient allocation, and the bounded ones where `XSTD_BITS_HAS_CONSTEXPR_BOUNDED` is defined. `std::vector<bool>`
+  and `std::array` are `constexpr` and serve as models there; `std::set` and `std::flat_set` are not, so the set
+  reading asserts each clause's postconditions directly. Enumerations count against `-fconstexpr-steps` and
+  `-fconstexpr-ops-limit`, so this driver may need a lower width cap than the run-time one.
+- **`requires (I < N)` on `bit_array`'s `tuple_element`.** The adaptor's two specializations carry it, while the two
+  `basic_bit_array` forwards to them do not, so an index out of range is a hard error a requires-expression cannot
+  observe, and `[array.tuple]/1` stays a declined row of the audit. With the constraint on the forwards it is
+  answered.
+
+### the-next-audit
+
+The type-matrix table, `test/src/bits/type_matrix.cpp`, answers whether every operation compiles, or is refused on
+purpose, for every owner and view over every block ([#377](https://github.com/rhalbersma/xstd-bits/issues/377)).
+Three parts remain:
+
+- **Fast-path assertions** for the dispatch predicates that have none: `plane_is_its_string` and
+  `dense_planes`, which send a range of planes to the hash in one `update`, and `structural_blocks_v`, which picks
+  the public base that makes an owner structural. Each gets a `static_assert` over the types meant to take the
+  path and the types meant not to, as `blit_source`, `block_copies_as_bytes` and `adopts_from` have, so a path
+  silently not taken fails a build rather than only a benchmark.
+- **A doc-drift check**: a script, run in CI beside the include-order checks, that every backticked identifier in
+  `README.md` and this file still names something under `include/` or in the standard.
+- **The `doc/audit/` inventories re-run** against the current owners, the bounded ones (a capacity of nought,
+  `no_blocks`) and the small ones (rebindable and resizable) first.
+
+### a-module-interface
+
+The library is consumed by inclusion, and `import xstd.bits;` does not exist
+([#194](https://github.com/rhalbersma/xstd-bits/issues/194)). Header-only is a real choice, one `find_package`, no
+build order, no module cache to invalidate, and the direction is allowed to conclude that a module is not worth
+having. The cheap form is the only one to try first: a single `xstd.bits` interface unit that includes the
+existing headers in its global module fragment and exports the names, leaving every header where it is,
+`#include` working as before, and the change revertible. Partitions mirroring the header tree wait on a
+measurement of the cheap form.
+
+It waits on three things. Which of the seven ladders can build and consume a module interface at all, which is
+the least uniform corner of the toolchains; a measured clean-build cost for a translation unit that includes the
+umbrella, so that a speed-up is a number; and xstd-ints and xstd-misc, which this library includes and which
+record the same direction, so the three would move together rather than one importing two that are still
+included. A consumer path that imports would be a fourth leg of `consumption.yml`, and the include-what-you-use
+comments, written about inclusion, do not map onto exported names mechanically.
+
+### preconditions-as-contracts
+
+The precondition doctrine is the storage's cheapest contract, widened by the caller that needs more
+([the-cheapest-contract](#the-cheapest-contract), [total-versus-precondition](#total-versus-precondition)), and its
+mechanism is about ninety `assert`s, nearly half of them in `detail/bit_block_container.hpp` and most of the rest
+in the sequence and set adaptors ([#193](https://github.com/rhalbersma/xstd-bits/issues/193)). An `assert` states
+that something held, not that a caller owed it, which is the one distinction the doctrine turns on, and `NDEBUG`
+is one switch over a translation unit where the doctrine assigns costs per layer. A P2900 precondition says it on
+the declaration, where a caller reads it, and its evaluation semantics are chosen per build.
+
+It waits on P2900's availability across the ladders, measured with dates, and may well conclude "not yet". Three
+questions are to be decided before any syntax: whether a partial migration, two vocabularies for one doctrine,
+is worse than none, and so whether a mechanism that degrades to `assert` is wanted; the C++23 floor, since the
+library compiles as C++23 and contracts in the interface move it; and what the checked build is for, legibility
+alone if contracts are only ever ignored in release and enforced in tests. The pilot is the smallest file,
+`detail/valarray_adaptor.hpp` with four, reviewed for whether it reads better, and the coverage gate needs an
+exclusion for a contract annotation as it has one for an assert at the start of a line
+([an-assert-begins-its-line](#an-assert-begins-its-line)).
+
+### the-bit-infrastructure-thesis
+
+`std::bitset` was proposed in N0075, November 1991, three years before the STL entered the draft, so it was
+designed before containers, iterators and algorithms had a vocabulary
+([#192](https://github.com/rhalbersma/xstd-bits/issues/192)). It has no iterators and is no range, no
+`value_type`, no allocator, no block parameter and no resize; its set reading exists only as the vendor
+extensions `_Find_first` and `_Find_next`; and `test` throws where `operator[]` is undefined. The committee
+patches it a paper at a time, P2417R2's `constexpr`, P2697R1's `basic_string_view` constructor, LWG 4294's `charT`
+constraints, which is why the yardstick here is the working draft.
+
+The thesis is **bit infrastructure, containers and algorithms, in the vocabulary of the current draft, without a
+performance compromise**. Each clause is a kind of work: conformance, each container held to its counterpart's
+clauses paragraph by paragraph ([the-audit](#the-audit)); algorithms over the containers, under their standard
+names with a `bit_` prefix ([algorithms-not-members](#algorithms-not-members)); and performance a gate can resolve
+([a-deterministic-perf-gate](#a-deterministic-perf-gate)), with [preconditions-as-contracts](#preconditions-as-contracts)
+and [a-module-interface](#a-module-interface) as what "modern" asks besides. `std::bitset` itself is not
+reproduced: its three vocabularies are the set, sequence and string readings, `std::bitset`'s bitwise operators
+on a row of bools are the valarray reading's, and a bitset crosses into any of them through `xstd::bit_convert`
+([interop-not-a-bitset](#interop-not-a-bitset)). Done means every owner and view held to its counterpart's full
+clause, algorithms that agree with `std::ranges` on every input, and a number a reader can cite from a method that
+tells a regression from noise.
+
+### bit-regex
+
+Matching beyond fixed substrings, `1(0|11)*0` for a codeword shape or "a run of at least five ones", has no
+standard counterpart worth tracking ([#328](https://github.com/rhalbersma/xstd-bits/issues/328)). Over two
+symbols a deterministic automaton can consume 8 or 16 text bits per step through a 256- or 65,536-entry table per
+state, built at compile time after CTRE's model, the pattern a template argument. No maintained library offers
+regular expressions over bits, and the demand that exists takes other forms: field-oriented matching (Erlang's
+binary patterns, Kaitai Struct, BPF filters), SystemVerilog sequences, table-driven prefix-code decoders written
+by hand per format, and biological motifs over packed nucleotides. So the likely value is narrower than a regex
+engine, a `constexpr` automaton builder for prefix-code decoding or Erlang-style field matching, and which, if
+either, is for a concrete user to decide. It needs the string reading's compile-time patterns and block-mask
+search ([the-string-reading](#the-string-reading)), and its multi-bit alphabets for motifs over packed
+nucleotides.
+
+### the-downstream-contract
+
+This library, with xstd-ints and xstd-misc, is the foundation [tabula](https://github.com/rhalbersma/tabula) and
+[dctl](https://github.com/rhalbersma/dctl) are to be built on
+([#119](https://github.com/rhalbersma/xstd-bits/issues/119)). What their code shows, read rather than specified:
+
+- **The static row at two words.** tabula's `valid_size`, the bits a board needs after minimizing its padded
+  embedding over the dihedral group and trimming it, is the `N` of a fixed set, and fifteen of the nineteen named
+  boards land on exactly two 64-bit words. A position is `P` planes of `N` bits, between `⌈log2 K⌉` and `K` planes
+  for `K` square values, so each two-word operation runs `P` times per node of a search. `N` and `P` are
+  compile-time constants, which is why the static column carries the workload, and `constexpr` is a requirement
+  rather than a convenience: board masks are tables built at compile time.
+- **A migration target.** dctl's `core/board/mask.hpp` holds a board as
+  `xstd::bit_set_aligned<int, Board::bits()>`, the ancestor of `bit_align<bit_fixed_set<N>>`, and whatever that
+  offered (`max_size()`, `add()`, the compile-time tables) the fixed set has to offer at least.
+- **The sequence row at endgame-database scale.** dctl's `egdb/build.hpp` stores results as `std::vector<int>`,
+  where a win-draw-loss database needs two bits a position; a slice is 10^9 bits and more, so the costs are a
+  cache miss per random read, a sequential scan and a count over gigabytes, which
+  [the-sequence-ladder](#the-sequence-ladder)'s access bench asks, and the allocator becomes the way to huge
+  pages or a file-backed slice. A sequence of two-bit elements is the representation it points to.
+
+Bit planes and a per-square array are transposes of one another: the move generator reads a plane, and a board
+renderer, a FEN parser or a database index reads a square across the planes, which is a gather, the read side
+of the valarray reading's `mask_array` ([the-valarray-reading](#the-valarray-reading)). All of this is
+reconstructed from the two repositories; an architecture document covering the layer stack, the design axes and
+the invariants governs, and this entry is reconciled against it when it is published. The `valid_size` count and the two file references are observations
+of code and stand either way.
+
+### prior-art-by-column
+
+The directions above draw on one inventory of third-party containers, classified by behaviour rather than by
+name: **fixed**, an exact size at compile time; **bounded**, a size up to a compile-time capacity with no heap;
+**small**, an inline buffer of `N` and then the heap; **run-time-fixed**, a size chosen once at construction; and
+**dynamic**, a heap that grows ([#324](https://github.com/rhalbersma/xstd-bits/issues/324)). The block choice is
+compared in [block-and-width-transformations](#block-and-width-transformations) and the enum and flag sets in
+[flag-types](#flag-types). Every signature was read from the header at the linked commit; these are references for
+design comparison, not test oracles.
+
+Bit containers with a selectable or surprising column: `llvm::BitVector` is small despite its name, its words in a
+`SmallVector` of six inline words on a 64-bit target, and `llvm::SmallBitVector` keeps at most 57 bits inline;
+`llvm::PackedVector<T, BitNum, BitVectorTy>` packs `BitNum` bits per element over a selectable bit vector;
+`eastl::bitvector<Allocator, Element, Container>` takes its container and `eastl::fixed_bitvector` is small;
+`boost::dynamic_bitset<Block, AllocatorOrContainer>` takes a container since 1.90; `roaring::Roaring` and
+`bm::bvector` are compressed dynamic sets with `rank` and `select`; and `sdsl::bit_vector` is `int_vector<1>`.
+
+| fixed | signature | notes | source |
+|---|---|---|---|
+| `base::fixed_flat_set` (Chromium) | `template <class Key, size_t N, class Compare = std::less<>> using fixed_flat_set = base::flat_set<Key, Compare, std::array<const Key, N>>` | immutable and sorted, exactly `N`, built by `consteval MakeFixedFlatSet` | [fixed_flat_set.h](https://github.com/chromium/chromium/blob/ebdf288ea139cbf98e749f5a552083a7e74fde41/base/containers/fixed_flat_set.h) |
+| `frozen::set` | `template <class Key, std::size_t N, class Compare = std::less<Key>> class set` | immutable `constexpr` sorted set | [set.h](https://github.com/serge-sans-paille/frozen/blob/1a6065fc39263b24e024317044d5833d690c474a/include/frozen/set.h) |
+| `ctll::fixed_string` (CTRE) | `template <size_t N> struct fixed_string { char32_t content[N]; size_t real_size; }` | a template-argument string; `real_size`, at most `N`, is set at construction | [fixed_string.hpp](https://github.com/hanickadot/compile-time-regular-expressions/blob/62b060684d571df4dfab0fafeeddcf524db7c99e/include/ctll/fixed_string.hpp) |
+| `Poco::Array` | `template <class T, std::size_t N> class Array` | a `std::array` look-alike | [Array.h](https://github.com/pocoproject/poco/blob/9876c10177a29b987a7d8e9c3e15bce25a6e07ec/Foundation/include/Poco/Array.h) |
+
+| bounded | signature | past the capacity | source |
+|---|---|---|---|
+| `boost::container::static_vector` | `template <typename T, std::size_t Capacity, class Options = void> class static_vector` | `std::bad_alloc` by default; with `throw_on_overflow<false>`, an assert and otherwise undefined | [static_vector.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/static_vector.hpp), [options.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/options.hpp) |
+| `boost::static_strings::basic_static_string` | `template <std::size_t N, typename CharT, typename Traits = std::char_traits<CharT>> class basic_static_string` | `std::length_error`, and `std::out_of_range` for a bad position | [static_string.hpp](https://github.com/boostorg/static_string/blob/2ff9d3535e853f4913e85e7fea28f84b04ea5d81/include/boost/static_string/static_string.hpp) |
+| `folly::BasicFixedString` | `template <class Char, std::size_t N> class BasicFixedString` | `std::out_of_range`, a compile error in constant evaluation | [FixedString.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/FixedString.h) |
+| `folly::small_vector` with `policy_in_situ_only<true>` | `template <class Value, std::size_t RequestedMaxInline = 1, class Policy = void> class small_vector` | `std::length_error` | [small_vector.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/container/small_vector.h) |
+| `eastl::fixed_vector`, `fixed_string`, `fixed_set` with `bEnableOverflow = false` | as in the small table | `EASTL_ASSERT` in debug builds, otherwise undefined or an allocation exception | as below |
+| `etl::vector` | `template <typename T, const size_t MAX_SIZE_> class vector` | `etl::vector_full` with ETL exceptions on, otherwise the error handler | [vector.h](https://github.com/ETLCPP/etl/blob/4707b6b15bff21d3b4268d27ebb7a7bd2ab941c7/include/etl/vector.h), [error_handler.h](https://github.com/ETLCPP/etl/blob/4707b6b15bff21d3b4268d27ebb7a7bd2ab941c7/include/etl/error_handler.h) |
+| `etl::string` | `template <size_t MAX_SIZE_> class string` | **truncates**; optionally flags it or raises `etl::string_truncation` | [string.h](https://github.com/ETLCPP/etl/blob/4707b6b15bff21d3b4268d27ebb7a7bd2ab941c7/include/etl/string.h), [basic_string.h](https://github.com/ETLCPP/etl/blob/4707b6b15bff21d3b4268d27ebb7a7bd2ab941c7/include/etl/basic_string.h) |
+| `etl::flat_set` | `template <typename T, const size_t MAX_SIZE_, typename TCompare = etl::less<T>> class flat_set` | ETL's error policy | [flat_set.h](https://github.com/ETLCPP/etl/blob/4707b6b15bff21d3b4268d27ebb7a7bd2ab941c7/include/etl/flat_set.h) |
+| `itlib::static_vector` | `template <typename T, size_t Capacity> class static_vector` | `std::out_of_range` by default, configurable | [static_vector.hpp](https://github.com/iboB/itlib/blob/b7eedccee7590f39f08bf9e414960a7fe854f1ad/include/itlib/static_vector.hpp) |
+| `FixedVector` (Godot) | `template <class T, uint32_t CAPACITY> class FixedVector` | logs an error and leaves the vector unchanged | [fixed_vector.h](https://github.com/godotengine/godot/blob/e7cfa294a0b81bed7986be04a848cc1832a3f083/core/templates/fixed_vector.h) |
+| `seastar::circular_buffer_fixed_capacity` | `template <typename T, size_t Capacity> class circular_buffer_fixed_capacity` | a ring buffer; unverified | [circular_buffer_fixed_capacity.hh](https://github.com/scylladb/seastar/blob/e417c0c0ebeb1f0578b1dd5b3dd4f65decff0a4b/include/seastar/core/circular_buffer_fixed_capacity.hh) |
+
+| small | signature | notes | source |
+|---|---|---|---|
+| `llvm::SmallVector` | `template <typename T, unsigned N = CalculateSmallVectorDefaultInlinedElements<T>::value> class SmallVector` | the default `N` aims for `sizeof <= 64` | [SmallVector.h](https://github.com/llvm/llvm-project/blob/1e60b852a9d7f73ffed3540e9ea84aefde1b80ab/llvm/include/llvm/ADT/SmallVector.h) |
+| `llvm::SmallString` | `template <unsigned InternalLen> class SmallString : public SmallVector<char, InternalLen>` | | [SmallString.h](https://github.com/llvm/llvm-project/blob/1e60b852a9d7f73ffed3540e9ea84aefde1b80ab/llvm/include/llvm/ADT/SmallString.h) |
+| `llvm::SmallSet` | `template <typename T, unsigned N, typename C = std::less<T>> class SmallSet` | a linear `SmallVector`, then **switches structure** to `std::set` | [SmallSet.h](https://github.com/llvm/llvm-project/blob/1e60b852a9d7f73ffed3540e9ea84aefde1b80ab/llvm/include/llvm/ADT/SmallSet.h) |
+| `llvm::SmallPtrSet`, `llvm::SmallDenseSet` | `template <class PtrType, unsigned SmallSize>`, `template <typename ValueT, unsigned InlineBuckets = 4, typename ValueInfoT>` | a linear array or inline buckets, then a heap hash table | [SmallPtrSet.h](https://github.com/llvm/llvm-project/blob/1e60b852a9d7f73ffed3540e9ea84aefde1b80ab/llvm/include/llvm/ADT/SmallPtrSet.h), [DenseSet.h](https://github.com/llvm/llvm-project/blob/1e60b852a9d7f73ffed3540e9ea84aefde1b80ab/llvm/include/llvm/ADT/DenseSet.h) |
+| `absl::InlinedVector` | `template <typename T, size_t N, typename A = std::allocator<T>> class InlinedVector` | `N > 0` enforced | [inlined_vector.h](https://github.com/abseil/abseil-cpp/blob/33a35cf45087dffab22c0c9ae817021a45e93a47/absl/container/inlined_vector.h) |
+| `folly::small_vector` | `template <class Value, std::size_t RequestedMaxInline = 1, class Policy = void> class small_vector` | `std::length_error` past `max_size()`; bounded under a policy, above | [small_vector.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/container/small_vector.h) |
+| `folly::basic_fbstring` | `template <typename E, class T = std::char_traits<E>, class A = std::allocator<E>, class Storage = fbstring_core<E>> class basic_fbstring` | 23 `char` in place on a 64-bit target, then a medium and a reference-counted large form | [FBString.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/FBString.h) |
+| `boost::container::small_vector` | `template <class T, std::size_t N, class Allocator = void, class Options = void> class small_vector` | | [small_vector.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/small_vector.hpp) |
+| `boost::container::basic_string` | `template <class CharT, class Traits = std::char_traits<CharT>, class Allocator = void, class Options = void> class basic_string` | inline capacity set by `string_options<inline_chars<K>>`, clamped to 127; the first release shipping it unverified | [string.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/string.hpp) |
+| `eastl::fixed_vector`, `fixed_string`, `fixed_set` | `template <typename T, size_t nodeCount, bool bEnableOverflow = true, typename OverflowAllocator> class fixed_vector`, and alike | `bEnableOverflow` switches small and bounded with one flag; `fixed_set` is a red-black tree over a node pool | [fixed_vector.h](https://github.com/electronicarts/EASTL/blob/e323f67e5d93fdadcd44f7998069d804697b1945/include/EASTL/fixed_vector.h), [fixed_string.h](https://github.com/electronicarts/EASTL/blob/e323f67e5d93fdadcd44f7998069d804697b1945/include/EASTL/fixed_string.h), [fixed_set.h](https://github.com/electronicarts/EASTL/blob/e323f67e5d93fdadcd44f7998069d804697b1945/include/EASTL/fixed_set.h) |
+| `QVarLengthArray` | `template <class T, qsizetype Prealloc> class QVarLengthArray` | `Prealloc` defaults to 256 | [qvarlengtharray.h](https://github.com/qt/qtbase/blob/8901c04fd61ad269c3730beb5ea502b0587bbce2/src/corelib/tools/qvarlengtharray.h) |
+| `mozilla::Vector` | `template <typename T, size_t MinInlineCapacity = 0, class AllocPolicy = MallocAllocPolicy> class Vector` | out of memory is `append` returning `false`, not an exception | [Vector.h](https://github.com/mozilla-firefox/firefox/blob/d0f18859d99ecb16f4c5d641b35a5f3bdb7b4f36/mfbt/Vector.h) |
+| `gch::small_vector` | `template <typename T, unsigned InlineCapacity, typename Allocator = std::allocator<T>> class small_vector` | `std::length_error` past the maximum size | [small_vector.hpp](https://github.com/gharveymn/small_vector/blob/efcab60e5360b699f45d2a44dcb9a79bba40c356/source/include/gch/small_vector.hpp) |
+| `itlib::small_vector` | `template <typename T, size_t StaticCapacity = 16, size_t RevertToStaticBelow = 0, class Alloc = std::allocator<T>> class small_vector` | returns to the inline buffer below `RevertToStaticBelow` | [small_vector.hpp](https://github.com/iboB/itlib/blob/b7eedccee7590f39f08bf9e414960a7fe854f1ad/include/itlib/small_vector.hpp) |
+| `fmt::basic_memory_buffer` | `template <typename T, size_t SIZE = inline_buffer_size, typename Allocator> class basic_memory_buffer` | `inline_buffer_size = 500` | [format.h](https://github.com/fmtlib/fmt/blob/9197f51593dab5f637454a8889fb9638e737711a/include/fmt/format.h) |
+| `hpx::detail::small_vector` | `template <typename T, std::size_t MinInlineCapacity, typename Allocator = std::allocator<T>> class small_vector` | `MinInlineCapacity <= 127`, the allocator unused | [small_vector.hpp](https://github.com/STEllAR-GROUP/hpx/blob/d4cd4bd5be7a0b123efc9e25f67bdb369db9672f/libs/core/datastructures/include/hpx/datastructures/detail/small_vector.hpp) |
+| `TInlineAllocator`, `TFixedAllocator` (Unreal) | `TArray<T, TInlineAllocator<N>>` | from the public documentation only; the declarations unverified, `TFixedAllocator` believed bounded | [TInlineAllocator](https://docs.unrealengine.com/5.0/en-US/API/Runtime/Core/Containers/TInlineAllocator/ForElementType/InlineData/) |
+
+| run-time-fixed, and set adaptors over a container | signature | column | source |
+|---|---|---|---|
+| `absl::FixedArray` | `template <typename T, size_t N = kFixedArrayUseDefault, typename A = std::allocator<T>> class FixedArray` | run-time-fixed: inline up to `N`, or `256 / sizeof(T)` by default, else the heap | [fixed_array.h](https://github.com/abseil/abseil-cpp/blob/33a35cf45087dffab22c0c9ae817021a45e93a47/absl/container/fixed_array.h) |
+| `folly::sorted_vector_set`, `small_sorted_vector_set` | `template <class T, class Compare, class Allocator, class GrowthPolicy, class Container = std::vector<T, Allocator>> class sorted_vector_set` | follows `Container`; the alias is small, or bounded under a policy | [sorted_vector_types.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/container/sorted_vector_types.h) |
+| `boost::container::flat_set`, `small_flat_set` | `template <class Key, class Compare, class AllocatorOrContainer> class flat_set` | follows the container; no `static_flat_set` alias, so the bounded one is spelled out | [flat_set.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/flat_set.hpp), [container_fwd.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/container_fwd.hpp) |
+| `base::flat_set` (Chromium) | `template <class Key, class Compare = std::less<>, class Container = std::vector<Key>> using flat_set` | dynamic by default; `fixed_flat_set` is its `std::array` form | [flat_set.h](https://github.com/chromium/chromium/blob/ebdf288ea139cbf98e749f5a552083a7e74fde41/base/containers/flat_set.h) |
+| `itlib::flat_set` | `template <typename Key, typename Compare, typename Container = std::vector<Key>> class flat_set` | follows `Container` | [flat_set.hpp](https://github.com/iboB/itlib/blob/b7eedccee7590f39f08bf9e414960a7fe854f1ad/include/itlib/flat_set.hpp) |
+
+Not containers: `frozen::basic_string` is a `constexpr` view, comparable to `std::string_view`; POCO's Foundation
+has no small, bounded or bit container; Bitsery serializes and defines none; Williams' `enable_bitmask_operators`
+declares operator templates in the global namespace, which ADL does not search for an enumeration in any other
+namespace, so an operator in the calling namespace hides them; Godot's `BitField<T>` is a typed flag word.
+
+**Names that collide.** "Fixed" means bounded or small as often as it means an exact size: `eastl::fixed_vector`,
+`fixed_string` and `fixed_set` are small by default and bounded without overflow, and `eastl::fixed_bitvector` is
+small; `absl::FixedArray` is run-time-fixed; `folly::FixedString` and Godot's `FixedVector` are bounded;
+`ctll::fixed_string<N>` stores at most `N`; only Chromium's `fixed_flat_set` is fixed in this library's sense.
+"Static" means bounded in `boost::container::static_vector`, `boost::static_string` and `itlib::static_vector`.
+Boost.Container uses "inplace" only for the `inplace_alignment` option. `llvm::BitVector` has no "small" in its
+name and is small all the same, through its `SmallVector`; `llvm::SmallBitVector` is small at a fixed 57 bits;
+`llvm::SmallSet` is small by structure rather than storage; and `folly::small_vector` turns bounded under a policy.
+Hence names here say what the user gets, `fixed` and `bounded`, rather than where the blocks live
+([the-public-names](#the-public-names)).
+
+**SDSL, the encoding axis.** SDSL ([xxsds/sdsl-lite](https://github.com/xxsds/sdsl-lite), the maintained fork of
+Simon Gog's original) is a family of types over bit vectors that varies a different axis: this library varies the
+interface and the storage over mutable containers held to the standard's clauses, and SDSL varies the encoding
+and the indexes attached to it, over sequences mostly built once and then queried.
+
+| layer | types |
+|---|---|
+| packed integers | `int_vector<t_width>`, `t_width == 0` choosing the width at run time; `bit_vector` is `int_vector<1>` ([int_vector.hpp](https://github.com/xxsds/sdsl-lite/blob/e6c417391f55476c6946c6fcf76c7315354e1af9/include/sdsl/int_vector.hpp)) |
+| compressed bit vectors | `rrr_vector` (H0), `sd_vector` (Elias-Fano, for sparse sets), `hyb_vector`, `bit_vector_il` ([rrr_vector.hpp](https://github.com/xxsds/sdsl-lite/blob/e6c417391f55476c6946c6fcf76c7315354e1af9/include/sdsl/rrr_vector.hpp), [sd_vector.hpp](https://github.com/xxsds/sdsl-lite/blob/e6c417391f55476c6946c6fcf76c7315354e1af9/include/sdsl/sd_vector.hpp)) |
+| rank and select | `rank_support_v`, `rank_support_v5`, `select_support_mcl`, separate objects over a constant bit vector ([rank_support_v.hpp](https://github.com/xxsds/sdsl-lite/blob/e6c417391f55476c6946c6fcf76c7315354e1af9/include/sdsl/rank_support_v.hpp), [select_support_mcl.hpp](https://github.com/xxsds/sdsl-lite/blob/e6c417391f55476c6946c6fcf76c7315354e1af9/include/sdsl/select_support_mcl.hpp)) |
+| variable-length integers | `enc_vector` (Elias γ and δ), `dac_vector`, `vlc_vector` ([enc_vector.hpp](https://github.com/xxsds/sdsl-lite/blob/e6c417391f55476c6946c6fcf76c7315354e1af9/include/sdsl/enc_vector.hpp)) |
+| built on top | wavelet trees, compressed suffix arrays and trees, range-minimum queries ([wt_int.hpp](https://github.com/xxsds/sdsl-lite/blob/e6c417391f55476c6946c6fcf76c7315354e1af9/include/sdsl/wt_int.hpp), [csa_wt.hpp](https://github.com/xxsds/sdsl-lite/blob/e6c417391f55476c6946c6fcf76c7315354e1af9/include/sdsl/csa_wt.hpp)) |
+
+`int_vector<1>` has this library's sequence layout and `int_vector<K>` that of a sequence of `K`-bit elements,
+least significant bit first, and `seqan3::bitpacked_sequence` stores one, so exchanging blocks with either is a
+matter of reaching their storage, not of converting. A `rank_support` refers to a constant bit vector and is
+invalidated by any change, which is the model for a rank directory over a set's blocks: a view valid while the
+set is unmodified, as an iterator is, rather than a member. Compressed
+encodings, wavelet trees, compressed suffix structures and FM-indexes are SDSL's territory, and users who need
+them are pointed there.
