@@ -601,11 +601,11 @@ Each relation gets one operation and one concept. Blocks that *are* bit storage 
 the tag constructor, `X(xstd::from_blocks, b)`, where the tag says the blocks are bits rather than keys or
 elements; `xstd::bit_constructible_from<X, B>` names it. Anything that *has* bit storage converts to anything else
 that does through `xstd::bit_convert<To>(from)`, which maps positions and may copy, shift or throw;
-`xstd::bit_convertible_to<From, To>` names it. Between two fixed widths the widths agree exactly, the blocks are
-copied through the byte currency, and a view is read from and never written into. So
-`bit_convert<xstd::bit_array<64>>(set)`, `bit_convert<std::bitset<64>>(set)` and `bit_convert<std::uint64_t>(set)`
-are one rule, and a `std::bitset` never goes through the tag, which would blur a type that has storage with one
-that is it.
+`xstd::bit_convertible_to<From, To>` names it. Between two fixed widths the target is at least as wide as the
+source, the blocks are copied through the byte currency with the positions past the source's width clear, and a
+view is read from and never written into. So `bit_convert<xstd::bit_array<64>>(set)`,
+`bit_convert<std::bitset<64>>(set)` and `bit_convert<std::uint64_t>(set)` are one rule, and a `std::bitset` never
+goes through the tag, which would blur a type that has storage with one that is it.
 
 #### the same job `flat_set` gives `extract` and `replace`
 
@@ -3740,8 +3740,15 @@ has its own header under `<xstd/bits/bit_concepts/>`.
 - **Positions.** Position `i` of the source is position `i` of the target, across the readings and across block
   widths. That is the whole contract, and the name says so: this is a conversion of positions, not a
   reinterpretation of an object.
-- **Two fixed widths** must be equal, or there is no conversion at all and the call does not compile. Nothing
-  truncates and nothing pads, so nothing can fail: the call is `noexcept` and the round trip is the identity.
+- **Two fixed widths** widen and never narrow. A source `M` positions wide converts into a target `N >= M` wide,
+  position `i` to position `i` and the positions `[M, N)` clear, so `bit_convert<std::uint8_t>(bit_array<5>)` is
+  what `to_ulong` gives for a `std::bitset<5>` of the same positions, and a `bit_fixed_set<100>` is an
+  `xstd::uint128` or a `std::array<std::uint64_t, 2>`. Into a narrower target there is no conversion at all and the
+  call does not compile: both types state their widths, so a truncation is a mistake to report where it is written,
+  and narrowing is a checked conversion only from a run-time width, below. Nothing truncates, so nothing can fail:
+  the call is `noexcept`, and the round trip, back through a run-time width or by `from_blocks` of the low
+  positions, is the identity. Widening means one thing in both readings, position `i` staying `i`: a set's fixed
+  width is a capacity, so it gains positions no key names yet, and a sequence gains `false` elements.
   `std::bitset<N>` crosses this way, read on `std::bit_cast`'s terms ([the-bytes-they-agree-on](#the-bytes-they-agree-on)):
   `bit_convert<xstd::bit_fixed_set<N>>(b)` is the set reading of a `std::bitset`, and `bit_convert<std::bitset<N>>(s)`
   hands one back. The set and sequence readings cross the same way, directly, with no bitset between them.

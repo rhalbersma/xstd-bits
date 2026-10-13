@@ -21,11 +21,14 @@
 #include <xstd/bits/ext/boost/bit_small_set.hpp>         // basic_bit_small_set, bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp>      // basic_bit_small_vector, bit_small_vector
 #include <xstd/bits/from_blocks.hpp>                     // from_blocks
+#include <xstd/ints/cstdint/bit_int.hpp>                 // bit_uint
+#include <xstd/ints/cstdint/int128.hpp>                  // uint128
 #include <xstd/ints/memory.hpp>                          // align_up
 #include <test/for_each_type.hpp>                        // for_each_type
 #include <test/whole_blocks.hpp>                         // block_bits, whole_blocks
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <array>                                         // array
+#include <bit>                                           // bit_cast
 #include <bitset>                                        // bitset
 #include <concepts>                                      // constructible_from, same_as
 #include <cstddef>                                       // size_t
@@ -217,11 +220,62 @@ BOOST_AUTO_TEST_CASE(ABuiltInArrayConvertsAsTheStdArrayOfItsBlocks)
         // And back the other way, into the std::array that holds the array's blocks.
         BOOST_CHECK((xstd::bit_convert<std::array<std::uint64_t, 4>>(xstd::bit_convert<xstd::bit_fixed_set<256>>(blocks)) == same));
 
-        // Equal widths only, as for a std::array, and never into the array itself.
-        static_assert(xstd::bit_convertible_to<four_blocks const&, xstd::bit_array<256>> and xstd::bit_convertible_to<four_blocks, std::bitset<256>>);
+        // As wide or wider, as for a std::array, and never into the array itself.
+        static_assert(xstd::bit_convertible_to<four_blocks const&, xstd::bit_array<256>> and xstd::bit_convertible_to<four_blocks, std::bitset<257>>);
         static_assert(not xstd::bit_convertible_to<four_blocks const&, xstd::bit_array<255>>);
         static_assert(not xstd::bit_convertible_to<xstd::bit_array<256>, four_blocks> and not xstd::bit_convertible_to<std::array<std::uint64_t, 4>, four_blocks>);
         static_assert(not xstd::bit_convertible_to<xstd::bit_vector, four_blocks>);
+}
+
+// A fixed width widens into a wider fixed one: position i stays position i, and the positions past it are clear.
+BOOST_AUTO_TEST_CASE(AFixedWidthWidensZeroExtended)
+{
+        // An odd width as a word is what std::bitset's to_ulong gives for the same positions.
+        static_assert([] -> bool {
+                auto five       = xstd::bit_array<5>();
+                five[0]         = true;
+                five[4]         = true;
+                auto const nine = xstd::bit_fixed_set<9>{1, 8};
+                return xstd::bit_convert<std::uint8_t>(five) == std::bitset<5>(0b1'0001).to_ulong() and xstd::bit_convert<unsigned long>(nine) == std::bitset<9>(0b1'0000'0010).to_ulong();
+        }());
+
+        // A board as the wide word or the blocks that hold its object, which std::bit_cast reads in the same order.
+        static constexpr auto board = xstd::bit_fixed_set<100>{0, 63, 64, 99};
+        static_assert(xstd::bit_convert<std::array<std::uint64_t, 2>>(board) == std::array<std::uint64_t, 2>{(1ULL << 63U) | 1ULL, (1ULL << 35U) | 1ULL});
+        BOOST_CHECK((xstd::bit_convert<std::array<std::uint64_t, 2>>(board) == std::bit_cast<std::array<std::uint64_t, 2>>(board)));
+#ifdef XSTD_HAS_INT128
+        static_assert(xstd::bit_convert<xstd::uint128>(board) == ((xstd::uint128{1} << 99U) | (xstd::uint128{1} << 64U) | (xstd::uint128{1} << 63U) | xstd::uint128{1}));
+        BOOST_CHECK(xstd::bit_convert<xstd::uint128>(board) == std::bit_cast<xstd::uint128>(board));
+#endif
+
+        // Into and out of a std::bitset, a block, a whole view and another block width.
+        static_assert(xstd::bit_convert<std::bitset<64>>(xstd::bit_fixed_set<10>{2, 9}) == std::bitset<64>(0b10'0000'0100));
+        static_assert(xstd::bit_convert<xstd::bit_fixed_set<128>>(std::bitset<70>(1ULL << 63U) << 6U) == xstd::bit_fixed_set<128>{69});
+        static_assert(xstd::bit_convert<xstd::bit_array<64>>(std::uint8_t{0x81}) == xstd::bit_array<64>(xstd::from_blocks, std::uint64_t{0x81}));
+        static_assert([] -> bool {
+                auto word = std::uint8_t{0x81};
+                auto a    = xstd::basic_bit_array<std::uint8_t, 13>();
+                a[0]      = true;
+                a[12]     = true;
+                return xstd::bit_convert<std::uint64_t>(xstd::bit_set_view(word)) == 0x81ULL and xstd::bit_convert<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64>>(a) == xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64>{0, 12};
+        }());
+
+        // Every position of a full source crosses, and not one past its width.
+        static_assert(xstd::bit_count(xstd::bit_convert<xstd::bit_array<64>>(~xstd::bit_fixed_set<9>())) == 9);
+        static_assert(xstd::bit_convert<xstd::bit_fixed_set<128>>(std::bitset<70>().set()).size() == 70UZ);
+        static_assert(xstd::bit_convert<std::uint32_t>(std::array<std::uint8_t, 3>{0xFF, 0xFF, 0xFF}) == 0xFF'FFFFU);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::bitset<200>>(~xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 100>()).count(), 100UZ);
+
+        // A bit-precise block widens as any other does.
+#ifdef __BITINT_MAXWIDTH__
+        static_assert(xstd::bit_convert<std::uint32_t>(~xstd::bit_uint<23>{0}) == 0x7F'FFFFU);
+        static_assert(xstd::bit_convert<xstd::bit_uint<23>>(xstd::bit_fixed_set<17>{0, 16}) == xstd::bit_uint<23>{0x1'0001});
+#endif
+
+        // Back down through a run-time width, which is checked, gives the source again.
+        auto const wide = xstd::bit_convert<xstd::bit_fixed_set<128>>(board);
+        BOOST_CHECK(xstd::bit_convert<xstd::bit_fixed_set<100>>(xstd::bit_convert<xstd::bit_set>(wide)) == board);
+        BOOST_CHECK(xstd::bit_convert<xstd::bit_array<100>>(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::bit_array<128>>(board))) == xstd::bit_convert<xstd::bit_array<100>>(board));
 }
 
 // Nothing throws between fixed widths, and only that pair is noexcept: a run-time end can refuse or allocate.
@@ -229,6 +283,10 @@ BOOST_AUTO_TEST_CASE(OnlyTwoFixedWidthsAreNoexcept)
 {
         static_assert(noexcept(xstd::bit_convert<std::uint64_t>(std::declval<xstd::bit_fixed_set<64> const&>())));
         static_assert(noexcept(xstd::bit_convert<xstd::bit_array<70>>(std::declval<std::bitset<70> const&>())));
+        static_assert(noexcept(xstd::bit_convert<std::uint8_t>(std::declval<xstd::bit_array<5> const&>())));
+        static_assert(noexcept(xstd::bit_convert<std::array<std::uint64_t, 2>>(std::declval<xstd::bit_fixed_set<100> const&>())));
+        static_assert(noexcept(xstd::bit_convert<xstd::bit_fixed_set<128>>(std::declval<std::bitset<70> const&>())));
+        static_assert(noexcept(xstd::bit_convert<std::bitset<64>>(std::declval<xstd::bit_set_view<std::uint8_t> const&>())));
         static_assert(not noexcept(xstd::bit_convert<std::uint64_t>(std::declval<xstd::bit_set const&>())));
         static_assert(not noexcept(xstd::bit_convert<xstd::bit_vector>(std::declval<std::bitset<70> const&>())));
         static_assert(not noexcept(xstd::bit_convert<xstd::bit_vector>(std::declval<xstd::bit_set&&>())));

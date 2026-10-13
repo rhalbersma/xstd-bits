@@ -676,9 +676,9 @@ BOOST_AUTO_TEST_CASE(TheSequenceExchangeIsNamedBothWays)
         static_assert(not std::is_constructible_v<T, std::bitset<N>>);
         static_assert(not std::is_constructible_v<std::bitset<N>, T>);
 
-        // Any other width is no exchange at all, rather than a narrowing one.
+        // A wider source would truncate, so it is no exchange at all, and a narrower one widens.
         static_assert(not test::converts_from<T, std::bitset<N + 1UZ>>);
-        static_assert(not test::converts_from<T, std::bitset<N - 1UZ>>);
+        static_assert(test::converts_from<T, std::bitset<N - 1UZ>>);
 }
 
 // A window converts from its own first position, which is not the storage's, so it is read from its offset.

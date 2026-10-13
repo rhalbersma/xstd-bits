@@ -58,10 +58,11 @@ and nothing more.
 
 Every one of them reads its raw blocks through `from_blocks`, and converts to and from anything else that has
 bit storage through `xstd::bit_convert` — the general form of what `to_ullong` does for one word. Position `i`
-stays position `i` at any two widths: two fixed widths must be equal, a run-time width converts into a fixed one by
-value and throws `std::overflow_error` for a position the target cannot hold, and anything converts into a bounded,
-small or dynamic owner, which adopts the blocks outright from an rvalue holding the same container. Because
-positions are kept, a `std::bitset`'s `to_string()` reads reversed against its positions.
+stays position `i` at any two widths: a fixed width widens into a wider fixed one, zero-extended, and never
+narrows, a run-time width converts into a fixed one by value and throws `std::overflow_error` for a position the
+target cannot hold, and anything converts into a bounded, small or dynamic owner, which adopts the blocks outright
+from an rvalue holding the same container. Because positions are kept, a `std::bitset`'s `to_string()` reads
+reversed against its positions.
 
 xstd-bits is **eleven containers**: two readings of a block of bits — an ordered set of `std::size_t` and a sequence of `bool` — over four storages, which differ in whether size and capacity are static or dynamic: both static, a dynamic size within a static capacity, a dynamic size kept inline up to a static capacity and on the heap past it, and both dynamic; and the sequence's elementwise reading, the valarray, over three of them. Three views give the set or the sequence reading of bits that something else owns.
 

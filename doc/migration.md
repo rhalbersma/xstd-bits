@@ -174,8 +174,8 @@ v >>= 1;  // or v = v.shift(1)
 ## `std::bitset<N>` as a word
 
 `to_ullong` and the `unsigned long long` constructor are the one-word case of `xstd::bit_convert` and the
-`from_blocks` tag. A fixed width converts only into an equal one, so `N` is the word's width; `bit_align<bit_least<X>>`
-rounds any `N` up to one.
+`from_blocks` tag. A fixed width converts into any at least as wide, zero-extended, so `N` need not be the word's
+width, and into a narrower one it does not compile.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>
@@ -193,6 +193,21 @@ auto w = b.to_ullong();  // 0xF0
 
 auto s = xstd::bit_fixed_set<64>(xstd::from_blocks, std::uint64_t{0xF0});
 auto w = xstd::bit_convert<std::uint64_t>(s);  // 0xF0
+```
+
+</td></tr>
+<tr><td>
+
+```cpp
+auto b = std::bitset<9>(0x1F0);
+auto w = b.to_ulong();  // 0x1F0
+```
+
+</td><td>
+
+```cpp
+auto s = xstd::bit_fixed_set<9>{4, 5, 6, 7, 8};
+auto w = xstd::bit_convert<unsigned long>(s);  // 0x1F0
 ```
 
 </td></tr>

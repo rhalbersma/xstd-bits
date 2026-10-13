@@ -15,7 +15,7 @@
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks
 #include <xstd/ints/limits.hpp>                              // numeric_limits
-#include <algorithm>                                         // min
+#include <algorithm>                                         // copy, min
 #include <array>                                             // array
 #include <bit>                                               // popcount
 #include <concepts>                                          // default_initializable, same_as
@@ -255,13 +255,20 @@ template<class To, class From>
         return to;
 }
 
-// Into a fixed width, of the same width: the bytes cross whole, and nothing can be lost.
+// Into a fixed width at least as wide: the bytes cross whole into zeros, and nothing can be lost.
 template<fixed_target To, fixed_width From>
-        requires (bit_width_v<To> == bit_width_v<From>)
+        requires (bit_width_v<From> <= bit_width_v<To>)
 [[nodiscard]] constexpr auto convert_fixed(From const& from) noexcept
         -> To
 {
-        return from_fixed_bytes<To>(fixed_bytes(from));
+        if constexpr (bit_width_v<From> == bit_width_v<To>) {
+                return from_fixed_bytes<To>(fixed_bytes(from));
+        } else {
+                // The source's last byte is clear past its width, so the target's positions past it stay clear.
+                auto bytes = std::array<unsigned char, byte_count<bit_width_v<To>>>();
+                std::ranges::copy(fixed_bytes(from), bytes.begin());
+                return from_fixed_bytes<To>(bytes);
+        }
 }
 
 // A position the fixed target cannot hold was set, which is what std::bitset's to_ulong throws for.
@@ -298,10 +305,10 @@ concept foreign_convertible = requires (From const& from) {
         { bit_target<To>::convert(from) } -> std::same_as<To>;
 };
 
-// What bit_convert takes: equal fixed widths, run-time into fixed, anything into a run-time owner or foreign type.
+// What bit_convert takes: fixed into at least as wide, run-time into fixed, anything into a run-time or foreign type.
 template<class From, class To>
 concept bit_convertible =
-        (fixed_target<To> and fixed_width<From> and bit_width_v<To> == bit_width_v<From>) or
+        (fixed_target<To> and fixed_width<From> and bit_width_v<From> <= bit_width_v<To>) or
         (fixed_target<To> and bit_convert_source<From> and (not fixed_width<From>)) or
         (owner<To> and (not std::is_const_v<To>) and std::default_initializable<To> and owned_bits_t<To>::has_stored_size and bit_convert_source<From>) or
         foreign_convertible<To, From>;
