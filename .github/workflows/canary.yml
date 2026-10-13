@@ -21,6 +21,8 @@ jobs:
   # Run the complete compiler workflows weekly so dynamic development toolchains and mutable runner images are checked even without a push.
   gcc:
     uses: ./.github/workflows/gcc.yml
+  emscripten:
+    uses: ./.github/workflows/emscripten.yml
   clang:
     uses: ./.github/workflows/clang.yml
   clang_libcxx:
