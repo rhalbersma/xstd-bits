@@ -2585,11 +2585,30 @@ index is immutable and shared between copies, so a proxy holds its own copy and 
 `std::gslice_array` referring to a `std::gslice` can. `v[std::gslice]` builds one per subscript.
 
 **Not worse than handwritten.** The benchmark holds each subscript to three columns: `std::valarray<bool>`, this
-library, and the loop a bitboard engine writes by hand over raw 64-bit words with P3104's word functions, each gather
+library, and the same algorithm written by hand over raw 64-bit words with P3104's word functions, each gather
 returning a clear array of its own as `v[s]` does. A gather collects its packed bits in a register and stores each output
 block once, full: an or into memory per input block chains each update on the last store through store forwarding,
 which at stride eight, eight blocks to an output word, held it to two thirds of the handwritten loop. Where xstd-ints runs PEXT and PDEP in hardware, a full mask goes through
 them like any other; the shortcut that saves the portable kernels a full permutation mispredicts at high densities.
+
+Handwritten means what a programmer writes at the call site with the information the library has there, and no more:
+the block width, the kind of selection, and the stride or the mask words at run time, but not how dense the selection
+is. The handwritten column is therefore the library's own algorithm as a raw loop over the same blocks of the same
+owners, with no hints, and what it measures is the cost of the abstraction alone. On GCC 15 and Clang 22 that cost is
+nil: both columns compile to the same instructions per block. What remains between them is code layout. The gather
+stores an output block on a branch that depends on the data, and GCC places that store either in line, so the common
+path jumps over it, or ahead of the loop head, so every path takes one branch; which it picks depends on the
+surrounding function, not on the loop, and at five per cent density the difference is a cycle a block. Clang lays the
+two columns out alike. `-freorder-blocks-algorithm=simple` gives GCC the better layout at every density and is the
+user's to set for the whole program; `[[likely]]`, `[[unlikely]]` and `__builtin_expect_with_probability` each help one
+density and hurt another, and profile-guided layout fits whichever density it was trained on, so the kernels carry none
+of them.
+
+A programmer who knows the density knows something the library does not, and can beat it: by a branch hint that suits
+the data, or, for a sparse enough mask, by walking its set bits instead of permuting every block. That is not an
+abstraction penalty, any more than a counting sort over small keys is a penalty of `std::sort`. Where such knowledge
+should reach the library, it belongs in the interface, as a selection type with a path of its own, the way
+`bit_gslice` carries a shape a `std::gslice` cannot; none is added without a workload that needs it.
 
 The two permutations come from xstd-ints, which runs BMI2 where the target has it fast and portable kernels
 elsewhere, choosing at compile time. Neither is public here: no `std::ranges` algorithm packs selected elements, so
