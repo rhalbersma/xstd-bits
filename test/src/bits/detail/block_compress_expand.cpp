@@ -147,11 +147,8 @@ BOOST_AUTO_TEST_CASE(SliceMasksSelectEveryStrideFromEveryStart)
                                         for (auto const j : std::views::iota(0UZ, size)) {
                                                 expected[start + (j * stride)] = true;
                                         }
-                                        auto masks  = xstd::bits::detail::slice_masks<Block>(start, size, stride);
                                         auto blocks = std::vector<Block>(n / digits<Block>);
-                                        for (auto const k : std::views::iota(masks.first(), masks.last())) {
-                                                blocks[k] = masks.next();
-                                        }
+                                        xstd::bits::detail::slice_masks<Block>(start, size, stride).for_each([&](std::size_t k, Block mask) -> void { blocks[k] = mask; });
                                         BOOST_CHECK(bools_of(blocks) == expected);
                                 }
                         }
