@@ -245,15 +245,15 @@ public:
         [[nodiscard]] constexpr auto take(std::size_t count) noexcept
                 -> Block
         {
-                auto const buffer = static_cast<Block>(m_buffer);
+                auto bits = static_cast<Block>(m_buffer);
                 if (count <= m_avail) {
-                        m_buffer = shr_up_to_width(buffer, count);
+                        m_buffer = shr_up_to_width(bits, count);
                         m_avail -= count;
-                        return buffer;
+                        return bits;
                 }
                 // A count past what is held reaches into the next block, which a count within the source always has.
                 auto const next = m_blocks[m_next++];
-                auto const bits = static_cast<Block>(buffer | shl(next, m_avail));
+                bits            = static_cast<Block>(bits | shl(next, m_avail));
                 m_buffer        = shr_up_to_width(next, count - m_avail);
                 m_avail         = block_width<Block> - (count - m_avail);
                 return bits;
