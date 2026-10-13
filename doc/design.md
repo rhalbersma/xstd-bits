@@ -166,7 +166,7 @@ almost none of it. At a static width it needs none; at a run-time width it needs
 line where [container.reqmts]/68 draws it, so the concept states its own five requirements and borrows nothing.
 
 The name says *block container*, not *storage*: what an adaptor sits on is a different question, asked by
-`specialization_of_bit_container` and answered by name rather than by members
+`bit_block_container_type` and answered by name rather than by members
 ([one-storage](#one-storage)).
 
 ### the-const-reference
@@ -325,7 +325,7 @@ reading needs positional writes — while the concept asks only what the three *
 common. Union below, intersection across.
 
 **Nothing is constrained on it, and that is deliberate.** The adaptors admit their storage *nominally*, by
-`specialization_of_bit_container` ([one-storage](#one-storage)), and the structural question is a
+`bit_block_container_type` ([one-storage](#one-storage)), and the structural question is a
 different question: `std::bitset` and `boost::dynamic_bitset` both model the common vocabulary and neither
 is a storage this library wraps. Constraining an adaptor on the concept would turn *this is not one of ours*
 into *your type lacks `count()`*, which is the wrong diagnosis about the wrong type.
@@ -401,10 +401,11 @@ bit_fixed_set<256>(blocks)                    // {0, 2} — the values are block
 ```
 
 Behind an explicit constructor both compile, both succeed, and they disagree, a tag being the whole of what
-separates them. A name is what tells them apart at the call site, where the reader is. `std::bitset` spells its own exit `to_ullong` for the
-same reason and offers no conversion operator at all, and Boost.dynamic_bitset spells this pair `from_block_range`
-and `to_block_range`. Here the way in is the tag, which `bit_block_container` spells `assign_bits` one layer down, and the
-way out is `xstd::bit_convert`, one free function for every pair of widths, so no reading carries a member for it.
+separates them. A name is what tells them apart at the call site, where the reader is. `std::bitset` spells its own
+exit `to_ullong` for the same reason and offers no conversion operator at all, and Boost.dynamic_bitset spells this
+pair `from_block_range` and `to_block_range`. Here the way in is the tag, which `bit_block_container` spells
+`assign_bits` one layer down, and the way out is `xstd::bit_convert`, one free function for every pair of widths, so
+no reading carries a member for it.
 
 Neither is spelled with a type. `std::bitset` appears nowhere in the set adaptor: the two are templates
 constrained on `bits::detail::bit_layout<B, N>`, which admits two families: one whose layout the language states, and
@@ -976,22 +977,29 @@ join, and nothing stands in for it: a storage joins by being a `bit_block_contai
 and is spelled by the library alone. That is a real narrowing and it is deliberate — a trait would pay for a
 generality with no second instance ([the-interface-line](#the-interface-line)).
 
-**There is no local detector.** The obvious `is_specialization_of` names a template through a
-`template<class...>` parameter, and this storage is a type then a value, so a local detector would be a variable
-template specialized on `bit_block_container<Blocks, N>` plus a concept stripping the const. xstd-misc carries one
-concept per parameter shape instead, so the adaptors spell the constraint where they take the parameter:
+**The detector is local.** The obvious `is_specialization_of` names a template through a `template<class...>`
+parameter, and this storage is a type then a value, so it does not apply. The adaptors are constrained instead on
+`bit_block_container_type`, a concept over a variable template specialized on `bit_block_container<Blocks, N>`,
+which strips the const a view over a const owner names:
 
 ```cpp
-template<specialization_of_TN<bits::detail::bit_block_container> Bits, ownership Own>
+template<class T>
+inline constexpr bool is_bit_block_container_v = false;
+
+template<class Blocks, std::size_t N>
+inline constexpr bool is_bit_block_container_v<bit_block_container<Blocks, N>> = true;
+
+template<class T>
+concept bit_block_container_type = is_bit_block_container_v<std::remove_const_t<T>>;
+
+template<bit_block_container_type Bits, storage Store = storage::owned, class Derived = void, class Key = std::size_t, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, class Compare = std::less<Key>>
 class set_adaptor;
 ```
 
-Not an alias for it. A local name for a library concept applied to a local template is a second thing to
-learn that says nothing the spelling does not, and it hides which part is general: `TN` is the shape, the
-storage is the argument. `TN` is spelt `<class U, U...>` rather than `<class, auto...>`, which would also
-take a value typed by the type, and it strips the const a view over a const owner names, which is all a local
-concept would add. A constrained parameter is no obstacle:
-`owned_bit_blocks Blocks` binds it as a bare `class` would.
+A generic concept for the shape would have to be spelt `<class U, U...>` rather than `<class, auto...>`, which
+would also take a value typed by the type, and would still need the const stripped; two specializations and a
+concept state the one fact directly. A constrained parameter is no obstacle: `owned_bit_blocks Blocks` binds it as
+a bare `class` would.
 
 ### what-the-readings-share
 
@@ -1476,9 +1484,9 @@ takes, so it is an uncovered branch per instantiation ([per-instantiation-slots]
 
 `front()` and `back()` on the sequence reading are four lines apiece for this, and no other reason. Their two
 preconditions, each written on the line of the call it guards, cost seven branches across the deducing-this
-instantiations and take the gate from 100% to 99.2%, where the same asserts in `erase` and `index_of` -- each on a line of its own
--- cost nothing at all. The rule is worth stating because the failure is silent at the point of writing: the
-code is right, the assert fires as intended, and only the gate says otherwise.
+instantiations and take the gate from 100% to 99.2%, where the same asserts in `erase` and `index_of` -- each on a
+line of its own -- cost nothing at all. The rule is worth stating because the failure is silent at the point of
+writing: the code is right, the assert fires as intended, and only the gate says otherwise.
 
 ### while-not-for
 
@@ -1673,7 +1681,7 @@ in both ownerships ([one-storage](#one-storage)). Each takes the parameters its 
 others: `set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>` and `sequence_adaptor<Bits, Store, W, Derived>`, the set reading
 never windowed and the only one with a key.
 
-The two are internal: the eight owners and the three views are the public surface, and no public template
+The two are internal: the owners and the three views are the public surface, and no public template
 argument list, deduction guide or specialization spells an adaptor. Every public name is a class deriving from
 one of them, passing itself as an argument so that the adaptor names it back: `basic_bit_fixed_set<Key, B, N, KeyMapping, Compare>` derives from
 `set_adaptor<bit_block_container<std::array<B, K>, N>, storage::owned, basic_bit_fixed_set<Key, B, N, KeyMapping, Compare>, Key, KeyMapping, Compare>`. The short layer stays
@@ -1723,7 +1731,7 @@ new column is a new owner here, not a parameter a user sets.
 The grid has two container adaptors, one per reading -- `set_adaptor` and `sequence_adaptor`
 in `xstd::bits::detail`, in the manner of `std::stack<T, Container>` and `std::flat_set<Key, Compare, KeyContainer>`
 -- each over a `bit_block_container` open to any `owned_bit_blocks` without a new class for it. They are
-internal. The public surface is the eight owners and the three views, and an adaptor over a storage no owner
+internal. The public surface is the owners and the three views, and an adaptor over a storage no owner
 names is reached from inside the library and its tests alone.
 
 **The owners are classes deriving from the adaptors, not aliases over them.** Each passes itself as its adaptor's
@@ -1763,8 +1771,8 @@ leg (#228, stand-in types, one `static_assert` per case) finds three rules for t
 MSVC also refuses alias deduction through an alias `basic_bit_fixed_set` itself, with `C7602`, and that is what
 makes the owners classes. A class takes its guides as its own and needs none of the three rules: the guides name
 `basic_bit_array<Block, N>` rather than computing a block count, and `bit_fixed_set<N>` is an alias of
-`basic_bit_fixed_set<std::size_t, std::size_t, N>`, one alias over a class, the depth every compiler deduces through. The one-block
-guides need no defaulted count either. The views are a separate question from the owners
+`basic_bit_fixed_set<std::size_t, std::size_t, N>`, one alias over a class, the depth every compiler deduces
+through. The one-block guides need no defaulted count either. The views are a separate question from the owners
 ([the-views-are-the-adaptors](#the-views-are-the-adaptors)).
 
 ### owning-is-ours
@@ -2452,11 +2460,14 @@ proxies, which move and swap. And `std::array`'s aggregate initialization as an 
 on the static owner, the listed values leading and the rest false, a longer list being the error it is on
 `std::array`.
 
-Three things are not offered, each because packed bits have no address. `data()`, and the `pointer` and
-`const_pointer` typedefs, name what a proxy cannot give; the checklist leaves them out of
-`[container.reqmts]`'s typedefs rather than inventing a pointer to a bit. `std::array`'s tuple interface,
-`get<I>`, `tuple_size` and `tuple_element`, is left out with them: it is `std::array`'s claim to be a
-product of `N` objects, and a packed sequence is one object. `std::hash` is asked of the vector alone,
+`data()` is not offered, because packed bits have no address, and the `pointer` and `const_pointer` typedefs are
+`void`: they name what a proxy cannot give, and the checklist leaves them out of `[container.reqmts]`'s typedefs
+rather than inventing a pointer to a bit. `std::array`'s tuple interface is offered on `bit_array` as far as a proxy
+carries it. `std::tuple_size` is `N`; `std::tuple_element<I>` names the proxy, `reference`, or `const_reference` for
+a const array, rather than `bool`; and `get<I>` is four overloads found by ADL, one per value category, each
+constrained on `I < N` and returning the proxy by value, `std::get` being the standard's to declare. The two
+specializations are written for `basic_bit_array` itself, forwarding to the adaptor's, since a partial
+specialization on the adaptor never matches a class derived from it. `std::hash` is asked of the vector alone,
 `std::array` having none, while `bit_array` hashes as every owner does
 ([the-hashing-invariant](#the-hashing-invariant)).
 
@@ -2601,10 +2612,11 @@ deduction guide for `bit_span(bit_set{})`, and `is_constructible_v` false.
 It is the constraint that does the work, so the friendships follow it rather than the other way round:
 `set_adaptor` befriends `set_adaptor` and `sequence_adaptor` befriends `sequence_adaptor`.
 
-What this gives up is real and small: `bit_span(some_bit_set)` does not compile. Nothing in the library or the
-tests wants it — an assertion that it compiles would assert the mechanism, not a use — and a caller who genuinely wants the other reading of an owner's bits is asking for a conversion between
-owners, which is an owner's to offer explicitly and not a view's to perform silently. None exists today; if
-one ever should, it belongs beside the containers, where it can be named and its cost seen.
+What this gives up is real and small: `bit_span(some_bit_set)` does not compile. Nothing in the library or the tests
+wants it — an assertion that it compiles would assert the mechanism, not a use — and a caller who genuinely wants
+the other reading of an owner's bits is asking for a conversion between owners, which is an owner's to offer
+explicitly and not a view's to perform silently. None exists today; if one ever should, it belongs beside the
+containers, where it can be named and its cost seen.
 
 ### the-interface-line
 
@@ -2613,8 +2625,10 @@ rule, and it is a test rather than a judgement: `bit_fixed_set` is spelled, `bit
 `set_adaptor`'s nested `basic_reference` is reached only through the `iterator` and `reference` typedefs and is
 spelled by nobody.
 
-What the rule keeps on the interface side: **the six containers and the three views**, with the concept they are
-named by (`bit_blocks`), the tag, the conversion and the `bit_` algorithms over them. The common vocabulary is a
+What the rule keeps on the interface side: **the eleven owners and the three views** -- the set and sequence
+readings over four storages each, the small ones among them under `ext/`, and the valarray reading over three --
+with the concepts they are named by (`bit_blocks` and the mapping concepts), the tag, the conversion, the
+transformations and the `bit_` algorithms over them. The common vocabulary is a
 test concept rather than a public one: nothing is constrained on it, so it is a claim about `std::bitset` and
 `boost::dynamic_bitset` rather than an interface ([the-common-vocabulary](#the-common-vocabulary)).
 
@@ -2637,7 +2651,8 @@ counter is that a test is not a user; a test tree that mirrors the library, `det
 an implementation looks like.
 
 **Enforced, not asserted.** `test/consumer/main.cpp` includes `<xstd/bits.hpp>` and no other header of ours,
-and names every type above: the six containers and the three views, and nothing from `detail/`. It
+and names six owners, the set and sequence readings' over the fixed, bounded and dynamic storages, and the
+three views, and nothing from `detail/`; the valarray owners and the `ext/` small owners are not among them. It
 pattern-matches each container against its reading — bidirectional with a `key_type`, or random-access over
 `bool` — for all six and over the three views besides, which is the
 claim [the-views-are-the-adaptors](#the-views-are-the-adaptors) rests on, asked from outside and in the
@@ -2854,26 +2869,28 @@ fastest, and the platform decides how wide that is. glibc on x86-64 makes `std::
 
 `bit_underlying<X>` asks more of `X`: a set whose `key_type` is an enumeration or a built-in integer type with an
 unsigned counterpart, which excludes `enum : bool`, `bool`, the character types and every class key, a `std::bitset`
-mask among them. Its block is the word an existing field or ABI already stores those flags in, `std::make_unsigned_t`
-of the enumeration's underlying type or of the integer type itself, and named `underlying_block_t<K>` beside
-`least_block_t` and `fast_block_t`: `underlying_block_t<int>` is `unsigned`, which is what an `int` field of flags
-is read as. The rule is by type, not by mapping, so a set of positions has one too: `bit_fixed_set<N>` is keyed by
-`std::size_t`, whose word is its own, and `bit_underlying<bit_least<bit_fixed_set<9>>>` is `bit_fixed_set<9>` again. That is what a flag set wants at a boundary:
-`bit_underlying<bit_fast<bit_flag_set<E>>>` is back in `E`'s own word, `bit_underlying<bit_flag_set<E, 9>>` holds its
-nine flags in that word rather than the two bytes `bit_least` chose, and either way the set's block is the mask's
-representation bit for bit, so `xstd::bit_convert`, `from_blocks` and `std::bit_cast` to and from that word are copies.
-For a flag set at the mask's full width, the default, `bit_least` already chose that word, and `bit_underlying` is the
-identity; it is the transformation that says why, rather than one that happens to agree.
-The precedent for the form is `std::make_unsigned_t<T>`, a type in and a related type out, and C++26's `std::simd`,
-whose `rebind_t<U, V>` changes the element type of a `basic_simd` and `resize_t<N, V>` its width, each keeping the
-other, and `bit_rebind` and `bit_resize` take the names and the argument order of that pair. Each owner specializes
-one exposition-only trait that names its block, its width where its type has one, and itself over another block or
-width; the two aliases are written once against that trait, and the four choices once against the two. Spelling
-the same choices as namespaces, `aligned::bit_fixed_set<N>` beside `xstd::bit_fixed_set<N>`, would re-declare every
-class template's parameter list in each namespace with its own defaults and constraints, and such copies drift: an
-`aligned::basic_bit_fixed_set` taking an unconstrained `Compare` where the class takes only a direction surfaces a
-misuse inside the class rather than at the name. A transformation has no parameter list of its own to keep in step, and so cannot drift; it also
-applies to a type a user has already named, mapping and comparator included, rather than asking for them again.
+mask among them. Its block is the word an existing field or ABI already stores those flags in,
+`std::make_unsigned_t` of the enumeration's underlying type or of the integer type itself, and named
+`underlying_block_t<K>` beside `least_block_t` and `fast_block_t`: `underlying_block_t<int>` is `unsigned`, which is
+what an `int` field of flags is read as. The rule is by type, not by mapping, so a set of positions has one too:
+`bit_fixed_set<N>` is keyed by `std::size_t`, whose word is its own, and
+`bit_underlying<bit_least<bit_fixed_set<9>>>` is `bit_fixed_set<9>` again. That is what a flag set wants at a
+boundary: `bit_underlying<bit_fast<bit_flag_set<E>>>` is back in `E`'s own word,
+`bit_underlying<bit_flag_set<E, 9>>` holds its nine flags in that word rather than the two bytes `bit_least` chose,
+and either way the set's block is the mask's representation bit for bit, so `xstd::bit_convert`, `from_blocks` and
+`std::bit_cast` to and from that word are copies. For a flag set at the mask's full width, the default, `bit_least`
+already chose that word, and `bit_underlying` is the identity; it is the transformation that says why, rather than
+one that happens to agree. The precedent for the form is `std::make_unsigned_t<T>`, a type in and a related type
+out, and C++26's `std::simd`, whose `rebind_t<U, V>` changes the element type of a `basic_simd` and `resize_t<N, V>`
+its width, each keeping the other, and `bit_rebind` and `bit_resize` take the names and the argument order of that
+pair. Each owner specializes one exposition-only trait that names its block, its width where its type has one, and
+itself over another block or width; the two aliases are written once against that trait, and the four choices once
+against the two. Spelling the same choices as namespaces, `aligned::bit_fixed_set<N>` beside
+`xstd::bit_fixed_set<N>`, would re-declare every class template's parameter list in each namespace with its own
+defaults and constraints, and such copies drift: an `aligned::basic_bit_fixed_set` taking an unconstrained `Compare`
+where the class takes only a direction surfaces a misuse inside the class rather than at the name. A transformation
+has no parameter list of its own to keep in step, and so cannot drift; it also applies to a type a user has already
+named, mapping and comparator included, rather than asking for them again.
 
 They compose, and the order matters. `bit_align<bit_least<bit_fixed_set<3>>>` picks the byte first and then fills
 it, `basic_bit_fixed_set<std::size_t, std::uint8_t, 8>` in one byte: least first, then align, is the compact form
@@ -3346,13 +3363,13 @@ arithmetic. This one has nothing to stand between.
 
 `blocks_for` is **public** for that reason, and the claim is a `static_assert`:
 `blocks_for(SIZE_MAX) == max_num_blocks + 1`, one block more than the widest whole number of them, where the
-rounding spelling answers one. Asserting it by *growing* to such a width instead asks `std::allocator` for 2^61 bytes,
-and two of this tree's CI legs will not answer that question -- a sanitized build **aborts** on a request that
-size (`allocation-size-too-big`) rather than reporting `bad_alloc`, and clang at `-O2` elides the `new`/`delete`
-pair of a discarded temporary, so `(void)V(SIZE_MAX)` never allocates and never throws. Both were measured on
-this tree, on exactly that assertion, across nine CI jobs. The compile-time form is the better one anyway: it
-names the count the rounding spelling gets wrong rather than inferring it from an exception, and it holds on
-every leg.
+rounding spelling answers one. Asserting it by *growing* to such a width instead asks `std::allocator` for 2^61
+bytes, and two of this tree's CI legs will not answer that question -- a sanitized build **aborts** on a request
+that size (`allocation-size-too-big`) rather than reporting `bad_alloc`, and clang at `-O2` elides the
+`new`/`delete` pair of a discarded temporary, so `(void)V(SIZE_MAX)` never allocates and never throws. Both were
+measured on this tree, on exactly that assertion, across nine CI jobs. The compile-time form is the better one
+anyway: it names the count the rounding spelling gets wrong rather than inferring it from an exception, and it holds
+on every leg.
 
 The **refusal** still wants looking at, and `std::inplace_vector` is where it can be: it is the one block
 container here that refuses a width without asking anyone for memory, so the refusal arrives at a size a test can
@@ -3783,11 +3800,11 @@ to satisfy — there is nowhere to put the key — and each of the three storage
 | an inplace extent | grows within its capacity; past it the blocks say `std::bad_alloc` |
 | a static extent | `std::out_of_range`, which is what `std::bitset<N>::set` says for a position past `N` |
 
-The three differ because the reasons do — a domain, a capacity, a representable size — but none of them is
-silence, which at a static extent would be a write through a block index the array does not have. Leaving it
-undefined for a performance benefit does not survive measurement: on the sieve at `N = 2^16`, GCC 14 `-O3 -march=native`, best of twenty-five, 188.0µs unchecked
-against 188.1µs checked, and 75.1µs against 75.1µs over 65536 inserts. The comparison is against a compile-time
-constant and is never taken; it costs nothing to keep.
+The three differ because the reasons do — a domain, a capacity, a representable size — but none of them is silence,
+which at a static extent would be a write through a block index the array does not have. Leaving it undefined for a
+performance benefit does not survive measurement: on the sieve at `N = 2^16`, GCC 14 `-O3 -march=native`, best of
+twenty-five, 188.0µs unchecked against 188.1µs checked, and 75.1µs against 75.1µs over 65536 inserts. The comparison
+is against a compile-time constant and is never taken; it costs nothing to keep.
 
 An enumerator's `^=`, which toggles one key, is the same write and answers the same way. A key past the width is
 absent, so the toggle that admits it **is** the insert that admits it, and it grows where insert grows.
@@ -3873,10 +3890,11 @@ again. The fifth, the reversed erase range, is caught nowhere below: both of its
 so nothing there has anything to object to, and it grows a four-element sequence to six in a debug build as
 readily as in a release one.
 
-The iterator preconditions are said **once**, in `index_of`, which is the one place a caller's iterator becomes
-an index and is reached by all five members that take one. Half of that precondition is the iterator's own: `operator-` and `operator<=>` assert `m_ptr == m_ptr`, so an iterator into another sequence never arrives
-here. What is left is the range, `cbegin() <= position` and `position <= cend()`, and past either end the
-subtraction below it is a `size_type` that wraps or an index the rebuild then writes through.
+The iterator preconditions are said **once**, in `index_of`, which is the one place a caller's iterator becomes an
+index and is reached by all five members that take one. Half of that precondition is the iterator's own: `operator-`
+and `operator<=>` assert `m_ptr == m_ptr`, so an iterator into another sequence never arrives here. What is left is
+the range, `cbegin() <= position` and `position <= cend()`, and past either end the subtraction below it is a
+`size_type` that wraps or an index the rebuild then writes through.
 
 `erase(first, last)` adds the one thing neither iterator says on its own -- that they are in that order -- and
 `erase(position)` the one `[sequence.reqmts]` asks of the single-position form, that the position is
@@ -4006,19 +4024,25 @@ GCC 15 and Clang 22 both read it so.
 template arguments -- the storage, the derived container, the key mapping and the comparator -- never reach them:
 
 ```cpp
-class sequence_adaptor          // over Bits, Store, W, Derived, E
+template<bit_block_container_type Bits, storage Store, window W, class Derived, std::size_t E>
+class sequence_adaptor
 {
-        template<bool IsConst> class basic_iterator;      // * yields basic_reference<IsConst>
-        template<bool IsConst> class basic_reference;     // & yields basic_iterator<IsConst>
-        using iterator       = basic_iterator<std::is_const_v<Bits>>;
-        using const_iterator = basic_iterator<true>;
+        template<bool IsConst> class basic_reference;      // & yields basic_iterator<IsConst>
+        template<bool IsConst> class basic_iterator;       // * yields basic_reference<IsConst>
+        using reference       = basic_reference<std::is_const_v<Bits>>;
+        using const_reference = basic_reference<true>;
+        using iterator        = basic_iterator<std::is_const_v<Bits>>;
+        using const_iterator  = basic_iterator<true>;
 };
 
-class set_adaptor               // over Bits, Store, Derived, Key, KeyMapping, Compare
+template<bit_block_container_type Bits, storage Store, class Derived, class Key, bit_index_mapping<Key> KeyMapping, class Compare>
+class set_adaptor
 {
-        template<class Value = Key> class basic_iterator; // * yields basic_reference<Value>
         template<class Value = Key> class basic_reference; // & yields basic_iterator<Value>
-        using iterator = basic_iterator<>;
+        template<class Value = Key> class basic_iterator;  // * yields basic_reference<Value>
+        using reference      = basic_reference<>;
+        using iterator       = basic_iterator<>;
+        using const_iterator = iterator;
 };
 ```
 
@@ -4233,9 +4257,9 @@ every variant**, identical to the digit, because a subject that is a local of a 
 propagated the way clang propagates it above. A stand-in optimizes away the thing under test, and the benchmark's
 own objects say the opposite.
 
-The same defect sinks a harness that passes the subject to one shared timing function as a `Subject const&`:
-that routes the **owner** through a pointer as well, makes every variant indirect, and reports no gap. A subject has to be a local of the function that runs the loop, as the
-benchmark's variants are, or the harness measures nothing.
+The same defect sinks a harness that passes the subject to one shared timing function as a `Subject const&`: that
+routes the **owner** through a pointer as well, makes every variant indirect, and reports no gap. A subject has to
+be a local of the function that runs the loop, as the benchmark's variants are, or the harness measures nothing.
 
 What is left over is small and unexplained: 491 extra instructions where the per-step `lea` accounts for 410,
 so about 80 sit in the block-advance path and the prologue, and `sequence count` at 4096 bits is bimodal --
@@ -4244,11 +4268,12 @@ the third variant back on the owner's time. Only the middle variant moves, and b
 Code layout does not account for it, a byte-identical twin of the owner case measuring layout at about a
 percent here, so it stays recorded rather than explained. One run would have made it a finding.
 
-Two things about the measurement itself, because each is easy to get wrong. **Every subject goes
-through `DoNotOptimize` before the loop, owners included.** Without that an owner is a local the compiler
-folds straight through: `count()` on one block measured 0.16 ns, half a cycle, which is not a faster reading
-but no reading at all, while a view's pointer blocks the same folding -- so the comparison measured the
-folding. And **the ladder runs four blocks to 256, with no one-block rung**: a single `popcount` is one cycle, so a one-cycle difference between two variants reads as +100% and means nothing.
+Two things about the measurement itself, because each is easy to get wrong. **Every subject goes through
+`DoNotOptimize` before the loop, owners included.** Without that an owner is a local the compiler folds straight
+through: `count()` on one block measured 0.16 ns, half a cycle, which is not a faster reading but no reading at all,
+while a view's pointer blocks the same folding -- so the comparison measured the folding. And **the ladder runs four
+blocks to 256, with no one-block rung**: a single `popcount` is one cycle, so a one-cycle difference between two
+variants reads as +100% and means nothing.
 
 ### swap-goes-through-adl
 
@@ -4272,9 +4297,9 @@ friend** `swap(x, y)` that forwards to it. One rule, no exceptions -- the storag
 container and no requirement asks it for either.
 
 The storage's member has no caller but the friend, which is true and is no reason to fold it away: the friend
-calling the member *is* the design, so the member is the primitive rather than dead weight, and deleting it
-would buy one fewer function at the price of the storage reading differently from the adaptors. The adaptors keep the member because a container
-requirement asks for it; the storage keeps it so the tree has one shape.
+calling the member *is* the design, so the member is the primitive rather than dead weight, and deleting it would
+buy one fewer function at the price of the storage reading differently from the adaptors. The adaptors keep the
+member because a container requirement asks for it; the storage keeps it so the tree has one shape.
 
 Hidden rather than at namespace scope, matching `==` and `<=>` -- `ranges::swap` finds a hidden friend by ADL
 exactly as it would a namespace-scope template,
@@ -4688,8 +4713,9 @@ the degenerate ones, and two window widths, so a window shorter than its tail is
 swallows it. The bounds stop at `N` because one container under test is `N` bits wide, and a fixed width is a
 capacity ([width-is-capacity](#width-is-capacity)).
 
-`generate_candidates` is total in `n`. `iota(2, n)` is a precondition violation below 2, which asking the sieve
-for the primes under nothing would reach -- a question with an answer, none, rather than a contract to break. The two unbounded sieves compute their own inner bounds, so a guard there is worth more than a comment.
+`generate_candidates` is total in `n`. `iota(2, n)` is a precondition violation below 2, which asking the sieve for
+the primes under nothing would reach -- a question with an answer, none, rather than a contract to break. The two
+unbounded sieves compute their own inner bounds, so a guard there is worth more than a comment.
 
 ### the-sequence-ladder
 
@@ -4759,16 +4785,16 @@ proxy, the key for the set proxy — which is the shape
 `operator==` or an `operator<=>`: every comparison is the built-in one, or the key's own, reached through that
 one conversion, so it serves two proxies over **different** Blocks exactly as it serves two over the same one.
 
-Neither proxy carries a second, templated implicit conversion, to any class type implicitly constructible from
-the `value_type`, because any such class with a non-template `operator==` in a namespace
-associated with the proxy — its Block's, its key's, its key mapping's — gives every comparison a second,
-equally good reading: convert both sides to the `value_type`, or convert both sides to that class. Two
-user-defined conversions of equal rank tie, and the tie costs `equality_comparable` and with it
-`std::ranges::equal`. The 128-bit integer classes are one instance, a Block naming its own namespace; excluding
-`xstd::integer` and adding comparisons exact in both operands would patch that instance and leave every other
-one open, a user's strong type in a key-mapping namespace among them. A set's comparator is no way in: it reaches
-the proxy only as a direction. What going without it costs is copy-initializing a class from a proxy, `C c = *it;`, which needs two user-defined conversions;
-direct-initialization, `C c(*it);`, needs one and still works.
+Neither proxy carries a second, templated implicit conversion, to any class type implicitly constructible from the
+`value_type`, because any such class with a non-template `operator==` in a namespace associated with the proxy — its
+Block's, its key's, its key mapping's — gives every comparison a second, equally good reading: convert both sides to
+the `value_type`, or convert both sides to that class. Two user-defined conversions of equal rank tie, and the tie
+costs `equality_comparable` and with it `std::ranges::equal`. The 128-bit integer classes are one instance, a Block
+naming its own namespace; excluding `xstd::integer` and adding comparisons exact in both operands would patch that
+instance and leave every other one open, a user's strong type in a key-mapping namespace among them. A set's
+comparator is no way in: it reaches the proxy only as a direction. What going without it costs is copy-initializing
+a class from a proxy, `C c = *it;`, which needs two user-defined conversions; direct-initialization, `C c(*it);`,
+needs one and still works.
 
 Of the namespaces that list names, only the key's is associated with a proxy
 ([the-adl-firewall](#the-adl-firewall)), so the Block's contributes no candidate: Boost.Int128's non-template
