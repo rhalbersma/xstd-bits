@@ -9,7 +9,6 @@
 #include <xstd/bits/bit_valarray.hpp>       // bit_valarray
 #include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <concepts>                         // regular
-#include <cstddef>                          // size_t
 #include <type_traits>                      // is_trivially_copyable_v
 #include <valarray>                         // slice
 
