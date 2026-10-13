@@ -2657,11 +2657,12 @@ name throughout `test/`, which is a real signal, and demoting it makes the test 
 counter is that a test is not a user; a test tree that mirrors the library, `detail/` included, is what testing
 an implementation looks like.
 
-**Enforced, not asserted.** `test/consumer/main.cpp` includes `<xstd/bits.hpp>` and no other header of ours,
-and names six owners, the set and sequence readings' over the fixed, bounded and dynamic storages, and the
-three views, and nothing from `detail/`; the valarray owners and the `ext/` small owners are not among them. It
-pattern-matches each container against its reading — bidirectional with a `key_type`, or random-access over
-`bool` — for all six and over the three views besides, which is the
+**Enforced, not asserted.** `test/consumer/main.cpp` includes `<xstd/bits.hpp>` and, the `ext/` column being
+opt-in, `<xstd/bits/ext/boost.hpp>`, and no other header of ours. It names the eleven owners, the set and sequence
+readings' over the fixed, bounded, small and dynamic storages and the valarray reading's over the fixed, bounded and
+dynamic ones, and the three views, and nothing from `detail/`. It pattern-matches each container against its
+reading — bidirectional with a `key_type`, random-access over `bool`, or random-access over `bool` with an `==` that
+answers an array rather than a `bool` — for all eleven and over the three views besides, which is the
 claim [the-views-are-the-adaptors](#the-views-are-the-adaptors) rests on, asked from outside and in the
 standard's vocabulary rather than in ours. The view names it reaches by deduction, which is both the only way
 in and the thing the classes are for. The three `consumption`
