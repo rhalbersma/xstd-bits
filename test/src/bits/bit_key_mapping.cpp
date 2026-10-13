@@ -14,7 +14,7 @@
 #include <xstd/bits/bit_fixed_set.hpp>                        // basic_bit_fixed_set
 #include <xstd/bits/bit_key_mapping.hpp>                      // bit_find_mapping, bit_key_mapping, bit_range_mapping, enum_traits
 #include <xstd/bits/detail/set_adaptor.hpp>                   // admits_width
-#include <xstd/ints/cstdint.hpp>                              // int128
+#include <xstd/ints/cstdint.hpp>                              // int128, uint128
 #include <xstd/ints/limits.hpp>                               // numeric_limits
 #include <boost/test/unit_test.hpp>                           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                          // min, ranges::find
@@ -209,7 +209,7 @@ BOOST_AUTO_TEST_CASE(AFarKeyWiderThanThePositionStaysOutside)
 #ifdef TEST_HAS_UINT128
         using wider = xstd::bit_range_mapping<xstd::int128, xstd::int128{-50}, 100UZ>;
         BOOST_CHECK(not wider::is_key(xstd::numeric_limits<xstd::int128>::min()));
-        BOOST_CHECK(not wider::is_key(static_cast<xstd::int128>(xstd::int128{-50} + (xstd::int128{1} << 64U))));
+        BOOST_CHECK(not wider::is_key(static_cast<xstd::int128>(xstd::int128{-50} + static_cast<xstd::int128>(xstd::uint128{1} << 64U))));
         BOOST_CHECK(wider::is_key(xstd::int128{49}));
 #endif
 }
