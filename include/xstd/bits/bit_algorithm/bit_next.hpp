@@ -1,0 +1,35 @@
+//          Copyright Rein Halbersma 2014-2026.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE_1_0.txt or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
+
+#ifndef XSTD_BITS_BIT_ALGORITHM_BIT_NEXT_HPP
+#define XSTD_BITS_BIT_ALGORITHM_BIT_NEXT_HPP
+
+#include <xstd/bits/bit_algorithm/bit_advance.hpp>      // bit_advance
+#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // key_iterator
+#include <iterator>                                     // iter_difference_t
+
+namespace xstd {
+
+// std::ranges::next(it, n) over a set's keys, through bit_advance.
+template<bits::detail::key_iterator I>
+[[nodiscard]] constexpr auto bit_next(I it, std::iter_difference_t<I> n) noexcept
+        -> I
+{
+        xstd::bit_advance(it, n);
+        return it;
+}
+
+// std::ranges::next(it, n, bound), stopping at bound.
+template<bits::detail::key_iterator I>
+[[nodiscard]] constexpr auto bit_next(I it, std::iter_difference_t<I> n, I bound) noexcept
+        -> I
+{
+        static_cast<void>(xstd::bit_advance(it, n, bound));
+        return it;
+}
+
+} // namespace xstd
+
+#endif // XSTD_BITS_BIT_ALGORITHM_BIT_NEXT_HPP

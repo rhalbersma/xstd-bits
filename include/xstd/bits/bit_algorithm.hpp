@@ -44,6 +44,12 @@
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp> // IWYU pragma: export; bit_intersects
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>   // IWYU pragma: export; bit_disjoint
 
+// The set reading's iterator operations, rank and select: whole blocks skipped by their popcount.
+#include <xstd/bits/bit_algorithm/bit_advance.hpp>  // IWYU pragma: export; bit_advance
+#include <xstd/bits/bit_algorithm/bit_next.hpp>     // IWYU pragma: export; bit_next
+#include <xstd/bits/bit_algorithm/bit_prev.hpp>     // IWYU pragma: export; bit_prev
+#include <xstd/bits/bit_algorithm/bit_distance.hpp> // IWYU pragma: export; bit_distance
+
 // The set reading's results, each the set range-v3's view of its name would hold, which an operator spells.
 #include <xstd/bits/bit_algorithm/bit_set_intersection.hpp>         // IWYU pragma: export; bit_set_intersection
 #include <xstd/bits/bit_algorithm/bit_set_union.hpp>                // IWYU pragma: export; bit_set_union
