@@ -19,10 +19,10 @@
 #include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_small_set.hpp>              // basic_bit_small_set
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // owned_storage, storage
 #include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <algorithm>                                // sort
 #include <array>                                    // array
 #include <cstddef>                                  // size_t
@@ -80,8 +80,19 @@ using all = decltype(std::tuple_cat(std::declval<owners>(), std::declval<views>(
 // The same views over const blocks, which read the keys and write none: a clause asks them only what they lack.
 using const_views = std::tuple<xstd::bit_set_view<std::array<std::uint8_t, 3> const, 17>, xstd::bit_set_view<std::vector<std::uint64_t> const>>;
 
+#ifdef XSTD_BITS_SMALL_VECTOR_ABSL
+
+// absl::InlinedVector ignores the propagation traits, so the small sets take no stateful allocator there.
+using small_ledgered = std::tuple<>;
+
+#else
+
+using small_ledgered = std::tuple<xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint64_t>>>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
+
+#endif
+
 // The owners that take an allocator, under one that keeps a ledger and refuses on request, std::set first.
-using ledgered = std::tuple<std::set<std::size_t, std::less<>, test::container::non_propagating<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_set<std::size_t, std::uint64_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint64_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint64_t>>>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
+using ledgered = decltype(std::tuple_cat(std::declval<std::tuple<std::set<std::size_t, std::less<>, test::container::non_propagating<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_set<std::size_t, std::uint64_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint64_t>>>>(), std::declval<small_ledgered>())); // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
 
 } // namespace test::spec::set
 

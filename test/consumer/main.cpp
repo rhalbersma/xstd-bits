@@ -5,7 +5,7 @@
 
 // The gate on the interface line.
 
-#include <xstd/bits.hpp> // bit_array, bit_bounded_set, bit_bounded_vector, bit_convert, bit_fixed_set, bit_set, bit_set_view, bit_span, bit_subspan, bit_vector
+#include <xstd/bits.hpp> // bit_array, bit_bounded_set, bit_bounded_vector, bit_convert, bit_fixed_set, bit_set, bit_set_view, bit_small_set, bit_small_vector, bit_span, bit_subspan, bit_vector
 #include <array>         // array
 #include <concepts>      // copyable, default_initializable, equality_comparable, regular, same_as, totally_ordered
 #include <cstddef>       // size_t
@@ -55,6 +55,10 @@ static_assert(is_sequence_reading<subspan_of_blocks>);
 // The bounded column, over whichever inline storage the standard library leaves it.
 static_assert(is_set_reading<xstd::bit_bounded_set<100>>);
 static_assert(is_sequence_reading<xstd::bit_bounded_vector<100>>);
+
+// The small column, over whichever small-vector storage the build chose.
+static_assert(is_set_reading<xstd::bit_small_set<100>>);
+static_assert(is_sequence_reading<xstd::bit_small_vector<100>>);
 
 } // namespace consumer
 

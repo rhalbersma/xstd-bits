@@ -3,38 +3,38 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/container/allocator.hpp>             // basic_guarantee, keeps_a_ledger, ledger, ledger_allocator, non_propagating, propagating, strong_guarantee, user_allocator
-#include <test/flat_set.hpp>                        // is_flat_set
-#include <test/for_each_type.hpp>                   // for_each_type
-#include <test/sequence/factory.hpp>                // make_sequence, stripes
-#include <test/spec/rejection.hpp>                  // has_allocator_constructor, has_allocator_extended_copy, has_allocator_extended_move, has_allocator_type, has_get_allocator
-#include <test/spec/sequence.hpp>                   // all
-#include <test/spec/set.hpp>                        // all, const_views
-#include <test/spec/span.hpp>                       // all
-#include <xstd/bits/bit_array.hpp>                  // bit_array
-#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
-#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <array>                                    // array
-#include <concepts>                                 // same_as
-#include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint64_t, uint8_t
-#include <functional>                               // less
-#include <initializer_list>                         // initializer_list
-#include <iterator>                                 // prev
-#include <memory>                                   // allocator, allocator_traits, uses_allocator_v
-#include <memory_resource>                          // memory_resource, monotonic_buffer_resource, polymorphic_allocator, unsynchronized_pool_resource
-#include <new>                                      // bad_alloc
-#include <ranges>                                   // from_range, iota
-#include <scoped_allocator>                         // scoped_allocator_adaptor
-#include <set>                                      // pmr::set, set
-#include <tuple>                                    // tuple, tuple_cat
-#include <type_traits>                              // is_constructible_v, is_nothrow_constructible_v
-#include <utility>                                  // declval, move
-#include <vector>                                   // pmr::vector, vector
+#include <test/container/allocator.hpp>   // basic_guarantee, keeps_a_ledger, ledger, ledger_allocator, non_propagating, propagating, strong_guarantee, user_allocator
+#include <test/flat_set.hpp>              // is_flat_set
+#include <test/for_each_type.hpp>         // for_each_type
+#include <test/sequence/factory.hpp>      // make_sequence, stripes
+#include <test/spec/rejection.hpp>        // has_allocator_constructor, has_allocator_extended_copy, has_allocator_extended_move, has_allocator_type, has_get_allocator
+#include <test/spec/sequence.hpp>         // all
+#include <test/spec/set.hpp>              // all, const_views
+#include <test/spec/span.hpp>             // all
+#include <xstd/bits/bit_array.hpp>        // bit_array
+#include <xstd/bits/bit_key_mapping.hpp>  // bit_key_mapping
+#include <xstd/bits/bit_set.hpp>          // basic_bit_set, bit_set
+#include <xstd/bits/bit_small_set.hpp>    // basic_bit_small_set
+#include <xstd/bits/bit_small_vector.hpp> // basic_bit_small_vector
+#include <xstd/bits/bit_vector.hpp>       // basic_bit_vector, bit_vector
+#include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <array>                          // array
+#include <concepts>                       // same_as
+#include <cstddef>                        // size_t
+#include <cstdint>                        // uint64_t, uint8_t
+#include <functional>                     // less
+#include <initializer_list>               // initializer_list
+#include <iterator>                       // prev
+#include <memory>                         // allocator, allocator_traits, uses_allocator_v
+#include <memory_resource>                // memory_resource, monotonic_buffer_resource, polymorphic_allocator, unsynchronized_pool_resource
+#include <new>                            // bad_alloc
+#include <ranges>                         // from_range, iota
+#include <scoped_allocator>               // scoped_allocator_adaptor
+#include <set>                            // pmr::set, set
+#include <tuple>                          // tuple, tuple_cat
+#include <type_traits>                    // is_constructible_v, is_nothrow_constructible_v
+#include <utility>                        // declval, move
+#include <vector>                         // pmr::vector, vector
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)
@@ -73,11 +73,25 @@ template<class Allocator>
         }
 }
 
-// std::set is the model, over the allocator's own value_type; the bit sets take it rebound to their Block.
-template<template<class> class Allocator>
-using allocator_aware = std::tuple<std::set<std::size_t, std::less<std::size_t>, Allocator<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint8_t>>, xstd::basic_bit_set<std::size_t, std::uint64_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint64_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint64_t>>>;
+#ifdef XSTD_BITS_SMALL_VECTOR_ABSL
 
-using Types = decltype(std::tuple_cat(std::declval<allocator_aware<propagating>>(), std::declval<allocator_aware<non_propagating>>(), std::declval<allocator_aware<std::pmr::polymorphic_allocator>>()));
+// absl::InlinedVector ignores the propagation traits, so the small columns take none of these stateful allocators.
+template<template<class> class Allocator>
+using small_allocator_aware = std::tuple<>;
+
+template<template<class> class Allocator>
+using small_sequence_allocator_aware = std::tuple<>;
+
+template<class X>
+inline constexpr auto wraps_allocator = false;
+
+#else
+
+template<template<class> class Allocator>
+using small_allocator_aware = std::tuple<xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint64_t>>>;
+
+template<template<class> class Allocator>
+using small_sequence_allocator_aware = std::tuple<xstd::basic_bit_small_vector<std::uint8_t, 9, Allocator<std::uint8_t>>, xstd::basic_bit_small_vector<std::uint64_t, 64, Allocator<std::uint64_t>>>;
 
 // The small columns, whose allocator_type is Boost's wrapper around the one they were declared with.
 template<class X>
@@ -88,6 +102,14 @@ inline constexpr auto wraps_allocator<xstd::basic_bit_small_set<std::size_t, Blo
 
 template<class Block, std::size_t N, class Allocator>
 inline constexpr auto wraps_allocator<xstd::basic_bit_small_vector<Block, N, Allocator>> = true;
+
+#endif
+
+// std::set is the model, over the allocator's own value_type; the bit sets take it rebound to their Block.
+template<template<class> class Allocator>
+using allocator_aware = decltype(std::tuple_cat(std::declval<std::tuple<std::set<std::size_t, std::less<std::size_t>, Allocator<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint8_t>>, xstd::basic_bit_set<std::size_t, std::uint64_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint64_t>>>>(), std::declval<small_allocator_aware<Allocator>>()));
+
+using Types = decltype(std::tuple_cat(std::declval<allocator_aware<propagating>>(), std::declval<allocator_aware<non_propagating>>(), std::declval<allocator_aware<std::pmr::polymorphic_allocator>>()));
 
 template<class X>
 [[nodiscard]] auto allocator(int tag)
@@ -107,7 +129,7 @@ concept list_converts_from = requires (Args... args) { accept<C>({args...}); };
 
 // std::vector<bool> is the model, over bool; the bit sequences take the allocator rebound to their Block.
 template<template<class> class Allocator>
-using sequence_allocator_aware = std::tuple<std::vector<bool, Allocator<bool>>, xstd::basic_bit_vector<std::uint8_t, Allocator<std::uint8_t>>, xstd::basic_bit_vector<std::uint64_t, Allocator<std::uint64_t>>, xstd::basic_bit_small_vector<std::uint8_t, 9, Allocator<std::uint8_t>>, xstd::basic_bit_small_vector<std::uint64_t, 64, Allocator<std::uint64_t>>>;
+using sequence_allocator_aware = decltype(std::tuple_cat(std::declval<std::tuple<std::vector<bool, Allocator<bool>>, xstd::basic_bit_vector<std::uint8_t, Allocator<std::uint8_t>>, xstd::basic_bit_vector<std::uint64_t, Allocator<std::uint64_t>>>>(), std::declval<small_sequence_allocator_aware<Allocator>>()));
 
 using SequenceTypes = decltype(std::tuple_cat(std::declval<sequence_allocator_aware<propagating>>(), std::declval<sequence_allocator_aware<non_propagating>>(), std::declval<sequence_allocator_aware<std::pmr::polymorphic_allocator>>()));
 

@@ -3,19 +3,18 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_EXT_BOOST_BIT_SMALL_VECTOR_HPP
-#define XSTD_BITS_EXT_BOOST_BIT_SMALL_VECTOR_HPP
+#ifndef XSTD_BITS_BIT_SMALL_VECTOR_HPP
+#define XSTD_BITS_BIT_SMALL_VECTOR_HPP
 
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
 #include <xstd/bits/detail/num_blocks.hpp>                   // num_blocks_v, tiling_block
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
+#include <xstd/bits/detail/small_blocks.hpp>                 // XSTD_BITS_SMALL_STORAGE, small_allocator, small_blocks, small_blocks_allocator
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
-#include <boost/container/new_allocator.hpp>                 // new_allocator
-#include <boost/container/small_vector.hpp>                  // small_vector
 #include <boost/container_hash/is_range.hpp>                 // is_range
 #include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
 #include <cstddef>                                           // size_t
@@ -29,19 +28,22 @@
 
 namespace xstd {
 
-// The sequence reading over the small-vector column; the allocator is Boost's own, as that container defaults to it.
-template<xstd::unsigned_integer Block, std::size_t N, class Alloc = boost::container::new_allocator<Block>>
-        requires bits::detail::tiling_block<Block>
-class basic_bit_small_vector : public bits::detail::sequence_adaptor<bits::detail::bit_block_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_small_vector<Block, N, Alloc>>
+// One namespace per storage, inline for the selected one: two builds over different storages fail to link together.
+inline namespace XSTD_BITS_SMALL_STORAGE {
+
+// The sequence reading over the small-vector column; the allocator defaults to the storage's own.
+template<xstd::unsigned_integer Block, std::size_t N, class Alloc = bits::detail::small_allocator<Block>>
+        requires bits::detail::tiling_block<Block> and bits::detail::small_blocks_allocator<Alloc> // a std::pmr allocator, which absl::InlinedVector swaps
+class basic_bit_small_vector : public bits::detail::sequence_adaptor<bits::detail::bit_block_container<bits::detail::small_blocks<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_small_vector<Block, N, Alloc>>
 {
-        using base_type = bits::detail::sequence_adaptor<bits::detail::bit_block_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_small_vector<Block, N, Alloc>>;
+        using base_type = bits::detail::sequence_adaptor<bits::detail::bit_block_container<bits::detail::small_blocks<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_small_vector<Block, N, Alloc>>;
 
 public:
         using typename base_type::allocator_type;
         using typename base_type::block_container_type;
         using typename base_type::size_type;
 
-        // [vector.bool.pspc]'s constructors, in its order, over the small vector's allocator_type, which wraps Alloc.
+        // [vector.bool.pspc]'s constructors, in its order, over the storage's allocator_type, Boost's wrapping Alloc.
         [[nodiscard]] constexpr basic_bit_small_vector() noexcept(noexcept(allocator_type()))
                 : basic_bit_small_vector(allocator_type())
         {}
@@ -103,6 +105,8 @@ public:
 template<std::size_t N>
 using bit_small_vector = basic_bit_small_vector<std::size_t, N>;
 
+} // namespace XSTD_BITS_SMALL_STORAGE
+
 // Another block takes the allocator with it, as std::allocator_traits rebinds one; another width keeps it.
 template<class Block, std::size_t N, class Alloc>
 struct bits::detail::rebind<basic_bit_small_vector<Block, N, Alloc>>
@@ -144,4 +148,4 @@ struct hash<xstd::basic_bit_small_vector<Block, N, Alloc>> : hash<typename xstd:
 
 // NOLINTEND(bugprone-std-namespace-modification)
 
-#endif // XSTD_BITS_EXT_BOOST_BIT_SMALL_VECTOR_HPP
+#endif // XSTD_BITS_BIT_SMALL_VECTOR_HPP

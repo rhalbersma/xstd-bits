@@ -9,11 +9,11 @@
 #include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
 #include <xstd/bits/bit_set.hpp>                    // bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_small_set.hpp>              // basic_bit_small_set
+#include <xstd/bits/bit_small_vector.hpp>           // basic_bit_small_vector
 #include <xstd/bits/bit_type_traits/bit_resize.hpp> // bit_resize
 #include <xstd/bits/bit_vector.hpp>                 // bit_vector
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <boost/container/new_allocator.hpp>        // new_allocator
+#include <xstd/bits/detail/small_blocks.hpp>        // small_allocator
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                                    // array
 #include <bitset>                                   // bitset
@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(TheWidthIsReplacedAndTheRestKept)
         static_assert(std::is_same_v<xstd::bit_resize<3, xstd::basic_bit_bounded_vector<std::uint32_t, 9>>, xstd::basic_bit_bounded_vector<std::uint32_t, 3>>);
         static_assert(std::is_same_v<xstd::bit_resize<64, xstd::bit_fixed_set<9>>, xstd::bit_fixed_set<64>>);
         static_assert(std::is_same_v<xstd::bit_resize<0, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 9>>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 0>>);
-        static_assert(std::is_same_v<xstd::bit_resize<128, xstd::basic_bit_small_vector<std::uint64_t, 9>>, xstd::basic_bit_small_vector<std::uint64_t, 128, boost::container::new_allocator<std::uint64_t>>>);
+        static_assert(std::is_same_v<xstd::bit_resize<128, xstd::basic_bit_small_vector<std::uint64_t, 9>>, xstd::basic_bit_small_vector<std::uint64_t, 128, xstd::bits::detail::small_allocator<std::uint64_t>>>);
         static_assert(std::is_same_v<xstd::bit_resize<128, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 9>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 128>>);
         static_assert(std::is_same_v<xstd::bit_resize<9, xstd::basic_bit_array<std::uint8_t, 9>>, xstd::basic_bit_array<std::uint8_t, 9>>);
         BOOST_CHECK(true);

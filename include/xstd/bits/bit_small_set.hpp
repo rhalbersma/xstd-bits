@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_EXT_BOOST_BIT_SMALL_SET_HPP
-#define XSTD_BITS_EXT_BOOST_BIT_SMALL_SET_HPP
+#ifndef XSTD_BITS_BIT_SMALL_SET_HPP
+#define XSTD_BITS_BIT_SMALL_SET_HPP
 
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>      // bit_index_mapping
 #include <xstd/bits/bit_key_mapping.hpp>                     // bit_key_mapping
@@ -13,11 +13,10 @@
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, key_direction, set_adaptor
+#include <xstd/bits/detail/small_blocks.hpp>                 // XSTD_BITS_SMALL_STORAGE, small_allocator, small_blocks, small_blocks_allocator
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
-#include <boost/container/new_allocator.hpp>                 // new_allocator
-#include <boost/container/small_vector.hpp>                  // small_vector
 #include <boost/container_hash/is_range.hpp>                 // is_range
 #include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
 #include <cstddef>                                           // size_t
@@ -31,12 +30,15 @@
 
 namespace xstd {
 
-// The set reading over the small-vector column; the allocator is Boost's own, as that container defaults to it.
-template<class Key, xstd::unsigned_integer Block, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>, class Alloc = boost::container::new_allocator<Block>>
-        requires bits::detail::tiling_block<Block>
-class basic_bit_small_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>, Key, KeyMapping, Compare>
+// One namespace per storage, inline for the selected one: two builds over different storages fail to link together.
+inline namespace XSTD_BITS_SMALL_STORAGE {
+
+// The set reading over the small-vector column; the allocator defaults to the storage's own.
+template<class Key, xstd::unsigned_integer Block, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>, class Alloc = bits::detail::small_allocator<Block>>
+        requires bits::detail::tiling_block<Block> and bits::detail::small_blocks_allocator<Alloc> // a std::pmr allocator, which absl::InlinedVector swaps
+class basic_bit_small_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<bits::detail::small_blocks<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>, Key, KeyMapping, Compare>
 {
-        using base_type = bits::detail::set_adaptor<bits::detail::bit_block_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>, Key, KeyMapping, Compare>;
+        using base_type = bits::detail::set_adaptor<bits::detail::bit_block_container<bits::detail::small_blocks<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>, Key, KeyMapping, Compare>;
 
         // A mapping that names a size closes the universe, and the width must be that size.
         static_assert(bits::detail::set::admits_width<KeyMapping, Key, N>);
@@ -47,7 +49,7 @@ public:
         using typename base_type::key_compare;
         using typename base_type::value_type;
 
-        // [set.cons], in [set.overview]'s order, over the small vector's own allocator_type, which wraps Alloc.
+        // [set.cons], in [set.overview]'s order, over the storage's own allocator_type, which Boost's wraps Alloc in.
         [[nodiscard]] constexpr basic_bit_small_set()
                 : basic_bit_small_set(key_compare())
         {}
@@ -119,6 +121,8 @@ public:
 template<std::size_t N>
 using bit_small_set = basic_bit_small_set<std::size_t, std::size_t, N>;
 
+} // namespace XSTD_BITS_SMALL_STORAGE
+
 // Another block takes the allocator with it, as std::allocator_traits rebinds one; another width keeps it.
 template<class Key, class Block, std::size_t N, class KeyMapping, class Compare, class Alloc>
 struct bits::detail::rebind<basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>>
@@ -160,4 +164,4 @@ struct hash<xstd::basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>
 
 // NOLINTEND(bugprone-std-namespace-modification)
 
-#endif // XSTD_BITS_EXT_BOOST_BIT_SMALL_SET_HPP
+#endif // XSTD_BITS_BIT_SMALL_SET_HPP

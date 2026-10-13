@@ -3,26 +3,26 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <fuzz/decoder.hpp>                         // checker, decoder, run, throws
-#include <xstd/bits/bit_algorithm.hpp>              // bit_all_of, bit_any_of, bit_count, bit_mismatch, bit_none_of
-#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector, bit_bounded_vector
-#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <algorithm>                                // count, equal, fill, mismatch
-#include <array>                                    // array
-#include <compare>                                  // is_eq, is_lt
-#include <cstddef>                                  // ptrdiff_t, size_t
-#include <cstdint>                                  // uint8_t, uint64_t
-#include <functional>                               // hash
-#include <iterator>                                 // next
-#include <new>                                      // bad_alloc
-#include <ranges>                                   // from_range, iota, reverse, ssize
-#include <stdexcept>                                // out_of_range
-#include <tuple>                                    // tuple
-#include <type_traits>                              // type_identity
-#include <utility>                                  // move, swap
-#include <vector>                                   // vector
+#include <fuzz/decoder.hpp>                 // checker, decoder, run, throws
+#include <xstd/bits/bit_algorithm.hpp>      // bit_all_of, bit_any_of, bit_count, bit_mismatch, bit_none_of
+#include <xstd/bits/bit_array.hpp>          // basic_bit_array, bit_array
+#include <xstd/bits/bit_bounded_vector.hpp> // basic_bit_bounded_vector, bit_bounded_vector
+#include <xstd/bits/bit_small_vector.hpp>   // basic_bit_small_vector
+#include <xstd/bits/bit_vector.hpp>         // basic_bit_vector, bit_vector
+#include <algorithm>                        // count, equal, fill, mismatch
+#include <array>                            // array
+#include <compare>                          // is_eq, is_lt
+#include <cstddef>                          // ptrdiff_t, size_t
+#include <cstdint>                          // uint8_t, uint64_t
+#include <functional>                       // hash
+#include <iterator>                         // next
+#include <new>                              // bad_alloc
+#include <ranges>                           // from_range, iota, reverse, ssize
+#include <stdexcept>                        // out_of_range
+#include <tuple>                            // tuple
+#include <type_traits>                      // type_identity
+#include <utility>                          // move, swap
+#include <vector>                           // vector
 
 namespace {
 

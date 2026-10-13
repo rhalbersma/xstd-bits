@@ -3,39 +3,39 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>                     // all_block_types
-#include <test/for_each_type.hpp>                   // for_each_type
-#include <xstd/bits/bit_array.hpp>                  // bit_array
-#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
-#include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_hasher.hpp>                 // bit_hash_append, bit_hasher
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
-#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
-#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <xstd/bits/from_blocks.hpp>                // from_blocks
-#include <xstd/misc/ext/boost/hash2.hpp>            // hash_algorithm, hasher
-#include <boost/hash2/flavor.hpp>                   // default_flavor, little_endian_flavor
-#include <boost/hash2/fnv1a.hpp>                    // fnv1a_64
-#include <boost/hash2/get_integral_result.hpp>      // get_integral_result
-#include <boost/hash2/hash_append.hpp>              // hash_append, hash_append_size
-#include <boost/hash2/hash_append_fwd.hpp>          // hash_append_tag
-#include <boost/hash2/siphash.hpp>                  // siphash_64
-#include <boost/hash2/xxhash.hpp>                   // xxhash_64
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <array>                                    // array
-#include <concepts>                                 // same_as
-#include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint64_t, uint8_t
-#include <functional>                               // hash
-#include <initializer_list>                         // initializer_list
-#include <ranges>                                   // iota
-#include <span>                                     // span
-#include <tuple>                                    // tuple
-#include <type_traits>                              // is_nothrow_default_constructible_v
-#include <vector>                                   // vector
+#include <test/block_types.hpp>                // all_block_types
+#include <test/for_each_type.hpp>              // for_each_type
+#include <xstd/bits/bit_array.hpp>             // bit_array
+#include <xstd/bits/bit_bounded_set.hpp>       // basic_bit_bounded_set
+#include <xstd/bits/bit_bounded_vector.hpp>    // basic_bit_bounded_vector
+#include <xstd/bits/bit_fixed_set.hpp>         // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_hasher.hpp>            // bit_hash_append, bit_hasher
+#include <xstd/bits/bit_set.hpp>               // basic_bit_set, bit_set
+#include <xstd/bits/bit_set_view.hpp>          // bit_set_view
+#include <xstd/bits/bit_small_set.hpp>         // basic_bit_small_set
+#include <xstd/bits/bit_small_vector.hpp>      // basic_bit_small_vector
+#include <xstd/bits/bit_vector.hpp>            // basic_bit_vector, bit_vector
+#include <xstd/bits/from_blocks.hpp>           // from_blocks
+#include <xstd/misc/ext/boost/hash2.hpp>       // hash_algorithm, hasher
+#include <boost/hash2/flavor.hpp>              // default_flavor, little_endian_flavor
+#include <boost/hash2/fnv1a.hpp>               // fnv1a_64
+#include <boost/hash2/get_integral_result.hpp> // get_integral_result
+#include <boost/hash2/hash_append.hpp>         // hash_append, hash_append_size
+#include <boost/hash2/hash_append_fwd.hpp>     // hash_append_tag
+#include <boost/hash2/siphash.hpp>             // siphash_64
+#include <boost/hash2/xxhash.hpp>              // xxhash_64
+#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <array>                               // array
+#include <concepts>                            // same_as
+#include <cstddef>                             // size_t
+#include <cstdint>                             // uint64_t, uint8_t
+#include <functional>                          // hash
+#include <initializer_list>                    // initializer_list
+#include <ranges>                              // iota
+#include <span>                                // span
+#include <tuple>                               // tuple
+#include <type_traits>                         // is_nothrow_default_constructible_v
+#include <vector>                              // vector
 
 // The bits as bytes: one string whatever blocks hold it, one update wherever the storage is that string.
 BOOST_AUTO_TEST_SUITE(BitHasher)

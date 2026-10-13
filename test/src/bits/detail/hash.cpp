@@ -3,36 +3,36 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
-#include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_hasher.hpp>                 // bit_hasher
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
-#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
-#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
-#include <xstd/bits/detail/intrin.hpp>              // bools_per_block, byte_bools, expand_block, expand_block_by_table
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <xstd/bits/from_blocks.hpp>                // from_blocks
-#include <xstd/misc/ext/boost/hash2.hpp>            // hasher
-#include <boost/hash2/flavor.hpp>                   // big_endian_flavor, default_flavor, little_endian_flavor
-#include <boost/hash2/fnv1a.hpp>                    // fnv1a_64
-#include <boost/hash2/get_integral_result.hpp>      // get_integral_result
-#include <boost/hash2/hash_append.hpp>              // hash_append
-#include <boost/hash2/siphash.hpp>                  // siphash_64
-#include <boost/hash2/xxhash.hpp>                   // xxhash_64
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <boost/unordered/unordered_flat_set.hpp>   // unordered_flat_set
-#include <array>                                    // array
-#include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint64_t, uint8_t
-#include <functional>                               // hash
-#include <initializer_list>                         // initializer_list
-#include <ranges>                                   // iota
-#include <set>                                      // set
-#include <unordered_set>                            // unordered_set
-#include <vector>                                   // vector
+#include <xstd/bits/bit_array.hpp>                // basic_bit_array, bit_array
+#include <xstd/bits/bit_bounded_set.hpp>          // basic_bit_bounded_set
+#include <xstd/bits/bit_bounded_vector.hpp>       // basic_bit_bounded_vector
+#include <xstd/bits/bit_fixed_set.hpp>            // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_hasher.hpp>               // bit_hasher
+#include <xstd/bits/bit_set.hpp>                  // basic_bit_set, bit_set
+#include <xstd/bits/bit_set_view.hpp>             // bit_set_view
+#include <xstd/bits/bit_small_set.hpp>            // basic_bit_small_set
+#include <xstd/bits/bit_small_vector.hpp>         // basic_bit_small_vector
+#include <xstd/bits/bit_vector.hpp>               // basic_bit_vector, bit_vector
+#include <xstd/bits/detail/intrin.hpp>            // bools_per_block, byte_bools, expand_block, expand_block_by_table
+#include <xstd/bits/from_blocks.hpp>              // from_blocks
+#include <xstd/misc/ext/boost/hash2.hpp>          // hasher
+#include <boost/hash2/flavor.hpp>                 // big_endian_flavor, default_flavor, little_endian_flavor
+#include <boost/hash2/fnv1a.hpp>                  // fnv1a_64
+#include <boost/hash2/get_integral_result.hpp>    // get_integral_result
+#include <boost/hash2/hash_append.hpp>            // hash_append
+#include <boost/hash2/siphash.hpp>                // siphash_64
+#include <boost/hash2/xxhash.hpp>                 // xxhash_64
+#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <boost/unordered/unordered_flat_set.hpp> // unordered_flat_set
+#include <array>                                  // array
+#include <cstddef>                                // size_t
+#include <cstdint>                                // uint64_t, uint8_t
+#include <functional>                             // hash
+#include <initializer_list>                       // initializer_list
+#include <ranges>                                 // iota
+#include <set>                                    // set
+#include <unordered_set>                          // unordered_set
+#include <vector>                                 // vector
 
 // The models' messages the hooks append, how they expand bits to bools, and the algorithm std::hash picks.
 BOOST_AUTO_TEST_SUITE(DetailHash)

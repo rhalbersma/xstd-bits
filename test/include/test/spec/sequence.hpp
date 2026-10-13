@@ -6,25 +6,25 @@
 #ifndef TEST_SPEC_SEQUENCE_HPP
 #define TEST_SPEC_SEQUENCE_HPP
 
-#include <test/container/allocator.hpp>             // non_propagating
-#include <test/dynamic.hpp>                         // dynamic
-#include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/sequence/factory.hpp>                // make_sequence, static_capacity, static_width, stripes
-#include <test/spec/input.hpp>                      // edge, exhaustive, key_vector, keyed, keyed_pair, memo, one, origin, rebuilt, two
-#include <test/spec/random.hpp>                     // block_digits_v, key_samples, keyed_samples, pair_samples, sequence_width
-#include <test/uint128.hpp>                         // TEST_HAS_UINT128, uint128
-#include <xstd/bits/bit_array.hpp>                  // basic_bit_array
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
-#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <algorithm>                                // min
-#include <array>                                    // array
-#include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint8_t, uint16_t, uint32_t, uint64_t
-#include <ranges>                                   // iota
-#include <tuple>                                    // tuple, tuple_cat
-#include <utility>                                  // declval, move
-#include <vector>                                   // vector
+#include <test/container/allocator.hpp>     // non_propagating
+#include <test/dynamic.hpp>                 // dynamic
+#include <test/inplace_vector.hpp>          // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/sequence/factory.hpp>        // make_sequence, static_capacity, static_width, stripes
+#include <test/spec/input.hpp>              // edge, exhaustive, key_vector, keyed, keyed_pair, memo, one, origin, rebuilt, two
+#include <test/spec/random.hpp>             // block_digits_v, key_samples, keyed_samples, pair_samples, sequence_width
+#include <test/uint128.hpp>                 // TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit_array.hpp>          // basic_bit_array
+#include <xstd/bits/bit_bounded_vector.hpp> // basic_bit_bounded_vector
+#include <xstd/bits/bit_small_vector.hpp>   // basic_bit_small_vector
+#include <xstd/bits/bit_vector.hpp>         // basic_bit_vector
+#include <algorithm>                        // min
+#include <array>                            // array
+#include <cstddef>                          // size_t
+#include <cstdint>                          // uint8_t, uint16_t, uint32_t, uint64_t
+#include <ranges>                           // iota
+#include <tuple>                            // tuple, tuple_cat
+#include <utility>                          // declval, move
+#include <vector>                           // vector
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
@@ -80,8 +80,19 @@ using growable_all = decltype(std::tuple_cat(std::declval<vector_all>(), std::de
 
 using all = decltype(std::tuple_cat(std::declval<array_all>(), std::declval<growable_all>()));
 
+#ifdef XSTD_BITS_SMALL_VECTOR_ABSL
+
+// absl::InlinedVector ignores the propagation traits, so the small vectors take no stateful allocator there.
+using small_ledgered = std::tuple<>;
+
+#else
+
+using small_ledgered = std::tuple<xstd::basic_bit_small_vector<std::uint8_t, 9, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_vector<std::uint64_t, 64, test::container::non_propagating<std::uint64_t>>>;
+
+#endif
+
 // The owners that take an allocator, under one that keeps a ledger and refuses on request, std::vector<bool> first.
-using ledgered = std::tuple<std::vector<bool, test::container::non_propagating<bool>>, xstd::basic_bit_vector<std::uint8_t, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_vector<std::uint64_t, test::container::non_propagating<std::uint64_t>>, xstd::basic_bit_small_vector<std::uint8_t, 9, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_vector<std::uint64_t, 64, test::container::non_propagating<std::uint64_t>>>;
+using ledgered = decltype(std::tuple_cat(std::declval<std::tuple<std::vector<bool, test::container::non_propagating<bool>>, xstd::basic_bit_vector<std::uint8_t, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_vector<std::uint64_t, test::container::non_propagating<std::uint64_t>>>>(), std::declval<small_ledgered>()));
 
 // The positions a sequence holds without growing: a width or capacity in its type, a small one's inline bits, or none.
 template<class X>

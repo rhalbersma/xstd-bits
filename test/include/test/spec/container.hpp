@@ -13,12 +13,12 @@
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
 #include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
+#include <xstd/bits/bit_small_set.hpp>              // basic_bit_small_set
+#include <xstd/bits/bit_small_vector.hpp>           // basic_bit_small_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/bounded_blocks.hpp>      // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_BOUNDED
 #include <xstd/bits/detail/ownership.hpp>           // storage
 #include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
 #include <cstddef>                                  // size_t
 #include <set>                                      // set
 #include <tuple>                                    // tuple_cat

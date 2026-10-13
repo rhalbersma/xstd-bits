@@ -14,13 +14,13 @@
 #include <xstd/bits/bit_hasher.hpp>                      // bit_hasher
 #include <xstd/bits/bit_set.hpp>                         // basic_bit_set
 #include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
+#include <xstd/bits/bit_small_set.hpp>                   // basic_bit_small_set
+#include <xstd/bits/bit_small_vector.hpp>                // basic_bit_small_vector
 #include <xstd/bits/bit_span.hpp>                        // bit_span
 #include <xstd/bits/bit_type_traits/bit_rebind.hpp>      // bit_rebind
 #include <xstd/bits/bit_type_traits/bit_resize.hpp>      // bit_resize
 #include <xstd/bits/bit_valarray.hpp>                    // basic_bit_valarray
 #include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector
-#include <xstd/bits/ext/boost/bit_small_set.hpp>         // basic_bit_small_set
-#include <xstd/bits/ext/boost/bit_small_vector.hpp>      // basic_bit_small_vector
 #include <xstd/bits/from_blocks.hpp>                     // from_blocks_t
 #include <xstd/ints/cstdint/bit_int.hpp>                 // bit_uint
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK_MESSAGE

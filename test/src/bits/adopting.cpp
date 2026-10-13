@@ -10,12 +10,12 @@
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
 #include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
+#include <xstd/bits/bit_small_set.hpp>              // basic_bit_small_set
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/bounded_blocks.hpp>      // bounded_blocks
 #include <xstd/bits/detail/ownership.hpp>           // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/from_blocks.hpp>                // from_blocks, from_blocks_t
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                // equal
@@ -124,8 +124,12 @@ BOOST_AUTO_TEST_CASE(InlineBlocksDeduceTheirAlignedCapacity)
         BOOST_CHECK(s.contains(0) and s.contains(7));
 }
 
-// The heap owners over a polymorphic allocator, which two resources make unequal.
+// The heap owners over a polymorphic allocator, which two resources make unequal; Abseil's small set takes none.
+#ifdef XSTD_BITS_SMALL_VECTOR_ABSL
+using polymorphic_owners = std::tuple<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>>; // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+#else
 using polymorphic_owners = std::tuple<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 16, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>>; // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+#endif
 
 // Blocks adopted under an unequal allocator are copied into it; storage taken from new and delete would leak.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AdoptionUnderAnUnequalAllocatorCopiesTheBlocks, S, polymorphic_owners)

@@ -10,9 +10,14 @@
 
 #endif
 
+#include <test/set/concepts.hpp>                     // bit_set
+#include <xstd/bits/detail/bit_block_container.hpp>  // bit_block_container
 #include <xstd/bits/detail/bit_blocks_capacity.hpp>  // bit_blocks_capacity_v
 #include <xstd/bits/detail/bounded_blocks.hpp>       // bounded_blocks, bounded_blocks_for, no_blocks
+#include <xstd/bits/detail/owned_bit_blocks.hpp>     // owned_bit_blocks
 #include <xstd/bits/detail/resizable_bit_blocks.hpp> // resizable_bit_blocks
+#include <xstd/bits/detail/set_adaptor.hpp>          // set_adaptor
+#include <boost/container/static_vector.hpp>         // static_vector
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <array>                                     // array
 #include <concepts>                                  // same_as
@@ -93,6 +98,15 @@ BOOST_AUTO_TEST_CASE(ChangesThatStayAtNoughtChangeNothing)
         Blocks::insert(a.end(), blocks.begin(), blocks.begin());
         Blocks::clear();
         BOOST_CHECK(a == Blocks());
+}
+
+// The fallback storage meets the storage contract as it comes, at a capacity of 24 bits: no trait, no wrapper.
+BOOST_AUTO_TEST_CASE(AStaticVectorIsAStorageTheSetReadingTakes)
+{
+        using inline_blocks = boost::container::static_vector<std::uint8_t, 3>;
+        static_assert(xstd::bits::detail::owned_bit_blocks<inline_blocks> and xstd::bits::detail::resizable_bit_blocks<inline_blocks>);
+        static_assert(test::set::bit_set<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<inline_blocks>>>);
+        BOOST_CHECK(true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

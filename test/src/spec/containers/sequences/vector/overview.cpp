@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(Vector)
 BOOST_AUTO_TEST_CASE(ConstexprIterators)
 {
         test::for_each_type<test::spec::sequence::vector_all>([]<class T> -> void {
-                // Boost's small_vector, which the small columns hold their blocks in, is not constant-evaluable.
+                // Neither small vector the small columns can hold their blocks in is constant-evaluable.
                 if constexpr (test::spec::container::constant_evaluable_v<T>) {
                         static_assert(test::sequence::iterates_as_a_constant<T>()); // [vector.overview]/3
                 }

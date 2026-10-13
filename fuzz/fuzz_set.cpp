@@ -10,7 +10,7 @@
 #include <xstd/bits/bit_bounded_set.hpp>              // basic_bit_bounded_set, bit_bounded_set
 #include <xstd/bits/bit_fixed_set.hpp>                // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set.hpp>                      // basic_bit_set, bit_set
-#include <xstd/bits/ext/boost/bit_small_set.hpp>      // basic_bit_small_set
+#include <xstd/bits/bit_small_set.hpp>                // basic_bit_small_set
 #include <algorithm>                                  // includes, set_difference, set_intersection, set_symmetric_difference, set_union
 #include <array>                                      // array
 #include <compare>                                    // is_eq, is_lt

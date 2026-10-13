@@ -10,11 +10,11 @@
 #include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_small_set.hpp>              // basic_bit_small_set
+#include <xstd/bits/bit_small_vector.hpp>           // basic_bit_small_vector, bit_small_vector
 #include <xstd/bits/bit_type_traits/bit_rebind.hpp> // bit_rebind
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector, bit_small_vector
-#include <boost/container/new_allocator.hpp>        // new_allocator
+#include <xstd/bits/detail/small_blocks.hpp>        // small_allocator
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                // equal
 #include <array>                                    // array
@@ -53,8 +53,8 @@ BOOST_AUTO_TEST_CASE(AnAllocatorIsReboundWithTheBlock)
 {
         static_assert(std::is_same_v<xstd::bit_rebind<std::uint8_t, xstd::bit_vector>, xstd::basic_bit_vector<std::uint8_t, std::allocator<std::uint8_t>>>);
         static_assert(std::is_same_v<xstd::bit_rebind<std::uint8_t, xstd::bit_set>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::allocator<std::uint8_t>>>); // NOLINT(modernize-use-transparent-functors): the comparator the type names
-        static_assert(std::is_same_v<xstd::bit_rebind<std::uint16_t, xstd::bit_small_vector<9>>, xstd::basic_bit_small_vector<std::uint16_t, 9, boost::container::new_allocator<std::uint16_t>>>);
-        static_assert(std::is_same_v<xstd::bit_rebind<std::uint32_t, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9>>, xstd::basic_bit_small_set<std::size_t, std::uint32_t, 9, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, boost::container::new_allocator<std::uint32_t>>>); // NOLINT(modernize-use-transparent-functors): the comparator the type names
+        static_assert(std::is_same_v<xstd::bit_rebind<std::uint16_t, xstd::bit_small_vector<9>>, xstd::basic_bit_small_vector<std::uint16_t, 9, xstd::bits::detail::small_allocator<std::uint16_t>>>);
+        static_assert(std::is_same_v<xstd::bit_rebind<std::uint32_t, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9>>, xstd::basic_bit_small_set<std::size_t, std::uint32_t, 9, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, xstd::bits::detail::small_allocator<std::uint32_t>>>); // NOLINT(modernize-use-transparent-functors): the comparator the type names
         BOOST_CHECK(true);
 }
 

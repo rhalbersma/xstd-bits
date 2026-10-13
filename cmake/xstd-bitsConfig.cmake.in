@@ -11,6 +11,11 @@ find_dependency(xstd-misc 0.1.0 CONFIG)
 find_dependency(boost_container CONFIG)
 find_dependency(boost_hash2 CONFIG)
 
+# The small column's storage as this package was configured with, which the exported target's compile definition names.
+if("@XSTD_BITS_SMALL_VECTOR@" STREQUAL "absl")
+    find_dependency(absl CONFIG)
+endif()
+
 include("${CMAKE_CURRENT_LIST_DIR}/xstd-bitsTargets.cmake")
 
 check_required_components(xstd-bits)

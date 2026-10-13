@@ -20,10 +20,10 @@
 #include <xstd/bits/bit_key_mapping.hpp>               // bit_key_mapping, enum_traits
 #include <xstd/bits/bit_set.hpp>                       // basic_bit_set, bit_set
 #include <xstd/bits/bit_set_view.hpp>                  // bit_set_view
+#include <xstd/bits/bit_small_set.hpp>                 // basic_bit_small_set
 #include <xstd/bits/detail/bit_block_container.hpp>    // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>              // owned_bits_t, storage
 #include <xstd/bits/detail/set_adaptor.hpp>            // set_adaptor
-#include <xstd/bits/ext/boost/bit_small_set.hpp>       // basic_bit_small_set
 #include <boost/test/unit_test.hpp>                    // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_TEST_CONTEXT
 #include <algorithm>                                   // lexicographical_compare_three_way, max, min, ranges::all_of, ranges::equal, ranges::includes
 #include <array>                                       // array

@@ -12,6 +12,7 @@
 #include <test/value_reference.hpp>                 // value_reference
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
+#include <xstd/bits/bit_small_vector.hpp>           // basic_bit_small_vector
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_subspan.hpp>                // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector
@@ -19,7 +20,6 @@
 #include <xstd/bits/detail/ownership.hpp>           // storage
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor, sequence_reference
 #include <xstd/bits/detail/storage_ptr.hpp>         // storage_ptr_t
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                // equal, ranges::reverse, ranges::sort, reverse, sort
 #include <array>                                    // array

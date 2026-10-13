@@ -12,6 +12,12 @@
     "test"
   ],
   "features": {
+    "abseil": {
+      "description": "Hold bit_small_set's and bit_small_vector's blocks in absl::InlinedVector, with -DXSTD_BITS_SMALL_VECTOR=absl",
+      "dependencies": [
+        "abseil"
+      ]
+    },
     "dynamic-bitset": {
       "description": "Interoperate with boost::dynamic_bitset through <xstd/bits/ext/boost/dynamic_bitset.hpp>",
       "dependencies": [

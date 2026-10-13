@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_HPP
 #define XSTD_BITS_HPP
 
-// The umbrella over every container but the ext column's, which stays out so boost::container::small_vector is opt-in.
+// The umbrella over every container and view; ext/'s adapters to another library's types are included by name.
 
 // Shared by both readings.
 #include <xstd/bits/bit_concepts.hpp>    // IWYU pragma: export; bit_blocks, bit_constructible_from, bit_convertible_to, bit_index_mapping, bit_mask_mapping, sized_bit_index_mapping
@@ -20,6 +20,7 @@
 #include <xstd/bits/bit_array.hpp>          // IWYU pragma: export; bit_array
 #include <xstd/bits/bit_bounded_vector.hpp> // IWYU pragma: export; bit_bounded_vector
 #include <xstd/bits/bit_vector.hpp>         // IWYU pragma: export; bit_vector
+#include <xstd/bits/bit_small_vector.hpp>   // IWYU pragma: export; bit_small_vector
 #include <xstd/bits/bit_span.hpp>           // IWYU pragma: export; bit_span
 #include <xstd/bits/bit_subspan.hpp>        // IWYU pragma: export; bit_subspan
 
@@ -34,6 +35,7 @@
 #include <xstd/bits/bit_enum_set.hpp>    // IWYU pragma: export; bit_enum_set
 #include <xstd/bits/bit_bounded_set.hpp> // IWYU pragma: export; bit_bounded_set
 #include <xstd/bits/bit_set.hpp>         // IWYU pragma: export; bit_set
+#include <xstd/bits/bit_small_set.hpp>   // IWYU pragma: export; bit_small_set
 #include <xstd/bits/bit_set_view.hpp>    // IWYU pragma: export; bit_set_view
 
 // Flag types, a mask block spelled as the bitmask enumeration it replaces.

@@ -51,8 +51,26 @@ endif()
 # Boost.Hash2 is a public dependency of this library's headers, not just of the tests, so it is declared explicitly.
 find_package(boost_hash2 CONFIG REQUIRED)
 
-# Boost.Container likewise: the ext/ column's small_vector, opt-in to include, and the bounded column's blocks where the standard library has no std::inplace_vector.
+# Boost.Container likewise, whatever the setting below: the bounded column's blocks where the standard library has no std::inplace_vector, and the small column's by default.
 find_package(boost_container CONFIG REQUIRED)
+
+# The small column's storage, one choice for the whole program: several small-vector libraries can be installed at once, so it is the user's to make rather than detected. It reaches every target linking xstd::bits as a compile definition, and the owners are declared in an inline namespace named after it, so two libraries built with different choices fail to link instead of violating the ODR. llvm::SmallVector is not offered: its growth path is defined in LLVMSupport, a compiled library this header-only target would have to link, its size type caps 64-bit blocks at 2^32 of them, and a failed growth calls report_bad_alloc_error, which aborts where LLVM is built without exceptions.
+set(${project_option_prefix}_SMALL_VECTOR boost CACHE STRING "Storage of bit_small_set and bit_small_vector: boost (boost::container::small_vector) or absl (absl::InlinedVector)")
+set(${project_option_prefix}_SMALL_VECTOR_CHOICES boost absl)
+set_property(CACHE ${project_option_prefix}_SMALL_VECTOR PROPERTY STRINGS ${${project_option_prefix}_SMALL_VECTOR_CHOICES})
+if(NOT ${project_option_prefix}_SMALL_VECTOR IN_LIST ${project_option_prefix}_SMALL_VECTOR_CHOICES)
+    message(FATAL_ERROR "${project_option_prefix}_SMALL_VECTOR=${${project_option_prefix}_SMALL_VECTOR} is not one of: ${${project_option_prefix}_SMALL_VECTOR_CHOICES}.")
+endif()
+
+# Abseil only when chosen, and then required; its InlinedVector is header-only for every member the owners call.
+if(${project_option_prefix}_SMALL_VECTOR STREQUAL "absl")
+    find_package(absl CONFIG REQUIRED)
+    set(${project_id}_small_vector_target absl::inlined_vector)
+    set(${project_id}_small_vector_definition ${project_option_prefix}_SMALL_VECTOR_ABSL)
+else()
+    set(${project_id}_small_vector_target)
+    set(${project_id}_small_vector_definition)
+endif()
 
 add_library(
     ${PROJECT_NAME} INTERFACE
@@ -106,6 +124,8 @@ target_sources(
         include/xstd/bits/bit_flag_mapping.hpp
         include/xstd/bits/bit_key_mapping.hpp
         include/xstd/bits/bit_set.hpp
+        include/xstd/bits/bit_small_set.hpp
+        include/xstd/bits/bit_small_vector.hpp
         include/xstd/bits/bit_set_view.hpp
         include/xstd/bits/bit_span.hpp
         include/xstd/bits/bit_fixed_set.hpp
@@ -127,6 +147,7 @@ target_sources(
         include/xstd/bits/bit_algorithm/detail/algorithm.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
         include/xstd/bits/detail/bounded_blocks.hpp
+        include/xstd/bits/detail/small_blocks.hpp
         include/xstd/bits/detail/bit_block_container.hpp
         include/xstd/bits/detail/block_intersects.hpp
         include/xstd/bits/detail/comparisons.hpp
@@ -138,9 +159,6 @@ target_sources(
         include/xstd/bits/detail/ordinal.hpp
         include/xstd/bits/detail/is_key.hpp
         include/xstd/bits/from_blocks.hpp
-        include/xstd/bits/ext/boost.hpp
-        include/xstd/bits/ext/boost/bit_small_set.hpp
-        include/xstd/bits/ext/boost/bit_small_vector.hpp
         include/xstd/bits/ext/boost/dynamic_bitset.hpp
         include/xstd/bits/ext/boost/detail/dynamic_bitset.hpp
         include/xstd/bits/detail/bit_layout.hpp
@@ -192,6 +210,12 @@ target_link_libraries(
     xstd::misc
     Boost::container
     Boost::hash2
+    ${${project_id}_small_vector_target}
+)
+
+target_compile_definitions(
+    ${PROJECT_NAME} INTERFACE
+    ${${project_id}_small_vector_definition}
 )
 
 target_compile_features(
