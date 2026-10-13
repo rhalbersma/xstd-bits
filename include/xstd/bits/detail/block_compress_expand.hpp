@@ -9,17 +9,22 @@
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
 #include <xstd/bits/detail/borrowed_bits.hpp>              // borrowed_bits
 #include <xstd/bits/detail/intrin.hpp>                     // popcount
-#include <xstd/bits/detail/shift.hpp>                      // partial_block_mask, shl
+#include <xstd/bits/detail/shift.hpp>                      // partial_block_mask, shl, shr
 #include <xstd/ints/bit/bit_compress.hpp>                  // bit_compress
 #include <xstd/ints/bit/bit_expand.hpp>                    // bit_expand
 #include <xstd/ints/bit/bit_repeat.hpp>                    // bit_repeat
 #include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
 #include <xstd/ints/limits.hpp>                            // numeric_limits
-#include <algorithm>                                       // min
+#include <algorithm>                                       // all_of, copy, min, transform
+#include <array>                                           // array
+#include <cassert>                                         // assert
+#include <concepts>                                        // same_as
 #include <cstddef>                                         // size_t
 #include <cstdint>                                         // uint64_t
+#include <numeric>                                         // gcd
 #include <ranges>                                          // iota
 #include <span>                                            // span
+#include <type_traits>                                     // conditional_t, remove_const_t
 
 // Gather and scatter over a range of blocks: P3104's bit_compress and bit_expand a block at a time, packed by block_at.
 namespace xstd::bits::detail {
@@ -30,19 +35,34 @@ inline constexpr std::size_t block_width = xstd::bit_blocks_extent_v<Block>;
 template<xstd::unsigned_integer Block>
 inline constexpr auto block_ones = xstd::numeric_limits<Block>::max();
 
-// A full mask selects the whole block in place, which no permutation needs to find out.
+// The condition under which xstd-ints runs bit_compress and bit_expand as PEXT and PDEP, which permute a full mask as fast.
+#if defined(__BMI2__) || (defined(_MSC_VER) && !defined(__clang__) && defined(__AVX2__))
+inline constexpr bool permutes_in_hardware = true;
+#else
+inline constexpr bool permutes_in_hardware = false;
+#endif
+
+// A full mask selects the whole block in place, which the portable kernels would take the long way round to find.
 template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto compressed(Block src, Block mask) noexcept
         -> Block
 {
-        return mask == block_ones<Block> ? src : xstd::bit_compress(src, mask);
+        if constexpr (permutes_in_hardware) {
+                return xstd::bit_compress(src, mask);
+        } else {
+                return mask == block_ones<Block> ? src : xstd::bit_compress(src, mask);
+        }
 }
 
 template<xstd::unsigned_integer Block>
 [[nodiscard]] constexpr auto expanded(Block src, Block mask) noexcept
         -> Block
 {
-        return mask == block_ones<Block> ? src : xstd::bit_expand(src, mask);
+        if constexpr (permutes_in_hardware) {
+                return xstd::bit_expand(src, mask);
+        } else {
+                return mask == block_ones<Block> ? src : xstd::bit_expand(src, mask);
+        }
 }
 
 // The masks of a slice whose stride is below the block width, one per block from the one holding its start.
@@ -51,14 +71,19 @@ class slice_masks
 {
         static constexpr auto digits = block_width<Block>;
 
+        // Held at least a word wide, so a narrow block leaves no padding between the counts.
+        using wide_block = std::conditional_t<(sizeof(Block) < sizeof(std::size_t)), std::size_t, Block>;
+
         std::size_t m_first;
         std::size_t m_last;
-        std::size_t m_final;
-        std::size_t m_stride;
-        std::size_t m_carry;
-        std::size_t m_base;
-        std::size_t m_offset;
-        std::size_t m_below;
+        std::size_t m_next;
+        std::size_t m_period;
+        std::size_t m_phase = 0UZ;
+        // The cuts below the start and above the final position, made once.
+        wide_block m_head;
+        wide_block m_tail;
+        // The masks of one period: block k's offset falls back by digits % stride, so they repeat every stride / gcd blocks.
+        std::array<wide_block, digits> m_masks{};
 
 public:
         // The stride selects at least one position in every block from the first to the last.
@@ -67,13 +92,19 @@ public:
         [[nodiscard]] constexpr slice_masks(std::size_t start, std::size_t size, std::size_t stride) noexcept
                 : m_first(start / digits)
                 , m_last(((start + ((size - 1UZ) * stride)) / digits) + 1UZ)
-                , m_final(start + ((size - 1UZ) * stride))
-                , m_stride(stride)
-                , m_carry(digits % stride)
-                , m_base(m_first * digits)
-                , m_offset((start - m_base) % stride)
-                , m_below(start - m_base)
-        {}
+                , m_next(m_first)
+                , m_period(stride / std::gcd(stride, digits))
+                , m_head(static_cast<Block>(~partial_block_mask<Block>(start % digits)))
+                , m_tail(partial_block_mask<Block>(((start + ((size - 1UZ) * stride)) % digits) + 1UZ))
+        {
+                auto const ones  = xstd::bit_repeat(Block{1}, static_cast<int>(stride));
+                auto const carry = digits % stride;
+                auto offset      = (start % digits) % stride;
+                for (auto const k : std::views::iota(0UZ, m_period)) {
+                        m_masks[k] = shl(ones, offset);
+                        offset     = offset >= carry ? offset - carry : offset + stride - carry;
+                }
+        }
 
         [[nodiscard]] constexpr auto first() const noexcept
                 -> std::size_t
@@ -87,17 +118,20 @@ public:
                 return m_last;
         }
 
-        // One bit every stride, shifted to the block's first position, cut below the start and above the last one.
+        // The period's next mask, cut at the first and the last block alone.
         [[nodiscard]] constexpr auto next() noexcept
                 -> Block
         {
-                auto const kept   = std::ranges::min(digits, m_final - m_base + 1UZ);
-                auto const ones   = xstd::bit_repeat(Block{1}, static_cast<int>(m_stride));
-                auto const period = static_cast<Block>(shl(ones, m_offset) & static_cast<Block>(~partial_block_mask<Block>(m_below)));
-                m_base += digits;
-                m_below  = 0UZ;
-                m_offset = m_offset >= m_carry ? m_offset - m_carry : m_offset + m_stride - m_carry;
-                return static_cast<Block>(period & partial_block_mask<Block>(kept));
+                auto mask = static_cast<Block>(m_masks[m_phase]);
+                if (m_next == m_first) {
+                        mask = static_cast<Block>(mask & static_cast<Block>(m_head));
+                }
+                if (m_next + 1UZ == m_last) {
+                        mask = static_cast<Block>(mask & static_cast<Block>(m_tail));
+                }
+                ++m_next;
+                m_phase = m_phase + 1UZ == m_period ? 0UZ : m_phase + 1UZ;
+                return mask;
         }
 };
 
@@ -195,11 +229,12 @@ inline constexpr auto scatter_or = []<class Block>(Block d, Block e, Block /* m 
 
 inline constexpr auto scatter_xor = []<class Block>(Block d, Block e, Block /* m */) noexcept -> Block { return static_cast<Block>(d ^ e); };
 
-// The bits each mask selects from the blocks of src, packed in order into dst from position zero.
+// The bits each mask selects from the blocks of src, packed in order into a clear dst from position zero.
 template<class Src, class Masks, xstd::unsigned_integer Block>
 constexpr auto compress_blocks(Src const& src, Masks masks, borrowed_bits<Block>& dst) noexcept
         -> void
 {
+        assert(std::ranges::all_of(dst.blocks(), [](Block block) noexcept -> bool { return block == Block{}; }));
         auto pos = 0UZ;
         for (auto const k : std::views::iota(masks.first(), masks.last())) {
                 auto const mask  = masks.next();
@@ -210,7 +245,14 @@ constexpr auto compress_blocks(Src const& src, Masks masks, borrowed_bits<Block>
                                 continue;
                         }
                 }
-                dst.block_at(pos, compressed(src[k], mask), partial_block_mask<Block>(count));
+                // dst starts clear, every gather writing a valarray of its own, so the packed bits are or-ed in.
+                auto const packed = compressed(src[k], mask);
+                auto const index  = pos / block_width<Block>;
+                auto const offset = pos % block_width<Block>;
+                dst[index]        = static_cast<Block>(dst[index] | shl(packed, offset));
+                if (offset + count > block_width<Block>) {
+                        dst[index + 1UZ] = static_cast<Block>(dst[index + 1UZ] | shr(packed, block_width<Block> - offset));
+                }
                 pos += count;
         }
 }
@@ -252,6 +294,58 @@ template<xstd::unsigned_integer Block, class F>
         -> bool
 {
         return static_cast<Block>(f(static_cast<Block>(static_cast<unsigned>(d)), static_cast<Block>(static_cast<unsigned>(e)), Block{1}) & Block{1}) != Block{};
+}
+
+// A run of size positions from start, the slice of stride one: a block at a time through block_at, no permutation.
+template<class Src, xstd::unsigned_integer Block>
+constexpr auto gather_run(Src const& src, std::size_t start, std::size_t size, borrowed_bits<Block>& dst) noexcept
+        -> void
+{
+        // From a block boundary every whole block is a plain copy into the clear dst, at memmove's speed.
+        auto const whole = start % block_width<Block> == 0UZ ? size / block_width<Block> : 0UZ;
+        std::ranges::copy(src.blocks().subspan(start / block_width<Block>, whole), dst.blocks().begin());
+        for (auto j = whole * block_width<Block>; j < size; j += block_width<Block>) {
+                dst.block_at(j, src.block_at(start + j), partial_block_mask<Block>(std::ranges::min(block_width<Block>, size - j)));
+        }
+}
+
+template<class Src, xstd::unsigned_integer Block, class F>
+constexpr auto expand_run(Src const& src, std::size_t start, std::size_t size, borrowed_bits<Block>& dst, F f) noexcept
+        -> void
+{
+        auto const whole = start % block_width<Block> == 0UZ ? size / block_width<Block> : 0UZ;
+        auto const from  = src.blocks().first(whole);
+        auto const onto  = dst.blocks().subspan(start / block_width<Block>, whole);
+        if constexpr (std::same_as<F, std::remove_const_t<decltype(scatter_assign)>>) {
+                // An assignment of whole blocks is a copy, at memmove's speed; onto themselves, as v[s] = v, there is nothing to do.
+                if (from.data() != onto.data()) {
+                        std::ranges::copy(from, onto.begin());
+                }
+        } else {
+                std::ranges::transform(onto, from, onto.begin(), [&](Block d, Block e) noexcept -> Block { return f(d, e, block_ones<Block>); });
+        }
+        for (auto j = whole * block_width<Block>; j < size; j += block_width<Block>) {
+                auto const mask = partial_block_mask<Block>(std::ranges::min(block_width<Block>, size - j));
+                auto const pos  = start + j;
+                dst.block_at(pos, f(dst.block_at(pos), static_cast<Block>(src.block_at(j) & mask), mask), mask);
+        }
+}
+
+template<xstd::unsigned_integer Block, class F>
+constexpr auto fill_run(bool value, std::size_t start, std::size_t size, borrowed_bits<Block>& dst, F f) noexcept
+        -> void
+{
+        auto const splat = value ? block_ones<Block> : Block{};
+        auto const whole = start % block_width<Block> == 0UZ ? size / block_width<Block> : 0UZ;
+        for (auto const k : std::views::iota(0UZ, whole)) {
+                auto& block = dst[(start / block_width<Block>)+k];
+                block       = f(block, splat, block_ones<Block>);
+        }
+        for (auto j = whole * block_width<Block>; j < size; j += block_width<Block>) {
+                auto const mask = partial_block_mask<Block>(std::ranges::min(block_width<Block>, size - j));
+                auto const pos  = start + j;
+                dst.block_at(pos, f(dst.block_at(pos), static_cast<Block>(splat & mask), mask), mask);
+        }
 }
 
 // One position's bit written with no branch on its value, which random bits would mispredict.

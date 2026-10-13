@@ -54,7 +54,7 @@ concept valarray_owner_of = owner_reading<std::remove_cvref_t<V>, valarray_readi
         return std::ranges::count(seen, true) == std::ssize(indices);
 }
 
-// [class.slice]: start + j * stride for j < size, a mask a block at a time below the block width, else one by one.
+// [class.slice]: start + j * stride for j < size: a run at stride one, a mask a block at a time below the block width, else one by one.
 class slice_selection
 {
         std::size_t m_start;
@@ -65,7 +65,7 @@ class slice_selection
         [[nodiscard]] constexpr auto is_strided() const noexcept
                 -> bool
         {
-                return m_size != 0UZ and 0UZ < m_stride and m_stride < block_width<Block>;
+                return m_size != 0UZ and 1UZ < m_stride and m_stride < block_width<Block>;
         }
 
         template<class Block>
@@ -97,7 +97,9 @@ public:
         constexpr auto gather(Src const& src, borrowed_bits<Block>& dst) const noexcept
                 -> void
         {
-                if (is_strided<Block>()) {
+                if (m_stride == 1UZ) {
+                        gather_run(src, m_start, m_size, dst);
+                } else if (is_strided<Block>()) {
                         compress_blocks(src, masks<Block>(), dst);
                 } else {
                         gather_indices(src, m_size, index(), dst);
@@ -108,7 +110,9 @@ public:
         constexpr auto expand(Src const& src, borrowed_bits<Block>& dst, F f) const noexcept
                 -> void
         {
-                if (is_strided<Block>()) {
+                if (m_stride == 1UZ) {
+                        expand_run(src, m_start, m_size, dst, f);
+                } else if (is_strided<Block>()) {
                         expand_blocks(src, masks<Block>(), dst, f);
                 } else {
                         expand_indices(src, m_size, index(), dst, f);
@@ -119,7 +123,9 @@ public:
         constexpr auto fill(bool value, borrowed_bits<Block>& dst, F f) const noexcept
                 -> void
         {
-                if (is_strided<Block>()) {
+                if (m_stride == 1UZ) {
+                        fill_run(value, m_start, m_size, dst, f);
+                } else if (is_strided<Block>()) {
                         fill_blocks(value, masks<Block>(), dst, f);
                 } else {
                         fill_indices(value, m_size, index(), dst, f);

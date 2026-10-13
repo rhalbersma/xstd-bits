@@ -91,11 +91,11 @@ auto check_compress_expand(std::vector<Block> const& mask_blocks)
                 auto const dst = bools_of(dst_blocks);
 
                 auto source     = src_blocks;
-                auto compressed = dst_blocks;
+                auto compressed = std::vector<Block>(dst_blocks.size());
                 auto const from = xstd::bits::detail::borrowed_bits<Block>(std::span(source));
                 auto into       = xstd::bits::detail::borrowed_bits<Block>(std::span(compressed));
                 xstd::bits::detail::compress_blocks(from, xstd::bits::detail::stored_masks<Block>(mask_blocks), into);
-                BOOST_CHECK(bools_of(compressed) == compress_oracle(src, mask, dst));
+                BOOST_CHECK(bools_of(compressed) == compress_oracle(src, mask, bools(dst.size())));
 
                 auto expanded = dst_blocks;
                 auto onto     = xstd::bits::detail::borrowed_bits<Block>(std::span(expanded));

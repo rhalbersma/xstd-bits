@@ -71,6 +71,11 @@ BOOST_AUTO_TEST_CASE(AssigningAProxyAssignsItsElementsGatheredBeforeAnyIsWritten
                 expected[2UZ + j] = a[j];
         }
         test::valarray::check_equal(v, expected);
+
+        // The whole array onto itself, whose blocks the assignment would otherwise copy over themselves.
+        auto u                        = test::valarray::make<xstd::bit_valarray>(a);
+        u[std::slice(0UZ, 70UZ, 1UZ)] = u;
+        test::valarray::check_equal(u, a);
 }
 
 // Every owner takes a proxy of any owner over the same blocks, at the fixed size only one of the type's own size.
