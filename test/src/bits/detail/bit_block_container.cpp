@@ -17,16 +17,16 @@
 #include <boost/test/unit_test.hpp>                   // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                  // all_of, any_of, count, lexicographical_compare_three_way, min, reverse
 #include <array>                                      // array
+#include <bit>                                        // popcount
 #include <bitset>                                     // bitset
 #include <compare>                                    // strong_ordering
 #include <concepts>                                   // same_as
 #include <cstddef>                                    // ptrdiff_t, size_t
-#include <cstdint>                                    // uint8_t, uint64_t
+#include <cstdint>                                    // uint32_t, uint64_t, uint8_t
 #include <functional>                                 // identity
 #include <initializer_list>                           // initializer_list
 #include <limits>                                     // numeric_limits
 #include <memory>                                     // addressof, allocator
-#include <version>                                    // IWYU pragma: keep; __cpp_lib_ranges_as_const
 #include <new>                                        // bad_alloc
 #include <ranges>                                     // begin, iota, range_const_reference_t, size, transform
 #include <span>                                       // dynamic_extent
@@ -35,6 +35,7 @@
 #include <type_traits>                                // is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_trivially_*
 #include <utility>                                    // declval, move
 #include <vector>                                     // vector
+#include <version>                                    // IWYU pragma: keep; __cpp_lib_ranges_as_const
 
 BOOST_AUTO_TEST_SUITE(BitBlockContainer)
 
@@ -1629,6 +1630,41 @@ BOOST_AUTO_TEST_CASE(AdoptingAnArrayKeepsEveryBit)
         for (auto const i : std::views::iota(0UZ, 96UZ)) {
                 BOOST_CHECK_EQUAL(c.test(i), ((blocks[i / 32UZ] >> (i % 32UZ)) & 1U) != 0U);
         }
+}
+
+// A width short of its last block takes the positions below it, by blocks or by bytes alike, and clears the rest.
+BOOST_AUTO_TEST_CASE(AWidthShortOfItsLastBlockClearsThePositionsPastIt)
+{
+        using Wide          = xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 2>, 100>;
+        constexpr auto low  = std::uint64_t{0x0123'4567'89AB'CDEFULL};
+        constexpr auto high = std::uint64_t{0xFEDC'BA98'7654'3210ULL};
+        constexpr auto top  = std::uint64_t{0x8'7654'3210ULL};
+        constexpr auto wide = []<class Bits>(Bits const& bits) -> bool {
+                auto const c = Wide(xstd::from_blocks, bits);
+                return c[0] == low and c[1] == top and c.count() == static_cast<std::size_t>(std::popcount(low)) + static_cast<std::size_t>(std::popcount(top));
+        };
+
+        // The same block width, exactly as wide and wider, and a narrower one, which goes byte by byte.
+        static_assert(wide(std::array<std::uint64_t, 2>{low, high}));
+        static_assert(wide(std::array<std::uint64_t, 3>{low, high, high}));
+        static_assert(wide(std::array<std::uint32_t, 4>{0x89AB'CDEFU, 0x0123'4567U, 0x7654'3210U, 0xFEDC'BA98U}));
+        BOOST_CHECK(wide(std::array<std::uint64_t, 2>{low, high}));
+        BOOST_CHECK(wide(std::array<std::uint64_t, 3>{low, high, high}));
+        BOOST_CHECK(wide(std::array<std::uint32_t, 4>{0x89AB'CDEFU, 0x0123'4567U, 0x7654'3210U, 0xFEDC'BA98U}));
+
+        // A single block, read as the array of one, and byte blocks under a width that is no whole number of bytes.
+        constexpr auto one = [](std::uint64_t block) -> bool {
+                auto const c = xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 1>, 37>(xstd::from_blocks, block);
+                return c[0] == 0x18'7654'3210ULL;
+        };
+        constexpr auto bytes = [](std::array<std::uint8_t, 3> const& blocks) -> bool {
+                auto const c = xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>, 20>(xstd::from_blocks, blocks);
+                return c[0] == 0xA5 and c[1] == 0x5A and c[2] == 0x0F;
+        };
+        static_assert(one(high));
+        static_assert(bytes({0xA5, 0x5A, 0xFF}));
+        BOOST_CHECK(one(high));
+        BOOST_CHECK(bytes({0xA5, 0x5A, 0xFF}));
 }
 
 // A bare block is no range of blocks, so the vehicle refuses it by its constraint rather than failing inside.
