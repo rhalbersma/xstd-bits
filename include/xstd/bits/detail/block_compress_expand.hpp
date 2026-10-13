@@ -17,13 +17,14 @@
 #include <xstd/ints/limits.hpp>                            // numeric_limits
 #include <algorithm>                                       // copy, min, transform
 #include <array>                                           // array
+#include <cassert>                                         // assert
 #include <concepts>                                        // same_as
 #include <cstddef>                                         // size_t
 #include <cstdint>                                         // uint64_t
 #include <numeric>                                         // gcd
 #include <ranges>                                          // iota
 #include <span>                                            // span
-#include <type_traits>                                     // conditional_t, remove_const_t
+#include <type_traits>                                     // conditional_t, remove_const_t, remove_cvref_t
 
 // Gather and scatter over a range of blocks: P3104's bit_compress and bit_expand a block at a time, packed by block_at.
 namespace xstd::bits::detail {
@@ -90,11 +91,20 @@ class slice_masks
         // Their popcounts, so a kernel asks none per block.
         std::array<std::size_t, digits> m_counts{};
 
+        // A stride of zero or of a whole block has no period below the block width to tabulate.
+        [[nodiscard]] static constexpr auto span_of(std::size_t stride) noexcept
+                -> std::size_t
+        {
+                assert(0UZ < stride and stride < digits);
+                auto const period = stride / std::gcd(stride, digits);
+                return (digits / period) * period;
+        }
+
 public:
         [[nodiscard]] constexpr slice_masks(std::size_t start, std::size_t size, std::size_t stride) noexcept
                 : m_first(start / digits)
                 , m_last(((start + ((size - 1UZ) * stride)) / digits) + 1UZ)
-                , m_span((digits / (stride / std::gcd(stride, digits))) * (stride / std::gcd(stride, digits)))
+                , m_span(span_of(stride))
                 , m_spans_end(m_first + 1UZ + (((m_last - m_first - std::ranges::min(m_last - m_first, 2UZ)) / m_span) * m_span))
                 , m_first_mask()
                 , m_last_mask()
@@ -305,12 +315,12 @@ constexpr auto fill_blocks(bool value, Masks const& masks, borrowed_bits<Block>&
         masks.for_each([&](std::size_t k, Block mask, std::size_t /* count */) noexcept -> void { dst[k] = f(dst[k], static_cast<Block>(mask & splat), mask); });
 }
 
-// One position's bit through a block combiner, as a mask of that one position.
-template<xstd::unsigned_integer Block, class F>
-[[nodiscard]] constexpr auto combined(F f, bool d, bool e) noexcept
-        -> bool
+// The bit at pos as a block holding it in bit zero: shifted and masked, never a bool converted back.
+template<class Src>
+[[nodiscard]] constexpr auto bit_at(Src const& src, std::size_t pos) noexcept
 {
-        return static_cast<Block>(f(static_cast<Block>(static_cast<unsigned>(d)), static_cast<Block>(static_cast<unsigned>(e)), Block{1}) & Block{1}) != Block{};
+        using block_type = std::remove_cvref_t<decltype(src[0UZ])>;
+        return static_cast<block_type>(shr(src[pos / block_width<block_type>], pos % block_width<block_type>) & block_type{1});
 }
 
 // A run of size positions from start, the slice of stride one: a block at a time through block_at, no permutation.
@@ -365,17 +375,6 @@ constexpr auto fill_run(bool value, std::size_t start, std::size_t size, borrowe
         }
 }
 
-// One position's bit written with no branch on its value, which random bits would mispredict.
-template<xstd::unsigned_integer Block>
-constexpr auto put(borrowed_bits<Block>& dst, std::size_t pos, bool value) noexcept
-        -> void
-{
-        auto& block      = dst[pos / block_width<Block>];
-        auto const mask  = shl(Block{1}, pos % block_width<Block>);
-        auto const splat = static_cast<Block>(Block{} - static_cast<Block>(static_cast<unsigned>(value)));
-        block            = static_cast<Block>(static_cast<Block>(block & static_cast<Block>(~mask)) | static_cast<Block>(mask & splat));
-}
-
 // The bits at index(0), ..., index(count - 1) of src, in that order, into dst from position zero: gathered in a
 // register, each block of dst stored once, full.
 template<class Src, xstd::unsigned_integer Block, class Index>
@@ -384,7 +383,7 @@ constexpr auto gather_indices(Src const& src, std::size_t count, Index index, bo
 {
         auto acc = Block{};
         for (auto const j : std::views::iota(0UZ, count)) {
-                acc = static_cast<Block>(acc | shl(static_cast<Block>(static_cast<unsigned>(src.test(index(j)))), j % block_width<Block>));
+                acc = static_cast<Block>(acc | shl(bit_at(src, index(j)), j % block_width<Block>));
                 if (j % block_width<Block> == block_width<Block> - 1UZ) {
                         dst[j / block_width<Block>] = acc;
                         acc                         = Block{};
@@ -401,8 +400,11 @@ constexpr auto expand_indices(Src const& src, std::size_t count, Index index, bo
         -> void
 {
         for (auto const j : std::views::iota(0UZ, count)) {
-                auto const pos = index(j);
-                put(dst, pos, combined<Block>(f, dst.test(pos), src.test(j)));
+                // One position is a block whose mask has one bit, which the block combiner takes as it takes any other.
+                auto const pos  = index(j);
+                auto const mask = shl(Block{1}, pos % block_width<Block>);
+                auto& block     = dst[pos / block_width<Block>];
+                block           = f(block, shl(bit_at(src, j), pos % block_width<Block>), mask);
         }
 }
 
@@ -410,9 +412,12 @@ template<xstd::unsigned_integer Block, class Index, class F>
 constexpr auto fill_indices(bool value, std::size_t count, Index index, borrowed_bits<Block>& dst, F f) noexcept
         -> void
 {
+        auto const splat = value ? block_ones<Block> : Block{};
         for (auto const j : std::views::iota(0UZ, count)) {
-                auto const pos = index(j);
-                put(dst, pos, combined<Block>(f, dst.test(pos), value));
+                auto const pos  = index(j);
+                auto const mask = shl(Block{1}, pos % block_width<Block>);
+                auto& block     = dst[pos / block_width<Block>];
+                block           = f(block, static_cast<Block>(mask & splat), mask);
         }
 }
 

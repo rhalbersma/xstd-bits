@@ -62,6 +62,17 @@ template<class Block>
         return dst;
 }
 
+// The oracle for a slice: exactly start + j * stride for j < size.
+[[nodiscard]] auto slice_oracle(std::size_t n, std::size_t start, std::size_t size, std::size_t stride)
+        -> bools
+{
+        auto result = bools(n);
+        for (auto const j : std::views::iota(0UZ, size)) {
+                result[start + (j * stride)] = true;
+        }
+        return result;
+}
+
 // The source and destination patterns, so a kept bit, a written bit and an untouched one all show.
 template<class Block>
 [[nodiscard]] auto fills(std::size_t num_blocks)
@@ -144,16 +155,12 @@ BOOST_AUTO_TEST_CASE(SliceMasksSelectEveryStrideFromEveryStart)
                         for (auto const size : std::views::iota(1UZ, ((n - 1UZ - start) / stride) + 2UZ)) {
                                 BOOST_TEST_CONTEXT("slice(" << start << ", " << size << ", " << stride << ")")
                                 {
-                                        auto expected = bools(n);
-                                        for (auto const j : std::views::iota(0UZ, size)) {
-                                                expected[start + (j * stride)] = true;
-                                        }
                                         auto blocks = std::vector<Block>(n / digits<Block>);
                                         xstd::bits::detail::slice_masks<Block>(start, size, stride).for_each([&](std::size_t k, Block mask, std::size_t count) -> void {
                                                 blocks[k] = mask;
                                                 BOOST_CHECK_EQUAL(count, static_cast<std::size_t>(std::popcount(mask)));
                                         });
-                                        BOOST_CHECK(bools_of(blocks) == expected);
+                                        BOOST_CHECK(bools_of(blocks) == slice_oracle(n, start, size, stride));
                                 }
                         }
                 }
