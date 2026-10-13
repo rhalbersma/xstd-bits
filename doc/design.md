@@ -2749,17 +2749,36 @@ a left shift drops what it carries past the last key, as it does at a static wid
 value of the key type, as `std::set`'s do; the bounds of a value that is no key bisect the keys under `key_compare`,
 which puts `First - 1` before a range's first element where the wrapped distance alone would have put it after the
 last, and an unlisted value between two listed ones between them. A key type with no order of its own, a
-`std::bitset`, has no place between two keys to give, and its bounds keep `is_key` as their precondition. `basic_bit_fixed_set<E, Block, N>` with no mapping spelled keys it the same way; an enumeration that declares
-nothing has no default mapping, and so no set, unless its author specializes `bit_key_mapping<E>` directly, say as a
+`std::bitset`, has no place between two keys to give, and its bounds keep `is_key` as their precondition. `basic_bit_fixed_set<E, Block, N>` with no mapping spelled keys it the same way. An enumeration that lists nothing
+but ends in a sentinel, `enum class E { a, b, c, count };`, is keyed by that sentinel, below. One that declares
+neither has no default mapping, and so no set, unless its author specializes `bit_key_mapping<E>` directly, say as a
 `bit_range_mapping` from its first enumerator. The same `bit_find_mapping` keys sparse integers, such as identifiers
 drawn from a fixed table, to as many positions as there are identifiers.
 
-The count comes from the declaration because C++ has no portable way to count enumerators. A sentinel such as
-`E::MAX` makes the width a value of `E`, which every exhaustive `switch` must then handle and which cannot be added
-to an enumeration someone else owns. Counting by parsing compiler-generated function names, as `magic_enum` does,
-works only within a guessed value range and is no part of the language. `enum_traits<E>` leaves `E` as it is and
-can be declared by whoever needs it; C++26 reflection, `std::meta::enumerators_of(^^E)`, can generate `values`
-later without changing what `bit_key_mapping` reads.
+The count comes from the declaration because C++ has no portable way to count enumerators. Many enumerations
+already carry one: `enum class piece : std::uint8_t { pawn, knight, bishop, rook, queen, king, count };` says
+"from the first enumerator, `count` of them", and type_safe's `flag_set_traits` reads such a sentinel too. So
+`bit_key_mapping<E>` reads it where the author declared it. For an enumeration with an enumerator named `count` and
+no `enum_traits<E>::values`, it derives from `bit_range_mapping<E, E{}, N>`, `N` being `count`'s distance from
+`E{}`: `to_index` is a subtraction, `size` is `N`, and the sentinel, at position `N`, is never a key, so
+`bit_enum_set<piece>` is one byte holding six keys and `insert(piece::count)` throws `std::out_of_range` as any
+other non-key does. The name is exactly `count`, one spelling, since every further spelling (`size`, `COUNT`,
+`_size`) is another way for an unrelated enumerator to be read as a sentinel, and an inclusive alias such as
+Chromium's `kMaxValue = kLast` would be a second rule rather than a synonym. The range starts at `E{}`, the value
+`0`; an enumeration starting elsewhere lists its values or spells its `bit_range_mapping`. A `count` below zero is
+rejected by a `static_assert`, and a `count` of `0` is the empty universe, as `bit_range_mapping<E, E{}, 0>` is. The
+sentinel means that every value from `0` to `count - 1` is a key, and C++ cannot check that: an enumeration
+`{a = 0, b = 2, count = 3}` gets a three-key range in which the undeclared value `1` is a key. A list is the
+enumeration's own account of its keys and keeps priority, so an enumeration that lists its values keeps the list's
+mapping whether it ends in `count` or not, and the two specializations never compete.
+
+The sentinel is read, never required. Requiring one would make the width a value of `E`, which every exhaustive
+`switch` must then handle and which cannot be added to an enumeration someone else owns; an enumeration without one
+behaves as it would if the rule did not exist. Counting by parsing compiler-generated function names, as `magic_enum`
+does, works only within a guessed value range and is no part of the language. `enum_traits<E>` remains the general
+way: it leaves `E` as it is, takes gaps and any first value, and can be declared by whoever needs it; C++26
+reflection, `std::meta::enumerators_of(^^E)`, can generate `values` later without changing what `bit_key_mapping`
+reads.
 
 `bit_enum_set<Enum>` is `bit_least<basic_bit_fixed_set<Enum, std::size_t, N, bit_key_mapping<Enum>>>`, `N` being
 the mapping's `size`, for any enumeration whose `bit_key_mapping` models `sized_bit_index_mapping`. The block is

@@ -102,7 +102,44 @@ enum class undeclared : std::uint8_t
         x,
 };
 
-using listed_enums = std::tuple<perm, letter, piece, level, sign, day, wind, nine>;
+// Dense from 0 and closed by its author's count, with no list beside it.
+enum class chessman : std::uint8_t
+{
+        pawn,
+        knight,
+        bishop,
+        rook,
+        queen,
+        king,
+        count,
+};
+
+// Closed by a count but listed as well, with gaps the list skips and the count spans.
+enum class tone : std::uint8_t
+{
+        low   = 0,
+        mid   = 4,
+        high  = 9,
+        count = 10,
+};
+
+// A count after a gap, which the count spans all the same.
+enum class gapped : std::uint8_t
+{
+        a     = 0,
+        b     = 2,
+        count = 3,
+};
+
+// A count and nothing before it: an empty universe.
+enum class nothing : std::uint8_t
+{
+        count,
+};
+
+using listed_enums = std::tuple<perm, letter, piece, level, sign, day, wind, nine, tone>;
+
+using counted_enums = std::tuple<chessman, gapped, nothing>;
 
 } // namespace test::set
 
@@ -146,6 +183,12 @@ template<>
 struct xstd::enum_traits<test::set::wind>
 {
         static constexpr std::array values = {test::set::wind::n, test::set::wind::ne, test::set::wind::e, test::set::wind::se, test::set::wind::s, test::set::wind::sw, test::set::wind::w, test::set::wind::nw};
+};
+
+template<>
+struct xstd::enum_traits<test::set::tone>
+{
+        static constexpr std::array values = {test::set::tone::low, test::set::tone::mid, test::set::tone::high};
 };
 
 template<>

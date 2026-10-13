@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/enums.hpp>                       // day, listed_enums, nine, perm, piece, wind
+#include <test/set/enums.hpp>                       // chessman, day, listed_enums, nine, perm, piece, undeclared, wind
 #include <test/set/lookup.hpp>                      // lookup_mismatches
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp> // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp> // bit_includes
@@ -18,6 +18,7 @@
 #include <xstd/misc/utility/to_underlying.hpp>      // to_underlying
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                // max, min, ranges::equal, ranges::includes
+#include <array>                                    // array
 #include <bit>                                      // bit_cast
 #include <concepts>                                 // same_as
 #include <cstddef>                                  // size_t
@@ -64,6 +65,9 @@ using descending_set = xstd::bit_least<xstd::basic_bit_fixed_set<E, std::size_t,
 // A requires-expression on a concrete type is ill-formed rather than false ([expr.prim.req]/5).
 template<class E>
 constexpr bool enumerators_combine = requires (E a, E b) { a | b; } or requires (E a, E b) { a & b; } or requires (E a, E b) { a ^ b; } or requires (E a, E b) { a - b; };
+
+template<class E>
+constexpr bool has_enum_set = requires { typename xstd::bit_enum_set<E>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
 
 template<class X, class K>
 constexpr bool takes_as_key = requires (X x, K k) { x.insert(k); } or requires (X x, K k) { x.contains(k); } or requires (X x, K k) { x.find(k); };
@@ -326,6 +330,27 @@ BOOST_AUTO_TEST_CASE(ASpecializedMappingNeedsNoListOfValues)
         static_assert(std::same_as<decltype(s), xstd::bit_enum_set<weekday> const>);
         BOOST_CHECK(std::ranges::equal(s, std::set<weekday>{weekday::mon, weekday::wed, weekday::sun}));
         BOOST_CHECK_EQUAL((~s).size(), 4UZ);
+}
+
+// An enumeration ending in count needs nothing else declared: its keys are those below the count, in one byte.
+BOOST_AUTO_TEST_CASE(ACountClosesTheUniverseWithNothingElseDeclared)
+{
+        using test::set::chessman;
+        using X = xstd::bit_enum_set<chessman>;
+        static_assert(std::same_as<X, xstd::basic_bit_fixed_set<chessman, std::uint8_t, 6UZ, xstd::bit_key_mapping<chessman>>>);
+        static_assert(sizeof(X) == 1UZ);
+        static_assert(std::same_as<decltype(xstd::basic_bit_fixed_set{chessman::rook, chessman::pawn}), X>);
+        static_assert(has_enum_set<chessman> and not has_enum_set<test::set::undeclared>);
+
+        auto const all = std::array{chessman::pawn, chessman::knight, chessman::bishop, chessman::rook, chessman::queen, chessman::king};
+        BOOST_CHECK(std::ranges::equal(~X(), all));
+        BOOST_CHECK(std::ranges::equal(X{chessman::king, chessman::pawn}, std::set<chessman>{chessman::pawn, chessman::king}));
+
+        // The count is no key, and a fixed set refuses it as it refuses every other.
+        auto x = X();
+        BOOST_CHECK(not x.contains(chessman::count));
+        BOOST_CHECK_THROW(static_cast<void>(x.insert(chessman::count)), std::out_of_range);
+        BOOST_CHECK(x.empty());
 }
 
 // Gaps cost no bit: the universe is the six pieces, and the complement of none is all six.
