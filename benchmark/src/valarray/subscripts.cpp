@@ -5,17 +5,17 @@
 
 // The valarray row's subscripts: xstd::bit_valarray against std::valarray<bool>, a gather and a scatter each.
 
-#include <xstd/bits/bit_gslice.hpp>   // bit_gslice
-#include <xstd/bits/bit_valarray.hpp> // bit_valarray
-#include <xstd/ints/bit.hpp>          // bit_compress, bit_expand, popcount
-#include <benchmark/benchmark.h>      // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
-#include <cstddef>                    // size_t
-#include <algorithm>                  // copy
-#include <cstdint>                    // int64_t, uint64_t
-#include <ranges>                     // iota
-#include <utility>                    // as_const
-#include <valarray>                   // gslice, slice, valarray
-#include <vector>                     // vector
+#include <xstd/bits/bit_gslice.hpp>       // bit_gslice
+#include <xstd/bits/bit_valarray.hpp>     // bit_valarray
+#include <xstd/bits/detail/ownership.hpp> // storage_access
+#include <xstd/ints/bit.hpp>              // bit_compress, bit_expand, popcount
+#include <benchmark/benchmark.h>          // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
+#include <algorithm>                      // copy
+#include <cstddef>                        // size_t
+#include <cstdint>                        // int64_t, uint64_t
+#include <ranges>                         // iota
+#include <span>                           // span
+#include <valarray>                       // gslice, slice, valarray
 
 namespace {
 
@@ -67,22 +67,25 @@ auto set_counters(benchmark::State& state, std::size_t selected)
         state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(selected));
 }
 
-// The handwritten column: raw 64-bit words, P3104's word functions, no container, as a bitboard engine writes them.
-using words = std::vector<std::uint64_t>;
+// The handwritten column: P3104's word functions over 64-bit words, as a bitboard engine writes them. The words are
+// the blocks of bit_valarrays filled as the library's are, and each gather's result is a bit_valarray too, so both
+// columns run on the same allocator, alignment and fill, and differ only in the code between them.
+using word = std::size_t;
 
-auto words_of(std::size_t size, std::size_t percent, std::uint64_t seed)
-        -> words
+auto blocks(xstd::bit_valarray& v)
+        -> std::span<word>
 {
-        auto const v = filled<std::valarray<bool>>(size, percent, seed);
-        auto w       = words((size + 63UZ) / 64UZ);
-        for (auto const i : std::views::iota(0UZ, size)) {
-                w[i / 64UZ] |= static_cast<std::uint64_t>(v[i]) << (i % 64UZ);
-        }
-        return w;
+        return xstd::bits::detail::storage_access::bits(v).blocks();
+}
+
+auto blocks(xstd::bit_valarray const& v)
+        -> std::span<word const>
+{
+        return xstd::bits::detail::storage_access::bits(v).blocks();
 }
 
 // Bits packed in at a running offset, each word's share split over at most two output words.
-inline auto append(words& out, std::size_t& pos, std::uint64_t bits, std::size_t count)
+inline auto append(std::span<word> out, std::size_t& pos, word bits, std::size_t count)
         -> void
 {
         auto const index  = pos / 64UZ;
@@ -95,8 +98,8 @@ inline auto append(words& out, std::size_t& pos, std::uint64_t bits, std::size_t
 }
 
 // The next count bits from a running offset.
-inline auto take(words const& in, std::size_t& pos, std::size_t count)
-        -> std::uint64_t
+inline auto take(std::span<word const> in, std::size_t& pos, std::size_t count)
+        -> word
 {
         auto const index  = pos / 64UZ;
         auto const offset = pos % 64UZ;
@@ -109,7 +112,7 @@ inline auto take(words const& in, std::size_t& pos, std::size_t count)
 }
 
 // A gather returns an array of its own, as v[s] does: a clear output of the size selected.
-auto hand_gather(words const& src, words const& mask, words& out)
+auto hand_gather(std::span<word const> src, std::span<word const> mask, std::span<word> out)
         -> void
 {
         auto pos = 0UZ;
@@ -118,7 +121,7 @@ auto hand_gather(words const& src, words const& mask, words& out)
         }
 }
 
-auto hand_scatter(words& dst, words const& mask, words const& in)
+auto hand_scatter(std::span<word> dst, std::span<word const> mask, std::span<word const> in)
         -> void
 {
         auto pos = 0UZ;
@@ -128,35 +131,36 @@ auto hand_scatter(words& dst, words const& mask, words const& in)
         }
 }
 
-auto hand_index_gather(words const& src, std::valarray<std::size_t> const& indices, words& out)
+auto hand_index_gather(std::span<word const> src, std::valarray<std::size_t> const& indices, std::span<word> out)
         -> void
 {
         for (auto const j : std::views::iota(0UZ, indices.size())) {
                 auto const i   = indices[j];
                 auto const bit = (src[i / 64UZ] >> (i % 64UZ)) & 1U;
                 auto& w        = out[j / 64UZ];
-                w              = (w & ~(std::uint64_t{1} << (j % 64UZ))) | (bit << (j % 64UZ));
+                w              = (w & ~(word{1} << (j % 64UZ))) | (bit << (j % 64UZ));
         }
 }
 
-auto hand_index_scatter(words& dst, std::valarray<std::size_t> const& indices, words const& in)
+auto hand_index_scatter(std::span<word> dst, std::valarray<std::size_t> const& indices, std::span<word const> in)
         -> void
 {
         for (auto const j : std::views::iota(0UZ, indices.size())) {
                 auto const i   = indices[j];
                 auto const bit = (in[j / 64UZ] >> (j % 64UZ)) & 1U;
                 auto& w        = dst[i / 64UZ];
-                w              = (w & ~(std::uint64_t{1} << (i % 64UZ))) | (bit << (i % 64UZ));
+                w              = (w & ~(word{1} << (i % 64UZ))) | (bit << (i % 64UZ));
         }
 }
 
-// A slice's positions as a mask word per word, made once outside the loop as a handwritten engine would.
-auto slice_mask(std::size_t stride)
-        -> words
+// A selection as a mask over n bits, made once outside the loop as a handwritten engine would.
+template<class Selects>
+auto mask_of(Selects selects)
+        -> xstd::bit_valarray
 {
-        auto m = words(n / 64UZ);
-        for (auto i = 0UZ; i < n; i += stride) {
-                m[i / 64UZ] |= std::uint64_t{1} << (i % 64UZ);
+        auto m = xstd::bit_valarray(n);
+        for (auto const i : std::views::iota(0UZ, n)) {
+                m[i] = selects(i);
         }
         return m;
 }
@@ -168,16 +172,16 @@ auto bm_slice_gather_hand(benchmark::State& state)
         -> void
 {
         auto const stride = static_cast<std::size_t>(state.range(0));
-        auto const v      = words_of(n, 50UZ, 1U);
-        auto const mask   = slice_mask(stride);
+        auto const v      = filled<xstd::bit_valarray>(n, 50UZ, 1U);
+        auto const mask   = mask_of([=](std::size_t i) -> bool { return i % stride == 0UZ; });
         for (auto _ : state) {
-                auto out = words(((n / stride) + 63UZ) / 64UZ);
+                auto out = xstd::bit_valarray(n / stride);
                 if (stride == 1UZ) {
-                        std::ranges::copy(v, out.begin());
+                        std::ranges::copy(blocks(v), blocks(out).begin());
                 } else {
-                        hand_gather(v, mask, out);
+                        hand_gather(blocks(v), blocks(mask), blocks(out));
                 }
-                benchmark::DoNotOptimize(out.data());
+                benchmark::DoNotOptimize(out);
                 benchmark::ClobberMemory();
         }
         set_counters(state, n / stride);
@@ -187,14 +191,14 @@ auto bm_slice_scatter_hand(benchmark::State& state)
         -> void
 {
         auto const stride = static_cast<std::size_t>(state.range(0));
-        auto v            = words_of(n, 50UZ, 1U);
-        auto const mask   = slice_mask(stride);
-        auto const w      = words_of(n / stride, 50UZ, 2U);
+        auto v            = filled<xstd::bit_valarray>(n, 50UZ, 1U);
+        auto const mask   = mask_of([=](std::size_t i) -> bool { return i % stride == 0UZ; });
+        auto const w      = filled<xstd::bit_valarray>(n / stride, 50UZ, 2U);
         for (auto _ : state) {
                 if (stride == 1UZ) {
-                        std::ranges::copy(w, v.begin());
+                        std::ranges::copy(blocks(w), blocks(v).begin());
                 } else {
-                        hand_scatter(v, mask, w);
+                        hand_scatter(blocks(v), blocks(mask), blocks(w));
                 }
                 benchmark::ClobberMemory();
         }
@@ -204,18 +208,18 @@ auto bm_slice_scatter_hand(benchmark::State& state)
 auto bm_mask_gather_hand(benchmark::State& state)
         -> void
 {
-        auto const v    = words_of(n, 50UZ, 1U);
-        auto const mask = words_of(n, static_cast<std::size_t>(state.range(0)), 3U);
+        auto const v    = filled<xstd::bit_valarray>(n, 50UZ, 1U);
+        auto const mask = filled<xstd::bit_valarray>(n, static_cast<std::size_t>(state.range(0)), 3U);
         auto size       = 0UZ;
         for (auto _ : state) {
                 // The size first, as a gather returning its own array must know it.
                 size = 0UZ;
-                for (auto const m : mask) {
+                for (auto const m : blocks(mask)) {
                         size += static_cast<std::size_t>(xstd::popcount(m));
                 }
-                auto out = words((size + 63UZ) / 64UZ);
-                hand_gather(v, mask, out);
-                benchmark::DoNotOptimize(out.data());
+                auto out = xstd::bit_valarray(size);
+                hand_gather(blocks(v), blocks(mask), blocks(out));
+                benchmark::DoNotOptimize(out);
                 benchmark::ClobberMemory();
         }
         set_counters(state, size);
@@ -224,15 +228,15 @@ auto bm_mask_gather_hand(benchmark::State& state)
 auto bm_mask_scatter_hand(benchmark::State& state)
         -> void
 {
-        auto v          = words_of(n, 50UZ, 1U);
-        auto const mask = words_of(n, static_cast<std::size_t>(state.range(0)), 3U);
+        auto v          = filled<xstd::bit_valarray>(n, 50UZ, 1U);
+        auto const mask = filled<xstd::bit_valarray>(n, static_cast<std::size_t>(state.range(0)), 3U);
         auto size       = 0UZ;
-        for (auto const m : mask) {
+        for (auto const m : blocks(mask)) {
                 size += static_cast<std::size_t>(xstd::popcount(m));
         }
-        auto const w = words_of(size, 50UZ, 2U);
+        auto const w = filled<xstd::bit_valarray>(size, 50UZ, 2U);
         for (auto _ : state) {
-                hand_scatter(v, mask, w);
+                hand_scatter(blocks(v), blocks(mask), blocks(w));
                 benchmark::ClobberMemory();
         }
         set_counters(state, size);
@@ -242,12 +246,12 @@ auto bm_mask_scatter_hand(benchmark::State& state)
 auto bm_gslice_gather_hand(benchmark::State& state)
         -> void
 {
-        auto const v    = words_of(n, 50UZ, 1U);
-        auto const mask = words(n / 64UZ, 0x0F0F'0F0F'0F0F'0F0FULL);
+        auto const v    = filled<xstd::bit_valarray>(n, 50UZ, 1U);
+        auto const mask = mask_of([](std::size_t i) -> bool { return i % 8UZ < 4UZ; });
         for (auto _ : state) {
-                auto out = words(n / 128UZ);
-                hand_gather(v, mask, out);
-                benchmark::DoNotOptimize(out.data());
+                auto out = xstd::bit_valarray(n / 2UZ);
+                hand_gather(blocks(v), blocks(mask), blocks(out));
+                benchmark::DoNotOptimize(out);
                 benchmark::ClobberMemory();
         }
         set_counters(state, n / 2UZ);
@@ -256,11 +260,11 @@ auto bm_gslice_gather_hand(benchmark::State& state)
 auto bm_gslice_scatter_hand(benchmark::State& state)
         -> void
 {
-        auto v          = words_of(n, 50UZ, 1U);
-        auto const mask = words(n / 64UZ, 0x0F0F'0F0F'0F0F'0F0FULL);
-        auto const w    = words_of(n / 2UZ, 50UZ, 2U);
+        auto v          = filled<xstd::bit_valarray>(n, 50UZ, 1U);
+        auto const mask = mask_of([](std::size_t i) -> bool { return i % 8UZ < 4UZ; });
+        auto const w    = filled<xstd::bit_valarray>(n / 2UZ, 50UZ, 2U);
         for (auto _ : state) {
-                hand_scatter(v, mask, w);
+                hand_scatter(blocks(v), blocks(mask), blocks(w));
                 benchmark::ClobberMemory();
         }
         set_counters(state, n / 2UZ);
@@ -269,12 +273,12 @@ auto bm_gslice_scatter_hand(benchmark::State& state)
 auto bm_indirect_gather_hand(benchmark::State& state)
         -> void
 {
-        auto const v       = words_of(n, 50UZ, 1U);
+        auto const v       = filled<xstd::bit_valarray>(n, 50UZ, 1U);
         auto const indices = indices_of(filled<std::valarray<bool>>(n, static_cast<std::size_t>(state.range(0)), 3U));
         for (auto _ : state) {
-                auto out = words((indices.size() + 63UZ) / 64UZ);
-                hand_index_gather(v, indices, out);
-                benchmark::DoNotOptimize(out.data());
+                auto out = xstd::bit_valarray(indices.size());
+                hand_index_gather(blocks(v), indices, blocks(out));
+                benchmark::DoNotOptimize(out);
                 benchmark::ClobberMemory();
         }
         set_counters(state, indices.size());
@@ -283,11 +287,11 @@ auto bm_indirect_gather_hand(benchmark::State& state)
 auto bm_indirect_scatter_hand(benchmark::State& state)
         -> void
 {
-        auto v             = words_of(n, 50UZ, 1U);
+        auto v             = filled<xstd::bit_valarray>(n, 50UZ, 1U);
         auto const indices = indices_of(filled<std::valarray<bool>>(n, static_cast<std::size_t>(state.range(0)), 3U));
-        auto const w       = words_of(indices.size(), 50UZ, 2U);
+        auto const w       = filled<xstd::bit_valarray>(indices.size(), 50UZ, 2U);
         for (auto _ : state) {
-                hand_index_scatter(v, indices, w);
+                hand_index_scatter(blocks(v), indices, blocks(w));
                 benchmark::ClobberMemory();
         }
         set_counters(state, indices.size());
