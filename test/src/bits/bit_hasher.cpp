@@ -156,8 +156,8 @@ template<class T>
         return x;
 }
 
-// A seed of the kind a container draws at random, fixed here so that a failure reruns.
-constexpr auto test_seed = std::uint64_t{0x9E37'79B9'7F4A'7C15};
+// Fixed so that a failure reruns, and named as bit_hasher names its parameter, so MSVC checks it for C4459.
+constexpr auto seed = std::uint64_t{0x9E37'79B9'7F4A'7C15};
 
 // The positions a long set holds: past the first block, across 256 bytes and up to its last position.
 inline constexpr auto long_width = 4'000UZ;
@@ -473,12 +473,12 @@ BOOST_AUTO_TEST_CASE(TheHasherIsSeededAndTransparent)
         auto const value      = xstd::bit_fixed_set<100>({1, 3, 99});
         auto const seed_bytes = std::array<unsigned char, 4>{1, 2, 3, 4};
         auto const unseeded   = xstd::bit_hasher<boost::hash2::siphash_64>();
-        auto const seeded     = xstd::bit_hasher<boost::hash2::siphash_64>(test_seed);
+        auto const seeded     = xstd::bit_hasher<boost::hash2::siphash_64>(seed);
         auto const keyed      = xstd::bit_hasher<boost::hash2::siphash_64>(seed_bytes.data(), seed_bytes.size());
         BOOST_CHECK(unseeded(value) != seeded(value));
         BOOST_CHECK(seeded(value) != keyed(value));
 
-        auto h = boost::hash2::siphash_64(test_seed);
+        auto h = boost::hash2::siphash_64(seed);
         xstd::bit_hash_append(h, boost::hash2::default_flavor(), value);
         BOOST_CHECK_EQUAL(seeded(value), boost::hash2::get_integral_result<std::size_t>(h));
 
@@ -499,7 +499,7 @@ BOOST_AUTO_TEST_CASE(TheHasherIsSeededAndTransparent)
         auto expected = recorder();
         xstd::bit_hash_append(expected, boost::hash2::default_flavor(), value);
         BOOST_CHECK_EQUAL(expected.result(), 13UZ);
-        BOOST_CHECK_EQUAL(xstd::bit_hasher<recorder>(test_seed)(value), boost::hash2::get_integral_result<std::size_t>(expected));
+        BOOST_CHECK_EQUAL(xstd::bit_hasher<recorder>(seed)(value), boost::hash2::get_integral_result<std::size_t>(expected));
         BOOST_CHECK_EQUAL(xstd::bit_hasher<recorder>(seed_bytes.data(), seed_bytes.size())(value), boost::hash2::get_integral_result<std::size_t>(expected));
 }
 
