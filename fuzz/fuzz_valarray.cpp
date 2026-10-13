@@ -10,20 +10,21 @@
 #include <xstd/bits/bit_fixed_valarray.hpp>   // basic_bit_fixed_valarray, bit_fixed_valarray
 #include <xstd/bits/bit_valarray.hpp>         // basic_bit_valarray, bit_valarray
 #include <xstd/bits/bit_vector.hpp>           // bit_vector
-#include <algorithm>                          // count, equal, fill
+#include <algorithm>                          // count, equal, fill, min
 #include <array>                              // array
 #include <climits>                            // INT_MIN
 #include <cstddef>                            // size_t
 #include <cstdint>                            // uint8_t
-#include <ranges>                             // iota, ssize
+#include <ranges>                             // iota, range_value_t, ssize
 #include <tuple>                              // tuple
 #include <type_traits>                        // type_identity
-#include <utility>                            // move, swap
+#include <utility>                            // as_const, move, swap
+#include <valarray>                           // slice
 #include <vector>                             // vector
 
 namespace {
 
-// The valarray reading's owners: a heap, a static size, and a capacity, each across blocks.
+// The valarray reading's owners: a heap, a static size, and a capacity, each across blocks; slices and masks over each.
 using owners = std::tuple<
         xstd::bit_valarray,
         xstd::basic_bit_valarray<std::uint8_t>,
@@ -155,6 +156,93 @@ template<class A, class B>
         }
 }
 
+// The positions a slice or a mask selects, in the order a gather reads them and a scatter writes them.
+[[nodiscard]] auto gathered(model const& m, std::vector<std::size_t> const& positions)
+        -> model
+{
+        auto result = model();
+        for (auto const pos : positions) {
+                result.push_back(m[pos]);
+        }
+        return result;
+}
+
+// One write through a proxy, position by position and in order, as the model takes it.
+[[nodiscard]] auto scattered(unsigned op, model m, std::vector<std::size_t> const& positions, model const& b)
+        -> model
+{
+        for (auto const j : std::views::iota(0UZ, positions.size())) {
+                auto const pos = positions[j];
+                m[pos]         = op == 0U ? b[j] : model_op(op - 1U, m[pos], b[j]);
+        }
+        return m;
+}
+
+template<class P, class A>
+auto proxy_op(unsigned op, P const& p, A const& a)
+        -> void
+{
+        switch (op) {
+                case 0:
+                        p = a;
+                        break;
+                case 1:
+                        p &= a;
+                        break;
+                case 2:
+                        p |= a;
+                        break;
+                default:
+                        p ^= a;
+                        break;
+        }
+}
+
+// The positions of a slice reduced into range: a stride of zero repeats one position, at most as often as there are.
+[[nodiscard]] auto slice_in(fuzz::decoder& in, std::size_t size)
+        -> std::slice
+{
+        if (size == 0UZ) {
+                return {0UZ, 0UZ, 1UZ};
+        }
+        auto const start  = in.below(size);
+        auto const stride = in.below(size + 2UZ);
+        auto const most   = stride == 0UZ ? std::ranges::min(size, 3UZ) : ((size - 1UZ - start) / stride) + 1UZ;
+        return {start, in.below(most + 1UZ), stride};
+}
+
+// A gather compared with the model, or a write through the proxy from an array of the same blocks or from a scalar.
+template<class X, class Selector>
+auto fuzz_subscript(fuzz::decoder& in, fuzz::checker const& check, X& x, model& m, Selector const& selector, std::vector<std::size_t> const& positions)
+        -> void
+{
+        using operand    = xstd::basic_bit_valarray<std::ranges::range_value_t<typename X::block_container_type>>;
+        auto const count = positions.size();
+        switch (in.byte() % 3U) {
+                case 0: {
+                        expect_equal(check, std::as_const(x)[selector], gathered(m, positions));
+                        break;
+                }
+                case 1: {
+                        auto const op = in.byte() % 4U;
+                        auto b        = model(count);
+                        for (auto&& e : b) {
+                                e = in.boolean();
+                        }
+                        proxy_op(op, x[selector], from_model<operand>(b));
+                        m = scattered(op, m, positions, b);
+                        break;
+                }
+                default: {
+                        auto const op  = in.byte() % 4U;
+                        auto const val = in.boolean();
+                        proxy_op(op, x[selector], val);
+                        m = scattered(op, m, positions, model(count, val));
+                        break;
+                }
+        }
+}
+
 [[nodiscard]] auto model_of_op(unsigned op, bool a, bool b)
         -> bool
 {
@@ -180,7 +268,7 @@ auto fuzz_one(fuzz::decoder& in)
                 auto my_sized = my;
                 my_sized.resize(size);
                 auto const y = from_model<X>(my_sized);
-                switch (in.byte() % 12U) {
+                switch (in.byte() % 14U) {
                         case 0: {
                                 check.step("operator[]");
                                 if (size != 0UZ) {
@@ -325,6 +413,27 @@ auto fuzz_one(fuzz::decoder& in)
                                                 break;
                                         }
                                 }
+                                break;
+                        }
+                        case 12: {
+                                check.step("slice gather and scatter");
+                                auto const s   = slice_in(in, size);
+                                auto positions = std::vector<std::size_t>();
+                                for (auto const k : std::views::iota(0UZ, s.size())) {
+                                        positions.push_back(s.start() + (k * s.stride()));
+                                }
+                                fuzz_subscript(in, check, x, m, s, positions);
+                                break;
+                        }
+                        case 13: {
+                                check.step("mask gather and scatter");
+                                auto positions = std::vector<std::size_t>();
+                                for (auto const k : std::views::iota(0UZ, size)) {
+                                        if (my_sized[k]) {
+                                                positions.push_back(k);
+                                        }
+                                }
+                                fuzz_subscript(in, check, x, m, y, positions);
                                 break;
                         }
                         default: {
