@@ -271,8 +271,6 @@ auto mask_of(Selects selects)
         return m;
 }
 
-} // namespace
-
 // The handwritten slice: a stride-one gather is a copy, any other the same set-up and loop as the library's.
 auto bm_slice_gather_hand(benchmark::State& state)
         -> void
@@ -585,6 +583,8 @@ auto bm_indirect_scatter(benchmark::State& state)
         }
         set_counters(state, indices.size());
 }
+
+} // namespace
 
 // Strides below a block take the mask path, one of a block or more the index path.
 BENCHMARK_TEMPLATE(bm_slice_gather, std::valarray<bool>)->Arg(1)->Arg(2)->Arg(3)->Arg(8)->Arg(64)->Arg(100);
