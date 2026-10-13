@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_FLAG_MAPPING_HPP
 #define XSTD_BITS_BIT_FLAG_MAPPING_HPP
 
-#include <xstd/bits/detail/flag_block.hpp> // flag_mask, flag_width_v, flag_block_t, from_block, to_block
+#include <xstd/bits/detail/flag_block.hpp> // default_flag_width_v, flag_block_t, flag_mask, flag_width_v, from_block, to_block
 #include <xstd/bits/detail/shift.hpp>      // shl
 #include <bit>                             // countr_zero, has_single_bit
 #include <cassert>                         // assert
@@ -16,7 +16,7 @@
 namespace xstd {
 
 // A one-bit value ranks at the position of its bit, and rank i is the value 1 << i: an enumeration, integer or bitset.
-template<class Key, std::size_t N = bits::detail::flag_width_v<Key>>
+template<class Key, std::size_t N = bits::detail::default_flag_width_v<Key>>
         requires bits::detail::flag_mask<Key>
 struct bit_flag_mapping
 {

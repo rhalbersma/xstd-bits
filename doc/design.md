@@ -2991,6 +2991,28 @@ unsigned counterpart, or the block a bitset of that width is, and every conversi
 goes through that word: a cast for an enumeration or an integer, `xstd::bit_convert` for a bitset, position `i`
 staying position `i`. `bool` and the character types are integral but no integer type, and are not masks.
 
+An enumeration is a mask when `xstd::bit_mask` says so, its operators returning the enumeration, and also whenever
+its `|` compiles, whatever that returns. Qt's flag enumerations return a `QFlags<Enum>` from `|`, and a C enumeration
+with no operators of its own returns the `int` of the built-in one; both are bitmasks by intent, and writing
+`bit_flag_set<E>` already says so. A scoped enumeration with no `|`, such as `std::filesystem::file_type` or
+`std::regex_constants::error_type`, is an enumerated type and no bitmask, and is turned away: it is the likeliest
+accident. An unscoped enumeration that is no bitmask still has the built-in `|`, and is admitted; that is the rule's
+cost, paid only by someone who names it in `bit_flag_set`.
+
+**The width an enumeration defaults to depends on how it is declared.** With an unsigned underlying type, it is
+every bit of that type: Qt's `WindowType` and glibc's `EPOLL_EVENTS` put a flag on bit 31 that way. With a signed
+underlying type, it is the integer's width less the sign bit, below: 31 for an `int`-based enumeration such as
+`std::launch`, exactly as for `int` itself. With no fixed underlying type there is no default, and `bit_flag_set<E>`
+does not name a type: such an enumeration's values are only those of the smallest bit-field holding its enumerators
+([dcl.enum]/8), and a flag type over more bits than that forms a value outside the enumeration on `~` or on
+iterating its high keys, which is undefined behaviour and which UBSan reports. `E{0}` is well-formed exactly where the
+underlying type is fixed ([dcl.init.list]/3.8), and that is the test. The range itself cannot be computed: Clang
+rejects an out-of-range `static_cast<E>` in a constant expression and GCC accepts it, and C++ cannot list
+enumerators. So the user writes the width, as `bit_flag_set<Qt::AlignmentFlag, 9>` for an alignment whose
+enumerators reach bit 8. libc++'s `regex_constants::syntax_option_type` and `match_flag_type`, and libstdc++'s
+`ios_base::fmtflags`, `iostate` and `openmode`, are such enumerations. C++26 reflection lifts the restriction:
+`std::meta::enumerators_of(^^E)` gives the enumerators, and with them the range.
+
 **An integer mask keys its one-bit values, not its numbers.** `bit_flag_set<std::uint32_t>`'s keys are `1`, `2`,
 `4`, … `0x8000'0000`, exactly as an enumeration's are; it is `bit_flag_mapping`, not the key type, that decides,
 and `bit_fixed_set<N>`, keyed by the positions `0` to `N - 1` through `bit_key_mapping<std::size_t>`, is a different
@@ -2998,17 +3020,30 @@ set over the same `std::size_t`. `xstd::bit_mask` admits only the unsigned integ
 says "an integer type" without a sign, and an implementation picks one: the flag type also takes a signed `Mask`,
 and keeps its sign bit out of the universe. `N` is at most
 `std::numeric_limits<Mask>::digits`, which counts no sign bit, and defaults to it: 31 for `int`, 7 for
-`std::int8_t`, every bit for an unsigned type. So every value a signed flag type gives back is non-negative, and a
-value with the sign bit set is a value wider than `N`, below. The arithmetic is the unsigned counterpart's: a rank
-is its `countr_zero` and rank `i` is `1` shifted left `i` places in that word, cast back, which is why the sign
-bit, the one position a shift there would reach, is excluded rather than handled.
+`std::int8_t`, every bit for an unsigned type. An enumeration on a signed underlying type is counted the same way,
+so `int` and an `int`-based enumeration agree about bit 31. So every value a signed flag type gives back is
+non-negative, and a value with the sign bit set is a value wider than `N`, below: it narrows under brace
+initialization, `bit_flag_set<int>{0x8000'0000U}`, and fails the conversion's assertion in a constant expression and
+at run time. The arithmetic is the unsigned counterpart's: a rank is its `countr_zero` and rank `i` is `1` shifted
+left `i` places in that word, cast back, which is why the sign bit, the one position a shift there would reach, is
+excluded rather than handled.
+
+A bit set's order comes from bit positions, and a signed value order cannot match it once the sign bit is set:
+`std::greater<E>` ranks a flag on the sign bit lowest, where the walk from the highest position visits it first, so
+iteration, `lower_bound` and `<=>` would disagree with `std::set<E, std::greater<E>>`. Four ways to keep such a flag
+were weighed and rejected, each costing machinery or a comparator users cannot name: rotating the storage by one
+bit so that the sign flag ranks lowest, a cyclic walk starting at the sign bit, a signed index type for `to_index`,
+and a position comparator in place of `std::less` and `std::greater`. The one real case found, POSIX's `sa_flags`
+with glibc's `SA_RESETHAND` at `0x80000000`, is an `unsigned` constant stored in an `int` field: the word is `int`,
+the flags are `unsigned`, and `bit_flag_set<unsigned>` keys it, with a cast on each side of the field.
 
 The standard's own bitmask types are the case in point. [ios.base] declares `fmtflags`, `iostate` and `openmode`
-as bitmask types and leaves the rest to the implementation: libstdc++ makes each an enumeration over `int` with the
-operators overloaded, libc++ `unsigned int`, and MSVC `int`, its constants of an unscoped enumeration beside it.
-`bit_flag_set<std::ios_base::fmtflags>` is one spelling for all three, 32 bits wide on the first two and 31 on the
-third, every standard constant below that, and code written against the stream carries over with only the variable's
-type changed: `fmtflags f = os.flags(); f -= ios::basefield; f |= ios::hex; os.flags(f);`.
+as bitmask types and leaves the rest to the implementation: libstdc++ makes each an unscoped enumeration with no
+fixed underlying type and the operators overloaded, libc++ `unsigned int`, and MSVC `int`, its constants of an
+unscoped enumeration beside it. libstdc++'s enumerations take no default width, so the spelling for all three is
+`bit_flag_set<std::ios_base::fmtflags, 16>`, every standard constant of every implementation below bit 16, and code
+written against the stream carries over with only the variable's type changed:
+`fmtflags f = os.flags(); f -= ios::basefield; f |= ios::hex; os.flags(f);`.
 
 1. **Implicit conversions both ways.** Values from the standard's functions flow in,
    `xfs::perms p = fs::status(path).permissions();`, and ours flow out, `fs::permissions(path, p)`. The converting

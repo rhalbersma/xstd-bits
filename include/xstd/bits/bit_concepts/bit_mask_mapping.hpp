@@ -16,7 +16,7 @@ namespace xstd {
 template<class Mapping, class Key>
 concept bit_mask_mapping =
         sized_bit_index_mapping<Mapping, Key> and
-        // Unsigned, never the signed type under an enumeration such as std::launch: a flag may sit on its sign bit.
+        // Unsigned, never the signed type under an enumeration such as std::launch: a shift or a count meets no sign.
         xstd::unsigned_integer<typename Mapping::block_type> and
         requires (Key mask, Mapping::block_type block) {
                 { Mapping::to_block(mask) } -> std::same_as<typename Mapping::block_type>; // every bit of mask, at its position

@@ -9,6 +9,7 @@
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
 #include <xstd/bits/bit_fixed_set.hpp>                        // basic_bit_fixed_set
 #include <xstd/bits/bit_flag_mapping.hpp>                     // bit_flag_mapping
+#include <xstd/bits/detail/flag_block.hpp>                    // full_range_mask
 #include <xstd/bits/from_blocks.hpp>                          // from_blocks
 #include <boost/test/unit_test.hpp>                           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                          // ranges::equal
@@ -17,12 +18,19 @@
 #include <bitset>                                             // bitset
 #include <concepts>                                           // same_as
 #include <cstddef>                                            // size_t
+#include <charconv>                                           // chars_format
 #include <cstdint>                                            // int8_t, uint16_t, uint64_t, uint8_t
+#include <filesystem>                                         // copy_options, perms
 #include <functional>                                         // greater
+#include <future>                                             // launch
+#include <ios>                                                // ios_base
 #include <limits>                                             // numeric_limits
 #include <ranges>                                             // iota
+#include <regex>                                              // regex_constants
 #include <set>                                                // set
 #include <stdexcept>                                          // out_of_range
+#include <type_traits>                                        // underlying_type_t
+#include <utility>                                            // to_underlying
 
 BOOST_AUTO_TEST_SUITE(BitFlagMapping)
 
@@ -39,7 +47,7 @@ enum class mode : std::uint8_t
         sock  = 0x20,
 };
 
-// A signed underlying type, with one enumerator on its sign bit.
+// A signed underlying type, with one enumerator on its sign bit, which no flag may take.
 enum class signed_flag : std::int8_t
 {
         low  = 0x01,
@@ -47,6 +55,17 @@ enum class signed_flag : std::int8_t
         high = 0x40,
         sign = -0x80,
 };
+
+// An int's width of flags in an enumeration, as an int-based enumeration declares them.
+enum class int_flag : int // NOLINT(performance-enum-size): an int is the underlying type under test
+{
+        first = 0x1,
+        last  = 0x4000'0000,
+};
+
+// The default width exists where the mapping knows every value of the word to be one of the type's.
+template<class Key>
+constexpr bool has_default_width = requires { typename xstd::bit_flag_mapping<Key>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
 
 constexpr auto modes = std::array{mode::read, mode::write, mode::exec, mode::dir, mode::link, mode::sock};
 
@@ -114,11 +133,12 @@ auto integer_mismatches()
 
 } // namespace
 
-// The universe defaults to every bit of the underlying type, and a narrower one is the second argument.
+// The universe defaults to the underlying type's width less any sign bit, and a narrower one is the second argument.
 BOOST_AUTO_TEST_CASE(TheSizeDefaultsToTheUnderlyingTypesWidth)
 {
         static_assert(xstd::bit_flag_mapping<mode>::size == 8UZ);
-        static_assert(xstd::bit_flag_mapping<signed_flag>::size == 8UZ);
+        static_assert(xstd::bit_flag_mapping<signed_flag>::size == 7UZ);
+        static_assert(xstd::bit_flag_mapping<std::launch>::size == static_cast<std::size_t>(std::numeric_limits<std::underlying_type_t<std::launch>>::digits));
         static_assert(xstd::bit_flag_mapping<mode, 6UZ>::size == 6UZ);
         static_assert(std::same_as<decltype(xstd::bit_flag_mapping<mode>::size), std::size_t const>);
         static_assert(std::same_as<decltype(xstd::bit_flag_mapping<mode>::to_index(mode::read)), std::size_t>);
@@ -144,18 +164,20 @@ BOOST_AUTO_TEST_CASE(AOneBitValueRanksAtItsBitsPosition)
         static_assert(mapping::from_index(7UZ) == std::bit_cast<mode>(std::uint8_t{0x80}));
 }
 
-// The sign bit is a position like the others: the unsigned counterpart does the arithmetic.
-BOOST_AUTO_TEST_CASE(TheSignBitIsTheHighestPosition)
+// A signed enumeration stops below its sign bit, as its integer does: the bit above is no position, so no key.
+BOOST_AUTO_TEST_CASE(ASignedEnumerationStopsBelowItsSignBit)
 {
         using mapping = xstd::bit_flag_mapping<signed_flag>;
         static_assert(mapping::to_index(signed_flag::low) == 0UZ);
         static_assert(mapping::to_index(signed_flag::mid) == 3UZ);
         static_assert(mapping::to_index(signed_flag::high) == 6UZ);
-        static_assert(mapping::to_index(signed_flag::sign) == 7UZ);
-        static_assert(mapping::from_index(7UZ) == signed_flag::sign);
+        static_assert(mapping::to_index(signed_flag::sign) >= mapping::size and not mapping::is_key(signed_flag::sign));
         static_assert(mapping::from_index(6UZ) == signed_flag::high);
+        static_assert(xstd::bit_flag_mapping<int_flag>::size == 31UZ and xstd::bit_flag_mapping<int_flag>::size == xstd::bit_flag_mapping<int>::size);
+        static_assert(not xstd::bit_flag_mapping<int_flag>::is_key(std::bit_cast<int_flag>(std::numeric_limits<int>::min())));
         for (auto const i : std::views::iota(0UZ, mapping::size)) {
                 BOOST_CHECK_EQUAL(mapping::to_index(mapping::from_index(i)), i);
+                BOOST_CHECK(std::to_underlying(mapping::from_index(i)) > 0);
         }
 }
 
@@ -175,10 +197,11 @@ BOOST_AUTO_TEST_CASE(AMaskEnumerationKeysASetDirectly)
         BOOST_CHECK_THROW(static_cast<void>(x.insert(std::bit_cast<mode>(std::uint8_t{0x40}))), std::out_of_range);
         BOOST_CHECK(x == s);
 
-        // The signed one keys a set in the order of its positions, the sign bit last.
-        using Y      = xstd::basic_bit_fixed_set<signed_flag, std::uint8_t, 8UZ, xstd::bit_flag_mapping<signed_flag>>;
-        auto const y = Y(xstd::from_blocks, std::uint8_t{0x81});
-        BOOST_CHECK(std::ranges::equal(y, std::array{signed_flag::low, signed_flag::sign}));
+        // The signed one keys a set in the order of its positions, and its sign bit is no element.
+        using Y      = xstd::basic_bit_fixed_set<signed_flag, std::uint8_t, 7UZ, xstd::bit_flag_mapping<signed_flag>>;
+        auto const y = Y(xstd::from_blocks, std::uint8_t{0xC1});
+        BOOST_CHECK(std::ranges::equal(y, std::array{signed_flag::low, signed_flag::high}));
+        BOOST_CHECK(not y.contains(signed_flag::sign));
 }
 
 // A bitset as wide as a block is keyed the same way: a one-bit bitset ranks at its bit, and rank i is that bitset.
@@ -206,8 +229,8 @@ BOOST_AUTO_TEST_CASE(AKeyIsAOneBitValueBelowTheSize)
         BOOST_CHECK_EQUAL(mode_mismatches<6UZ>(), 0UZ);
         BOOST_CHECK_EQUAL(mode_mismatches<1UZ>(), 0UZ);
 
-        // The sign bit is one bit like the others, and the value with every bit set is none.
-        BOOST_CHECK(xstd::bit_flag_mapping<signed_flag>::is_key(signed_flag::sign));
+        // The sign bit is one bit but no key, and the value with every bit set is none either.
+        BOOST_CHECK(not xstd::bit_flag_mapping<signed_flag>::is_key(signed_flag::sign));
         BOOST_CHECK(not xstd::bit_flag_mapping<signed_flag>::is_key(std::bit_cast<signed_flag>(std::int8_t{-1})));
 }
 
@@ -263,8 +286,29 @@ BOOST_AUTO_TEST_CASE(AFlagMappingIsAnOrderIsomorphismOntoItsPositions)
         static_assert(test::set::is_order_isomorphism<xstd::bit_flag_mapping<mode, 6UZ>, mode>());
         static_assert(test::set::is_order_isomorphism<xstd::bit_flag_mapping<std::uint16_t>, std::uint16_t>());
         static_assert(test::set::is_order_isomorphism<xstd::bit_flag_mapping<std::int8_t>, std::int8_t>());
+        static_assert(test::set::is_order_isomorphism<xstd::bit_flag_mapping<signed_flag>, signed_flag>());
+        static_assert(test::set::is_order_isomorphism<xstd::bit_flag_mapping<int_flag>, int_flag>());
+        static_assert(test::set::is_order_isomorphism<xstd::bit_flag_mapping<std::launch>, std::launch>());
         static_assert(test::set::is_order_isomorphism<xstd::bit_flag_mapping<std::bitset<16>>, std::bitset<16>>());
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// An enumeration with a fixed underlying type takes any value of it; one without holds only its enumerators' bit-field.
+BOOST_AUTO_TEST_CASE(OnlyAFixedUnderlyingTypeGivesADefaultWidth)
+{
+        static_assert(has_default_width<mode> and has_default_width<std::filesystem::perms> and has_default_width<std::launch> and has_default_width<std::chars_format>);
+        static_assert(xstd::bits::detail::full_range_mask<std::filesystem::copy_options> and xstd::bits::detail::full_range_mask<std::bitset<16>> and xstd::bits::detail::full_range_mask<int>);
+        static_assert(xstd::bits::detail::full_range_mask<std::regex_constants::syntax_option_type> == has_default_width<std::regex_constants::syntax_option_type>);
+#ifdef _LIBCPP_VERSION
+        // libc++ declares its regex flags with no underlying type, its bit-fields 11 and 13 bits wide.
+        static_assert(not has_default_width<std::regex_constants::syntax_option_type> and not has_default_width<std::regex_constants::match_flag_type>);
+        static_assert(xstd::bit_flag_mapping<std::regex_constants::syntax_option_type, 11UZ>::size == 11UZ);
+#endif
+#ifdef __GLIBCXX__
+        // libstdc++'s [ios.base] types are enumerations with no underlying type, its range spanning int all the same.
+        static_assert(not has_default_width<std::ios_base::fmtflags> and not has_default_width<std::ios_base::iostate> and not has_default_width<std::ios_base::openmode>);
+#endif
+        BOOST_CHECK(true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

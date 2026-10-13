@@ -9,11 +9,13 @@
 #include <xstd/bits/bit/bit_convert.hpp>                // bit_convert
 #include <xstd/bits/bit_type_traits/bit_least.hpp>      // least_block_t
 #include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
+#include <xstd/bits/detail/ordinal.hpp>                 // ordinal_key, ordinal_t
+#include <xstd/ints/limits/numeric_limits.hpp>          // numeric_limits
 #include <bitset>                                       // bitset
 #include <concepts>                                     // integral
 #include <cstddef>                                      // size_t
 #include <limits>                                       // numeric_limits
-#include <type_traits>                                  // conditional_t, is_enum_v, type_identity
+#include <type_traits>                                  // is_enum_v, type_identity
 
 // The block a flag type's mask is read and written as: an enumeration's or an integer's unsigned type, or a bitset's.
 namespace xstd::bits::detail {
@@ -22,7 +24,7 @@ template<class Mask>
 struct flag_block
 {};
 
-// Unsigned, so a signed type's bits shift and count as an unsigned block's do; an enumerator may sit on its sign bit.
+// Unsigned, so a signed type's bits shift and count as an unsigned block's do, its sign bit no flag's.
 template<class Mask>
         requires requires { typename xstd::underlying_block_t<Mask>; }
 struct flag_block<Mask> : std::type_identity<xstd::underlying_block_t<Mask>>
@@ -41,9 +43,34 @@ using flag_block_t = flag_block<Mask>::type;
 template<class Mask>
 concept flag_mask = requires { typename flag_block_t<Mask>; };
 
-// Every bit of the block but a signed integer's sign bit, which no flag takes, so that every mask stays non-negative.
+// The integer a mask's width is counted in: an enumeration's underlying type, an integer itself, a bitset's block.
+template<class Mask>
+struct flag_word : std::type_identity<flag_block_t<Mask>>
+{};
+
+template<ordinal_key Mask>
+struct flag_word<Mask> : std::type_identity<ordinal_t<Mask>>
+{};
+
+template<class Mask>
+using flag_word_t = flag_word<Mask>::type;
+
+// Every bit of the word but a sign bit, an integer's or a signed enumeration's alike, so every mask stays non-negative.
 template<flag_mask Mask>
-inline constexpr auto flag_width_v = static_cast<std::size_t>(std::numeric_limits<std::conditional_t<std::integral<Mask>, Mask, flag_block_t<Mask>>>::digits);
+inline constexpr auto flag_width_v = static_cast<std::size_t>(xstd::numeric_limits<flag_word_t<Mask>>::digits);
+
+// Not an enumeration without a fixed underlying type, whose values stop at the bit-field holding its enumerators.
+template<class Mask>
+concept full_range_mask = not std::is_enum_v<Mask> or requires { Mask{0}; };
+
+// Only where every value of the word is one of the mask's: libc++'s regex flags would otherwise leave their range.
+template<flag_mask Mask>
+        requires full_range_mask<Mask>
+inline constexpr auto default_flag_width_v = flag_width_v<Mask>;
+
+// Flags by intent: | compiles, whatever it returns, so an enumerated type such as file_type is turned away.
+template<class Mask>
+concept flag_enumeration = std::is_enum_v<Mask> and requires (Mask a, Mask b) { a | b; };
 
 template<flag_mask Mask>
 [[nodiscard]] constexpr auto to_block(Mask const& mask) noexcept

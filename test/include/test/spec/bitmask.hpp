@@ -7,13 +7,11 @@
 #define TEST_SPEC_BITMASK_HPP
 
 #include <test/spec/input.hpp>                          // context, edge
-#include <xstd/bits/bit/bit_convert.hpp>                // bit_convert
 #include <xstd/bits/bit_flag_set.hpp>                   // bit_flag_set
 #include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
 #include <array>                                        // array, to_array
-#include <bitset>                                       // bitset
+#include <bit>                                          // bit_width
 #include <charconv>                                     // chars_format
-#include <concepts>                                     // same_as
 #include <cstddef>                                      // size_t
 #include <cstdint>                                      // uint64_t
 #include <filesystem>                                   // copy_options, directory_options, perm_options, perms
@@ -23,6 +21,7 @@
 #include <ranges>                                       // iota
 #include <regex>                                        // regex_constants
 #include <tuple>                                        // tuple, tuple_cat
+#include <type_traits>                                  // type_identity
 #include <utility>                                      // declval
 #include <vector>                                       // vector
 
@@ -141,8 +140,36 @@ struct candidate
 template<class Names>
 using standard = candidate<typename Names::type, Names>;
 
+// The narrowest width holding every named value, which no enumeration's range can fall short of.
 template<class Names>
-using flag_set = candidate<xstd::bit_flag_set<typename Names::type>, Names>;
+[[nodiscard]] consteval auto named_width()
+        -> std::size_t
+{
+        using block_type = xstd::underlying_block_t<typename Names::type>;
+        auto bits        = std::uint64_t{0};
+        auto const add   = [&](auto const& values) -> void {
+                for (auto const v : values) {
+                        bits |= static_cast<std::uint64_t>(static_cast<block_type>(v));
+                }
+        };
+        add(Names::elements);
+        add(Names::constants);
+        add(Names::empties);
+        return static_cast<std::size_t>(std::bit_width(bits));
+}
+
+// The flag type at its default width, or at the named values' where an enumeration without a fixed type takes none.
+template<class Names>
+struct flag_type : std::type_identity<xstd::bit_flag_set<typename Names::type, named_width<Names>()>>
+{};
+
+template<class Names>
+        requires requires { typename xstd::bit_flag_set<typename Names::type>; } // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+struct flag_type<Names> : std::type_identity<xstd::bit_flag_set<typename Names::type>>
+{};
+
+template<class Names>
+using flag_set = candidate<typename flag_type<Names>::type, Names>;
 
 using masks = std::tuple<standard<fmtflags>, standard<iostate>, standard<openmode>, standard<perms>, standard<perm_options>, standard<copy_options>, standard<directory_options>, standard<syntax_option_type>, standard<match_flag_type>, standard<launch>, standard<chars_format>>;
 
@@ -154,16 +181,12 @@ using all = decltype(std::tuple_cat(std::declval<masks>(), std::declval<flag_set
 template<class C>
 using block_t = xstd::underlying_block_t<typename C::names::type>;
 
-// A value's bits as the mask's block; a flag type's via a bitset, as its complement can leave an enumeration's range.
+// A value's bits as the mask's block, a flag type's through the mask it converts to, its width within the mask's range.
 template<class C>
 [[nodiscard]] auto block(typename C::type const& x)
         -> block_t<C>
 {
-        if constexpr (std::same_as<typename C::type, typename C::names::type>) {
-                return static_cast<block_t<C>>(x);
-        } else {
-                return static_cast<block_t<C>>(xstd::bit_convert<std::bitset<C::type::max_size()>>(x).to_ullong());
-        }
+        return static_cast<block_t<C>>(static_cast<C::names::type>(x));
 }
 
 // [bitmask.types]/3: the value 0, the empty bitmask, which an enumeration need not name as one of its enumerators.

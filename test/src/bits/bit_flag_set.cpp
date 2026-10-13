@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/flag/qflags.hpp>                         // align_*, alignment_flag, flags
 #include <test/for_each_type.hpp>                       // for_each_type
 #include <test/set/enums.hpp>                           // perm
 #include <test/set/lookup.hpp>                          // lookup_mismatches
@@ -32,20 +33,29 @@
 #include <format>                                       // format, format_to, formatter
 #include <fstream>                                      // ofstream
 #include <functional>                                   // greater, hash, ranges::greater
+#include <future>                                       // launch
 #include <initializer_list>                             // initializer_list
 #include <ios>                                          // ios_base
 #include <iterator>                                     // bidirectional_iterator, inserter, iter_reference_t, ranges::distance
 #include <limits>                                       // numeric_limits
 #include <random>                                       // random_device
+#include <regex>                                        // regex_constants
 #include <ranges>                                       // bidirectional_range, iota, ranges::swap, sized_range, views::reverse
 #include <set>                                          // set
 #include <sstream>                                      // istringstream, ostringstream
 #include <stdexcept>                                    // out_of_range
 #include <string_view>                                  // string_view
 #include <tuple>                                        // tuple
-#include <type_traits>                                  // underlying_type_t
+#include <type_traits>                                  // bool_constant, underlying_type_t
 #include <utility>                                      // pair, to_underlying
 #include <vector>                                       // vector
+#include <signal.h>                                     // NOLINT(modernize-deprecated-headers): POSIX declares sigaction and its SA_ flags here, <csignal> not
+#if __has_include(<sys/epoll.h>)
+#include <sys/epoll.h> // EPOLL_EVENTS, EPOLLERR, EPOLLET, EPOLLHUP, EPOLLIN, EPOLLONESHOT, EPOLLOUT, EPOLLPRI, EPOLLRDHUP
+#define XSTD_TEST_HAS_EPOLL 1
+#else
+#define XSTD_TEST_HAS_EPOLL 0
+#endif
 
 namespace {
 
@@ -474,6 +484,85 @@ auto adjust_permissions(fs::path const& path)
 template<class Mask>
 concept names_a_flag_type = requires { typename xstd::bit_flag_set<Mask>; };
 
+// Whether Mask keys a flag type at a width spelled out.
+template<class Mask, std::size_t N>
+concept names_a_narrow_flag_type = requires { typename xstd::bit_flag_set<Mask, N>; };
+
+// Whether a braced value initializes X: false for a constant that narrows into the mask.
+template<class X, auto Value>
+constexpr bool brace_initializes = requires { X{Value}; };
+
+// Whether making a flag type is a constant expression, which an assertion failing on the way in is not.
+template<auto Make>
+constexpr bool constant_evaluates = requires { typename std::bool_constant<(Make(), true)>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+
+// Whether the flag type over Mask converts to bool through Mask, as an if statement's condition does.
+template<class Mask, std::size_t N>
+constexpr bool tests_in_an_if = requires (xstd::bit_flag_set<Mask, N> x, Mask m) { (x & m) ? 1 : 0; }; // NOLINT(bugprone-non-zero-enum-to-bool-conversion,readability-implicit-bool-conversion): the conversion under test
+
+// A flag type's walk against std::set<Mask, std::greater<Mask>> built from the same flags, over every subset of them.
+template<class X>
+auto order_mismatches_over_subsets(std::vector<typename X::key_type> const& flags)
+        -> std::size_t
+{
+        using key_type  = X::key_type;
+        auto mismatches = 0UZ;
+        for (auto const mask : std::views::iota(0UZ, 1UZ << flags.size())) {
+                auto x     = X();
+                auto model = std::set<key_type, std::greater<key_type>>(); // NOLINT(modernize-use-transparent-functors): the comparator the flag type names
+                for (auto const i : std::views::iota(0UZ, flags.size())) {
+                        if (((mask >> i) & 1UZ) != 0UZ) {
+                                x.insert(flags[i]);
+                                model.insert(flags[i]);
+                        }
+                }
+                mismatches += static_cast<std::size_t>(not std::ranges::equal(x, model));
+        }
+        return mismatches;
+}
+
+// The Qt alignment type at the nine bits of its range, and its one-bit flags.
+using alignment = xstd::bit_flag_set<test::qt::alignment_flag, 9>;
+
+constexpr auto alignment_flags = std::to_array({test::qt::align_left, test::qt::align_right, test::qt::align_hcenter, test::qt::align_justify, test::qt::align_absolute, test::qt::align_top, test::qt::align_bottom, test::qt::align_vcenter, test::qt::align_baseline});
+
+// How often a translation of QFlags' members answers otherwise than QFlags, over pairs of subsets and composites.
+auto qflags_mismatches()
+        -> std::size_t
+{
+        using test::qt::alignment_flag;
+        using qflags    = test::qt::flags<alignment_flag>;
+        auto values     = std::vector<alignment_flag>(alignment_flags.begin(), alignment_flags.end());
+        auto const more = {test::qt::align_horizontal, test::qt::align_vertical, test::qt::align_center};
+        values.insert(values.end(), more.begin(), more.end());
+        auto mismatches = 0UZ;
+        for (auto const mask : std::views::iota(0U, 1U << 9U)) {
+                auto const q = qflags(static_cast<alignment_flag>(mask));
+                auto const a = alignment(static_cast<alignment_flag>(mask));
+                mismatches += static_cast<std::size_t>(static_cast<unsigned>(a) != static_cast<unsigned>(q.toInt()));
+                for (auto const f : values) {
+                        auto const one_bit = std::has_single_bit(static_cast<unsigned>(f));
+                        mismatches += static_cast<std::size_t>(one_bit and a.contains(f) != q.testFlag(f));
+                        mismatches += static_cast<std::size_t>(xstd::bit_includes(a, f) != q.testFlags(f));
+                        mismatches += static_cast<std::size_t>(xstd::bit_intersects(a, f) != q.testAnyFlags(f));
+                        auto on  = q;
+                        auto off = q;
+                        on.setFlag(f);
+                        off.setFlag(f, false);
+                        mismatches += static_cast<std::size_t>(static_cast<unsigned>(a | f) != static_cast<unsigned>(on.toInt()));
+                        mismatches += static_cast<std::size_t>(static_cast<unsigned>(a - f) != static_cast<unsigned>(off.toInt()));
+                        if (one_bit) {
+                                auto x = a;
+                                static_cast<void>(x.insert(f));
+                                auto y = a;
+                                static_cast<void>(y.erase(f));
+                                mismatches += static_cast<std::size_t>(x != (a | f) or y != (a - f));
+                        }
+                }
+        }
+        return mismatches;
+}
+
 // Integer masks: each unsigned width, int and std::int8_t below their sign bits, and twelve of sixteen bits.
 using integer_flags = std::tuple<xstd::bit_flag_set<std::uint8_t>, xstd::bit_flag_set<std::uint16_t>, xstd::bit_flag_set<std::uint32_t>, xstd::bit_flag_set<std::uint64_t>, xstd::bit_flag_set<int>, xstd::bit_flag_set<std::int8_t>, xstd::bit_flag_set<std::uint16_t, 12>>;
 
@@ -594,12 +683,16 @@ auto integer_mismatches()
         return mismatches;
 }
 
+// Sixteen bits, which every library's constants fit, spelled as libstdc++'s enumerations have no fixed type.
+template<class Mask>
+using ios_flags = xstd::bit_flag_set<Mask, 16>;
+
 // How many of a stream type's constants a flag type of it converts, counts or looks up otherwise than the mask does.
 template<class Mask>
 auto ios_mismatches(std::initializer_list<Mask> constants)
         -> std::size_t
 {
-        using X          = xstd::bit_flag_set<Mask>;
+        using X          = ios_flags<Mask>;
         using block_type = xstd::underlying_block_t<Mask>;
         auto mismatches  = 0UZ;
         for (auto const c : constants) {
@@ -1140,16 +1233,16 @@ BOOST_AUTO_TEST_CASE(EveryIosBaseConstantRoundTrips)
         BOOST_CHECK_EQUAL(ios_mismatches<ios::fmtflags>({ios::boolalpha, ios::dec, ios::fixed, ios::hex, ios::internal, ios::left, ios::oct, ios::right, ios::scientific, ios::showbase, ios::showpoint, ios::showpos, ios::skipws, ios::unitbuf, ios::uppercase, ios::adjustfield, ios::basefield, ios::floatfield}), 0UZ);
         BOOST_CHECK_EQUAL(ios_mismatches<ios::iostate>({ios::goodbit, ios::badbit, ios::eofbit, ios::failbit}), 0UZ);
         BOOST_CHECK_EQUAL(ios_mismatches<ios::openmode>({ios::app, ios::ate, ios::binary, ios::in, ios::out, ios::trunc}), 0UZ);
-        BOOST_CHECK(xstd::bit_flag_set<ios::iostate>(ios::goodbit).empty());
-        BOOST_CHECK(xstd::bit_flag_set<ios::fmtflags>(ios::adjustfield).size() == 3UZ);
+        BOOST_CHECK(ios_flags<ios::iostate>(ios::goodbit).empty());
+        BOOST_CHECK(ios_flags<ios::fmtflags>(ios::adjustfield).size() == 3UZ);
 }
 
 // Code written against a stream's flags and state, with only the variable's type respelled, formats and recovers alike.
 BOOST_AUTO_TEST_CASE(AStreamTakesItsFlagsAndStateAsFlagTypes)
 {
         using ios      = std::ios_base;
-        using fmtflags = xstd::bit_flag_set<ios::fmtflags>;
-        using iostate  = xstd::bit_flag_set<ios::iostate>;
+        using fmtflags = ios_flags<ios::fmtflags>;
+        using iostate  = ios_flags<ios::iostate>;
 
         auto os    = std::ostringstream();
         fmtflags f = os.flags();
@@ -1169,6 +1262,120 @@ BOOST_AUTO_TEST_CASE(AStreamTakesItsFlagsAndStateAsFlagTypes)
         st -= ios::failbit;
         is.clear(st);
         BOOST_CHECK(is.good() and iostate(is.rdstate()).empty());
+}
+
+// Any enumeration whose | compiles keys a flag type, whatever | returns: Qt's QFlags, a C enumeration's int.
+BOOST_AUTO_TEST_CASE(AFlagEnumerationKeysAFlagTypeWhateverItsOperatorsReturn)
+{
+        using test::qt::alignment_flag;
+        static_assert(not xstd::bit_mask<alignment_flag> and std::same_as<decltype(test::qt::align_left | test::qt::align_top), test::qt::flags<alignment_flag>>);
+        static_assert(names_a_narrow_flag_type<alignment_flag, 9UZ> and xstd::bit_mask<alignment>);
+        static_assert(std::same_as<alignment, xstd::basic_bit_fixed_set<alignment_flag, std::uint16_t, 9, xstd::bit_flag_mapping<alignment_flag, 9>, std::greater<alignment_flag>>>); // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+
+        // An enumerated type that is no bitmask has no |, and is turned away at every width.
+        static_assert(not names_a_flag_type<std::filesystem::file_type> and not names_a_narrow_flag_type<std::filesystem::file_type, 8UZ>);
+        static_assert(names_a_flag_type<std::filesystem::perms>);
+
+        auto a = alignment{test::qt::align_left, test::qt::align_top};
+        BOOST_CHECK(std::ranges::equal(a, std::array{test::qt::align_top, test::qt::align_left}));
+        BOOST_CHECK(a.contains(test::qt::align_top) and not a.contains(test::qt::align_right));
+        a |= test::qt::align_center;
+        BOOST_CHECK(a.size() == 4UZ and xstd::bit_includes(a, test::qt::align_center));
+        BOOST_CHECK(alignment_flag(~alignment()) == 0x1FF);
+        BOOST_CHECK_EQUAL(order_mismatches_over_subsets<alignment>({alignment_flags.begin(), alignment_flags.end()}), 0UZ);
+}
+
+// QFlags' members each have a translation, which answers as QFlags does over every value and every flag.
+BOOST_AUTO_TEST_CASE(EachQFlagsMemberHasATranslation)
+{
+        BOOST_CHECK_EQUAL(qflags_mismatches(), 0UZ);
+}
+
+// An if reads a flag type of an unscoped enumeration as any-of, through the conversion; a scoped one does not.
+BOOST_AUTO_TEST_CASE(AnIfTestsAnyFlagOfAnUnscopedEnumerationOnly)
+{
+        static_assert(tests_in_an_if<test::qt::alignment_flag, 9UZ>);
+        static_assert(not tests_in_an_if<fs::perms, 16UZ> and not tests_in_an_if<mode, 3UZ>);
+
+        auto const a = alignment(test::qt::align_center);
+        auto hits    = 0;
+        if (a & test::qt::align_vertical) { // NOLINT(bugprone-non-zero-enum-to-bool-conversion,readability-implicit-bool-conversion): the conversion under test
+                ++hits;
+        }
+        if (a & test::qt::align_left) { // NOLINT(bugprone-non-zero-enum-to-bool-conversion,readability-implicit-bool-conversion): the conversion under test
+                ++hits;
+        }
+        BOOST_CHECK_EQUAL(hits, 1);
+}
+
+// An enumeration with no fixed underlying type spells its width, its range being only what its enumerators need.
+BOOST_AUTO_TEST_CASE(AnEnumerationWithNoFixedTypeSpellsItsWidth)
+{
+        static_assert(not names_a_flag_type<test::qt::alignment_flag> and names_a_narrow_flag_type<std::regex_constants::syntax_option_type, 11UZ>);
+#ifdef _LIBCPP_VERSION
+        // libc++'s regex flags: eleven and thirteen bits, whose complement stays inside the enumeration's range.
+        using syntax = xstd::bit_flag_set<std::regex_constants::syntax_option_type, 11>;
+        using match  = xstd::bit_flag_set<std::regex_constants::match_flag_type, 13>;
+        static_assert(not names_a_flag_type<std::regex_constants::syntax_option_type> and not names_a_flag_type<std::regex_constants::match_flag_type>);
+        BOOST_CHECK(static_cast<unsigned>(std::regex_constants::syntax_option_type(~syntax())) == 0x7FFU);
+        BOOST_CHECK(static_cast<unsigned>(std::regex_constants::match_flag_type(~match())) == 0x1FFFU);
+        BOOST_CHECK_EQUAL((~syntax()).size(), 11UZ);
+#endif
+#ifdef __GLIBCXX__
+        static_assert(not names_a_flag_type<std::ios_base::fmtflags> and names_a_narrow_flag_type<std::ios_base::fmtflags, 31UZ>);
+#endif
+#if XSTD_TEST_HAS_EPOLL
+        // glibc's epoll events: no fixed type, but EPOLLET on bit 31 stretches the range over all of unsigned.
+        using events = xstd::bit_flag_set<EPOLL_EVENTS, 32>;
+        static_assert(not names_a_flag_type<EPOLL_EVENTS> and xstd::bit_mask<events>);
+        auto const e = events{EPOLLIN, EPOLLET, EPOLLOUT};
+        BOOST_CHECK(e.front() == EPOLLET and e.back() == EPOLLIN and e.size() == 3UZ);
+        BOOST_CHECK(static_cast<std::uint32_t>(EPOLL_EVENTS(e)) == static_cast<std::uint32_t>(EPOLLIN | EPOLLET | EPOLLOUT));
+        BOOST_CHECK_EQUAL(order_mismatches_over_subsets<events>({EPOLLIN, EPOLLPRI, EPOLLOUT, EPOLLERR, EPOLLHUP, EPOLLRDHUP, EPOLLONESHOT, EPOLLET}), 0UZ);
+#endif
+        BOOST_CHECK(true);
+}
+
+// An enumeration on int, std::launch, is as wide as an int: the sign bit is no flag, and a mask holding it is refused.
+BOOST_AUTO_TEST_CASE(ASignedEnumerationIsAsWideAsItsInteger)
+{
+        using launches = xstd::bit_flag_set<std::launch>;
+        static_assert(std::same_as<std::underlying_type_t<std::launch>, int> and launches::max_size() == 31UZ and launches::max_size() == xstd::bit_flag_set<int>::max_size());
+        static_assert(brace_initializes<xstd::bit_flag_set<int>, 0x4000'0000U>);
+#ifndef NDEBUG
+        static_assert(constant_evaluates<[] -> launches { return {std::bit_cast<std::launch>(0x4000'0000)}; }>);
+        static_assert(not constant_evaluates<[] -> launches { return {std::bit_cast<std::launch>(std::numeric_limits<int>::min())}; }>);
+        static_assert(not constant_evaluates<[] -> xstd::bit_flag_set<int> { return {std::numeric_limits<int>::min()}; }>);
+#endif
+#ifdef SA_RESETHAND
+        // glibc puts SA_RESETHAND on the sign bit of sa_flags, an int: the unsigned constant narrows into it.
+        if constexpr (SA_RESETHAND == 0x8000'0000U) {
+                static_assert(not brace_initializes<xstd::bit_flag_set<int>, SA_RESETHAND>);
+        }
+#endif
+        auto const f = launches{std::launch::async, std::launch::deferred, std::bit_cast<std::launch>(0x4000'0000)};
+        BOOST_CHECK(std::ranges::equal(f, std::array{std::bit_cast<std::launch>(0x4000'0000), std::launch::deferred, std::launch::async}));
+        BOOST_CHECK(std::to_underlying(std::launch(~launches())) == std::numeric_limits<int>::max());
+        BOOST_CHECK(not launches().contains(std::bit_cast<std::launch>(std::numeric_limits<int>::min())));
+        BOOST_CHECK_EQUAL(order_mismatches_over_subsets<launches>({std::launch::async, std::launch::deferred, std::bit_cast<std::launch>(0x4000'0000)}), 0UZ);
+}
+
+// sa_flags is an int of unsigned flags: keyed on unsigned, the sign bit's flag is the highest, as std::set has it.
+BOOST_AUTO_TEST_CASE(AnIntFieldOfUnsignedFlagsKeysOnUnsigned)
+{
+        constexpr auto top = 0x8000'0000U;
+        using sa_flags     = xstd::bit_flag_set<unsigned>;
+        auto const field   = static_cast<int>(unsigned(sa_flags{top, 4U}));
+        auto const back    = sa_flags(static_cast<unsigned>(field));
+        BOOST_CHECK(field < 0);
+        BOOST_CHECK(std::ranges::equal(back, std::set<unsigned, std::greater<unsigned>>{top, 4U})); // NOLINT(modernize-use-transparent-functors): the comparator the flag type names
+        BOOST_CHECK_EQUAL(order_mismatches_over_subsets<sa_flags>({top, 0x1000'0000U, 4U, 1U}), 0UZ);
+#ifdef SA_RESETHAND
+        struct sigaction sa{};
+        sa.sa_flags     = static_cast<int>(unsigned(sa_flags{SA_RESETHAND, SA_RESTART}));
+        auto const read = sa_flags(static_cast<unsigned>(sa.sa_flags));
+        BOOST_CHECK(read.contains(SA_RESETHAND) and read.contains(SA_RESTART) and read.size() == 2UZ);
+#endif
 }
 
 BOOST_AUTO_TEST_SUITE_END()

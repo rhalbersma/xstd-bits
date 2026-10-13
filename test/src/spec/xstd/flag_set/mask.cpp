@@ -3,11 +3,10 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/for_each_type.hpp>     // for_each_type
-#include <test/spec/bitmask.hpp>      // flag_set, for_each_pair, masks, named_values, block, block_t, zero
-#include <xstd/bits/bit_flag_set.hpp> // bit_flag_set
-#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <concepts>                   // convertible_to
+#include <test/for_each_type.hpp>   // for_each_type
+#include <test/spec/bitmask.hpp>    // flag_set, for_each_pair, masks, named_values, block, block_t, zero
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <concepts>                 // convertible_to
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Xstd)
@@ -57,7 +56,7 @@ BOOST_AUTO_TEST_CASE(MaskConversion)
 {
         test::for_each_type<test::spec::bitmask::masks>([]<class C> -> void {
                 using T = C::type;
-                using S = xstd::bit_flag_set<T>;
+                using S = flag_set<typename C::names>::type;
                 static_assert(std::convertible_to<T, S> and std::convertible_to<S, T>);
                 for (auto const& a : inputs::named_values<C>()) {
                         S const s = a;
