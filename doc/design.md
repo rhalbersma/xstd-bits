@@ -2569,18 +2569,34 @@ at a time, through `test` and `assign`.
 
 | subscript | path |
 | :--- | :--- |
-| `v[std::slice]` | mask, a stride below the block width building each block's mask with `xstd::bit_repeat` and a shift; index, a stride of zero or of a block or more |
-| `v[std::gslice]` | mask, where the positions ascend, built once into a block per owner block; index, where they repeat or turn back |
+| `v[std::slice]`, `v[bit_slice]` | a run at stride one, whole blocks copied from a block boundary and the rest through `block_at`; mask, a stride below the block width, one period of `stride / gcd(stride, digits)` masks made once with `xstd::bit_repeat` and loaded, the first and last blocks cut; index, a stride of zero or of a block or more |
+| `v[std::gslice]`, `v[bit_gslice]` | mask, where the positions ascend, from the `bit_gslice`'s stored words; index, where they repeat or turn back |
 | `v[mask]` | mask, the mask's own blocks |
 | `v[std::valarray<std::size_t>]` | index |
+
+**`bit_slice` and `bit_gslice`.** `std::slice` has no `constexpr` constructor, so a slice could never be taken in a
+constant expression; `bit_slice` is the same three numbers, `constexpr` and regular, and `v[std::slice]` forwards to
+`v[bit_slice]`. `std::gslice` works its positions out once, in its constructor, and keeps them private, so a subscript
+by one had to work them out again, every time. `bit_gslice` keeps them: where its shape says they ascend, which is
+whether each stride clears the span of every dimension inside it, a check on the lengths and strides alone, it stores
+one bit per position as 64-bit words, which every block width reads as its masks, a block of up to a word inside one
+word and a wider one across several; where they repeat or turn back, it stores the positions in row-major order. The
+index is immutable and shared between copies, so a proxy holds its own copy and never outlives what it reads, which a
+`std::gslice_array` referring to a `std::gslice` can. `v[std::gslice]` builds one per subscript.
+
+**Not worse than handwritten.** The benchmark holds each subscript to three columns: `std::valarray<bool>`, this
+library, and the loop a bitboard engine writes by hand over raw 64-bit words with P3104's word functions, each gather
+returning a clear array of its own as `v[s]` does. Every gather writes a clear array, so its packed bits are or-ed in
+rather than written under a two-block mask. Where xstd-ints runs PEXT and PDEP in hardware, a full mask goes through
+them like any other; the shortcut that saves the portable kernels a full permutation mispredicts at high densities.
 
 The two permutations come from xstd-ints, which runs BMI2 where the target has it fast and portable kernels
 elsewhere, choosing at compile time. Neither is public here: no `std::ranges` algorithm packs selected elements, so
 there is no signature for an `xstd::bit_compress` over this library's ranges to borrow
 ([algorithms-not-members](#algorithms-not-members)), and the block-range kernels stay in `detail`, under the proxies.
 
-`std::slice` and `std::gslice` have no `constexpr` constructor, and `std::valarray<std::size_t>` none at all, so
-only a mask's subscripts can run in a constant expression; they do, on the fixed and bounded arrays.
+`std::slice`, `std::gslice` and `std::valarray<std::size_t>` have no `constexpr` constructor, so a mask's subscripts
+and a `bit_slice`'s are the ones that run in a constant expression; they do, on the fixed and bounded arrays.
 
 **The kernels.** Each operator is one bitwise expression over a block of either side, after which the padding past
 `size()` is cleared, so a count over whole blocks stays right. A scalar is a block of all ones or all zeros.
