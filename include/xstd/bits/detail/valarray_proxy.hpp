@@ -151,15 +151,22 @@ class gslice_selection
                 for (auto const length : lengths) { // NOLINT(clang-analyzer-core.uninitialized.Assign): the analyzer cannot follow libstdc++'s valarray copy.
                         count *= length;
                 }
-                auto result = std::vector<std::size_t>(count);
+                auto result  = std::vector<std::size_t>(count);
+                auto counter = std::vector<std::size_t>(dims);
+                auto pos     = s.start();
                 for (auto const t : std::views::iota(0UZ, count)) {
-                        auto pos  = s.start();
-                        auto rest = t;
-                        for (auto d = dims - 1UZ; d < dims; --d) {
-                                pos += (rest % lengths[d]) * strides[d];
-                                rest /= lengths[d];
-                        }
                         result[t] = pos;
+                        // An odometer: the last counter steps, and one that runs out carries into the one before it.
+                        auto d = dims - 1UZ;
+                        ++counter[d];
+                        pos += strides[d];
+                        while (counter[d] == lengths[d] and d != 0UZ) {
+                                pos -= lengths[d] * strides[d];
+                                counter[d] = 0UZ;
+                                --d;
+                                ++counter[d];
+                                pos += strides[d];
+                        }
                 }
                 return result;
         }

@@ -201,13 +201,24 @@ template<xstd::unsigned_integer Block, class F>
         return static_cast<Block>(f(static_cast<Block>(static_cast<unsigned>(d)), static_cast<Block>(static_cast<unsigned>(e)), Block{1}) & Block{1}) != Block{};
 }
 
+// One position's bit written with no branch on its value, which random bits would mispredict.
+template<xstd::unsigned_integer Block>
+constexpr auto put(borrowed_bits<Block>& dst, std::size_t pos, bool value) noexcept
+        -> void
+{
+        auto& block      = dst[pos / block_width<Block>];
+        auto const mask  = shl(Block{1}, pos % block_width<Block>);
+        auto const splat = static_cast<Block>(Block{} - static_cast<Block>(static_cast<unsigned>(value)));
+        block            = static_cast<Block>(static_cast<Block>(block & static_cast<Block>(~mask)) | static_cast<Block>(mask & splat));
+}
+
 // The bits at index(0), ..., index(count - 1) of src, in that order, into dst from position zero.
 template<class Src, xstd::unsigned_integer Block, class Index>
 constexpr auto gather_indices(Src const& src, std::size_t count, Index index, borrowed_bits<Block>& dst) noexcept
         -> void
 {
         for (auto const j : std::views::iota(0UZ, count)) {
-                dst.assign(j, src.test(index(j)));
+                put(dst, j, src.test(index(j)));
         }
 }
 
@@ -218,7 +229,7 @@ constexpr auto expand_indices(Src const& src, std::size_t count, Index index, bo
 {
         for (auto const j : std::views::iota(0UZ, count)) {
                 auto const pos = index(j);
-                dst.assign(pos, combined<Block>(f, dst.test(pos), src.test(j)));
+                put(dst, pos, combined<Block>(f, dst.test(pos), src.test(j)));
         }
 }
 
@@ -228,7 +239,7 @@ constexpr auto fill_indices(bool value, std::size_t count, Index index, borrowed
 {
         for (auto const j : std::views::iota(0UZ, count)) {
                 auto const pos = index(j);
-                dst.assign(pos, combined<Block>(f, dst.test(pos), value));
+                put(dst, pos, combined<Block>(f, dst.test(pos), value));
         }
 }
 
