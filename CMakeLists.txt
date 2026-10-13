@@ -176,6 +176,7 @@ target_sources(
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/bit_small_set.hpp
         include/xstd/bits/ext/boost/bit_small_vector.hpp
+        include/xstd/bits/ext/boost/bit_small_valarray.hpp
         include/xstd/bits/ext/boost/dynamic_bitset.hpp
         include/xstd/bits/ext/boost/detail/dynamic_bitset.hpp
         include/xstd/bits/detail/bit_layout.hpp

@@ -131,7 +131,7 @@ The tests check each operation on its own; the libFuzzer targets under [`fuzz/`]
 | :--- | :--- | :--- |
 | `fuzz_set` | `bit_set`, `bit_fixed_set<N>`, `bit_bounded_set<N>`, `bit_small_set` | `std::set<std::size_t>` |
 | `fuzz_vector` | `bit_vector`, `bit_array<N>`, `bit_bounded_vector<N>`, `bit_small_vector` | `std::vector<bool>` |
-| `fuzz_valarray` | `bit_valarray`, `bit_fixed_valarray<N>`, `bit_bounded_valarray<N>` | `std::vector<bool>`, operated on elementwise |
+| `fuzz_valarray` | `bit_valarray`, `bit_fixed_valarray<N>`, `bit_bounded_valarray<N>`, `bit_small_valarray<N>`, with slices and masks | `std::vector<bool>`, operated on elementwise |
 
 The first input byte picks the owner type, at widths on both sides of a block boundary. A set's left shift is modelled as what the library does for every owner: translate by `n` and keep the keys below `max_size()`.
 

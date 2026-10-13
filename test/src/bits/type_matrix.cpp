@@ -20,6 +20,7 @@
 #include <xstd/bits/bit_valarray.hpp>                    // basic_bit_valarray
 #include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector
 #include <xstd/bits/ext/boost/bit_small_set.hpp>         // basic_bit_small_set
+#include <xstd/bits/ext/boost/bit_small_valarray.hpp>    // basic_bit_small_valarray
 #include <xstd/bits/ext/boost/bit_small_vector.hpp>      // basic_bit_small_vector
 #include <xstd/bits/from_blocks.hpp>                     // from_blocks_t
 #include <xstd/ints/cstdint/bit_int.hpp>                 // bit_uint
@@ -148,6 +149,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EveryTypeAnswersItsRow, Block, matrix_block_types)
         // Valarrays: elementwise operators with their own type alone, and comparisons answering arrays, so not regular.
         check_row<Block, xstd::basic_bit_fixed_valarray<Block, N>>("bit_fixed_valarray", "11.11111..1.....111");
         check_row<Block, xstd::basic_bit_bounded_valarray<Block, N>>("bit_bounded_valarray", "11.11111..1.....111");
+        check_row<Block, xstd::basic_bit_small_valarray<Block, N>>("bit_small_valarray", "11.11111..1.....111");
         check_row<Block, xstd::basic_bit_valarray<Block>>("bit_valarray", "11.1111...1.....111");
 
         // Sequence views: read out by bit_convert, and neither combined nor compared, as span.

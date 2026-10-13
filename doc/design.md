@@ -2480,15 +2480,16 @@ The containers here are principled versions of the standard's: `bit_vector` is w
 `std::inplace_vector<bool, N>`. None of those has a bitwise operator, so none of ours does. What `&=` means on a
 row of bools is **elementwise logical**, `a[i] = a[i] and b[i]` at every position, and the one standard type
 that spells it is `std::valarray<bool>`, R's logical vector. That is a reading of its own, the sequence read
-elementwise, with its own three owners over the sequence's storages:
+elementwise, with its own four owners over the sequence's storages:
 
 | | `std::valarray<bool>` packed |
 | :--- | :--- |
 | static size, `std::bitset<N>` read elementwise | `bit_fixed_valarray<N>` |
 | run-time size within a capacity `N` | `bit_bounded_valarray<N>` |
+| run-time size inline up to `N`, on the heap past it, in `<xstd/bits/ext/boost.hpp>` | `bit_small_valarray<N>` |
 | run-time size on the heap, `boost::dynamic_bitset` read elementwise | `bit_valarray` |
 
-All three are one `valarray_adaptor` over the storage, whose reading tag refines the sequence's: the algorithms of
+All four are one `valarray_adaptor` over the storage, whose reading tag refines the sequence's: the algorithms of
 [algorithms-not-members](#algorithms-not-members) and `xstd::bit_convert` take a valarray as they take a sequence, and
 a `bit_span` views one as a `std::span<bool>` views a `std::valarray<bool>`. Its proxy and iterators are the
 sequence's, handed out through a whole view of its own storage. On packed bits every elementwise operation is
