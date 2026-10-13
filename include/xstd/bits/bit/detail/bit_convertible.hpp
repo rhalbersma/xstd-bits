@@ -15,7 +15,7 @@
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks
 #include <xstd/ints/limits.hpp>                              // numeric_limits
-#include <algorithm>                                         // min
+#include <algorithm>                                         // copy, min
 #include <array>                                             // array
 #include <bit>                                               // popcount
 #include <concepts>                                          // default_initializable, same_as
@@ -255,13 +255,24 @@ template<class To, class From>
         return to;
 }
 
+// Two of our owners over one block type, whose blocks line up one for one at a shared width.
+template<class To, class From>
+concept same_block_owners = owner<To> and owner<From> and std::same_as<typename owned_bits_t<To>::block_type, typename owned_bits_t<From>::block_type>;
+
 // Into a fixed width, of the same width: the bytes cross whole, and nothing can be lost.
 template<fixed_target To, fixed_width From>
         requires (bit_width_v<To> == bit_width_v<From>)
 [[nodiscard]] constexpr auto convert_fixed(From const& from) noexcept
         -> To
 {
-        return from_fixed_bytes<To>(fixed_bytes(from));
+        if constexpr (same_block_owners<To, From>) {
+                // Block for block, as GCC does not fold a copy of byte_count<N> bytes back into whole blocks.
+                auto to = To();
+                std::ranges::copy(storage_access::bits(from).blocks(), storage_access::bits(to).blocks().begin());
+                return to;
+        } else {
+                return from_fixed_bytes<To>(fixed_bytes(from));
+        }
 }
 
 // A position the fixed target cannot hold was set, which is what std::bitset's to_ulong throws for.

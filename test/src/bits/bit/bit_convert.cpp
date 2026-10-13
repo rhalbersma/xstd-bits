@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit/bit_convert.hpp>                 // bit_convert
-#include <xstd/bits/bit/detail/bit_convertible.hpp>      // adopts_from, bit_source, fixed_target, fixed_width
+#include <xstd/bits/bit/detail/bit_convertible.hpp>      // adopts_from, bit_source, fixed_target, fixed_width, same_block_owners
 #include <xstd/bits/bit/detail/bit_width.hpp>            // bit_width_v
 #include <xstd/bits/bit_algorithm/bit_count.hpp>         // bit_count
 #include <xstd/bits/bit_array.hpp>                       // basic_bit_array, bit_array
@@ -128,6 +128,17 @@ using targets_of = std::tuple<
 
 using targets = decltype(std::tuple_cat(targets_of<std::uint8_t>(), targets_of<std::uint64_t>()));
 
+// A set of one fixed width into the sequence of it and back, the sequence holding the set's keys as its true positions.
+template<class Set, class Sequence>
+[[nodiscard]] constexpr auto crosses_both_ways()
+        -> bool
+{
+        constexpr auto last = xstd::bits::detail::bit_width_v<Set> - 1UZ;
+        auto const set      = Set{0, 7, last};
+        auto const sequence = xstd::bit_convert<Sequence>(set);
+        return sequence[0] and sequence[7] and sequence[last] and xstd::bit_count(sequence) == 3UZ and xstd::bit_convert<Set>(sequence) == set;
+}
+
 } // namespace
 
 // Ours are owners or views, a window among the views, and nothing else is either.
@@ -194,6 +205,28 @@ BOOST_AUTO_TEST_CASE(EqualFixedWidthsCrossWhole)
         // A view is read from as the blocks it spans.
         auto board = std::uint64_t{0b1010};
         BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint64_t>(xstd::bit_set_view(board)), board);
+}
+
+// Two owners over one block cross block for block, at a width short of its last block too; other blocks go by bytes.
+BOOST_AUTO_TEST_CASE(OwnersOverOneBlockCrossBlockForBlock)
+{
+        using wide_set    = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 100>;
+        using wide_array  = xstd::basic_bit_array<std::uint64_t, 100>;
+        using split_array = xstd::basic_bit_array<std::uint32_t, 100>;
+        using byte_set    = xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 20>;
+        using byte_array  = xstd::basic_bit_array<std::uint8_t, 20>;
+        static_assert(xstd::bits::detail::same_block_owners<wide_array, wide_set> and xstd::bits::detail::same_block_owners<byte_set, byte_array>);
+        static_assert(not xstd::bits::detail::same_block_owners<split_array, wide_set> and not xstd::bits::detail::same_block_owners<std::bitset<100>, wide_set>);
+
+        static_assert(crosses_both_ways<wide_set, wide_array>());
+        static_assert(crosses_both_ways<byte_set, byte_array>());
+        static_assert(crosses_both_ways<wide_set, split_array>());
+        BOOST_CHECK((crosses_both_ways<wide_set, wide_array>()));
+        BOOST_CHECK((crosses_both_ways<byte_set, byte_array>()));
+        BOOST_CHECK((crosses_both_ways<wide_set, split_array>()));
+
+        // Width zero has no block to copy.
+        BOOST_CHECK(xstd::bit_convert<xstd::bit_array<0>>(xstd::bit_fixed_set<0>()).empty());
 }
 
 // A built-in array converts as the std::array of its blocks does, and is no target: no function returns one.
