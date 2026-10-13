@@ -15,9 +15,8 @@ concurrency:
 on:
   pull_request:
     branches: [ main ]
+  # canary.yml dispatches this weekly on main, the run its README badge shows.
   workflow_dispatch:
-  # canary.yml calls this weekly, so the stub stays callable itself.
-  workflow_call:
 
 jobs:
   # Two rungs, Apple publishing no Clang trunk; the file keeps its name because the README badge is the workflow's path.

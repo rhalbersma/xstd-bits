@@ -15,9 +15,8 @@ concurrency:
 on:
   pull_request:
     branches: [ main ]
+  # canary.yml dispatches this weekly on main, the run its README badge shows.
   workflow_dispatch:
-  # canary.yml calls this weekly, so the stub stays callable itself.
-  workflow_call:
 
 jobs:
   # Every rung, and the rungs move with cpp-ci rather than with a local matrix. The one ladder that builds the benchmark tree, now that XSTD_BITS_BUILD_BENCHMARKS is off by default. Its Release legs run the smoke test benchmark/CMakeLists.txt registers -- --benchmark_min_time=1x, that it runs rather than what it costs -- so the benchmarks keep compiling and executing against the current API without every other leg paying to build them.

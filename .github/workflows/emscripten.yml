@@ -15,9 +15,8 @@ concurrency:
 on:
   pull_request:
     branches: [ main ]
+  # canary.yml dispatches this weekly on main, the run its README badge shows.
   workflow_dispatch:
-  # canary.yml calls this weekly, so the stub stays callable itself.
-  workflow_call:
 
 jobs:
   # wasm32 under node: a 32-bit size_t like i686, but 8-byte alignment for 64-bit integers and a native __int128, so it catches what i686 cannot.

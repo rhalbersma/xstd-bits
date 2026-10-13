@@ -15,9 +15,8 @@ concurrency:
 on:
   pull_request:
     branches: [ main ]
+  # canary.yml dispatches this weekly on main, the run its README badge shows.
   workflow_dispatch:
-  # canary.yml calls this weekly, so the stub stays callable itself.
-  workflow_call:
 
 jobs:
   # No inputs: every rung. The libc++ leg is its own workflow now; what is left here is the libstdc++ side.
