@@ -226,7 +226,7 @@ BOOST_AUTO_TEST_CASE(OwnersOverOneBlockCrossBlockForBlock)
         BOOST_CHECK((crosses_both_ways<wide_set, split_array>()));
 
         // Width zero has no block to copy.
-        BOOST_CHECK(xstd::bit_convert<xstd::bit_array<0>>(xstd::bit_fixed_set<0>()).empty());
+        static_assert(xstd::bit_convert<xstd::bit_array<0>>(xstd::bit_fixed_set<0>()).empty());
 }
 
 // A built-in array converts as the std::array of its blocks does, and is no target: no function returns one.
