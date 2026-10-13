@@ -3077,6 +3077,27 @@ Other libraries offer one of an enum set or a flag type, seldom both:
 Java's `EnumSet` keys by ordinal, which is `bit_enum_set`; Qt's `QFlags` keys by the mask's own values, which is
 `bit_flag_set`. Only Rust, through two crates, and this library offer both, and here both are the same set reading.
 
+WG21 has worked on bitsets and bitmasks in pieces. Each paper below is cited where its point matters; here they are
+together, with what each contributed and where this library takes it up:
+
+| Paper | Year | What it proposed | Where this library meets it |
+| :-- | :-- | :-- | :-- |
+| [N2050](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2050.pdf) | 2006 | A dynamically sizeable bitset for TR2, after `boost::dynamic_bitset`, with set queries such as `is_subset_of` beside `push_back` and `resize`; libstdc++ still ships it as `std::tr2::dynamic_bitset`. | `bit_set` and `bit_vector`. The paper joins a set and a sequence in one type; here they are two readings of one storage. |
+| [N3110](https://wg21.link/n3110) | 2010 | Problems with the library's bitmask types, `ios_base::fmtflags`, `iostate`, `openmode` and the `regex_constants` flags: operators declared as members, an `operator~` that was a no-op or recursed, an underlying type that should be fixed so that `~` stays in range, and the point that the standard must not require enumerations, since [bitmask.types] allows integers and `std::bitset` too. | Flag types over an enumeration, an integer or a `std::bitset`. `~` stays within `N` on the unsigned block, and an enumeration with no fixed underlying type spells its `N`. `bit_flag_set<std::ios_base::fmtflags, 16>` is one spelling across three standard libraries. |
+| [N4202](https://wg21.link/n4202) | 2014 | *Strongly Typed Bitset*: a storage parameter `T` for `std::bitset`, `small_bitset<N>` over the least `uint_least*_t` holding `N`, `fast_bitset<N>`, and `underlying()`. | The `Block` parameter, `bit_least`, `bit_fast`, `from_blocks` and `bit_convert`. N4202 leaves the bits at or above `N` implementation-defined; here they are always zero, so `==`, hashing and `bit_cast` are exact. |
+| [P0125R0](https://wg21.link/p0125r0) | 2015 | `std::bitset::is_subset_of` and `is_superset_of`, members that may short-circuit, the names N2050 used. | `xstd::bit_includes`, `bit_intersects` and `bit_disjoint`, free functions after `std::ranges::includes`. |
+| [P3103R0](https://wg21.link/P3103R0), [R2](https://wg21.link/P3103R2) | 2024 | *More bitset operations*: `rotl`, `rotr`, `reverse`, `countl_zero(pos)` and `countr_zero(pos)` and their `one` forms, and `one()`. | `xstd::bit_rotate` and `bit_reverse`, in `std::rotate`'s direction. Iteration, `lower_bound` and `upper_bound` cover the positional counts. |
+| [P4313R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p4313r1.html) | 2026 | *Bitmask operations for enums*: `\|`, `&`, `^`, `~` and their compound forms for an enumeration annotated `[[=std::bitmask_type]]`, as operator templates in the global namespace, each returning the enumeration. | Complementary: P4313 gives the enumeration its operators, and `bit_flag_set` gives it the set reading, `contains`, `size`, iteration and the containments, which the paper leaves out. Its global-namespace operators are what this library never declares for a user's type ([the-adl-firewall](#the-adl-firewall)). |
+
+An enumeration with P4313's operators is an `xstd::bit_mask`, and `bit_flag_set<E>` takes it unchanged, where lookup
+finds the operators. `xstd::bit_mask` is a concept in `namespace xstd`, so its `a | b` sees what unqualified lookup
+finds at the concept's definition and what argument-dependent lookup finds at the use. An enumeration in the global
+namespace brings the global operators in by ADL; one in a named namespace finds them only if they were declared
+before the concept, since ADL never searches the global namespace for it. P4313R1 puts the operators in the global
+namespace and says nothing about an enumeration declared in a named one, so including `<bitmask>` after the xstd
+headers would leave such an enumeration with operators its own callers find and no flag type. The tests emulate the
+annotation with a trait and pin all three cases: global, named with the operators first, and named with them last.
+
 **A value wider than `N` meets the flag type as the enumeration always has.** Its positions at or above `N` are
 truncated by `&`, `-` with the flag type on the left, their compound forms and `==`, which finds such a value
 unequal, and are precluded by an `assert` on the way in: the conversion, `|`, `^`, their compound forms and `-` with
