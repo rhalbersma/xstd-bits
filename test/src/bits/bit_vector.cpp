@@ -168,18 +168,22 @@ BOOST_AUTO_TEST_CASE(TheCeilingIsStdVectorBoolsRowForRow)
         // Nothing moved: a refused growth is not a partial one.
         BOOST_CHECK(v.empty());
         BOOST_CHECK(m.empty());
+}
 
 #ifndef TEST_HAS_ADDRESS_SANITIZER
 
-        // The last row asks for the memory, so the allocator answers; ours only, the two libraries not agreeing here.
+// The last row asks for the memory, so the allocator answers; ours only, the two libraries not agreeing here.
+BOOST_AUTO_TEST_CASE(TheLastRowIsTheAllocatorsToRefuse)
+{
         // A 32-bit size_t makes that row a few hundred megabytes, which an allocator may well grant.
         if constexpr (test::block_bits >= 64UZ) {
+                auto v = xstd::bit_vector();
                 BOOST_CHECK_THROW(v.resize(v.max_size()), std::bad_alloc);
                 BOOST_CHECK(v.empty());
         }
+}
 
 #endif
-}
 
 // std::vector<bool>'s append_range and insert_range, spelled through insert for the standard libraries that lack them.
 template<class R>
