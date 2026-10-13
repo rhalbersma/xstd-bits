@@ -2906,8 +2906,7 @@ straddles two blocks, so every owner and view takes it. Any other width, C23's `
 take it for a width up to its own, in a single block, and the bounded, small and growing owners refuse it, since a
 second block would put a position across two of them. Clang on x86-64 stores such a block in the next standard
 integer size, so `_BitInt(23)` takes the four bytes of a `std::uint32_t` and nine padding bits the library never
-reads; what the block buys is the exact width in the type, not fewer bytes. A fourth transformation, `bit_precise<X>`,
-naming that block from the width, is planned separately.
+reads; what the block buys is the exact width in the type, not fewer bytes.
 
 Other libraries either pick the block themselves, from the width, or take it from the user as a template argument:
 
