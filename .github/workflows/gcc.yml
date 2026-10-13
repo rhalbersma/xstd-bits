@@ -49,3 +49,12 @@ jobs:
       arch: x86
       tiers: stable
       build_types: Debug
+
+  # The small column over absl::InlinedVector rather than boost::container::small_vector: XSTD_BITS_SMALL_VECTOR picks
+  # one storage for the whole build, so the other is reached only by a leg of its own. The stable rung alone, since
+  # what is under test is the storage, and the abseil feature of vcpkg.json, which no other leg installs.
+  gcc_absl:
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@1c32e510e25b1d41e613cddc1b169655680f9a01 # v0.12.0
+    with:
+      tiers: stable
+      cmake_args: -DXSTD_BITS_SMALL_VECTOR=absl -DVCPKG_MANIFEST_FEATURES=abseil
