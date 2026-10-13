@@ -39,7 +39,7 @@
 #include <utility>                                  // declval, move
 #include <vector>                                   // vector
 
-// Every member and operator of the three valarrays, each held to the same operation on a std::vector<bool>.
+// Every member and operator of the four valarrays, each held to the same operation on a std::vector<bool>.
 namespace test::valarray {
 
 using model = std::vector<bool>;
