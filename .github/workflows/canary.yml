@@ -5,8 +5,7 @@
 
 name: Toolchain Canary
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,20 +17,23 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Run the complete compiler workflows weekly so dynamic development toolchains and mutable runner images are checked even without a push.
-  gcc:
-    uses: ./.github/workflows/gcc.yml
-  emscripten:
-    uses: ./.github/workflows/emscripten.yml
-  clang:
-    uses: ./.github/workflows/clang.yml
-  clang_libcxx:
-    uses: ./.github/workflows/clang-libc++.yml
-  mingw:
-    uses: ./.github/workflows/mingw.yml
-  apple_clang:
-    uses: ./.github/workflows/apple-clang.yml
-  msvc:
-    uses: ./.github/workflows/msvc.yml
-  clang_cl:
-    uses: ./.github/workflows/clang-cl.yml
+  # Dispatched rather than called: a dispatched run is the workflow's own run on main, which its README badge shows,
+  # where a called one is filed under this workflow and leaves the badge on whatever main last ran. Weekly, so dynamic
+  # development toolchains and mutable runner images are checked even without a pull request.
+  dispatch:
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch every workflow a README badge shows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # codeql.yml is absent: it runs on a schedule of its own.
+          for workflow in gcc.yml clang.yml clang-libc++.yml mingw.yml apple-clang.yml msvc.yml clang-cl.yml \
+                          emscripten.yml sanitizers.yml clang-tidy.yml msvc-analyze.yml consumption.yml; do
+            gh workflow run "$workflow" --repo "$REPO" --ref "$REF"
+          done
