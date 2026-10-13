@@ -130,6 +130,32 @@ auto bm_gslice_scatter(benchmark::State& state)
         set_counters(state, n / 2UZ);
 }
 
+// The same with the gslice built in the loop: std::gslice computes its positions in its constructor, and ours per subscript.
+template<class T>
+auto bm_gslice_gather_with_setup(benchmark::State& state)
+        -> void
+{
+        auto const v = filled<T>(n, 50UZ, 1U);
+        for (auto _ : state) {
+                T w = v[board()];
+                benchmark::DoNotOptimize(w);
+        }
+        set_counters(state, n / 2UZ);
+}
+
+template<class T>
+auto bm_gslice_scatter_with_setup(benchmark::State& state)
+        -> void
+{
+        auto v       = filled<T>(n, 50UZ, 1U);
+        auto const w = filled<T>(n / 2UZ, 50UZ, 2U);
+        for (auto _ : state) {
+                v[board()] = w;
+                benchmark::ClobberMemory();
+        }
+        set_counters(state, n / 2UZ);
+}
+
 // v[mask] at a density of selected positions given in percent.
 template<class T>
 auto bm_mask_gather(benchmark::State& state)
@@ -198,6 +224,10 @@ BENCHMARK_TEMPLATE(bm_gslice_gather, std::valarray<bool>);
 BENCHMARK_TEMPLATE(bm_gslice_gather, xstd::bit_valarray);
 BENCHMARK_TEMPLATE(bm_gslice_scatter, std::valarray<bool>);
 BENCHMARK_TEMPLATE(bm_gslice_scatter, xstd::bit_valarray);
+BENCHMARK_TEMPLATE(bm_gslice_gather_with_setup, std::valarray<bool>);
+BENCHMARK_TEMPLATE(bm_gslice_gather_with_setup, xstd::bit_valarray);
+BENCHMARK_TEMPLATE(bm_gslice_scatter_with_setup, std::valarray<bool>);
+BENCHMARK_TEMPLATE(bm_gslice_scatter_with_setup, xstd::bit_valarray);
 
 BENCHMARK_TEMPLATE(bm_mask_gather, std::valarray<bool>)->Arg(5)->Arg(50)->Arg(95);
 BENCHMARK_TEMPLATE(bm_mask_gather, xstd::bit_valarray)->Arg(5)->Arg(50)->Arg(95);
