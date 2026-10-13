@@ -2985,11 +2985,25 @@ over two bytes, or in ascending order, has all of them.
 sixteen bits rather than the twelve permissions so that `std::filesystem::perms::unknown`, `0xFFFF`, survives the
 round trip; its four high bits are keys like the others.
 
-`Mask` is an enumeration, a built-in integer type or a `std::bitset` as wide as a block, one block for now, the
-three forms [bitmask.types]/1 allows. Its word is the enumeration's underlying type made unsigned, the integer type's
-unsigned counterpart, or the block a bitset of that width is, and every conversion between the mask and the block
-goes through that word: a cast for an enumeration or an integer, `xstd::bit_convert` for a bitset, position `i`
-staying position `i`. `bool` and the character types are integral but no integer type, and are not masks.
+`Mask` is an enumeration, a built-in integer type or a `std::bitset<M>` of any width `M`, the three forms
+[bitmask.types]/1 allows. Its word is the enumeration's underlying type made unsigned, the integer type's unsigned
+counterpart, or for a bitset the least block holding `M`, and past the widest block an array of them:
+`std::bitset<12>` is read as a `std::uint16_t`, and `std::bitset<147>` as a `std::array<std::uint64_t, 3>`. Every
+conversion between the mask and the set goes through that word, position `i` staying position `i`: a cast for an
+enumeration or an integer, and for a bitset the bytes `xstd::bit_convert` moves a bitset by, which reach a word wider
+than `M` with its high bits clear. `bit_mask_mapping` asks the word to be fixed bit blocks, one unsigned block or a
+fixed array of them, which is `xstd::bit_blocks`' own two cases with the width in the type, and never the signed type
+under an enumeration. Of the three shapes weighed for a mask wider than a block, this is the word array: the set's
+`from_blocks` already takes any fixed blocks at least `N` wide and drops what lies above, so the conversion, `&` and
+`-` need nothing new, and an enumeration or an integer keeps its one-cast path. Dropping the mapping's `to_block` and
+`from_block` for an equal-width `bit_convert` between set and mask would have cost that path and still needed a
+widening step below `M`, and a bit-precise word, `xstd::bit_uint<M>`, exists on Clang alone. A rank and its key are
+one bit counted across the blocks of the word, and `fits`, no bit at or above `N`, compares the word with the one
+that keeps only the bits below `N`, so `bit_flag_set<std::bitset<147>, 140>` refuses a mask with bit 145 set on the
+way in and truncates it under `&` and `-`. `bool` and the character types are integral but no integer type, and are
+not masks. The 128-bit integers are masks too: `bit_flag_set<xstd::uint128>` is 128 flags over two 64-bit blocks on
+GCC and Clang alike, in the GNU dialect the library builds in and under a strict `-std=c++23`, where they are no
+`std::integral` and `xstd::integer` admits them instead.
 
 An enumeration is a mask when `xstd::bit_mask` says so, its operators returning the enumeration, and also whenever
 its `|` compiles, whatever that returns. Qt's flag enumerations return a `QFlags<Enum>` from `|`, and a C enumeration

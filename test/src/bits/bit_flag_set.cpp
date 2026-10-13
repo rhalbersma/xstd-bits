@@ -7,6 +7,7 @@
 #include <test/for_each_type.hpp>                       // for_each_type
 #include <test/set/enums.hpp>                           // perm
 #include <test/set/lookup.hpp>                          // lookup_mismatches
+#include <test/uint128.hpp>                             // TEST_HAS_UINT128
 #include <xstd/bits/bit/bit_convert.hpp>                // bit_convert
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>     // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>     // bit_includes
@@ -16,16 +17,18 @@
 #include <xstd/bits/bit_flag_mapping.hpp>               // bit_flag_mapping
 #include <xstd/bits/bit_flag_set.hpp>                   // bit_flag_set
 #include <xstd/bits/bit_type_traits/bit_fast.hpp>       // bit_fast
+#include <xstd/bits/bit_type_traits/bit_least.hpp>      // bit_least
 #include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
 #include <xstd/bits/from_blocks.hpp>                    // from_blocks
 #include <xstd/filesystem.hpp>                          // perms
 #include <xstd/ints/concepts/bit_mask.hpp>              // bit_mask
+#include <xstd/ints/cstdint.hpp>                        // int128, uint128
 #include <boost/test/unit_test.hpp>                     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                    // ranges::equal, ranges::includes, ranges::set_difference, ranges::set_intersection, ranges::set_symmetric_difference, ranges::set_union
 #include <array>                                        // array, to_array
 #include <bit>                                          // bit_cast, bit_floor, countr_zero, has_single_bit, popcount
 #include <bitset>                                       // bitset
-#include <compare>                                      // is_gt, is_lt
+#include <compare>                                      // is_gt, is_lt, strong_ordering
 #include <concepts>                                     // convertible_to, same_as
 #include <cstddef>                                      // size_t
 #include <cstdint>                                      // int64_t, int8_t, uint16_t, uint32_t, uint64_t, uint8_t
@@ -478,6 +481,86 @@ auto adjust_permissions(fs::path const& path)
         fs::permissions(path, fs::perms::owner_all, fs::perm_options::add);
         fs::remove(path);
         return trace;
+}
+
+// The keys a flag type walks, highest first, as values.
+template<class X>
+auto keys_of(X const& x)
+        -> std::vector<typename X::key_type>
+{
+        return {x.begin(), x.end()};
+}
+
+// Masks of a bitset of width M: none, the ends, either side of each block boundary, two stripes, and every bit.
+template<std::size_t M>
+auto wide_masks()
+        -> std::vector<std::bitset<M>>
+{
+        auto nrv = std::vector<std::bitset<M>>{std::bitset<M>(), std::bitset<M>().set(0UZ), std::bitset<M>().set(M - 1UZ), std::bitset<M>().set(0UZ).set(M - 1UZ), std::bitset<M>().set()};
+        for (auto k = 63UZ; k + 1UZ < M; k += 64UZ) {
+                nrv.push_back(std::bitset<M>().set(k).set(k + 1UZ));
+        }
+        auto every_third = std::bitset<M>();
+        for (auto k = 0UZ; k < M; k += 3UZ) {
+                every_third.set(k);
+        }
+        nrv.push_back(every_third);
+        nrv.push_back(~every_third);
+        return nrv;
+}
+
+// The bitsets' numeric order: the highest bit at which the two differ decides, as the flag type's <=> does.
+template<std::size_t M>
+auto numeric_order(std::bitset<M> const& a, std::bitset<M> const& b)
+        -> std::strong_ordering
+{
+        for (auto i = M - 1UZ; i < M; --i) {
+                if (a.test(i) != b.test(i)) {
+                        return a.test(i) ? std::strong_ordering::greater : std::strong_ordering::less;
+                }
+        }
+        return std::strong_ordering::equal;
+}
+
+// How often a flag type over std::bitset<M> answers otherwise than std::bitset's own operators, over pairs of masks.
+template<std::size_t M>
+auto wide_bitset_mismatches()
+        -> std::size_t
+{
+        using mask      = std::bitset<M>;
+        using X         = xstd::bit_flag_set<mask>;
+        auto mismatches = 0UZ;
+        for (auto const& a : wide_masks<M>()) {
+                X const x = a;
+                mismatches += static_cast<std::size_t>(mask(x) != a or x != a or x.size() != a.count());
+                auto keys  = std::vector<mask>(x.begin(), x.end());
+                auto model = std::vector<mask>();
+                for (auto i = M - 1UZ; i < M; --i) {
+                        if (a.test(i)) {
+                                model.push_back(mask().set(i));
+                        }
+                }
+                mismatches += static_cast<std::size_t>(keys != model);
+                for (auto const& b : wide_masks<M>()) {
+                        mismatches += static_cast<std::size_t>(mask(x | b) != (a | b) or mask(b | x) != (b | a));
+                        mismatches += static_cast<std::size_t>(mask(x & b) != (a & b) or mask(b & x) != (b & a));
+                        mismatches += static_cast<std::size_t>(mask(x ^ b) != (a ^ b) or mask(b ^ x) != (b ^ a));
+                        mismatches += static_cast<std::size_t>(mask(x - b) != (a & ~b) or mask(b - x) != (b & ~a));
+                        auto y = x;
+                        y |= b;
+                        auto z = x;
+                        z &= b;
+                        auto w = x;
+                        w ^= b;
+                        auto v = x;
+                        v -= b;
+                        mismatches += static_cast<std::size_t>(mask(y) != (a | b) or mask(z) != (a & b) or mask(w) != (a ^ b) or mask(v) != (a & ~b));
+                        mismatches += static_cast<std::size_t>((x <=> X(b)) != numeric_order(a, b));
+                        mismatches += static_cast<std::size_t>(xstd::bit_includes(x, b) != ((a & b) == b));
+                        mismatches += static_cast<std::size_t>(xstd::bit_intersects(x, b) != (a & b).any() or xstd::bit_disjoint(x, b) != (a & b).none());
+                }
+        }
+        return mismatches;
 }
 
 // Whether Mask keys a flag type at its default width.
@@ -1377,5 +1460,76 @@ BOOST_AUTO_TEST_CASE(AnIntFieldOfUnsignedFlagsKeysOnUnsigned)
         BOOST_CHECK(read.contains(SA_RESETHAND) and read.contains(SA_RESTART) and read.size() == 2UZ);
 #endif
 }
+
+// A bitset as wide as no block is one mask over several: std::bitset<147> is three 64-bit blocks, the least holding it.
+BOOST_AUTO_TEST_CASE(AWideBitsetIsAFlagTypeOverSeveralBlocks)
+{
+        using wide = std::bitset<147>;
+        static_assert(std::same_as<xstd::bit_flag_set<wide>, xstd::bit_least<xstd::basic_bit_fixed_set<wide, std::size_t, 147, xstd::bit_flag_mapping<wide>, std::greater<wide>>>>); // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(std::same_as<xstd::bit_flag_set<wide>, xstd::basic_bit_fixed_set<wide, std::uint64_t, 147, xstd::bit_flag_mapping<wide>, std::greater<wide>>>);                // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(sizeof(xstd::bit_flag_set<wide>) == 3UZ * sizeof(std::uint64_t) and xstd::bit_mask<xstd::bit_flag_set<wide>>);
+        static_assert(xstd::bit_flag_set<std::bitset<12>>::max_size() == 12UZ and xstd::bit_flag_set<std::bitset<100>>::max_size() == 100UZ);
+        static_assert(noexcept(xstd::bit_flag_set<wide>(wide())) and noexcept(wide(xstd::bit_flag_set<wide>())));
+        static_assert(wide(xstd::bit_flag_set<wide>(wide().set(0).set(64).set(146))) == wide().set(0).set(64).set(146));
+
+        auto const p = xstd::bit_flag_set<wide>{wide().set(3), wide().set(146), wide().set(64)};
+        BOOST_CHECK((std::vector<wide>(p.begin(), p.end()) == std::vector{wide().set(146), wide().set(64), wide().set(3)}));
+        BOOST_CHECK(p.contains(wide().set(64)) and not p.contains(wide().set(63)) and not p.contains(wide().set(3).set(64)));
+        BOOST_CHECK_EQUAL((~p).size(), 144UZ);
+}
+
+// Every operator, compound form, comparison and containment against a wide bitset answers as std::bitset's own.
+BOOST_AUTO_TEST_CASE(AWideBitsetFlagTypeAgreesWithStdBitset)
+{
+        BOOST_CHECK_EQUAL(wide_bitset_mismatches<12UZ>(), 0UZ);
+        BOOST_CHECK_EQUAL(wide_bitset_mismatches<100UZ>(), 0UZ);
+        BOOST_CHECK_EQUAL(wide_bitset_mismatches<147UZ>(), 0UZ);
+}
+
+// Any block tiles a wide bitset's flags alike: bytes, words, or the alias's own 64-bit blocks.
+BOOST_AUTO_TEST_CASE(EveryBlockOverAWideBitsetConvertsAlike)
+{
+        using wide      = std::bitset<147>;
+        using bytes     = xstd::basic_bit_fixed_set<wide, std::uint8_t, 147, xstd::bit_flag_mapping<wide>, std::greater<wide>>;  // NOLINT(modernize-use-transparent-functors): the flag type's comparator
+        using words     = xstd::basic_bit_fixed_set<wide, std::uint32_t, 147, xstd::bit_flag_mapping<wide>, std::greater<wide>>; // NOLINT(modernize-use-transparent-functors): the flag type's comparator
+        auto mismatches = 0UZ;
+        for (auto const& m : wide_masks<147UZ>()) {
+                mismatches += static_cast<std::size_t>(wide(bytes(m)) != m or wide(words(m)) != m or bytes(m).size() != m.count());
+                auto const keys = keys_of(xstd::bit_flag_set<wide>(m));
+                mismatches += static_cast<std::size_t>(keys_of(bytes(m)) != keys or keys_of(words(m)) != keys);
+        }
+        BOOST_CHECK_EQUAL(mismatches, 0UZ);
+}
+
+// Below the bitset's width, a mask with a bit above N is refused on the way in, and truncated by & and -.
+BOOST_AUTO_TEST_CASE(ANarrowerWidthReadsTheLowPositionsOfAWideBitset)
+{
+        using wide   = std::bitset<147>;
+        using narrow = xstd::bit_flag_set<wide, 140>;
+        static_assert(narrow::max_size() == 140UZ and std::same_as<narrow::key_mapping_type, xstd::bit_flag_mapping<wide, 140>>);
+#ifndef NDEBUG
+        static_assert(constant_evaluates<[] -> narrow { return {wide().set(139)}; }>);
+        static_assert(not constant_evaluates<[] -> narrow { return {wide().set(145)}; }>);
+#endif
+        auto const high = wide().set(145).set(1);
+        auto const p    = ~narrow();
+        BOOST_CHECK(wide(p & high) == wide().set(1) and wide(p - high) == (wide(p) & ~wide().set(1)));
+        BOOST_CHECK(p != high and not(narrow(wide().set(1)) == high) and narrow(wide().set(1)) == wide().set(1));
+        BOOST_CHECK(wide(p).count() == 140UZ and not wide(p).test(140));
+        BOOST_CHECK(not p.contains(wide().set(145)));
+}
+
+#ifdef TEST_HAS_UINT128
+// A 128-bit integer is one block of two 64-bit ones in the flag type, and a bit past 64 round-trips.
+BOOST_AUTO_TEST_CASE(A128BitIntegerKeysAFlagTypeOverTwoBlocks)
+{
+        using X         = xstd::bit_flag_set<xstd::uint128>;
+        auto const high = xstd::uint128{1} << 100U;
+        static_assert(X::max_size() == 128UZ and sizeof(X) == 2UZ * sizeof(std::uint64_t));
+        auto const x = X(high | xstd::uint128{5});
+        BOOST_CHECK(xstd::uint128(x) == (high | xstd::uint128{5}) and x.size() == 3UZ and x.front() == high);
+        BOOST_CHECK(xstd::bit_flag_set<xstd::int128>::max_size() == 127UZ);
+}
+#endif
 
 BOOST_AUTO_TEST_SUITE_END()

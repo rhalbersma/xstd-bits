@@ -219,6 +219,29 @@ BOOST_AUTO_TEST_CASE(ABitsetRanksAtItsBitsPosition)
         }
 }
 
+// A bitset past a block's width is read as an array of the least blocks holding it, and ranks its bits as one word.
+BOOST_AUTO_TEST_CASE(AWideBitsetRanksAtItsBitsPosition)
+{
+        using wide    = std::bitset<147>;
+        using mapping = xstd::bit_flag_mapping<wide>;
+        static_assert(std::same_as<mapping::block_type, std::array<std::uint64_t, 3>> and mapping::size == 147UZ);
+        static_assert(std::same_as<xstd::bit_flag_mapping<std::bitset<12>>::block_type, std::uint16_t> and xstd::bit_flag_mapping<std::bitset<12>>::size == 12UZ);
+        static_assert(std::same_as<xstd::bit_flag_mapping<std::bitset<100>>::block_type, std::array<std::uint64_t, 2>>);
+        static_assert(xstd::sized_bit_index_mapping<mapping, wide> and xstd::bit_mask_mapping<mapping, wide>);
+        static_assert(mapping::to_index(wide().set(146)) == 146UZ and mapping::from_index(64UZ) == wide().set(64));
+        static_assert(test::set::is_order_isomorphism<mapping, wide>());
+        for (auto const i : std::views::iota(0UZ, mapping::size)) {
+                BOOST_CHECK_EQUAL(mapping::to_index(mapping::from_index(i)), i);
+                BOOST_CHECK(mapping::from_index(i) == wide().set(i));
+                BOOST_CHECK(mapping::is_key(wide().set(i)));
+        }
+
+        // None, two bits, and one bit at or above a narrower N are no key.
+        BOOST_CHECK(not mapping::is_key(wide()) and not mapping::is_key(wide().set(3).set(100)) and not mapping::is_key(wide().set()));
+        BOOST_CHECK((xstd::bit_flag_mapping<wide, 140UZ>::is_key(wide().set(139)) and not xstd::bit_flag_mapping<wide, 140UZ>::is_key(wide().set(145))));
+        BOOST_CHECK(mapping::from_block(mapping::to_block(wide().set(0).set(70).set(146))) == wide().set(0).set(70).set(146));
+}
+
 // A key has exactly one bit set, below N: zero, a value of several bits, or one bit at or above N is none.
 BOOST_AUTO_TEST_CASE(AKeyIsAOneBitValueBelowTheSize)
 {
