@@ -6,16 +6,17 @@
 #ifndef TEST_SET_STRONG_INDEX_HPP
 #define TEST_SET_STRONG_INDEX_HPP
 
-#include <xstd/bits/bit_key_mapping.hpp> // bit_key_mapping
-#include <boost/test/unit_test.hpp>      // BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                     // ranges::equal
-#include <compare>                       // strong_ordering
-#include <cstddef>                       // size_t
-#include <format>                        // format, formatter
-#include <ranges>                        // from_range, iota, reverse, to, transform
-#include <set>                           // erase_if, set
-#include <string>                        // string
-#include <vector>                        // vector
+#include <xstd/bits/bit_algorithm/bit_for_each.hpp> // bit_for_each
+#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
+#include <boost/test/unit_test.hpp>                 // BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                                // ranges::equal
+#include <compare>                                  // strong_ordering
+#include <cstddef>                                  // size_t
+#include <format>                                   // format, formatter
+#include <ranges>                                   // from_range, iota, reverse, to, transform
+#include <set>                                      // erase_if, set
+#include <string>                                   // string
+#include <vector>                                   // vector
 
 // A key that is not a std::size_t, and the two ways a set owner is told where it goes.
 namespace test::set {
@@ -103,10 +104,10 @@ auto constructs_and_walks_as_std_set(std::vector<strong_index> const& keys, std:
         }
 
         auto walked = std::vector<strong_index>();
-        a.for_each([&](strong_index k) -> void { walked.push_back(k); });
+        static_cast<void>(xstd::bit_for_each(a, [&](strong_index k) -> void { walked.push_back(k); }));
         BOOST_CHECK(std::ranges::equal(walked, model));
         walked.clear();
-        a.for_each_reverse([&](strong_index k) -> void { walked.push_back(k); });
+        static_cast<void>(xstd::bit_for_each(std::views::reverse(a), [&](strong_index k) -> void { walked.push_back(k); }));
         BOOST_CHECK(std::ranges::equal(walked, model | std::views::reverse));
 }
 

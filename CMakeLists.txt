@@ -75,10 +75,13 @@ target_sources(
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
+        include/xstd/bits/bit_algorithm/detail/walk.hpp
         include/xstd/bits/bit_algorithm/bit_all_of.hpp
         include/xstd/bits/bit_algorithm/bit_any_of.hpp
         include/xstd/bits/bit_algorithm/bit_count.hpp
         include/xstd/bits/bit_algorithm/bit_disjoint.hpp
+        include/xstd/bits/bit_algorithm/bit_fill.hpp
+        include/xstd/bits/bit_algorithm/bit_for_each.hpp
         include/xstd/bits/bit_algorithm/bit_includes.hpp
         include/xstd/bits/bit_algorithm/bit_intersects.hpp
         include/xstd/bits/bit_algorithm/bit_mismatch.hpp
@@ -131,7 +134,6 @@ target_sources(
         include/xstd/bits/detail/block_intersects.hpp
         include/xstd/bits/detail/comparisons.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp
-        include/xstd/bits/detail/functor.hpp
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
         include/xstd/bits/detail/flag_block.hpp

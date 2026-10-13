@@ -17,13 +17,10 @@
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                 // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                   // numeric_three_way, set_equal, three_way
-#include <xstd/bits/detail/functor.hpp>                       // decay_copy
 #include <xstd/bits/detail/hash.hpp>                          // hash_append_keys
-#include <xstd/bits/detail/intrin.hpp>                        // countl_zero, countr_zero
 #include <xstd/bits/detail/is_key.hpp>                        // is_key
 #include <xstd/bits/detail/owner_members.hpp>                 // owner_members
 #include <xstd/bits/detail/ownership.hpp>                     // owned_bits_t, owned_storage, owner_of, owns, reads, set_reading_tag, storage, storage_access
-#include <xstd/bits/detail/shift.hpp>                         // shl, shr
 #include <xstd/bits/detail/storage_ptr.hpp>                   // storage_ptr_t, storage_ref_t
 #include <xstd/bits/from_blocks.hpp>                          // from_blocks_t
 #include <xstd/misc/concepts/specialization_of.hpp>           // specialization_of
@@ -34,7 +31,7 @@
 #include <algorithm>                                          // all_of, find_if, max, min, partition_point
 #include <cassert>                                            // assert
 #include <compare>                                            // strong_ordering
-#include <concepts>                                           // constructible_from, convertible_to, equality_comparable, invocable, same_as, totally_ordered
+#include <concepts>                                           // constructible_from, convertible_to, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                            // ptrdiff_t, size_t
 #include <format>                                             // format, formatter
 #include <functional>                                         // greater, hash, less
@@ -44,66 +41,13 @@
 #include <source_location>                                    // source_location
 #include <span>                                               // dynamic_extent
 #include <stdexcept>                                          // out_of_range
-#include <type_traits>                                        // conditional_t, false_type, integral_constant, is_enum_v, is_invocable_r_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, remove_const_t, remove_cvref_t, remove_reference_t
+#include <type_traits>                                        // conditional_t, false_type, integral_constant, is_enum_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                            // declval, forward, in_place, move, pair
 
 // The set reading, [set] over a bit_block_container, owning it or referring to it.
 namespace xstd::bits::detail {
 
 namespace set {
-
-// One tier each: sharing a body puts the whole over readability-function-cognitive-complexity.
-
-// Blocks, lowest position first: load once per block, then tzcnt for the position and blsr to drop it.
-template<class Key, class KeyMapping, class Bits, class F>
-constexpr auto walk_blocks_ascending(Bits const& c, F& f)
-        -> void
-{
-        using block_type      = Bits::block_type;
-        constexpr auto digits = Bits::bits_per_block;
-
-        for (auto const index : std::views::iota(0UZ, c.num_blocks())) {
-                auto block = c[index];
-                while (block != block_type{}) {
-                        auto const offset = static_cast<std::size_t>(countr_zero(block));
-                        // A functor returning void has no exit to take, so its walk is compiled without one.
-                        if constexpr (std::is_invocable_r_v<bool, F&, Key>) {
-                                if (not f(decay_copy<Key>(KeyMapping::from_index((digits * index) + offset)))) {
-                                        return;
-                                }
-                        } else {
-                                f(decay_copy<Key>(KeyMapping::from_index((digits * index) + offset)));
-                        }
-                        block = static_cast<block_type>(block & static_cast<block_type>(block - block_type{1}));
-                }
-        }
-}
-
-// The mirror. w & (w - 1) has no descending twin, so this clears the bit it just reported.
-template<class Key, class KeyMapping, class Bits, class F>
-constexpr auto walk_blocks_descending(Bits const& c, F& f)
-        -> void
-{
-        using block_type      = Bits::block_type;
-        constexpr auto digits = Bits::bits_per_block;
-
-        auto const blocks = c.num_blocks();
-        for (auto index = blocks - 1UZ; index < blocks; --index) {
-                auto block = c[index];
-                while (block != block_type{}) {
-                        auto const offset = digits - 1UZ - static_cast<std::size_t>(countl_zero(block));
-                        // A functor returning void has no exit to take, so its walk is compiled without one.
-                        if constexpr (std::is_invocable_r_v<bool, F&, Key>) {
-                                if (not f(decay_copy<Key>(KeyMapping::from_index((digits * index) + offset)))) {
-                                        return;
-                                }
-                        } else {
-                                f(decay_copy<Key>(KeyMapping::from_index((digits * index) + offset)));
-                        }
-                        block = static_cast<block_type>(block ^ shl(block_type{1}, offset));
-                }
-        }
-}
 
 // A mapping that closes the universe says how many keys it has, which an owner's width must then be.
 template<class KeyMapping, class Key, std::size_t N>
@@ -238,6 +182,9 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
                 friend set_adaptor;
 
                 friend class basic_reference<Value>;
+
+                // The algorithms that step or write a block at a time reach the storage and position through this door.
+                friend struct storage_access;
 
                 [[nodiscard]] constexpr basic_iterator(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
                         : m_ptr(ptr)
@@ -692,32 +639,6 @@ public:
                 return rend();
         }
 
-        // The set reading a block at a time in the iteration order, which is what an iterator cannot be.
-        template<class F>
-                requires std::invocable<F&, key_type>
-        constexpr auto for_each(this auto&& self, F f)
-                -> void
-        {
-                if constexpr (is_descending) {
-                        set::walk_blocks_descending<Key, KeyMapping>(self.bits(), f);
-                } else {
-                        set::walk_blocks_ascending<Key, KeyMapping>(self.bits(), f);
-                }
-        }
-
-        // The mirror, the last key in the iteration order first.
-        template<class F>
-                requires std::invocable<F&, key_type>
-        constexpr auto for_each_reverse(this auto&& self, F f)
-                -> void
-        {
-                if constexpr (is_descending) {
-                        set::walk_blocks_ascending<Key, KeyMapping>(self.bits(), f);
-                } else {
-                        set::walk_blocks_descending<Key, KeyMapping>(self.bits(), f);
-                }
-        }
-
         // capacity; a bitset's count() is a set's size(), and max_size() is the positions there are to hold.
         [[nodiscard]] constexpr auto empty() const noexcept
                 -> bool
@@ -827,13 +748,6 @@ public:
                 requires requires { self.bits().growing_insert(KeyMapping::to_index(*ilist.begin())); }
         {
                 self.insert(ilist.begin(), ilist.end());
-        }
-
-        constexpr auto fill(this auto&& self) noexcept
-                -> void
-                requires requires { self.bits().fill(true); }
-        {
-                self.bits().fill(true);
         }
 
         // The successor first: exclusive_find_next never reads the position it steps from.

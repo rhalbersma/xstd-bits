@@ -12,8 +12,14 @@
 #include <xstd/bits/bit_algorithm/bit_none_of.hpp>  // IWYU pragma: export; bit_none_of
 #include <xstd/bits/bit_algorithm/bit_count.hpp>    // IWYU pragma: export; bit_count
 #include <xstd/bits/bit_algorithm/bit_mismatch.hpp> // IWYU pragma: export; bit_mismatch
-#include <xstd/bits/bit_algorithm/bit_reverse.hpp>  // IWYU pragma: export; bit_reverse
-#include <xstd/bits/bit_algorithm/bit_rotate.hpp>   // IWYU pragma: export; bit_rotate
+
+// The sequence reading's writes: whole sequences and windows alike, but for the permutations, which take no window.
+#include <xstd/bits/bit_algorithm/bit_fill.hpp>    // IWYU pragma: export; bit_fill
+#include <xstd/bits/bit_algorithm/bit_reverse.hpp> // IWYU pragma: export; bit_reverse
+#include <xstd/bits/bit_algorithm/bit_rotate.hpp>  // IWYU pragma: export; bit_rotate
+
+// Both readings': a walk in either order, and equality and order across block types and storages.
+#include <xstd/bits/bit_algorithm/bit_for_each.hpp> // IWYU pragma: export; bit_for_each
 
 // The set reading's, over keys.
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>   // IWYU pragma: export; bit_includes

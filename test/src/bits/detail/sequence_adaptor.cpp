@@ -6,7 +6,7 @@
 #include <test/bit_exchange.hpp>                    // converts_between, converts_from, converts_to, exchanges_from_bits
 #include <test/block_types.hpp>                     // graded_extents
 #include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
-#include <xstd/bits/bit_algorithm.hpp>              // bit_all_of, bit_any_of, bit_count, bit_mismatch, bit_none_of
+#include <xstd/bits/bit_algorithm.hpp>              // bit_all_of, bit_any_of, bit_count, bit_fill, bit_for_each, bit_mismatch, bit_none_of
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
 #include <xstd/bits/bit_set.hpp>                    // bit_set
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE(ConstIsDeepForTheOwnerAndShallowForTheView)
         static_assert(std::same_as<decltype(v.cbegin()), View::const_iterator>);
         static_assert(std::is_const_v<std::remove_reference_t<decltype(*Reader(c).begin()) const>>);
 
-        static_assert(can_fill<View> and can_write<View> and can_fill<Owner> and can_write<Owner> and can_swap<Owner>);
+        static_assert(not can_fill<View> and can_write<View> and can_fill<Owner> and can_write<Owner> and can_swap<Owner>);
         static_assert(not can_fill<Reader> and not can_write<Reader>);
         static_assert(not can_fill<Owner const> and not can_write<Owner const>);
         static_assert(not can_swap<View>);
@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE(AViewWritesThroughToWhatItViews)
         BOOST_CHECK(c.test(3) and c.test(5) and c.test(0) and c.test(99));
         BOOST_CHECK_EQUAL(c.count(), 4UZ);
 
-        v.fill(false);
+        static_cast<void>(xstd::bit_fill(v, false));
         BOOST_CHECK(c.none());
 }
 
@@ -460,13 +460,13 @@ auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m)
         return disagreements;
 }
 
-// What for_each hands its functor, in the order it hands it: the range-for's own answer, which is the contract.
+// What bit_for_each hands its functor, in the order it hands it: the range-for's own answer, which is the contract.
 template<class Seq>
 auto for_each_bools(Seq const& s)
         -> std::vector<bool>
 {
         auto v = std::vector<bool>();
-        s.for_each([&v](bool b) -> void { v.push_back(b); });
+        static_cast<void>(xstd::bit_for_each(s, [&v](bool b) -> void { v.push_back(b); }));
         return v;
 }
 
@@ -537,44 +537,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(MismatchAgreesWithTheModel, T, Graded)
 template<class S>
 constexpr bool can_mismatch = requires (S const& a) { xstd::bit_mismatch(a, a); };
 
-// What for_each accepts, likewise dependent.
-template<class S, class F>
-constexpr bool walks = requires (S const& s, F f) { s.for_each(f); };
-
-// Functors overloaded on the value category.
-struct void_probe
-{
-        bool& took_a_reference;
-
-        auto operator()(bool&&) const -> void {}
-
-        // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
-        [[maybe_unused]] auto operator()(bool&) const
-                -> void
-        {
-                took_a_reference = true;
-        }
-};
-
-struct bool_probe
-{
-        bool& took_a_reference;
-
-        auto operator()(bool&&) const
-                -> bool
-        {
-                return true;
-        }
-
-        // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
-        [[maybe_unused]] auto operator()(bool&) const
-                -> bool
-        {
-                took_a_reference = true;
-                return true;
-        }
-};
-
 // Every sequence has a mismatch: a window's a bool at a time, its end blocks not being its own.
 BOOST_AUTO_TEST_CASE(EverySequenceHasAMismatch)
 {
@@ -582,7 +544,7 @@ BOOST_AUTO_TEST_CASE(EverySequenceHasAMismatch)
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
-// for_each hands the functor what the iterator dereferences to, and stops where a bool functor says to.
+// bit_for_each hands the functor what the iterator dereferences to, over every graded extent.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ForEachAgreesWithTheRangeFor, T, Graded)
 {
         auto disagreements = 0UZ;
@@ -590,52 +552,19 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ForEachAgreesWithTheRangeFor, T, Graded)
                 auto a       = T();
                 auto const m = write_pattern(a, p);
                 disagreements += static_cast<std::size_t>(not std::ranges::equal(for_each_bools(a), m));
-
-                // A void functor always continues; a bool one says, and three is inside all but two extents.
-                auto seen = 0UZ;
-                a.for_each([&seen](bool) -> bool { return ++seen < 3UZ; });
-                disagreements += static_cast<std::size_t>(seen != std::ranges::min(a.size(), 3UZ));
         }
         BOOST_CHECK_EQUAL(disagreements, 0UZ);
 }
 
-// The functor is handed the bool by value, and the constraint says so.
-BOOST_AUTO_TEST_CASE(ForEachHandsTheBoolByValue)
+// Writing through the sequence is the range-for's job: const, and it still writes, the proxy being what is assigned.
+BOOST_AUTO_TEST_CASE(TheRangeForWritesThroughTheProxy)
 {
-        // By value, generic or not, and by const reference: all four read what they are given.
-        static_assert(walks<Owner, decltype([](bool) -> void {})>);
-        static_assert(walks<Owner, decltype([](auto) -> void {})>);
-        static_assert(walks<Owner, decltype([](bool const&) -> void {})>);
-        static_assert(walks<Owner, decltype([](auto const&) -> void {})>);
-
-        // A plain function is a functor too, and stays one.
-        static_assert(walks<Owner, void (*)(bool)>);
-
-        // A functor returning bool to mean "keep going" is the other accepted shape.
-        static_assert(walks<Owner, decltype([](bool) -> bool { return true; })>);
-
-        // And the two that would have written to nothing.
-        static_assert(not walks<Owner, decltype([](bool&) -> void {})>);
-        static_assert(not walks<Owner, decltype([](auto&) -> void {})>);
-
-        // Every shape is constrained alike: a view and a window.
-        static_assert(not walks<View, decltype([](bool&) -> void {})>);
-        static_assert(not walks<View::subspan_type, decltype([](bool&) -> void {})>);
-
-        // Writing through the sequence is the range-for's job, and it still is.
+        // NOLINTNEXTLINE(misc-const-correctness): a const owner hands out proxies that cannot write, so this would not compile.
         auto a = Owner();
-        // const, and it still writes: assigning through the proxy is what the proxy is for.
         for (auto const r : a) {
                 r = true;
         }
         BOOST_CHECK_EQUAL(xstd::bit_count(a), std::ranges::ssize(a));
-
-        // And the overload resolution the constraint cannot reach: an lvalue at the call would take the reference.
-        auto took_a_reference = false;
-        a.for_each(void_probe{took_a_reference});
-        BOOST_CHECK(not took_a_reference);
-        a.for_each(bool_probe{took_a_reference});
-        BOOST_CHECK(not took_a_reference);
 }
 
 // The byte exchange at the sequence reading: byte j holds [8j, 8j + 8), least significant bit first.

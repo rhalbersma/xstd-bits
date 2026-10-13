@@ -157,7 +157,7 @@ auto sift_primes_segmented(std::size_t n)
         auto window = Window();
         for (auto segment_lo = base_bound; segment_lo < n; segment_lo += width) {
                 auto const segment_hi = std::ranges::min(segment_lo + width, n);
-                window.fill();
+                window                = ~Window();
                 for (auto const p : base) {
                         // The first multiple of p at or above segment_lo, never below p * p.
                         auto const first = std::ranges::max(p * p, ((segment_lo + p - 1UZ) / p) * p);

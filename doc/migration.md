@@ -60,7 +60,7 @@ s.size();                  // 2
 not s.empty();             // true
 s.empty();                 // false
 s.size() == s.max_size();  // false
-s.fill();                  // every position
+s = ~decltype(s)();        // every position
 s = ~s;                    // complement
 ```
 

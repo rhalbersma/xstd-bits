@@ -14,7 +14,7 @@
 #include <xstd/bits/from_blocks.hpp>     // IWYU pragma: export; from_blocks, from_blocks_t
 #include <xstd/bits/bit.hpp>             // IWYU pragma: export; bit_convert
 #include <xstd/bits/bit_hasher.hpp>      // IWYU pragma: export; bit_hash_append, bit_hasher
-#include <xstd/bits/bit_algorithm.hpp>   // IWYU pragma: export; bit_all_of, bit_any_of, bit_count, bit_disjoint, bit_includes, bit_intersects, bit_mismatch, bit_none_of, bit_reverse, bit_rotate, bit_set_difference, bit_set_intersection, bit_set_symmetric_difference, bit_set_union
+#include <xstd/bits/bit_algorithm.hpp>   // IWYU pragma: export; bit_all_of, bit_any_of, bit_count, bit_disjoint, bit_fill, bit_for_each, bit_includes, bit_intersects, bit_mismatch, bit_none_of, bit_reverse, bit_rotate, bit_set_difference, bit_set_intersection, bit_set_symmetric_difference, bit_set_union
 
 // The sequence reading.
 #include <xstd/bits/bit_array.hpp>          // IWYU pragma: export; bit_array

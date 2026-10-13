@@ -109,6 +109,13 @@ public:
                 return {rebuild()};
         }
 
+        // The storage itself, by value: there is no object for a reference to name.
+        [[nodiscard]] constexpr auto operator*() const noexcept
+                -> bits_type
+        {
+                return rebuild();
+        }
+
         // The same blocks, which is what two iterators into one view share.
         [[nodiscard]] friend constexpr auto operator==(block_ptr lhs, block_ptr rhs) noexcept
                 -> bool
