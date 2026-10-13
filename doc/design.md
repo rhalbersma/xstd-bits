@@ -5820,6 +5820,60 @@ counterpart, since the working draft has no `mdarray`: the view sits over an own
 views row already does. GF(2) linear algebra on top of it is
 [#404](https://github.com/rhalbersma/xstd-bits/issues/404).
 
+### k-bit-elements
+
+An element wider than one bit is a parameter of a reading, not a reading of its own
+([#197](https://github.com/rhalbersma/xstd-bits/issues/197)). A generic packed adaptor would commit to no
+vocabulary and would bring back the layer of synthesized scans that [one-storage](#one-storage) deleted, and its two
+motivating cases land on different readings anyway: an endgame table of `unknown`, `loss`, `draw` and `win` is a
+sequence, and a DNA string over `ACGT` is a string. At one bit per element the sequence row is `bit_vector`; at
+eight bits per byte-sized element it is `std::vector<unsigned char>`, byte for byte on a little-endian target.
+`std::vector<bool>` is the one-bit point of that axis, concealed inside `vector<T>`; declared as a point on it, it
+is just a container. [`sdsl::int_vector<t_width>`](https://github.com/simongog/sdsl-lite) ships the sequence row,
+and [`seqan3::bitpacked_sequence`](https://docs.seqan.de/seqan3/main_user/classseqan3_1_1bitpacked__sequence.html)
+derives the width from the alphabet, which is the refinement to take. Neither has a string reading or a second
+reading over the same bits.
+
+The decisions already taken: the width comes from the element's index mapping, `bit_width(size - 1)`, so it needs
+no template parameter, and the letter `K` stays a count of blocks; each element is stored least significant bit
+first; the proxy converts to the element type as the `bool` proxy converts to `bool`; `<=>` exists only where the
+mapping's order is a total value order, so the endgame table, whose `unknown` makes it partial, has `==` alone; and
+the bitwise operators drop out by constraint above one bit. The set reading takes no width, since a dense set is
+one bit per potential element, and the valarray reading stays `bool`.
+
+Open before the first header: whether the element and its mapping join the existing owners' parameter lists,
+defaulted to `bool`, or name a separate family, since `basic_bit_vector<Block, Allocator>` changing touches every
+alias, every `rebind` and `bit_rebind` and `bit_resize`; whether a width that does not divide the block straddles
+two blocks, as `sdsl::int_vector<9>` does, or pads each block, with power-of-two widths first because they do
+neither; and the one kernel that does not exist yet, a SWAR field compare for `count` and `find` over fields. The
+string row waits for [the-string-reading](#the-string-reading).
+
+### selectable-small-storage
+
+The small column's storage is `boost::container::small_vector`, and `absl::InlinedVector` and `llvm::SmallVector`
+keep up to N elements inline the same way ([#264](https://github.com/rhalbersma/xstd-bits/issues/264)). The
+owners are named by what the user gets, so `bit_small_set` and `bit_small_vector` would keep their names whichever
+implementation backs them. The bounded column picks its storage from what the standard library provides, so every
+translation unit agrees without configuration; several small-vector libraries can be installed at once, so here
+the choice is the user's, and it has to hold across the whole program.
+
+The design: one CMake cache variable, `XSTD_BITS_SMALL_VECTOR`, takes `boost`, `absl` or `llvm`, defaults to
+`boost`, and becomes a compile definition on the `xstd::bits` INTERFACE target, so every target linking the
+library compiles with the same choice. Only the selected implementation's namespace is declared, `inline`, as
+`xstd::with_boost`, `with_absl` or `with_llvm`, so users write `xstd::bit_small_set` and the mangled name carries
+the implementation: two libraries built with different settings fail to link rather than violate the ODR. The
+namespaces are not named `boost`, `absl` or `llvm`, which would hide `::boost` inside `xstd`. Boost.Container stays
+required in every case, for the bounded fallback and the `dynamic_bitset` adapter. The container as a template
+parameter, `std::flat_set`'s shape, is not the alternative: [owned-bit-storage](#owned-bit-storage) records why
+each owner fixes its storage by its name.
+
+Open before the first header: `llvm::SmallVector`'s growth path is defined in `LLVMSupport`, a link dependency on
+a header-only library's INTERFACE target, so whether `with_llvm` is worth carrying or Boost and Abseil ship first;
+`llvm::SmallVector` takes no allocator, so its owners have no `allocator_type`, as the fixed and bounded owners
+have none; whether `absl::InlinedVector` and `llvm::SmallVector` satisfy the owned and resizable storage concepts
+as they stand; and each storage's `swap`, moves and `==` deduce different exception specifications, which the
+tests assert per implementation. CI runs one leg per implementation, with vcpkg features for the two new ones.
+
 ### a-deterministic-perf-gate
 
 Coverage is gated at 100% of lines and branches and time at nothing: the benchmarks run under `ctest` as smoke
