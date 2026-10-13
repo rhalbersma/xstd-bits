@@ -22,4 +22,4 @@ on:
 jobs:
   # wasm32 under node: a 32-bit size_t like i686, but 8-byte alignment for 64-bit integers and a native __int128, so it catches what i686 cannot.
   wasm32:
-    uses: rhalbersma/cpp-ci/.github/workflows/emscripten.yml@1c32e510e25b1d41e613cddc1b169655680f9a01 # main, past v0.11.1
+    uses: rhalbersma/cpp-ci/.github/workflows/emscripten.yml@1c32e510e25b1d41e613cddc1b169655680f9a01 # v0.12.0

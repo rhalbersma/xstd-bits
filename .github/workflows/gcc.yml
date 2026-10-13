@@ -22,7 +22,7 @@ on:
 jobs:
   # Every rung, and the rungs move with cpp-ci rather than with a local matrix. The one ladder that builds the benchmark tree, now that XSTD_BITS_BUILD_BENCHMARKS is off by default. Its Release legs run the smoke test benchmark/CMakeLists.txt registers -- --benchmark_min_time=1x, that it runs rather than what it costs -- so the benchmarks keep compiling and executing against the current API without every other leg paying to build them.
   gcc:
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@1c32e510e25b1d41e613cddc1b169655680f9a01 # main, past v0.11.1
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@1c32e510e25b1d41e613cddc1b169655680f9a01 # v0.12.0
     with:
       cmake_args: -DXSTD_BITS_BUILD_BENCHMARKS=ON
 
@@ -38,14 +38,14 @@ jobs:
   # to std::inplace_vector, or to anything else this column leans on, while it is still a change. The stable rung
   # stays out -- GCC 15 has no such header, so it would configure and then test static_vector a second time.
   gcc_cxx26:
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@1c32e510e25b1d41e613cddc1b169655680f9a01 # main, past v0.11.1
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@1c32e510e25b1d41e613cddc1b169655680f9a01 # v0.12.0
     with:
       tiers: qualification,development
       cmake_args: -DXSTD_BITS_CXX_STANDARD=26
 
   # 32-bit x86: a 32-bit size_t, 4-byte alignment for 64-bit integers, and no __int128. One rung in Debug, since what is under test is the target.
   i686:
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@1c32e510e25b1d41e613cddc1b169655680f9a01 # main, past v0.11.1
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@1c32e510e25b1d41e613cddc1b169655680f9a01 # v0.12.0
     with:
       arch: x86
       tiers: stable
