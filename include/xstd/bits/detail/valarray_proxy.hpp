@@ -90,13 +90,6 @@ public:
                 return m_size;
         }
 
-        // The last position, which must lie inside the owner.
-        [[nodiscard]] constexpr auto within(std::size_t n) const noexcept
-                -> bool
-        {
-                return m_size == 0UZ or m_start + ((m_size - 1UZ) * m_stride) < n;
-        }
-
         template<class Src, class Block>
         constexpr auto gather(Src const& src, borrowed_bits<Block>& dst) const noexcept
                 -> void

@@ -961,6 +961,8 @@ auto check_slice()
                 gslice_of(3UZ, {2UZ, 2UZ}, {0UZ, 1UZ}),
                 gslice_of(0UZ, {3UZ, 3UZ}, {1UZ, 1UZ}),
                 gslice_of(n / 2UZ, {n - (n / 2UZ)}, {1UZ}),
+                gslice_of(0UZ, {n}, {1UZ}),
+                gslice_of(n - 1UZ, {n}, {0UZ}),
                 gslice_of(0UZ, {(n + 7UZ) / 8UZ, 8UZ}, {8UZ, 1UZ}),
         };
         auto result = std::vector<std::gslice>();

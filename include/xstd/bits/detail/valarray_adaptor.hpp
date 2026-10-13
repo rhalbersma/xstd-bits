@@ -170,7 +170,10 @@ class valarray_adaptor : public adapted_bits<Bits, xstd::empty_base_type<>, Bits
         {
                 auto result = gathered_t<Derived>(selection.size());
                 auto dst    = borrowed_bits<block_type>(storage_access::bits(result).blocks());
-                selection.gather(m_bits, dst);
+                // Read through the view a proxy writes through, so every owner over one block runs one gather.
+                auto const blocks = m_bits.blocks();
+                auto const src    = borrowed_bits<block_type>(std::span(const_cast<block_type*>(blocks.data()), blocks.size())); // NOLINT(cppcoreguidelines-pro-type-const-cast): the view is only read.
+                selection.gather(src, dst);
                 return result;
         }
 
@@ -333,17 +336,15 @@ public:
         // [valarray.sub]: a gather into a valarray of its own where the array is const, else a proxy that refers to it.
         [[nodiscard]] auto operator[](std::slice s) const
         {
-                auto const selection = slice_selection(s);
-                assert(selection.within(size()));
-                return gather(selection);
+                assert(s.size() == 0UZ or s.start() + ((s.size() - 1UZ) * s.stride()) < size());
+                return gather(slice_selection(s));
         }
 
         [[nodiscard]] auto operator[](std::slice s)
                 -> xstd::bit_slice_array<block_type>
         {
-                auto const selection = slice_selection(s);
-                assert(selection.within(size()));
-                return proxy_access::make<xstd::bit_slice_array<block_type>>(borrowed(), selection);
+                assert(s.size() == 0UZ or s.start() + ((s.size() - 1UZ) * s.stride()) < size());
+                return proxy_access::make<xstd::bit_slice_array<block_type>>(borrowed(), slice_selection(s));
         }
 
         [[nodiscard]] auto operator[](std::gslice const& s) const
