@@ -19,13 +19,20 @@
 #include <xstd/bits/bit_algorithm/bit_partition_point.hpp> // IWYU pragma: export; bit_partition_point
 
 // The sequence reading's writes: whole sequences and windows alike, but for the permutations, which take no window.
-#include <xstd/bits/bit_algorithm/bit_fill.hpp>        // IWYU pragma: export; bit_fill
-#include <xstd/bits/bit_algorithm/bit_sort.hpp>        // IWYU pragma: export; bit_sort
-#include <xstd/bits/bit_algorithm/bit_partition.hpp>   // IWYU pragma: export; bit_partition
-#include <xstd/bits/bit_algorithm/bit_reverse.hpp>     // IWYU pragma: export; bit_reverse
-#include <xstd/bits/bit_algorithm/bit_rotate.hpp>      // IWYU pragma: export; bit_rotate
-#include <xstd/bits/bit_algorithm/bit_shift_left.hpp>  // IWYU pragma: export; bit_shift_left
-#include <xstd/bits/bit_algorithm/bit_shift_right.hpp> // IWYU pragma: export; bit_shift_right
+#include <xstd/bits/bit_algorithm/bit_copy.hpp>          // IWYU pragma: export; bit_copy
+#include <xstd/bits/bit_algorithm/bit_copy_backward.hpp> // IWYU pragma: export; bit_copy_backward
+#include <xstd/bits/bit_algorithm/bit_move.hpp>          // IWYU pragma: export; bit_move
+#include <xstd/bits/bit_algorithm/bit_swap_ranges.hpp>   // IWYU pragma: export; bit_swap_ranges
+#include <xstd/bits/bit_algorithm/bit_transform.hpp>     // IWYU pragma: export; bit_transform
+#include <xstd/bits/bit_algorithm/bit_fill.hpp>          // IWYU pragma: export; bit_fill
+#include <xstd/bits/bit_algorithm/bit_reverse_copy.hpp>  // IWYU pragma: export; bit_reverse_copy
+#include <xstd/bits/bit_algorithm/bit_rotate_copy.hpp>   // IWYU pragma: export; bit_rotate_copy
+#include <xstd/bits/bit_algorithm/bit_sort.hpp>          // IWYU pragma: export; bit_sort
+#include <xstd/bits/bit_algorithm/bit_partition.hpp>     // IWYU pragma: export; bit_partition
+#include <xstd/bits/bit_algorithm/bit_reverse.hpp>       // IWYU pragma: export; bit_reverse
+#include <xstd/bits/bit_algorithm/bit_rotate.hpp>        // IWYU pragma: export; bit_rotate
+#include <xstd/bits/bit_algorithm/bit_shift_left.hpp>    // IWYU pragma: export; bit_shift_left
+#include <xstd/bits/bit_algorithm/bit_shift_right.hpp>   // IWYU pragma: export; bit_shift_right
 
 // Both readings': a walk in either order, and equality and order across block types and storages.
 #include <xstd/bits/bit_algorithm/bit_for_each.hpp> // IWYU pragma: export; bit_for_each

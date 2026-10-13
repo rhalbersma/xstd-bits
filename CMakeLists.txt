@@ -75,10 +75,13 @@ target_sources(
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
+        include/xstd/bits/bit_algorithm/detail/blit.hpp
         include/xstd/bits/bit_algorithm/detail/find.hpp
         include/xstd/bits/bit_algorithm/detail/walk.hpp
         include/xstd/bits/bit_algorithm/bit_all_of.hpp
         include/xstd/bits/bit_algorithm/bit_any_of.hpp
+        include/xstd/bits/bit_algorithm/bit_copy.hpp
+        include/xstd/bits/bit_algorithm/bit_copy_backward.hpp
         include/xstd/bits/bit_algorithm/bit_count.hpp
         include/xstd/bits/bit_algorithm/bit_disjoint.hpp
         include/xstd/bits/bit_algorithm/bit_fill.hpp
@@ -90,11 +93,14 @@ target_sources(
         include/xstd/bits/bit_algorithm/bit_is_partitioned.hpp
         include/xstd/bits/bit_algorithm/bit_is_sorted.hpp
         include/xstd/bits/bit_algorithm/bit_mismatch.hpp
+        include/xstd/bits/bit_algorithm/bit_move.hpp
         include/xstd/bits/bit_algorithm/bit_none_of.hpp
         include/xstd/bits/bit_algorithm/bit_partition.hpp
         include/xstd/bits/bit_algorithm/bit_partition_point.hpp
         include/xstd/bits/bit_algorithm/bit_reverse.hpp
+        include/xstd/bits/bit_algorithm/bit_reverse_copy.hpp
         include/xstd/bits/bit_algorithm/bit_rotate.hpp
+        include/xstd/bits/bit_algorithm/bit_rotate_copy.hpp
         include/xstd/bits/bit_algorithm/bit_set_difference.hpp
         include/xstd/bits/bit_algorithm/bit_set_intersection.hpp
         include/xstd/bits/bit_algorithm/bit_set_symmetric_difference.hpp
@@ -102,6 +108,8 @@ target_sources(
         include/xstd/bits/bit_algorithm/bit_shift_left.hpp
         include/xstd/bits/bit_algorithm/bit_shift_right.hpp
         include/xstd/bits/bit_algorithm/bit_sort.hpp
+        include/xstd/bits/bit_algorithm/bit_swap_ranges.hpp
+        include/xstd/bits/bit_algorithm/bit_transform.hpp
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bit.hpp
         include/xstd/bits/bit/bit_convert.hpp
