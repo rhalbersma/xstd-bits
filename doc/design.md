@@ -2495,15 +2495,17 @@ sequence's, handed out through a whole view of its own storage. On packed bits e
 the set operation's own instruction a block at a time, so the reading costs nothing to serve.
 
 **The interface is `[valarray]`'s at `T = bool`, line by line.** `value_type`, and the proxy `reference` that
-stands in for `T&`; the default, count, value-and-count (the value first, as `[valarray.cons]` orders them) and
-list constructors; assignment from an array, a `bool` filling every element, and a list; `operator[]`, a proxy
-where `valarray` hands out `T&` and a `bool` where it hands out `const T&`; `swap`, `size`, `sum`, `min`, `max`,
+stands in for `T&`; the default, count, value-and-count (the value first, as `[valarray.cons]` orders them),
+pointer-and-count, list and proxy constructors; assignment from an array, a `bool` filling every element, a list
+and each of the four proxies; `operator[]`, a proxy where `valarray` hands out `T&` and a `bool` where it hands out
+`const T&`, and the four subscripts of `[valarray.sub]` described below; `swap`, `size`, `sum`, `min`, `max`,
 `shift`, `cshift`, `apply` in both shapes and `resize`, which assigns its value to every element as
 `[valarray.members]` says; `!`, `&=`, `|=` and `^=` against an array and a scalar; `&`, `|`, `^`, `&&`, `||` and
 the six comparisons over two arrays and over an array and a scalar on either side; `swap`, `begin` and `end` as
 non-members, which makes it a random-access range, and no member `begin` or `end`. A static size has no count
 constructors and no `resize`, and takes `std::array`'s list initialization and a built-in array of bools as
-`bit_array` does. Each array operator asserts that its operands have one size, the precondition `[valarray]` makes
+`bit_array` does; its pointer constructor and its constructors from a proxy assert that the count is the type's
+own. Each array operator asserts that its operands have one size, the precondition `[valarray]` makes
 undefined behaviour. Everything is `constexpr` as far as the storage is: the fixed one entirely, and structural at
 whole blocks; the heap one in a constant expression as `std::vector` is; the bounded one where its blocks are a
 `std::inplace_vector`. Besides `[valarray]`, the owners take `from_blocks` as every owner does.
@@ -2527,10 +2529,57 @@ whole blocks; the heap one in a constant expression as `std::vector` is; the bou
   `std::valarray`. Whole-array equality is `(v == w).min()`, or `xstd::bit_mismatch`.
 - **`apply` is asked twice.** A function of one `bool` is one of four, so `apply(func)` calls `func(false)` and
   `func(true)` once each and applies the answer a block at a time: a constant, the identity or a negation.
-- **No pointer constructor and no slices.** `valarray(const T*, size_t)` needs no packed form, a list or
-  `xstd::bit_convert` taking its place. `slice_array`, `gslice_array`, `mask_array` and `indirect_array`, and the
-  subscripts that make them, are deferred: each is a view with the valarray's operators, and a `bit_subspan`
-  already covers the contiguous slice.
+- **The proxies take scalar compound assignments and no shifts.** `[template.slice.array]` and its siblings
+  have `=` from a `T` but compound assignment only from an array; here `&=`, `|=` and `^=` take a `bool` too, as the
+  owners' do. Their `<<=` and `>>=` shift each element's value, which on a `bool` is arithmetic, and a position
+  shift over positions that need not be contiguous has no counterpart, so a proxy has neither.
+- **A fixed size gathers into the bounded array.** A const subscript returns a valarray of the run-time size it
+  selects, so `bit_fixed_valarray<N>` returns a `bit_bounded_valarray<N>` over the same block: no heap, and
+  `constexpr` as far as the bounded one is. A gather longer than `N`, which a slice of stride zero, a gslice or an
+  index array can make by repeating positions, throws `std::bad_alloc` as the bounded array does past its capacity.
+
+**The subscripts.** `[valarray.sub]`'s four each come in two forms: on a const array a gather into a valarray of
+its own, and on a non-const one a proxy, `bit_slice_array`, `bit_gslice_array`, `bit_mask_array` or
+`bit_indirect_array`, over the same block type. A proxy refers to its array's blocks, as `std::slice_array` refers
+to its `std::valarray`: it is made by the subscript alone, copies as a handle to the same elements, and must not
+outlive the array, or a mask or an index array it was made from, any more than the standard's must. Through a const
+proxy, `=`, `&=`, `|=` and `^=` take an array of the proxy's size or a `bool`, and assigning one proxy to another
+assigns elements, never the reference. An array here is any owner of the valarray reading over the same block, or
+another proxy, which gathers what it selects before any position is written, so `v[s] = v[t]` reads `v` before it
+writes it. A mask is any owner of the valarray reading over the same block and of the same size; a
+`std::valarray<bool>` would have to be packed into blocks the proxy then owns, so it is not taken. Every owner is
+constructible from each proxy, implicitly as `[valarray.cons]` makes it, and assignable from it, so the compound
+operators and the binary ones take a proxy on the right as they do in `std::valarray`.
+
+Each subscript asserts its positions lie inside the array, and the mask its size. `[indirect.array.assign]` leaves a
+write that names a position twice undefined, and the indirect proxy asserts against it, as every undefined case of
+`[valarray]` here is asserted. A slice of stride zero and a gslice that repeats a position are left defined by the
+standard, and write one position at a time, in order, so the last write to a position stands: libc++ does the same,
+and libstdc++ leaves a stride of zero's compound writes undone, its loop bounded by the stride times the size.
+
+**The gather and the scatter.** Each subscript runs on one of two paths. The mask path is a block at a time:
+a gather takes `xstd::bit_compress(src_k, mask_k)` of each block, P3104's PEXT, and lays it at a running output
+offset that grows by `popcount(mask_k)`, through the write side of `block_at` ([the-blit](#the-blit)); a scatter
+reads the next `popcount(mask_k)` bits at a running input offset through `block_at` and deposits them with
+`xstd::bit_expand`, PDEP, combining them with the block as the operator says: assignment keeps `d & ~m` and adds the
+deposit, `&=` is `d & (e | ~m)`, `|=` and `^=` take the deposit as it is. A scalar is a deposit of the whole mask
+or of nothing. A mask of all ones needs no permutation and passes the block through. The index path is a position
+at a time, through `test` and `assign`.
+
+| subscript | path |
+| :--- | :--- |
+| `v[std::slice]` | mask, a stride below the block width building each block's mask with `xstd::bit_repeat` and a shift; index, a stride of zero or of a block or more |
+| `v[std::gslice]` | mask, where the positions ascend, built once into a block per owner block; index, where they repeat or turn back |
+| `v[mask]` | mask, the mask's own blocks |
+| `v[std::valarray<std::size_t>]` | index |
+
+The two permutations come from xstd-ints, which runs BMI2 where the target has it fast and portable kernels
+elsewhere, choosing at compile time. Neither is public here: no `std::ranges` algorithm packs selected elements, so
+there is no signature for an `xstd::bit_compress` over this library's ranges to borrow
+([algorithms-not-members](#algorithms-not-members)), and the block-range kernels stay in `detail`, under the proxies.
+
+`std::slice` and `std::gslice` have no `constexpr` constructor, and `std::valarray<std::size_t>` none at all, so
+only a mask's subscripts can run in a constant expression; they do, on the fixed and bounded arrays.
 
 **The kernels.** Each operator is one bitwise expression over a block of either side, after which the padding past
 `size()` is cleared, so a count over whole blocks stays right. A scalar is a block of all ones or all zeros.
