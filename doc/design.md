@@ -2586,8 +2586,9 @@ index is immutable and shared between copies, so a proxy holds its own copy and 
 
 **Not worse than handwritten.** The benchmark holds each subscript to three columns: `std::valarray<bool>`, this
 library, and the loop a bitboard engine writes by hand over raw 64-bit words with P3104's word functions, each gather
-returning a clear array of its own as `v[s]` does. Every gather writes a clear array, so its packed bits are or-ed in
-rather than written under a two-block mask. Where xstd-ints runs PEXT and PDEP in hardware, a full mask goes through
+returning a clear array of its own as `v[s]` does. A gather collects its packed bits in a register and stores each output
+block once, full: an or into memory per input block chains each update on the last store through store forwarding,
+which at stride eight, eight blocks to an output word, held it to two thirds of the handwritten loop. Where xstd-ints runs PEXT and PDEP in hardware, a full mask goes through
 them like any other; the shortcut that saves the portable kernels a full permutation mispredicts at high densities.
 
 The two permutations come from xstd-ints, which runs BMI2 where the target has it fast and portable kernels

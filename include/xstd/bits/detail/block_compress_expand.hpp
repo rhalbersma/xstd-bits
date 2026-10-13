@@ -15,16 +15,15 @@
 #include <xstd/ints/bit/bit_repeat.hpp>                    // bit_repeat
 #include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
 #include <xstd/ints/limits.hpp>                            // numeric_limits
-#include <algorithm>                                       // all_of, copy, min, transform
+#include <algorithm>                                       // copy, min, transform
 #include <array>                                           // array
-#include <cassert>                                         // assert
 #include <concepts>                                        // same_as
 #include <cstddef>                                         // size_t
 #include <cstdint>                                         // uint64_t
 #include <numeric>                                         // gcd
 #include <ranges>                                          // iota
 #include <span>                                            // span
-#include <type_traits>                                     // conditional_t, remove_const_t
+#include <type_traits>                                     // conditional_t, remove_const_t, remove_cvref_t
 
 // Gather and scatter over a range of blocks: P3104's bit_compress and bit_expand a block at a time, packed by block_at.
 namespace xstd::bits::detail {
@@ -229,43 +228,42 @@ inline constexpr auto scatter_or = []<class Block>(Block d, Block e, Block /* m 
 
 inline constexpr auto scatter_xor = []<class Block>(Block d, Block e, Block /* m */) noexcept -> Block { return static_cast<Block>(d ^ e); };
 
-// The bits each mask selects from the blocks of src, packed in order into a clear dst from position zero.
+// The bits each mask selects from the blocks of src, packed in order into dst from position zero.
 template<class Src, class Masks, xstd::unsigned_integer Block>
-constexpr auto compress_blocks(Src const& src, Masks masks, borrowed_bits<Block>& dst) noexcept
+constexpr auto compress_blocks(Src const& src, Masks&& masks, borrowed_bits<Block>& dst) noexcept
         -> void
 {
-        assert(std::ranges::all_of(dst.blocks(), [](Block block) noexcept -> bool { return block == Block{}; }));
-        auto pos = 0UZ;
+        // The packed bits gather in a register and each block of dst is stored once, full, and never loaded.
+        auto out  = 0UZ;
+        auto fill = 0UZ;
+        auto acc  = Block{};
         for (auto const k : std::views::iota(masks.first(), masks.last())) {
-                auto const mask  = masks.next();
-                auto const count = detail::popcount(mask);
-                if constexpr (Masks::has_empty_blocks) {
-                        // An empty block writes nothing, and its position may lie one past the last block of dst.
-                        if (count == 0UZ) {
-                                continue;
-                        }
-                }
-                // dst starts clear, every gather writing a valarray of its own, so the packed bits are or-ed in.
+                auto const mask   = masks.next();
                 auto const packed = compressed(src[k], mask);
-                auto const index  = pos / block_width<Block>;
-                auto const offset = pos % block_width<Block>;
-                dst[index]        = static_cast<Block>(dst[index] | shl(packed, offset));
-                if (offset + count > block_width<Block>) {
-                        dst[index + 1UZ] = static_cast<Block>(dst[index + 1UZ] | shr(packed, block_width<Block> - offset));
+                auto const before = fill;
+                acc               = static_cast<Block>(acc | shl(packed, before));
+                fill += detail::popcount(mask);
+                if (fill >= block_width<Block>) {
+                        dst[out++] = acc;
+                        fill -= block_width<Block>;
+                        // What did not fit, shifted in two steps, so a shift by the whole block width is never asked for.
+                        acc = shr(shr(packed, 1UZ), block_width<Block> - before - 1UZ);
                 }
-                pos += count;
+        }
+        if (fill != 0UZ) {
+                dst[out] = acc;
         }
 }
 
 // The positions each mask selects in dst take the next bits of src in order, as f combines them with what dst holds.
 template<class Src, class Masks, xstd::unsigned_integer Block, class F>
-constexpr auto expand_blocks(Src const& src, Masks masks, borrowed_bits<Block>& dst, F f) noexcept
+constexpr auto expand_blocks(Src const& src, Masks&& masks, borrowed_bits<Block>& dst, F f) noexcept
         -> void
 {
         auto pos = 0UZ;
         for (auto const k : std::views::iota(masks.first(), masks.last())) {
                 auto const mask = masks.next();
-                if constexpr (Masks::has_empty_blocks) {
+                if constexpr (std::remove_cvref_t<Masks>::has_empty_blocks) {
                         // An empty block reads nothing, and its position may lie one past the last block of src.
                         if (mask == Block{}) {
                                 continue;
@@ -278,7 +276,7 @@ constexpr auto expand_blocks(Src const& src, Masks masks, borrowed_bits<Block>& 
 
 // A scalar at every position the masks select, as f combines it with what dst holds.
 template<class Masks, xstd::unsigned_integer Block, class F>
-constexpr auto fill_blocks(bool value, Masks masks, borrowed_bits<Block>& dst, F f) noexcept
+constexpr auto fill_blocks(bool value, Masks&& masks, borrowed_bits<Block>& dst, F f) noexcept
         -> void
 {
         auto const splat = value ? block_ones<Block> : Block{};
