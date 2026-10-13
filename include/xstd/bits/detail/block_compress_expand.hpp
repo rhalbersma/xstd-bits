@@ -17,6 +17,7 @@
 #include <xstd/ints/limits.hpp>                            // numeric_limits
 #include <algorithm>                                       // min
 #include <cstddef>                                         // size_t
+#include <cstdint>                                         // uint64_t
 #include <ranges>                                          // iota
 #include <span>                                            // span
 
@@ -130,6 +131,58 @@ public:
                 -> Block
         {
                 return m_masks[m_next++];
+        }
+};
+
+// The masks a bit_gslice stores as 64-bit words, read a block at a time at any block width; a block may select nothing.
+template<xstd::unsigned_integer Block>
+class word_masks
+{
+        static constexpr auto digits = block_width<Block>;
+        static constexpr auto word   = 64UZ;
+
+        std::span<std::uint64_t const> m_words;
+        std::size_t m_last;
+        std::size_t m_pos = 0UZ;
+
+public:
+        static constexpr bool has_empty_blocks = true;
+
+        // The blocks that hold the first width positions.
+        [[nodiscard]] constexpr word_masks(std::span<std::uint64_t const> words, std::size_t width) noexcept
+                : m_words(words)
+                , m_last((width + digits - 1UZ) / digits)
+        {}
+
+        [[nodiscard]] static constexpr auto first() noexcept
+                -> std::size_t
+        {
+                return 0UZ;
+        }
+
+        [[nodiscard]] constexpr auto last() const noexcept
+                -> std::size_t
+        {
+                return m_last;
+        }
+
+        [[nodiscard]] constexpr auto next() noexcept
+                -> Block
+        {
+                auto mask = Block{};
+                if constexpr (digits <= word) {
+                        // A block of a power of two of at most a word lies inside one word, which every block below width has.
+                        mask = static_cast<Block>(m_words[m_pos / word] >> (m_pos % word));
+                } else {
+                        // A wider block spans words, the last of which may lie past width.
+                        for (auto const i : std::views::iota(0UZ, digits / word)) {
+                                auto const index = (m_pos / word) + i;
+                                auto const bits  = index < m_words.size() ? static_cast<Block>(m_words[index]) : Block{};
+                                mask             = static_cast<Block>(mask | shl(bits, i * word));
+                        }
+                }
+                m_pos += digits;
+                return mask;
         }
 };
 

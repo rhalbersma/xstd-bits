@@ -6,9 +6,12 @@
 #ifndef XSTD_BITS_DETAIL_VALARRAY_PROXY_HPP
 #define XSTD_BITS_DETAIL_VALARRAY_PROXY_HPP
 
+#include <xstd/bits/bit_gslice.hpp>                   // bit_gslice
+#include <xstd/bits/bit_slice.hpp>                    // bit_slice
 #include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container
 #include <xstd/bits/detail/block_compress_expand.hpp> // block_width, compress_blocks, expand_blocks, expand_indices, fill_blocks, fill_indices, gather_indices, scatter_and, scatter_assign, scatter_or, scatter_xor, slice_masks, stored_masks
 #include <xstd/bits/detail/borrowed_bits.hpp>         // borrowed_bits
+#include <xstd/bits/detail/gslice_index.hpp>          // gslice_access, gslice_index
 #include <xstd/bits/detail/intrin.hpp>                // popcount
 #include <xstd/bits/detail/ownership.hpp>             // owned_bits_t, owner_reading, storage_access, valarray_reading_tag
 #include <xstd/bits/detail/shift.hpp>                 // shl
@@ -78,7 +81,7 @@ class slice_selection
         }
 
 public:
-        [[nodiscard]] explicit slice_selection(std::slice const& s) noexcept
+        [[nodiscard]] constexpr explicit slice_selection(xstd::bit_slice const& s) noexcept
                 : m_start(s.start())
                 , m_size(s.size())
                 , m_stride(s.stride())
@@ -124,118 +127,76 @@ public:
         }
 };
 
-// [class.gslice]: row-major positions, as a mask where they ascend, one by one where they repeat or turn back.
-template<xstd::unsigned_integer Block>
+// [class.gslice]: a bit_gslice's index, its words as masks where the positions ascend, one by one where they do not.
 class gslice_selection
 {
-        std::vector<std::size_t> m_indices;
-        // A block per owner block where the positions ascend, and none where the index path takes them.
-        std::vector<Block> m_masks;
+        xstd::bit_gslice m_gslice;
 
-        // The last length varies fastest; no lengths at all select nothing, as the standard libraries agree.
-        [[nodiscard]] static auto indices_of(std::gslice const& s)
-                -> std::vector<std::size_t>
+        [[nodiscard]] auto index() const noexcept
+                -> gslice_index const&
         {
-                auto const lengths = s.size();
-                auto const strides = s.stride();
-                auto const dims    = lengths.size();
-                assert(strides.size() == dims);
-                auto count = dims == 0UZ ? 0UZ : 1UZ;
-                for (auto const length : lengths) { // NOLINT(clang-analyzer-core.uninitialized.Assign): the analyzer cannot follow libstdc++'s valarray copy.
-                        count *= length;
-                }
-                auto result  = std::vector<std::size_t>(count);
-                auto counter = std::vector<std::size_t>(dims);
-                auto pos     = s.start();
-                for (auto const t : std::views::iota(0UZ, count)) {
-                        result[t] = pos;
-                        // An odometer: the last counter steps, and one that runs out carries into the one before it.
-                        auto d = dims - 1UZ;
-                        ++counter[d];
-                        pos += strides[d];
-                        while (counter[d] == lengths[d] and d != 0UZ) {
-                                pos -= lengths[d] * strides[d];
-                                counter[d] = 0UZ;
-                                --d;
-                                ++counter[d];
-                                pos += strides[d];
-                        }
-                }
-                return result;
+                return gslice_access::index(m_gslice);
         }
 
-        // An owner of no blocks takes the index path whatever the order, over no positions.
-        [[nodiscard]] constexpr auto is_masked() const noexcept
-                -> bool
+        [[nodiscard]] auto position() const noexcept
         {
-                return not m_masks.empty();
+                return [positions = std::span(index().positions)](std::size_t j) noexcept -> std::size_t { return positions[j]; };
         }
 
-        [[nodiscard]] constexpr auto index() const noexcept
+        template<class Block>
+        [[nodiscard]] auto masks() const noexcept
+                -> word_masks<Block>
         {
-                return [indices = std::span(m_indices)](std::size_t j) noexcept -> std::size_t { return indices[j]; };
+                return word_masks<Block>(index().words, index().width);
         }
 
 public:
-        [[nodiscard]] gslice_selection(std::gslice const& s, std::size_t num_blocks)
-                : m_indices(indices_of(s))
-                , m_masks(std::ranges::adjacent_find(m_indices, std::ranges::greater_equal()) == m_indices.end() ? num_blocks : 0UZ)
+        [[nodiscard]] explicit gslice_selection(xstd::bit_gslice g) noexcept
+                : m_gslice(std::move(g))
         {}
 
-        [[nodiscard]] constexpr auto size() const noexcept
+        [[nodiscard]] auto size() const noexcept
                 -> std::size_t
         {
-                return m_indices.size();
+                return index().count;
         }
 
-        [[nodiscard]] constexpr auto within(std::size_t n) const noexcept
+        [[nodiscard]] auto within(std::size_t n) const noexcept
                 -> bool
         {
-                return all_below(m_indices, n);
+                return index().width <= n;
         }
 
-        // Built once the positions are known to lie inside the owner, which every mask needs a block for.
-        constexpr auto build_masks() noexcept
+        template<class Src, class Block>
+        auto gather(Src const& src, borrowed_bits<Block>& dst) const noexcept
                 -> void
         {
-                if (is_masked()) {
-                        for (auto const i : m_indices) {
-                                auto& mask = m_masks[i / block_width<Block>];
-                                mask       = static_cast<Block>(mask | shl(Block{1}, i % block_width<Block>));
-                        }
+                if (index().is_masked()) {
+                        compress_blocks(src, masks<Block>(), dst);
+                } else {
+                        gather_indices(src, size(), position(), dst);
                 }
         }
 
-        template<class Src>
-        constexpr auto gather(Src const& src, borrowed_bits<Block>& dst) const noexcept
+        template<class Src, class Block, class F>
+        auto expand(Src const& src, borrowed_bits<Block>& dst, F f) const noexcept
                 -> void
         {
-                if (is_masked()) {
-                        compress_blocks(src, stored_masks<Block>(m_masks), dst);
+                if (index().is_masked()) {
+                        expand_blocks(src, masks<Block>(), dst, f);
                 } else {
-                        gather_indices(src, size(), index(), dst);
+                        expand_indices(src, size(), position(), dst, f);
                 }
         }
 
-        template<class Src, class F>
-        constexpr auto expand(Src const& src, borrowed_bits<Block>& dst, F f) const noexcept
+        template<class Block, class F>
+        auto fill(bool value, borrowed_bits<Block>& dst, F f) const noexcept
                 -> void
         {
-                if (is_masked()) {
-                        expand_blocks(src, stored_masks<Block>(m_masks), dst, f);
+                if (index().is_masked()) {
+                        fill_blocks(value, masks<Block>(), dst, f);
                 } else {
-                        expand_indices(src, size(), index(), dst, f);
-                }
-        }
-
-        template<class F>
-        constexpr auto fill(bool value, borrowed_bits<Block>& dst, F f) const noexcept
-                -> void
-        {
-                if (is_masked()) {
-                        fill_blocks(value, stored_masks<Block>(m_masks), dst, f);
-                } else {
-                        fill_indices(value, size(), index(), dst, f);
+                        fill_indices(value, size(), position(), dst, f);
                 }
         }
 };
@@ -367,7 +328,7 @@ class valarray_proxy;
 template<class P, class Block>
 concept valarray_proxy_of =
         std::derived_from<P, valarray_proxy<slice_selection, Block>> or
-        std::derived_from<P, valarray_proxy<gslice_selection<Block>, Block>> or
+        std::derived_from<P, valarray_proxy<gslice_selection, Block>> or
         std::derived_from<P, valarray_proxy<mask_selection<Block>, Block>> or
         std::derived_from<P, valarray_proxy<indirect_selection, Block>>;
 

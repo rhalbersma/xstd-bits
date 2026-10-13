@@ -7,9 +7,11 @@
 #define XSTD_BITS_DETAIL_VALARRAY_ADAPTOR_HPP
 
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>     // bit_blocks
+#include <xstd/bits/bit_gslice.hpp>                  // bit_gslice
 #include <xstd/bits/bit_gslice_array.hpp>            // bit_gslice_array
 #include <xstd/bits/bit_indirect_array.hpp>          // bit_indirect_array
 #include <xstd/bits/bit_mask_array.hpp>              // bit_mask_array
+#include <xstd/bits/bit_slice.hpp>                   // bit_slice
 #include <xstd/bits/bit_slice_array.hpp>             // bit_slice_array
 #include <xstd/bits/detail/adapted_bits.hpp>         // adapted_bits
 #include <xstd/bits/detail/bit_block_container.hpp>  // bit_block_container_type
@@ -336,11 +338,23 @@ public:
         // [valarray.sub]: a gather into a valarray of its own where the array is const, else a proxy that refers to it.
         [[nodiscard]] auto operator[](std::slice s) const
         {
+                return (*this)[xstd::bit_slice(s)];
+        }
+
+        [[nodiscard]] auto operator[](std::slice s)
+                -> xstd::bit_slice_array<block_type>
+        {
+                return (*this)[xstd::bit_slice(s)];
+        }
+
+        // Not in [valarray]: a bit_slice, which a constant expression can make, as it cannot a std::slice.
+        [[nodiscard]] constexpr auto operator[](xstd::bit_slice s) const
+        {
                 assert(s.size() == 0UZ or s.start() + ((s.size() - 1UZ) * s.stride()) < size());
                 return gather(slice_selection(s));
         }
 
-        [[nodiscard]] auto operator[](std::slice s)
+        [[nodiscard]] constexpr auto operator[](xstd::bit_slice s)
                 -> xstd::bit_slice_array<block_type>
         {
                 assert(s.size() == 0UZ or s.start() + ((s.size() - 1UZ) * s.stride()) < size());
@@ -349,18 +363,28 @@ public:
 
         [[nodiscard]] auto operator[](std::gslice const& s) const
         {
-                auto selection = gslice_selection<block_type>(s, m_bits.num_blocks());
-                assert(selection.within(size()));
-                selection.build_masks();
-                return gather(selection);
+                return (*this)[xstd::bit_gslice(s)];
         }
 
         [[nodiscard]] auto operator[](std::gslice const& s)
                 -> xstd::bit_gslice_array<block_type>
         {
-                auto selection = gslice_selection<block_type>(s, m_bits.num_blocks());
+                return (*this)[xstd::bit_gslice(s)];
+        }
+
+        // Not in [valarray]: a bit_gslice, whose positions are worked out once for every subscript that reuses it.
+        [[nodiscard]] auto operator[](xstd::bit_gslice const& s) const
+        {
+                auto const selection = gslice_selection(s);
                 assert(selection.within(size()));
-                selection.build_masks();
+                return gather(selection);
+        }
+
+        [[nodiscard]] auto operator[](xstd::bit_gslice const& s)
+                -> xstd::bit_gslice_array<block_type>
+        {
+                auto selection = gslice_selection(s);
+                assert(selection.within(size()));
                 return proxy_access::make<xstd::bit_gslice_array<block_type>>(borrowed(), std::move(selection));
         }
 

@@ -17,6 +17,8 @@
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
 #include <xstd/bits/bit_bounded_valarray.hpp>       // basic_bit_bounded_valarray
 #include <xstd/bits/bit_fixed_valarray.hpp>         // basic_bit_fixed_valarray
+#include <xstd/bits/bit_gslice.hpp>                 // bit_gslice
+#include <xstd/bits/bit_slice.hpp>                  // bit_slice
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_valarray.hpp>               // basic_bit_valarray
 #include <xstd/bits/bit_vector.hpp>                 // bit_vector
@@ -817,12 +819,12 @@ auto check_writes(model const& a, std::vector<std::size_t> const& positions, Sel
 }
 
 // The const subscript's gather, the non-const one's proxy read into an owner by construction and by assignment.
-template<class V, class Selector>
-auto check_reads(model const& a, Selector const& selector)
+template<class V, class Selector, class ReferenceSelector = Selector>
+auto check_reads(model const& a, Selector const& selector, ReferenceSelector const& reference_selector)
         -> void
 {
         auto const reference = reference_of(a);
-        auto const expected  = model_of(reference[selector]);
+        auto const expected  = model_of(reference[reference_selector]);
         auto const v         = make<V>(a);
         static_assert(std::same_as<decltype(v[selector]), gathered_t<V>>);
         check_equal(v[selector], expected);
@@ -900,9 +902,11 @@ auto check_slice()
 {
         for_each_subscripted<V>([](model const& a) -> void {
                 for_each_slice(a.size(), [&](std::slice const& s) -> void {
-                        check_reads<V>(a, s);
+                        check_reads<V>(a, s, s);
+                        auto const bs = xstd::bit_slice(s);
+                        check_reads<V>(a, bs, s);
                         auto const column = s.stride() == 0UZ ? reference::undefined : reference::defined;
-                        check_writes<V>(a, slice_indices(s), [&](V& x) -> auto { return x[s]; }, [&](reference_array& r) -> auto { return r[s]; }, column);
+                        check_writes<V>(a, slice_indices(s), [&](V& x) -> auto { return x[bs]; }, [&](reference_array& r) -> auto { return r[s]; }, column);
                 });
         });
 }
@@ -984,8 +988,10 @@ auto check_gslice()
                 for (auto const& g : gslices(a.size())) {
                         BOOST_TEST_CONTEXT("gslice from " << g.start() << " of " << gslice_indices(g).size())
                         {
-                                check_reads<V>(a, g);
-                                check_writes<V>(a, gslice_indices(g), [&](V& x) -> auto { return x[g]; }, [&](reference_array& r) -> auto { return r[g]; });
+                                check_reads<V>(a, g, g);
+                                auto const bg = xstd::bit_gslice(g);
+                                check_reads<V>(a, bg, g);
+                                check_writes<V>(a, gslice_indices(g), [&](V& x) -> auto { return x[bg]; }, [&](reference_array& r) -> auto { return r[g]; });
                         }
                 }
         });
@@ -1067,7 +1073,7 @@ auto check_indirect()
                         BOOST_TEST_CONTEXT("indices " << indices.size())
                         {
                                 if (indices.size() <= gather_capacity<V>) {
-                                        check_reads<V>(a, indices);
+                                        check_reads<V>(a, indices, indices);
                                 }
                         }
                 }

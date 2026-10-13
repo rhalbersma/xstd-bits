@@ -73,6 +73,7 @@ target_sources(
         include/xstd/bits/detail/set_adaptor.hpp
         include/xstd/bits/detail/valarray_adaptor.hpp
         include/xstd/bits/detail/valarray_proxy.hpp
+        include/xstd/bits/detail/gslice_index.hpp
         include/xstd/bits/detail/block_compress_expand.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_algorithm.hpp
@@ -155,6 +156,8 @@ target_sources(
         include/xstd/bits/bit_valarray.hpp
         include/xstd/bits/bit_fixed_valarray.hpp
         include/xstd/bits/bit_bounded_valarray.hpp
+        include/xstd/bits/bit_slice.hpp
+        include/xstd/bits/bit_gslice.hpp
         include/xstd/bits/bit_slice_array.hpp
         include/xstd/bits/bit_gslice_array.hpp
         include/xstd/bits/bit_mask_array.hpp

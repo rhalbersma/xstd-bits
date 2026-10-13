@@ -24,7 +24,9 @@
 #include <xstd/bits/bit_span.hpp>           // IWYU pragma: export; bit_span
 #include <xstd/bits/bit_subspan.hpp>        // IWYU pragma: export; bit_subspan
 
-// The valarray reading, its operators acting on every element at once, after the proxies its subscripts return.
+// The valarray reading, its operators acting on every element at once, after its subscripts' selectors and proxies.
+#include <xstd/bits/bit_gslice.hpp>           // IWYU pragma: export; bit_gslice
+#include <xstd/bits/bit_slice.hpp>            // IWYU pragma: export; bit_slice
 #include <xstd/bits/bit_gslice_array.hpp>     // IWYU pragma: export; bit_gslice_array
 #include <xstd/bits/bit_indirect_array.hpp>   // IWYU pragma: export; bit_indirect_array
 #include <xstd/bits/bit_mask_array.hpp>       // IWYU pragma: export; bit_mask_array

@@ -11,11 +11,11 @@
 
 namespace xstd {
 
-// [template.gslice.array]: the positions a std::gslice selects in a valarray, written through to its blocks.
+// [template.gslice.array]: the positions a std::gslice or a bit_gslice selects in a valarray, written through to its blocks.
 template<xstd::unsigned_integer Block>
-class bit_gslice_array : public bits::detail::valarray_proxy<bits::detail::gslice_selection<Block>, Block>
+class bit_gslice_array : public bits::detail::valarray_proxy<bits::detail::gslice_selection, Block>
 {
-        using base_type = bits::detail::valarray_proxy<bits::detail::gslice_selection<Block>, Block>;
+        using base_type = bits::detail::valarray_proxy<bits::detail::gslice_selection, Block>;
         using base_type::base_type;
 
         friend struct bits::detail::proxy_access;
