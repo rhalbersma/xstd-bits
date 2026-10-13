@@ -98,6 +98,10 @@ inline constexpr bool swaps_without_throwing_v = false;
 template<class Block, std::size_t K, class Options>
 inline constexpr bool swaps_without_throwing_v<boost::container::static_vector<Block, K, Options>> = true;
 
+// Storage whose move assignment throws nothing without declaring it; elsewhere its own spec is the answer.
+template<class Blocks>
+inline constexpr bool move_assigns_without_throwing_v = std::is_nothrow_move_assignable_v<Blocks>;
+
 // Whether a copy assignment hands the source's allocator over, which storage without an allocator never does.
 template<class Blocks>
 inline constexpr bool propagates_on_copy_assignment_v = false;
@@ -404,7 +408,7 @@ public:
         }
 
         // Assigned in place: a moved-into temporary would allocate the proxy a debug MSVC vector keeps, and can throw.
-        constexpr auto operator=(bit_block_container&& other) noexcept(std::is_nothrow_move_constructible_v<Blocks> and std::is_nothrow_move_assignable_v<Blocks>)
+        constexpr auto operator=(bit_block_container&& other) noexcept(std::is_nothrow_move_constructible_v<Blocks> and move_assigns_without_throwing_v<Blocks>)
                 -> bit_block_container&
                 requires has_stored_size and (not has_zero_capacity)
         {
@@ -426,7 +430,7 @@ public:
         }
 
         // flat_set's replace: the blocks come in whole, every bit a position, so there is no tail to clear.
-        constexpr auto replace(Blocks&& blocks) noexcept(std::is_nothrow_move_assignable_v<Blocks>)
+        constexpr auto replace(Blocks&& blocks) noexcept(move_assigns_without_throwing_v<Blocks>)
                 -> void
                 requires has_stored_size
         {
@@ -1444,7 +1448,7 @@ private:
         constexpr auto move_blocks(Blocks& source)
                 -> void
         {
-                if constexpr (not std::is_nothrow_move_assignable_v<Blocks>) {
+                if constexpr (not move_assigns_without_throwing_v<Blocks>) {
                         if (m_blocks.get_allocator() != source.get_allocator()) {
                                 assign_blocks(source);
                                 return;
