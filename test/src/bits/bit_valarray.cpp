@@ -109,6 +109,31 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparisonsAnswerAnArrayOfBools, V, Types)
         test::valarray::check_comparison<V>();
 }
 
+BOOST_AUTO_TEST_CASE_TEMPLATE(APointerConstructsThatManyElements, V, Types)
+{
+        test::valarray::check_pointer<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(ASliceGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_slice<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(AGsliceGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_gslice<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(AMaskGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_mask<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(AnIndexArrayGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_indirect<V>();
+}
+
 BOOST_AUTO_TEST_CASE_TEMPLATE(BeginAndEndMakeItARandomAccessRange, V, Types)
 {
         test::valarray::check_range<V>();

@@ -3,16 +3,18 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>             // graded_extents, wide_extents
-#include <test/structural.hpp>              // structural
-#include <test/valarray.hpp>                // check_*
-#include <xstd/bits/bit_fixed_valarray.hpp> // basic_bit_fixed_valarray, bit_fixed_valarray
-#include <boost/test/unit_test.hpp>         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <concepts>                         // constructible_from, convertible_to, same_as
-#include <cstddef>                          // size_t
-#include <cstdint>                          // uint8_t
-#include <tuple>                            // tuple_cat
-#include <utility>                          // declval
+#include <test/block_types.hpp>                // graded_extents, wide_extents
+#include <test/structural.hpp>                 // structural
+#include <test/valarray.hpp>                   // check_*
+#include <xstd/bits/bit_fixed_valarray.hpp>    // basic_bit_fixed_valarray, bit_fixed_valarray
+#include <xstd/bits/bit_valarray.hpp>          // bit_valarray
+#include <xstd/bits/detail/bounded_blocks.hpp> // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <concepts>                            // constructible_from, convertible_to, same_as
+#include <cstddef>                             // size_t
+#include <cstdint>                             // uint8_t
+#include <tuple>                               // tuple_cat
+#include <utility>                             // declval
 
 BOOST_AUTO_TEST_SUITE(BitFixedValarray)
 
@@ -107,6 +109,31 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparisonsAnswerAnArrayOfBools, V, Types)
         test::valarray::check_comparison<V>();
 }
 
+BOOST_AUTO_TEST_CASE_TEMPLATE(APointerConstructsThatManyElements, V, Types)
+{
+        test::valarray::check_pointer<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(ASliceGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_slice<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(AGsliceGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_gslice<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(AMaskGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_mask<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(AnIndexArrayGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_indirect<V>();
+}
+
 BOOST_AUTO_TEST_CASE_TEMPLATE(BeginAndEndMakeItARandomAccessRange, V, Types)
 {
         test::valarray::check_range<V>();
@@ -148,6 +175,41 @@ BOOST_AUTO_TEST_CASE(ItIsUsableInConstantExpressions)
                 return w.min() and v[66] and (v.shift(64) ^ ~v.cshift(-6)).sum();
         }());
 }
+
+// A mask's proxy writes, and an array is read from a pointer and from a proxy, in a constant expression.
+BOOST_AUTO_TEST_CASE(TheMaskProxyIsUsableInConstantExpressions)
+{
+        static_assert([] -> bool {
+                using V   = xstd::bit_fixed_valarray<70>;
+                auto mask = V{true, false, true};
+                mask[66]  = true;
+                auto v    = V{};
+                v[mask]   = xstd::bit_valarray{true, false, true};
+                v[mask] ^= true;
+                v[mask] |= xstd::bit_valarray{false, true, false};
+                bool const bools[70] = {true, false, true}; // NOLINT(modernize-avoid-c-arrays): what the pointer reads.
+                auto const all       = V(bools, 70UZ) | true;
+                auto const u         = V(v[all]);
+                return not u[0] and u[2] and not u[66] and (v == u).min() and V(bools, 70UZ)[2];
+        }());
+}
+
+#ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+
+// The const subscript gathers into the bounded array, which a constant expression holds where its blocks are inline.
+BOOST_AUTO_TEST_CASE(TheMaskGatherIsUsableInConstantExpressions)
+{
+        static_assert([] -> bool {
+                using V             = xstd::bit_fixed_valarray<70>;
+                auto mask           = V{true, false, true};
+                mask[66]            = true;
+                auto const v        = V{true, true} | V{true}.shift(-66);
+                auto const gathered = v[mask];
+                return gathered.size() == 3UZ and gathered[0] and not gathered[1] and gathered[2];
+        }());
+}
+
+#endif
 
 // At a whole number of blocks every bit is a position, so the array is a structural type, as bit_array is.
 BOOST_AUTO_TEST_CASE(AtAWholeNumberOfBlocksItIsStructural)

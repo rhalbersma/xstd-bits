@@ -7,18 +7,26 @@
 #define XSTD_BITS_DETAIL_VALARRAY_ADAPTOR_HPP
 
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>     // bit_blocks
+#include <xstd/bits/bit_gslice_array.hpp>            // bit_gslice_array
+#include <xstd/bits/bit_indirect_array.hpp>          // bit_indirect_array
+#include <xstd/bits/bit_mask_array.hpp>              // bit_mask_array
+#include <xstd/bits/bit_slice_array.hpp>             // bit_slice_array
 #include <xstd/bits/detail/adapted_bits.hpp>         // adapted_bits
 #include <xstd/bits/detail/bit_block_container.hpp>  // bit_block_container_type
+#include <xstd/bits/detail/borrowed_bits.hpp>        // borrowed_bits
 #include <xstd/bits/detail/ownership.hpp>            // owned_storage, storage, storage_access, valarray_reading_tag, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>     // sequence_adaptor
+#include <xstd/bits/detail/valarray_proxy.hpp>       // gslice_selection, indirect_selection, mask_selection, proxy_access, slice_selection, valarray_owner_of
 #include <xstd/bits/from_blocks.hpp>                 // from_blocks, from_blocks_t
 #include <xstd/misc/type_traits/empty_base_type.hpp> // empty_base_type
 #include <algorithm>                                 // copy
 #include <cassert>                                   // assert
 #include <cstddef>                                   // size_t
 #include <initializer_list>                          // initializer_list
+#include <span>                                      // span
 #include <type_traits>                               // conditional_t, is_nothrow_copy_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v
 #include <utility>                                   // in_place, move
+#include <valarray>                                  // gslice, slice, valarray
 
 // The valarray reading, [valarray] at bool over a bit_block_container it owns: every operator acts elementwise.
 namespace xstd::bits::detail {
@@ -57,6 +65,16 @@ inline constexpr auto greater_equal = []<class Block>(Block a, Block b) noexcept
 }
 
 } // namespace valarray
+
+// The owner a const subscript gathers into: an owner of run-time size its own type, and a fixed one specializes it.
+template<class Owner>
+struct gathered
+{
+        using type = Owner;
+};
+
+template<class Owner>
+using gathered_t = gathered<Owner>::type;
 
 template<bit_block_container_type Bits, class Derived>
 class valarray_adaptor : public adapted_bits<Bits, xstd::empty_base_type<>, Bits::is_structural>
@@ -121,6 +139,41 @@ class valarray_adaptor : public adapted_bits<Bits, xstd::empty_base_type<>, Bits
                 return static_cast<Derived const&>(*this);
         }
 
+        // The four proxies borrow the blocks, as std::slice_array refers to its std::valarray.
+        [[nodiscard]] constexpr auto borrowed() noexcept
+                -> std::span<block_type>
+        {
+                return m_bits.blocks();
+        }
+
+        // Only a constructor delegating from a proxy can name it.
+        struct gathering
+        {};
+
+        // Sized to what the proxy selects, which at a fixed size must be the type's own.
+        template<class Proxy>
+        [[nodiscard]] constexpr valarray_adaptor(gathering, Proxy const& a)
+        {
+                auto const n = proxy_access::size(a);
+                if constexpr (is_fixed) {
+                        assert(n == size());
+                } else {
+                        m_bits.resize(Bits::check_addressable_width(n));
+                }
+                auto dst = borrowed_bits<block_type>(borrowed());
+                proxy_access::gather(a, dst);
+        }
+
+        // A const subscript's elements, in a valarray of their own of the owner gathered_t names.
+        template<class Selection>
+        [[nodiscard]] constexpr auto gather(Selection const& selection) const
+        {
+                auto result = gathered_t<Derived>(selection.size());
+                auto dst    = borrowed_bits<block_type>(storage_access::bits(result).blocks());
+                selection.gather(m_bits, dst);
+                return result;
+        }
+
         // The free functions over every reading, bit_convert among them, reach the storage through this one door.
         friend struct storage_access;
 
@@ -174,6 +227,34 @@ public:
                 std::ranges::copy(a, elements().begin());
         }
 
+        // [valarray.cons]: n bools read from p, where n is the type's own at a fixed size.
+        [[nodiscard]] constexpr valarray_adaptor(value_type const* p, size_type n)
+        {
+                if constexpr (is_fixed) {
+                        assert(n == size());
+                } else {
+                        m_bits.resize(Bits::check_addressable_width(n));
+                }
+                std::ranges::copy(std::span(p, n), elements().begin());
+        }
+
+        // [valarray.cons]: as many elements as a proxy selects, which at a fixed size must be the type's own size.
+        [[nodiscard]] constexpr valarray_adaptor(xstd::bit_slice_array<block_type> const& a)
+                : valarray_adaptor(gathering(), a)
+        {}
+
+        [[nodiscard]] constexpr valarray_adaptor(xstd::bit_gslice_array<block_type> const& a)
+                : valarray_adaptor(gathering(), a)
+        {}
+
+        [[nodiscard]] constexpr valarray_adaptor(xstd::bit_mask_array<block_type> const& a)
+                : valarray_adaptor(gathering(), a)
+        {}
+
+        [[nodiscard]] constexpr valarray_adaptor(xstd::bit_indirect_array<block_type> const& a)
+                : valarray_adaptor(gathering(), a)
+        {}
+
         // Not in [valarray]: flat_set's adopting constructor at a run-time size, every bit of the blocks a position.
         [[nodiscard]] constexpr valarray_adaptor(xstd::from_blocks_t, adopted_type blocks) noexcept(std::is_nothrow_move_constructible_v<adopted_type>)
                 : members_type(std::in_place, xstd::from_blocks, std::move(blocks))
@@ -203,6 +284,35 @@ public:
                 return self() = Derived(il);
         }
 
+        // [valarray.assign]: a proxy's elements, gathered before any is assigned, so it may select from this array.
+        // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [valarray.assign] returns.
+        constexpr auto operator=(xstd::bit_slice_array<block_type> const& a)
+                -> Derived&
+        {
+                return self() = Derived(a);
+        }
+
+        // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [valarray.assign] returns.
+        constexpr auto operator=(xstd::bit_gslice_array<block_type> const& a)
+                -> Derived&
+        {
+                return self() = Derived(a);
+        }
+
+        // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [valarray.assign] returns.
+        constexpr auto operator=(xstd::bit_mask_array<block_type> const& a)
+                -> Derived&
+        {
+                return self() = Derived(a);
+        }
+
+        // NOLINTNEXTLINE(misc-unconventional-assign-operator): the container is what [valarray.assign] returns.
+        constexpr auto operator=(xstd::bit_indirect_array<block_type> const& a)
+                -> Derived&
+        {
+                return self() = Derived(a);
+        }
+
         // [valarray.access], the proxy where valarray hands out a T&, and the value where it hands out a const T&.
         [[nodiscard]] constexpr auto operator[](size_type n) noexcept
                 -> reference
@@ -218,6 +328,72 @@ public:
         {
                 assert(n < size());
                 return m_bits.test(n);
+        }
+
+        // [valarray.sub]: a gather into a valarray of its own where the array is const, else a proxy that refers to it.
+        [[nodiscard]] auto operator[](std::slice s) const
+        {
+                auto const selection = slice_selection(s);
+                assert(selection.within(size()));
+                return gather(selection);
+        }
+
+        [[nodiscard]] auto operator[](std::slice s)
+                -> xstd::bit_slice_array<block_type>
+        {
+                auto const selection = slice_selection(s);
+                assert(selection.within(size()));
+                return proxy_access::make<xstd::bit_slice_array<block_type>>(borrowed(), selection);
+        }
+
+        [[nodiscard]] auto operator[](std::gslice const& s) const
+        {
+                auto selection = gslice_selection<block_type>(s, m_bits.num_blocks());
+                assert(selection.within(size()));
+                selection.build_masks();
+                return gather(selection);
+        }
+
+        [[nodiscard]] auto operator[](std::gslice const& s)
+                -> xstd::bit_gslice_array<block_type>
+        {
+                auto selection = gslice_selection<block_type>(s, m_bits.num_blocks());
+                assert(selection.within(size()));
+                selection.build_masks();
+                return proxy_access::make<xstd::bit_gslice_array<block_type>>(borrowed(), std::move(selection));
+        }
+
+        // Any valarray of one size and block is a mask, which a proxy refers to and does not copy: it must outlive it.
+        template<class Mask>
+                requires valarray_owner_of<Mask, block_type>
+        [[nodiscard]] constexpr auto operator[](Mask const& mask) const
+        {
+                assert(mask.size() == size());
+                return gather(mask_selection<block_type>(storage_access::bits(mask).blocks()));
+        }
+
+        template<class Mask>
+                requires valarray_owner_of<Mask, block_type>
+        [[nodiscard]] constexpr auto operator[](Mask const& mask)
+                -> xstd::bit_mask_array<block_type>
+        {
+                assert(mask.size() == size());
+                return proxy_access::make<xstd::bit_mask_array<block_type>>(borrowed(), mask_selection<block_type>(storage_access::bits(mask).blocks()));
+        }
+
+        [[nodiscard]] auto operator[](std::valarray<std::size_t> const& indices) const
+        {
+                auto const selection = indirect_selection(indices);
+                assert(selection.within(size()));
+                return gather(selection);
+        }
+
+        [[nodiscard]] auto operator[](std::valarray<std::size_t> const& indices)
+                -> xstd::bit_indirect_array<block_type>
+        {
+                auto const selection = indirect_selection(indices);
+                assert(selection.within(size()));
+                return proxy_access::make<xstd::bit_indirect_array<block_type>>(borrowed(), selection);
         }
 
         // [valarray.members]
