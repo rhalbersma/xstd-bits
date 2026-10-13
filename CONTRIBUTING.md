@@ -44,6 +44,12 @@ cmake -S . -B build -DCMAKE_PREFIX_PATH=~/.local/opt/boost-1.92.0
 syntax-only checks, clang-tidy or the format gate are wanted. The script is idempotent, so re-running it on a warm
 container is safe.
 
+The small column's other storage is a configure of its own: `-DXSTD_BITS_SMALL_VECTOR=absl` holds `bit_small_set`'s and
+`bit_small_vector`'s blocks in `absl::InlinedVector`, and finds Abseil as a required package. The script does not
+install it; the `abseil` feature of [`vcpkg.json`](vcpkg.json) does, as does Abseil's own CMake install of the release
+the test tree pins, added to `CMAKE_PREFIX_PATH`. The test suite runs whole under either choice, and a change to the
+small owners is checked under both.
+
 In a [Claude Code cloud](https://code.claude.com/docs/en/claude-code-on-the-web) environment, the environment's
 setup script runs it, so every session starts with the rung already in place. That field holds a script rather than
 a command, and it runs from outside the checkout, so it needs a shebang and an absolute path:

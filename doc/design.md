@@ -800,6 +800,79 @@ The adaptors take growth by detection on the storage: growth is a container's bu
 takes none by name: a set grows by `insert`, and the storage's `growing_insert` grows a run-time width to hold
 the key ([asking-is-total](#asking-is-total)).
 
+### the-small-column
+
+**The small column's storage is the build's choice, one for the whole program.** `bit_small_set` and
+`bit_small_vector` hold their blocks inline up to `N` bits and on the heap past them, and more than one library offers
+that: `boost::container::small_vector` and `absl::InlinedVector` both, and either may be installed beside the other.
+The bounded column picks its storage by what the standard library provides, which every translation unit agrees on
+without being told; nothing comparable picks between two installed libraries, so the user does, through the CMake
+cache variable `XSTD_BITS_SMALL_VECTOR`, `boost` by default or `absl`. It reaches the `xstd::bits` INTERFACE target
+as the compile definition `XSTD_BITS_SMALL_VECTOR_ABSL`, so every target that links the library compiles with the
+one choice, and `detail/small_blocks.hpp` reads it to name `small_blocks<Block, K, Alloc>` and the allocator the
+storage defaults to. The chosen library is found as `REQUIRED` and the other is not looked for; Boost.Container is
+required whatever the choice, the bounded column's fallback and the `dynamic_bitset` adapter needing it.
+
+**The storage is not a template argument.** `std::flat_set<Key, Compare, KeyContainer>` takes its container, and
+`boost::dynamic_bitset<Block, AllocatorOrContainer>` has since 1.90, so a set owner over `<Key, BlockContainer>` with
+the small vector as the argument was weighed. It is the design [owned-bit-storage](#owned-bit-storage) rejects: no
+storage joins the library from outside, each owner fixes its storage by its name, and the storages part on enough --
+what growth past capacity throws, what a copy or a swap declares, which allocators they honour -- that an owner generic
+over them could promise only what they share. Two small vectors under one name are the same column twice; they are
+not a parameter.
+
+**One inline namespace per storage.** The owners are declared in `xstd::with_boost` or `xstd::with_absl`, only the
+selected one is declared, and it is `inline`, so a user writes `xstd::bit_small_set` and the mangled name carries
+the storage. Two libraries built with different choices then name different symbols wherever a small owner crosses
+between them, and fail to link instead of violating the ODR. The namespaces are not called `boost` or `absl`: inside
+`namespace xstd`, this library's and its siblings' alike, an unqualified `boost::…` would find `xstd::boost` before
+`::boost`, and under `using namespace xstd;` every `boost::…` in user code would become ambiguous. One class
+template serves both storages, the namespace's name and `small_blocks` being the only differences, so the two parameter
+lists are one: `basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>` and
+`basic_bit_small_vector<Block, N, Alloc>`, `Alloc` defaulting to the storage's own, `boost::container::new_allocator`
+or `std::allocator`. `bit_small_set<N>`, `bit_small_vector<N>` and every `basic_` name that leaves `Alloc` defaulted
+are portable across the two; a type that spells its allocator is not, and says so in its type.
+
+**Under Abseil the allocator must be one whose copies all compare equal.** `absl::InlinedVector` ignores the
+allocator propagation traits: its swap swaps the allocators unconditionally, so over `std::pmr::polymorphic_allocator`,
+which cannot be assigned, it does not compile, and its move assignment adopts the source's heap blocks while keeping
+its own allocator, which then deallocates memory another one gave. Both are sound only where any two allocators of
+the type are interchangeable, so the owners require `small_blocks_allocator<Alloc>`, which is
+`std::allocator_traits<Alloc>::is_always_equal` under Abseil and holds for every allocator under Boost, whose
+`small_vector` honours each trait. `std::allocator` and any stateless allocator pass; `std::pmr::polymorphic_allocator`
+and the test tree's ledgering allocators are refused at the constraint, and the allocator-aware clauses run the small
+owners under Boost alone.
+
+**Abseil is header-only for this use; LLVM would not be.** The owners call `resize`, `push_back`, `insert` at the
+end, `clear`, `max_size`, the subscripts, the allocator-extended constructors, the moves, `swap` and `==` of the
+storage, and none of those reaches a compiled Abseil library: a program instantiating every one of them over
+`absl::InlinedVector<std::uint64_t, 2>` links, under GCC 15 and Clang 22, against the include path alone. Only `at()`
+reaches `absl::throw_delegate`, and the vehicle subscripts. The target still links `absl::inlined_vector`, which is
+how Abseil asks to be consumed and costs nothing that is not called. `llvm::SmallVector` is otherwise the same
+container, and is not offered, for three reasons the code gives. Its growth path is compiled into `LLVMSupport` --
+measured against LLVM 22's apt packages, even `resize` leaves `SmallVectorBase<unsigned>::size()` undefined without it --
+so a header-only INTERFACE target would carry a link dependency on a library the size of LLVM's support layer. Its
+size type is 32 bits for any element of four bytes or more, so a `std::uint64_t` block caps the width at 2^32 blocks,
+where every other storage reaches `max_size()`. And a failed growth calls `report_bad_alloc_error`, which aborts
+where LLVM is built without exceptions, as distributions build it, so growth could no longer leave an owner as it was
+([growth](#growth)). It also takes no allocator, so its owners would need a parameter list of their own. Shipping
+Boost and Abseil is the smaller change; an LLVM storage can follow if one is wanted, behind `with_llvm`.
+
+**What each storage declares, the owners inherit, and the tests pin it per storage.** Their special members are
+deduced, so the specifications are the storage's, and the two disagree: Boost's `small_vector` declares its moves and
+`swap` `noexcept`, and `absl::InlinedVector` declares neither its move assignment nor its `swap`. Over unsigned
+blocks and `std::allocator` both are a `memcpy` of the inline buffer or an exchange of heap pointers and cannot throw,
+so the vehicle writes the answer the dependency leaves out, as it does for `boost::container::static_vector`'s `swap`:
+`swaps_without_throwing_v` and `move_assigns_without_throwing_v` are specialized for that `absl::InlinedVector` in
+`detail/small_blocks.hpp`, beside the header naming it. `test/src/bits/detail/small_blocks.cpp` asserts what each
+storage declares and what the vehicle then says, and `bit_small_set.cpp` and `bit_small_vector.cpp` that the owners'
+moves and `swap` are `noexcept` under either, and, under Boost, that a polymorphic allocator's move assignment is not.
+Neither storage is constant-evaluable, so neither small owner is.
+
+**Each storage gets a CI leg.** The small-owner tests are the same for both, branching only where the storage's
+answer differs, on `XSTD_BITS_SMALL_VECTOR_ABSL`; the GCC and Clang ladders run their stable rung once more with
+`-DXSTD_BITS_SMALL_VECTOR=absl` and the `abseil` feature of `vcpkg.json`.
+
 ## Scans
 
 ### inclusive-is-the-primitive
@@ -1696,9 +1769,11 @@ exactly the property the vehicle split was for.
 
 **The axis is closed to users and open to the library.** What a storage has to satisfy is the exposition-only
 `owned_bit_blocks` ([owned-bit-storage](#owned-bit-storage)), which is a claim about blocks and says nothing about
-where they live. `ext/boost.hpp` joins on that and nothing else: two containers over
-`boost::container::small_vector`, added without a line of the core changing. No owner takes a storage argument, so a
-new column is a new owner here, not a parameter a user sets.
+where they live. The small column joined on that and nothing else: two containers over
+`boost::container::small_vector`, added without a line of the core changing, and `absl::InlinedVector` after them
+under the same two names ([the-small-column](#the-small-column)). No owner takes a storage argument, so a new column
+is a new owner here, not a parameter a user sets, and a second storage for a column is the build's choice, not the
+user's argument.
 
 ### the-container-adaptor
 
@@ -2674,9 +2749,12 @@ therefore invisible to a `find_package` consumer, yet on the build-interface inc
 lives in `examples/` now, in namespace `opt`, and the file-set check globs all of `include/` so a stray
 directory is a configure error rather than a silent extra ([the-sieve](#the-sieve)).
 
-`ext/` is the one interface piece the umbrella leaves out. It costs nothing here — a consumer that wants the
-small column includes the one header for it — and it keeps `boost::container::small_vector` off the path of
-every consumer who does not.
+`ext/` is the one interface piece the umbrella leaves out. It holds adapters to another library's types,
+`boost::dynamic_bitset` alone now, and a consumer who wants one includes it by name, which keeps that library off the
+path of every consumer who does not. The small column used to sit there too, for the same reason, and left when its
+storage became the build's choice ([the-small-column](#the-small-column)): the dependency it needs is then one the
+target already carries, so the umbrella names it like every other owner, and a consumer who never names a small
+owner pays for one more header and no link dependency.
 
 ### the-public-names
 
@@ -2850,7 +2928,7 @@ choices written through that pair, the block or width computed from `X`'s own:
 `bit_rebind` and `bit_underlying` take every owner: `basic_bit_array<Block, N>`,
 `basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_bounded_vector<Block, N>`,
 `basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_vector<Block, Allocator>`,
-`basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>`, and the Boost extension's
+`basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>`, and the small column's
 `basic_bit_small_vector<Block, N, Alloc>` and `basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>`, short
 names included. `bit_resize`, `bit_least`, `bit_fast` and `bit_align` read or write `N`, so they take the six whose
 type carries one, the bounded and small ones changing their capacity. So `bit_rebind<std::uint8_t, bit_vector>` is
@@ -3132,7 +3210,8 @@ wraps, one storage however it is spelled. The constant capacity is read without 
 usable in a constant expression, as `std::inplace_vector`'s is, or from the `static_capacity` beside a static
 `capacity()` callable only at run time, as `boost::container::static_vector`'s is. `boost::container::small_vector`
 has a `static_capacity` too, but it is the inline part of a capacity that grows onto the heap, and its `capacity()`
-needs an object, so an owner over it is unbounded by type.
+needs an object, so an owner over it is unbounded by type; `absl::InlinedVector` names no capacity without an object
+at all, and is unbounded by type the same way.
 
 The class passes `N` through to the storage rather than leaving it in the block count alone, which is what makes
 distinct capacities distinct types and lets its guide name `N`: `num_blocks_v<Block, N>` is not a

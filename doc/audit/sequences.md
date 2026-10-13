@@ -177,7 +177,7 @@ A row's `outcome` is one of:
 | `[array.tuple]` | 3 | `get(array<T, N>& a)`, and three more | Returns | answered |  |
 | `[vector.overview]` | 1 | `class vector` | — | no-requirement | Describes the vector and its costs in prose; each operation is audited where it is specified. |
 | `[vector.overview]` | 2 | — | — | answered | Checked as a random access range with an allocator: `vector<bool>` is exempt from contiguity. |
-| `[vector.overview]` | 3 | — | — | answered | Asked of the columns whose storage is constant-evaluable. Boost's `small_vector`, under the small columns, is not. |
+| `[vector.overview]` | 3 | — | — | answered | Asked of the columns whose storage is constant-evaluable. Neither small vector the small columns can hold their blocks in, Boost's or Abseil's, is. |
 | `[vector.overview]` | 4 | — | — | no-requirement | Admits an incomplete element type; `bool` is complete. |
 | `[vector.cons]` | 1 | `vector(const Allocator&)` | Effects | answered | `noexcept` is asserted of every column, the small ones included. |
 | `[vector.cons]` | 2 | `vector(const Allocator&)` | Complexity | declined | A complexity bound, which no functional check can observe. |
