@@ -34,7 +34,7 @@ inline constexpr std::size_t block_width = xstd::bit_blocks_extent_v<Block>;
 template<xstd::unsigned_integer Block>
 inline constexpr auto block_ones = xstd::numeric_limits<Block>::max();
 
-// The condition under which xstd-ints runs bit_compress and bit_expand as PEXT and PDEP, which permute a full mask as fast.
+// Where xstd-ints runs bit_compress and bit_expand as PEXT and PDEP, which permute a full mask as fast as any other.
 #if defined(__BMI2__) || (defined(_MSC_VER) && !defined(__clang__) && defined(__AVX2__))
 inline constexpr bool permutes_in_hardware = true;
 #else
@@ -73,13 +73,12 @@ class slice_masks
         // Held at least a word wide, so a narrow block leaves no padding between the counts.
         using wide_block = std::conditional_t<(sizeof(Block) < sizeof(std::size_t)), std::size_t, Block>;
 
-        std::size_t m_first;
-        std::size_t m_last;
         std::size_t m_next;
+        std::size_t m_last;
         std::size_t m_period;
         std::size_t m_phase = 0UZ;
-        // The cuts below the start and above the final position, made once.
-        wide_block m_head;
+        // The cut below the start, all ones after the first block, and the cut above the final position.
+        wide_block m_cut;
         wide_block m_tail;
         // The masks of one period: block k's offset falls back by digits % stride, so they repeat every stride / gcd blocks.
         std::array<wide_block, digits> m_masks{};
@@ -89,11 +88,10 @@ public:
         static constexpr bool has_empty_blocks = false;
 
         [[nodiscard]] constexpr slice_masks(std::size_t start, std::size_t size, std::size_t stride) noexcept
-                : m_first(start / digits)
+                : m_next(start / digits)
                 , m_last(((start + ((size - 1UZ) * stride)) / digits) + 1UZ)
-                , m_next(m_first)
                 , m_period(stride / std::gcd(stride, digits))
-                , m_head(static_cast<Block>(~partial_block_mask<Block>(start % digits)))
+                , m_cut(static_cast<Block>(~partial_block_mask<Block>(start % digits)))
                 , m_tail(partial_block_mask<Block>(((start + ((size - 1UZ) * stride)) % digits) + 1UZ))
         {
                 auto const ones  = xstd::bit_repeat(Block{1}, static_cast<int>(stride));
@@ -105,10 +103,11 @@ public:
                 }
         }
 
+        // Asked before the first next().
         [[nodiscard]] constexpr auto first() const noexcept
                 -> std::size_t
         {
-                return m_first;
+                return m_next;
         }
 
         [[nodiscard]] constexpr auto last() const noexcept
@@ -121,10 +120,8 @@ public:
         [[nodiscard]] constexpr auto next() noexcept
                 -> Block
         {
-                auto mask = static_cast<Block>(m_masks[m_phase]);
-                if (m_next == m_first) {
-                        mask = static_cast<Block>(mask & static_cast<Block>(m_head));
-                }
+                auto mask = static_cast<Block>(m_masks[m_phase] & m_cut);
+                m_cut     = block_ones<Block>;
                 if (m_next + 1UZ == m_last) {
                         mask = static_cast<Block>(mask & static_cast<Block>(m_tail));
                 }
