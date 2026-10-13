@@ -127,7 +127,7 @@ public:
                 m_last_mask = static_cast<Block>(static_cast<Block>(m_masks[(m_last - m_first - 2UZ) % m_span]) & tail);
         }
 
-        // f(k, mask, popcount(mask)) for every block the slice touches: the edges cut, the middle over the table, counts made once.
+        // f(k, mask, popcount(mask)) for each block the slice touches: edges cut, the middle over the table.
         template<class F>
         constexpr auto for_each(F f) const noexcept
                 -> void
@@ -139,7 +139,7 @@ public:
                 }
                 auto k = m_first + 1UZ;
                 if (m_span == digits) {
-                        // A stride dividing the block width, whose period is one block: one mask and count for the middle.
+                        // A stride dividing the block width has a period of one block: one mask and count.
                         for (auto const constant = static_cast<Block>(m_masks[0]); k + 1UZ < m_last; ++k) {
                                 f(k, constant, m_counts[0]);
                         }
@@ -202,7 +202,7 @@ public:
                 for (auto const k : std::views::iota(0UZ, m_last)) {
                         auto const pos = k * digits;
                         if constexpr (digits <= word) {
-                                // A block of a power of two of at most a word lies inside one word, which every block below width has.
+                                // A block of at most a word lies inside one word, its width being a power of two.
                                 auto const mask = static_cast<Block>(m_words[pos / word] >> (pos % word));
                                 f(k, mask, detail::popcount(mask));
                         } else {
@@ -241,7 +241,7 @@ public:
                 : m_blocks(blocks)
         {}
 
-        // The next count bits in the low ones of a block, garbage above them, which every caller masks or deposits away.
+        // The next count bits in the low ones of a block, garbage above, which every caller masks away.
         [[nodiscard]] constexpr auto take(std::size_t count) noexcept
                 -> Block
         {
@@ -286,7 +286,7 @@ constexpr auto compress_blocks(Src const& src, Masks const& masks, borrowed_bits
                 if (fill >= block_width<Block>) {
                         dst[out++] = acc;
                         fill -= block_width<Block>;
-                        // What did not fit, shifted in two steps, so a shift by the whole block width is never asked for.
+                        // What did not fit, shifted in two steps, so no shift is by the whole block width.
                         acc = shr(shr(packed, 1UZ), block_width<Block> - before - 1UZ);
                 }
         });
@@ -344,7 +344,7 @@ constexpr auto expand_run(Src const& src, std::size_t start, std::size_t size, b
         auto const from  = src.blocks().first(whole);
         auto const onto  = dst.blocks().subspan(start / block_width<Block>, whole);
         if constexpr (std::same_as<F, std::remove_const_t<decltype(scatter_assign)>>) {
-                // An assignment of whole blocks is a copy, at memmove's speed; onto themselves, as v[s] = v, there is nothing to do.
+                // Whole blocks assigned are a copy at memmove's speed, and nothing at all onto themselves.
                 if (from.data() != onto.data()) {
                         std::ranges::copy(from, onto.begin());
                 }

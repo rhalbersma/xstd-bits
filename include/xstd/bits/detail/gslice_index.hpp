@@ -93,7 +93,7 @@ struct gslice_index
                 return result;
         }
 
-        // From the shape alone, the span the positions cover where row-major order ascends, each stride clearing all inside it.
+        // The span the positions cover where row-major order ascends, each stride clearing all inside it.
         [[nodiscard]] auto ascending_span() const noexcept
                 -> std::size_t
         {

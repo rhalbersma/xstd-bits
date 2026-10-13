@@ -282,7 +282,7 @@ auto bm_slice_gather_hand(benchmark::State& state)
                 if (stride == 1UZ) {
                         std::ranges::copy(blocks(v), blocks(out).begin());
                 } else if (stride >= 64UZ) {
-                        // A word or more apart, one bit at most per word: the positions one by one, as the library takes them.
+                        // A word or more apart, at most one bit a word: one position at a time, as the library does.
                         hand_index_gather(blocks(v), n / stride, [=](std::size_t j) -> std::size_t { return j * stride; }, blocks(out));
                 } else {
                         auto const src = blocks(v);
@@ -474,7 +474,7 @@ auto bm_gslice_scatter(benchmark::State& state)
         set_counters(state, n / 2UZ);
 }
 
-// The same with the gslice built in the loop: std::gslice computes its positions in its constructor, and ours per subscript.
+// The gslice built in the loop: std::gslice finds its positions when built, a bit_valarray per subscript.
 template<class T>
 auto bm_gslice_gather_with_setup(benchmark::State& state)
         -> void

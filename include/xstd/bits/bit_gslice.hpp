@@ -14,7 +14,7 @@
 
 namespace xstd {
 
-// [class.gslice] with its positions worked out once, as packed bits where they ascend, for every subscript that reuses it.
+// [class.gslice] with its positions worked out once, as packed bits where they ascend, for every reuse.
 class bit_gslice
 {
         std::shared_ptr<bits::detail::gslice_index const> m_index;

@@ -11,7 +11,7 @@
 
 namespace xstd {
 
-// [template.slice.array]: the positions a std::slice or a bit_slice selects in a valarray, written through to its blocks.
+// [template.slice.array]: what a std::slice or a bit_slice selects in a valarray, written through to its blocks.
 template<xstd::unsigned_integer Block>
 class bit_slice_array : public bits::detail::valarray_proxy<bits::detail::slice_selection, Block>
 {
