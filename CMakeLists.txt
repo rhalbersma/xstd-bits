@@ -76,6 +76,7 @@ target_sources(
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
         include/xstd/bits/bit_algorithm/detail/blit.hpp
+        include/xstd/bits/bit_algorithm/detail/compare.hpp
         include/xstd/bits/bit_algorithm/detail/find.hpp
         include/xstd/bits/bit_algorithm/detail/walk.hpp
         include/xstd/bits/bit_algorithm/bit_all_of.hpp
@@ -84,6 +85,7 @@ target_sources(
         include/xstd/bits/bit_algorithm/bit_copy_backward.hpp
         include/xstd/bits/bit_algorithm/bit_count.hpp
         include/xstd/bits/bit_algorithm/bit_disjoint.hpp
+        include/xstd/bits/bit_algorithm/bit_equal.hpp
         include/xstd/bits/bit_algorithm/bit_fill.hpp
         include/xstd/bits/bit_algorithm/bit_find.hpp
         include/xstd/bits/bit_algorithm/bit_find_last.hpp
@@ -92,6 +94,7 @@ target_sources(
         include/xstd/bits/bit_algorithm/bit_intersects.hpp
         include/xstd/bits/bit_algorithm/bit_is_partitioned.hpp
         include/xstd/bits/bit_algorithm/bit_is_sorted.hpp
+        include/xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp
         include/xstd/bits/bit_algorithm/bit_mismatch.hpp
         include/xstd/bits/bit_algorithm/bit_move.hpp
         include/xstd/bits/bit_algorithm/bit_none_of.hpp
@@ -130,6 +133,7 @@ target_sources(
         include/xstd/bits/bit_set_view.hpp
         include/xstd/bits/bit_span.hpp
         include/xstd/bits/bit_fixed_set.hpp
+        include/xstd/bits/bit_equal_to.hpp
         include/xstd/bits/bit_hasher.hpp
         include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_type_traits.hpp

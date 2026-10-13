@@ -35,7 +35,9 @@
 #include <xstd/bits/bit_algorithm/bit_shift_right.hpp>   // IWYU pragma: export; bit_shift_right
 
 // Both readings': a walk in either order, and equality and order across block types and storages.
-#include <xstd/bits/bit_algorithm/bit_for_each.hpp> // IWYU pragma: export; bit_for_each
+#include <xstd/bits/bit_algorithm/bit_for_each.hpp>                          // IWYU pragma: export; bit_for_each
+#include <xstd/bits/bit_algorithm/bit_equal.hpp>                             // IWYU pragma: export; bit_equal
+#include <xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp> // IWYU pragma: export; bit_lexicographical_compare_three_way
 
 // The set reading's, over keys.
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>   // IWYU pragma: export; bit_includes
