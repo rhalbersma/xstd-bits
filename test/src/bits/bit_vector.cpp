@@ -7,6 +7,7 @@
 #include <test/sanitizer.hpp>                       // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
 #include <test/sequence/dense.hpp>                  // yields_every_position
 #include <test/sequence/rotation.hpp>               // permutation_sweep, permutes_ten_bits
+#include <test/whole_blocks.hpp>                    // block_bits
 #include <xstd/bits/bit_algorithm/bit_count.hpp>    // bit_count
 #include <xstd/bits/bit_algorithm/bit_reverse.hpp>  // bit_reverse
 #include <xstd/bits/bit_algorithm/bit_rotate.hpp>   // bit_rotate
@@ -154,7 +155,7 @@ BOOST_AUTO_TEST_CASE(TheCeilingIsStdVectorBoolsRowForRow)
         BOOST_CHECK_LE(v.max_size(), pmax);
         BOOST_CHECK_LE(m.max_size(), pmax);
         BOOST_CHECK_LE(v.max_size(), m.max_size());
-        BOOST_CHECK_EQUAL(v.max_size() % 64UZ, 0UZ);
+        BOOST_CHECK_EQUAL(v.max_size() % test::block_bits, 0UZ);
 
         // One past each bound is std::length_error on both, and neither asks for memory first.
         BOOST_CHECK_THROW(v.resize(v.max_size() + 1UZ), std::length_error);
@@ -167,15 +168,22 @@ BOOST_AUTO_TEST_CASE(TheCeilingIsStdVectorBoolsRowForRow)
         // Nothing moved: a refused growth is not a partial one.
         BOOST_CHECK(v.empty());
         BOOST_CHECK(m.empty());
+}
 
 #ifndef TEST_HAS_ADDRESS_SANITIZER
 
-        // The last row asks for the memory, so the allocator answers; ours only, the two libraries not agreeing here.
-        BOOST_CHECK_THROW(v.resize(v.max_size()), std::bad_alloc);
-        BOOST_CHECK(v.empty());
+// The last row asks for the memory, so the allocator answers; ours only, the two libraries not agreeing here.
+BOOST_AUTO_TEST_CASE(TheLastRowIsTheAllocatorsToRefuse)
+{
+        // A 32-bit size_t makes that row a few hundred megabytes, which an allocator may well grant.
+        if constexpr (test::block_bits >= 64UZ) {
+                auto v = xstd::bit_vector();
+                BOOST_CHECK_THROW(v.resize(v.max_size()), std::bad_alloc);
+                BOOST_CHECK(v.empty());
+        }
+}
 
 #endif
-}
 
 // std::vector<bool>'s append_range and insert_range, spelled through insert for the standard libraries that lack them.
 template<class R>

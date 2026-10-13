@@ -31,6 +31,7 @@
 #include <cassert>                                           // assert
 #include <concepts>                                          // default_initializable, same_as
 #include <cstddef>                                           // ptrdiff_t, size_t
+#include <cstdint>                                           // uint64_t
 #include <format>                                            // format
 #include <functional>                                        // plus
 #include <iterator>                                          // next, prev
@@ -161,13 +162,11 @@ public:
 template<class Blocks, std::size_t N>
 concept zero_capacity = resizable_bit_blocks<Blocks> and N == 0UZ and bit_blocks_capacity_v<Blocks> == 0UZ;
 
-// The width is a size_t unless the blocks out-align one, when it fills what would be padding.
+// A size_t, widened to the blocks' alignment where they out-align one, so that the width fills what would be padding.
 template<class Blocks>
-using stored_width_t = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, std::ranges::range_value_t<Blocks>>;
-
-// The width is a size_t unless the blocks out-align one, when it fills what would be padding.
-template<class Blocks>
-using stored_width_t = std::conditional_t<(alignof(std::size_t) >= alignof(Blocks)), std::size_t, std::ranges::range_value_t<Blocks>>;
+using stored_width_t = std::conditional_t<
+        (alignof(std::size_t) >= alignof(Blocks)), std::size_t,
+        std::conditional_t<(alignof(std::uint64_t) >= alignof(Blocks)), std::uint64_t, std::ranges::range_value_t<Blocks>>>;
 
 // The width a vehicle over these blocks stores: one that moves under growth, where it is not always zero.
 template<class Blocks, std::size_t N>

@@ -95,6 +95,13 @@ struct shape_of<xstd::basic_bit_fixed_set<std::size_t, Block, N>>
         static constexpr auto width = N;
 };
 
+// GCC 15 mangles away implicit non-trailing zero blocks (PR c++/121231), splitting equal values; GCC 16 does not.
+#if defined(__GNUC__) and not defined(__clang__) and __GNUC__ < 16
+inline constexpr bool splits_equal_values_across_zero_blocks = true;
+#else
+inline constexpr bool splits_equal_values_across_zero_blocks = false;
+#endif
+
 // The same bits as blocks: the low bit of the first block and the high bit of the last one.
 template<class T>
 [[nodiscard]] constexpr auto with_blocks()
@@ -128,7 +135,10 @@ BOOST_AUTO_TEST_CASE(EqualValuesNameTheSameSpecialization)
                 constexpr auto last      = shape_of<T>::width - 1UZ;
                 constexpr auto by_bits   = with_bits<T>({0UZ, last});
                 constexpr auto by_blocks = with_blocks<T>();
-                static_assert(std::same_as<test::value_parameter<by_bits>, test::value_parameter<by_blocks>>);
+                constexpr auto blocks    = shape_of<T>::width / static_cast<std::size_t>(std::numeric_limits<typename shape_of<T>::block_type>::digits);
+                if constexpr (not splits_equal_values_across_zero_blocks or blocks <= 2UZ) {
+                        static_assert(std::same_as<test::value_parameter<by_bits>, test::value_parameter<by_blocks>>);
+                }
                 static_assert(std::same_as<test::value_parameter<T{}>, test::value_parameter<with_bits<T>({})>>);
         });
 }

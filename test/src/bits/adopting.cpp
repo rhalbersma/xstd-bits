@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
+#include <test/whole_blocks.hpp>                    // whole_blocks
 #include <xstd/bits/bit_array.hpp>                  // bit_array
 #include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
@@ -75,7 +76,7 @@ BOOST_AUTO_TEST_CASE(ARoundTripKeepsTheBitsAndPadsTheWidth)
         auto const original = v;
 
         auto w = xstd::bit_vector(xstd::from_blocks, std::move(v).extract());
-        BOOST_CHECK_EQUAL(w.size(), 128UZ);
+        BOOST_CHECK_EQUAL(w.size(), test::whole_blocks(70UZ));
         BOOST_CHECK(w[0] and w[69] and not w[70]);
         w.resize(70);
         BOOST_CHECK(w == original);

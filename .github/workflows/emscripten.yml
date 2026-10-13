@@ -1,0 +1,25 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+name: Emscripten
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+  # canary.yml calls this weekly, so the stub stays callable itself.
+  workflow_call:
+
+jobs:
+  # wasm32 under node: a 32-bit size_t like i686, but 8-byte alignment for 64-bit integers and a native __int128, so it catches what i686 cannot.
+  wasm32:
+    uses: rhalbersma/cpp-ci/.github/workflows/emscripten.yml@1c32e510e25b1d41e613cddc1b169655680f9a01 # v0.12.0

@@ -13,7 +13,7 @@
 #include <xstd/bits/bit_key_mapping.hpp>           // bit_key_mapping
 #include <xstd/bits/bit_type_traits/bit_align.hpp> // bit_align
 #include <xstd/bits/bit_type_traits/bit_fast.hpp>  // bit_fast
-#include <xstd/bits/bit_type_traits/bit_least.hpp> // bit_least
+#include <xstd/bits/bit_type_traits/bit_least.hpp> // bit_least, least_block_t
 #include <xstd/bits/from_blocks.hpp>               // from_blocks
 #include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                               // ranges::equal
@@ -144,8 +144,9 @@ BOOST_AUTO_TEST_CASE(TheTransformationsComposeInEitherOrder)
         using three = xstd::bit_fixed_set<3>;
         static_assert(std::same_as<xstd::bit_align<xstd::bit_least<three>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 8>>);
         static_assert(sizeof(xstd::bit_align<xstd::bit_least<three>>) == 1UZ);
-        static_assert(std::same_as<xstd::bit_least<xstd::bit_align<three>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64>>);
-        static_assert(sizeof(xstd::bit_least<xstd::bit_align<three>>) == sizeof(std::uint64_t));
+        constexpr auto word_digits = static_cast<std::size_t>(std::numeric_limits<std::size_t>::digits);
+        static_assert(std::same_as<xstd::bit_least<xstd::bit_align<three>>, xstd::basic_bit_fixed_set<std::size_t, xstd::least_block_t<word_digits>, word_digits>>);
+        static_assert(sizeof(xstd::bit_least<xstd::bit_align<three>>) == sizeof(std::size_t));
 
         constexpr auto fast8_digits = static_cast<std::size_t>(std::numeric_limits<std::uint_fast8_t>::digits);
         static_assert(std::same_as<xstd::bit_align<xstd::bit_fast<three>>, xstd::basic_bit_fixed_set<std::size_t, std::uint_fast8_t, fast8_digits>>);

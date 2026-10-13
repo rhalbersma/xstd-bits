@@ -21,7 +21,7 @@
 
 #include <immintrin.h> // _mm512_and_si512, _mm512_movm_epi8, _mm512_set1_epi8, _mm512_storeu_si512
 
-#elifdef __BMI2__
+#elif defined(__BMI2__) && defined(__x86_64__)
 
 #include <immintrin.h> // _pdep_u64
 #include <cstring>     // memcpy
@@ -76,7 +76,8 @@ constexpr auto expand_block_by_table(std::uint64_t block, std::span<unsigned cha
 constexpr auto expand_block(std::uint64_t block, std::span<unsigned char, bools_per_block> bools) noexcept
         -> void
 {
-#if defined(__AVX512BW__) || defined(__BMI2__)
+// A 32-bit target with BMI2 has only _pdep_u32, so the BMI2 branch is x86-64's alone.
+#if defined(__AVX512BW__) || (defined(__BMI2__) && defined(__x86_64__))
         if !consteval {
 #ifdef __AVX512BW__
                 _mm512_storeu_si512(bools.data(), _mm512_and_si512(_mm512_movm_epi8(block), _mm512_set1_epi8(1)));

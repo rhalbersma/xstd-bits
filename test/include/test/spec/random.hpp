@@ -89,16 +89,18 @@ public:
         {}
 
         // Uniform over [0, n) by rejection under the covering power of two, which never consumes a draw for n == 1.
-        [[nodiscard]] auto below(std::uint64_t n)
-                -> std::uint64_t
+        [[nodiscard]] auto below(std::size_t n)
+                -> std::size_t
         {
-                if (n <= 1) {
-                        return 0;
+                if (n <= 1UZ) {
+                        return 0UZ;
                 }
-                auto const mask = std::numeric_limits<std::uint64_t>::max() >> static_cast<unsigned>(std::countl_zero(n - 1));
+                // The draws are 64 bits on every target, so a seed reproduces the same keys where size_t is 32.
+                auto const bound = static_cast<std::uint64_t>(n);
+                auto const mask  = std::numeric_limits<std::uint64_t>::max() >> static_cast<unsigned>(std::countl_zero(bound - 1U));
                 for (;;) {
-                        if (auto const x = m_bits() & mask; x < n) {
-                                return x;
+                        if (auto const x = m_bits() & mask; x < bound) {
+                                return static_cast<std::size_t>(x);
                         }
                 }
         }

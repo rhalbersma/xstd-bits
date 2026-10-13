@@ -20,11 +20,11 @@ on:
 jobs:
   # The last stub to arrive: the shared workflow could not express this library before cpp-ci v0.4.1.
   consumption:
-    uses: rhalbersma/cpp-ci/.github/workflows/consumption.yml@5e70b2dfcf6a2a4d8f8d442c65703588d198548c # v0.11.1
+    uses: rhalbersma/cpp-ci/.github/workflows/consumption.yml@1c32e510e25b1d41e613cddc1b169655680f9a01 # v0.12.0
     with:
       # CMakeLists.txt find_package()s boost_hash2 and boost_container unconditionally, so every configure here needs vcpkg.
       vcpkg: true
       # The revisions CMakeLists.txt pins; install(EXPORT) cannot export a FetchContent build tree, so installed dependencies are required.
       dependency_repos: |
-        https://github.com/rhalbersma/xstd-ints.git af5119956df91d7fd80e393bbdfb562c9dd78041
-        https://github.com/rhalbersma/xstd-misc.git f6b03ce8f0c04217a8f0afebc48ae64b74f8cf94
+        https://github.com/rhalbersma/xstd-ints.git 032a37c99cbb1cd27675a4bc1f44a06429c76e31
+        https://github.com/rhalbersma/xstd-misc.git 99fc10aea2f5689a9ccb69698aa17dcd928886a0

@@ -55,6 +55,10 @@ set(cxx_compile_options_warnings
         -Wno-ctad-maybe-unsupported         # std::reverse_iterator(it) uses the standard's own deduction guide
         -Wno-zero-as-null-pointer-constant  # triggered by <=> comparisons against 0
     >
+    # Four-byte pointers beside 64-bit members pad the test fixtures, whose layout nothing reads; 64-bit legs keep the check.
+    $<$<AND:$<CXX_COMPILER_ID:Clang>,$<EQUAL:${CMAKE_SIZEOF_VOID_P},4>>:
+        -Wno-padded
+    >
     $<$<CXX_COMPILER_ID:GNU>:
         -Wall
         -Wextra
@@ -78,7 +82,8 @@ set(cxx_compile_options_warnings
 )
 
 set(cxx_compile_options_optimization
-    $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>:
+    # The build machine's processor only where the tests run on it: a cross build, such as Emscripten's, has no native.
+    $<$<AND:$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>,$<NOT:$<BOOL:${CMAKE_CROSSCOMPILING}>>>:
         -march=native
     >
     # MinGW emits 32-byte stores to a 16-byte aligned stack; the assembler rewrites them unaligned (#54, GCC PR target/54412).
@@ -232,5 +237,5 @@ foreach(t ${targets})
         ${cxx_compile_options_mbig_obj}
     )
 
-    add_test(${target_id} ${target_id})
+    add_test(NAME ${target_id} COMMAND ${target_id})
 endforeach()
