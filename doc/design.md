@@ -5786,6 +5786,32 @@ sequence of `K`-bit elements does. The work runs in this order: `bit_char_traits
 strings; search, staged as above; compile-time patterns; the audits; and the string row in the README's tables.
 Prior art for the bounded and small strings is in [prior-art-by-column](#prior-art-by-column).
 
+### bit-mdspan
+
+A bit matrix, `std::mdspan` over packed bits, adds a dimension to the views row rather than a reading
+([#196](https://github.com/rhalbersma/xstd-bits/issues/196)): bitboards, adjacency matrices, parity-check matrices,
+cellular automata and binary images are its workloads. `[mdspan.accessor.reqmts]` lets an accessor's `reference`
+be other than `element_type&` and its `data_handle_type` other than `element_type*`, so the accessor is the
+sequence reading's proxy and iterator: `access(p, i)` is `*(p + i)` and `offset(p, i)` is `p + i`. The constraint
+on `reference`, a common reference with `bool&`, is the one `std::indirectly_readable` already imposes on the
+iterator, so the accessor carries no new proof obligation.
+
+The layout is the alignment argument one dimension up. `layout_right` unpadded starts row *i* at bit `i · cols`,
+so unless `cols` is a whole number of blocks every row straddles blocks and every row-wise operation takes the
+funnel-shift path; `layout_right_padded` (C++26) starts each row on a block boundary for at most a block less one
+bit per row, which a 64-square board does not pay at all. Padded, a row is a contiguous run of whole blocks, and
+so a `bit_span` over the same storage: the sequence reading and the algorithms apply row-wise as they stand, and
+the matrix algorithms worth having (Warshall's closure, Gaussian elimination over GF(2), neighbour counts by
+shifted rows) are or, xor and and of two rows. A column is a strided run of single bits, one test per row, and
+no packing changes that, so an interface should not present a column as a row's peer.
+
+Open before the first header: whether `row(i)` returns a rank-1 `mdspan` through `submdspan`, a `bit_span`, or
+both; which extents come first, a static `8 × 8` board or a dynamic matrix; whether `[mdspan.copy]`'s algorithms
+go through the accessor or assume `element_type*`; and which ladders ship the padded layouts. There is no owning
+counterpart, since the working draft has no `mdarray`: the view sits over an owner someone else holds, as the
+views row already does. GF(2) linear algebra on top of it is
+[#404](https://github.com/rhalbersma/xstd-bits/issues/404).
+
 ### a-deterministic-perf-gate
 
 Coverage is gated at 100% of lines and branches and time at nothing: the benchmarks run under `ctest` as smoke
