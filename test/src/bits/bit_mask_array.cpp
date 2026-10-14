@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(AProxyWritesThroughToItsArrayWhileTheArrayLives)
         auto const mask      = test::valarray::make<xstd::bit_valarray>(m);
         auto const p         = v[mask];
         auto const reference = test::valarray::reference_of(m);
-        auto r               = expected[reference];
+        auto const r         = expected[reference];
         auto const n         = 35UZ;
         for (auto const w : test::valarray::writes) {
                 test::valarray::apply(w, p, true);

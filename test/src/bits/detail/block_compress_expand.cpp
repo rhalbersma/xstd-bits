@@ -31,7 +31,8 @@ template<class Block>
 {
         auto result = bools(blocks.size() * digits<Block>);
         for (auto const i : std::views::iota(0UZ, result.size())) {
-                result[i] = ((blocks[i / digits<Block>] >> (i % digits<Block>)) & Block{1}) != Block{};
+                // Cast back before the mask: a shifted narrow block is an int to bugprone-signed-bitwise.
+                result[i] = (static_cast<Block>(blocks[i / digits<Block>] >> (i % digits<Block>)) & Block{1}) != Block{};
         }
         return result;
 }

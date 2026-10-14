@@ -13,7 +13,7 @@
 #include <cstddef>                            // size_t
 #include <ranges>                             // iota
 #include <type_traits>                        // is_copy_constructible_v, is_default_constructible_v
-#include <utility>                            // declval
+#include <utility>                            // declval, to_underlying
 #include <valarray>                           // slice
 
 BOOST_AUTO_TEST_SUITE(BitSliceArray)
@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE(AProxyWritesThroughToItsArrayWhileTheArrayLives)
         auto v        = test::valarray::make<xstd::bit_valarray>(a);
         auto expected = test::valarray::reference_of(a);
         auto const p  = v[std::slice(2UZ, 20UZ, 3UZ)];
-        auto r        = expected[std::slice(2UZ, 20UZ, 3UZ)];
+        auto const r  = expected[std::slice(2UZ, 20UZ, 3UZ)];
         auto const n  = 20UZ;
         for (auto const w : test::valarray::writes) {
                 test::valarray::apply(w, p, true);
@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE(ASliceTakesAnyOwnerOverTheSameBlocks)
         auto const f = test::valarray::make<xstd::bit_fixed_valarray<8>>(b);
         for (auto const& s : {std::slice(0UZ, 8UZ, 1UZ), std::slice(5UZ, 8UZ, 13UZ), std::slice(3UZ, 8UZ, 65UZ), std::slice(1UZ, 8UZ, 64UZ)}) {
                 for (auto const w : test::valarray::writes) {
-                        BOOST_TEST_CONTEXT("slice(" << s.start() << ", " << s.size() << ", " << s.stride() << "), write " << static_cast<int>(w))
+                        BOOST_TEST_CONTEXT("slice(" << s.start() << ", " << s.size() << ", " << s.stride() << "), write " << static_cast<int>(std::to_underlying(w)))
                         {
                                 auto v        = test::valarray::make<xstd::bit_valarray>(a);
                                 auto expected = test::valarray::reference_of(a);

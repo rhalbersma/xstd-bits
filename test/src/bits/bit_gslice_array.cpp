@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(AProxyWritesThroughToItsArrayWhileTheArrayLives)
         auto expected = test::valarray::reference_of(a);
         auto const g  = std::gslice(0UZ, std::valarray<std::size_t>{2UZ, 3UZ}, std::valarray<std::size_t>{1UZ, 9UZ});
         auto const p  = v[g];
-        auto r        = expected[g];
+        auto const r  = expected[g];
         auto const n  = 6UZ;
         for (auto const w : test::valarray::writes) {
                 test::valarray::apply(w, p, true);
