@@ -86,7 +86,7 @@ storage whose `resize` is `noexcept` never takes that path.
 The element clause is `xstd::unsigned_integer`, and **not** the wider `bit_mask`, which would be the concept
 if the operators were all a block is asked for. They are not. Beyond them the body wants the `<bit>` intrinsics
 — `popcount`, `countr_zero` and `countl_zero`, each constrained on `xstd::unsigned_integer` in
-`detail/intrin.hpp` and reached at some thirty sites — a `numeric_limits<block_type>::digits` for
+`detail/intrinsic.hpp` and reached at some thirty sites — a `numeric_limits<block_type>::digits` for
 `bits_per_block`, and block arithmetic: `shl(unit, count) - unit`, and the `block & (block - 1)` step the set
 reading's block walk takes, where `bit_mask` omits `-` deliberately, subtraction and set difference
 being indistinguishable to a concept.
@@ -1383,9 +1383,10 @@ flavor, and a bit container hashes inside a user's Hash2-hashed aggregate as the
 | every set and set view | `std::set<Key, Compare>` | each key in iteration order, descending under `std::greater`, then `hash_append_size(count)` |
 
 A sequence's bools are not read through its proxies. `detail/hash.hpp` expands each 64-bit word of the bits
-into 64 bytes, through `detail/intrin.hpp`: one `_mm512_movm_epi8` where AVX-512BW is enabled, a `_pdep_u64`
-per byte where BMI2 is on x86-64, and otherwise, and in a constant expression, a 256-entry table of each byte's eight
-bools. Eight words go to an `update`, and the last stops at the width: no padding bit is ever a bool. Chunking
+into 64 bytes, through `detail/intrinsic.hpp`: one `_mm512_movm_epi8` where AVX-512BW is enabled, an
+`xstd::bit_expand` per byte where xstd-ints finds PDEP fast, which is BMI2 on x86-64 short of the AMD processors that
+microcode it and MSVC's `/arch:AVX2`, and otherwise, and in a constant expression, a 256-entry table of each byte's
+eight bools. Eight words go to an `update`, and the last stops at the width: no padding bit is ever a bool. Chunking
 does not change a Hash2 digest, so the expansion's grain is free. A set walks its keys, costing what `std::set`
 costs, and appends each as `Key`, so its message follows the platform's `std::size_t` as the model's does.
 `bit_block_container`, which is no reading, keeps its own hook over its blocks.
@@ -3684,6 +3685,37 @@ than an oversight: a tail invariant is needed only where blockwise reads are **u
 notices. libc++'s reads blocks and masks at every read site. This tree reads blocks unmasked and masks at the
 four writes that can dirty them.
 
+### the-kept-count
+
+A set's `size()` is its storage's `count()`. At a static width, `bit_fixed_set<N>` and `bit_bounded_set<N>`, that is
+a popcount bounded by `N`: one or two instructions at a board's width, constant in the number of elements as
+`[container.reqmts]` measures it, and a kept count would charge every write a read and an add to save them. Where
+the width grows without bound, `bit_set` and `bit_small_set`, the popcount runs over every block the set has ever
+grown to, so a megabit set holding one key pays thousands of popcounts per `size()`, and per `empty()` with it.
+Those two keep the count as a member: `set_bits_t<Blocks>` is `bit_block_container<Blocks, N, true>` exactly where
+`unbounded_width<Blocks, N>` holds. `bit_vector` holds the same blocks without it, its `size()` being its width.
+
+The count is the storage's for the reason the padding invariant is
+([the-invariant-stays-in-the-storage](#the-invariant-stays-in-the-storage)): a `bit_set_view` over a `bit_set`
+writes through the owner's storage and never through the owner, so a count the owner held would go stale at the
+first insert through a view. `set_view_storage_t` maps a view over unbounded blocks onto the counted storage its
+owner holds. Every write keeps the count:
+
+- a single bit by the bit it read, which `insert` and `erase` already return;
+- a range, `set(n, len, value)`, by the range's popcount taken before the write;
+- the shifts by the positions they drop, and `resize` by the positions that leave and arrive, applied once the
+  growth has succeeded, so a refused allocation leaves the count with the blocks it describes;
+- `&=`, `|=`, `^=` and `-=` by a popcount summed in the loop that writes the blocks, so a set operation stays one
+  pass, and `transform` the same way, less what `erase_unused` is about to clear, which only the last block holds;
+- `set()`, `reset()` and `flip()` by arithmetic on the width, and a rotation or a reversal not at all, a
+  permutation of the bits leaving their number as it was.
+
+A writer of raw blocks, through `blocks()` or the subscript, owes `recount()` exactly as it owes `erase_unused()`;
+`bit_convert` into a run-time owner is the one such writer in the tree. The count is eager. A flag set by the bulk
+writes and cleared by a recount in `size()` would make a `const` member write, which `[res.on.data.races]` forbids
+without synchronization, as reference-counted copy-on-write strings found. In a debug build `count()` asserts the
+kept count against the popcount, so every test that asks a size also checks the invariant.
+
 ### width-is-capacity
 
 `std::set` has no width, so `bit_set` treats its run-time width as capacity, never as value: two sets holding
@@ -4974,7 +5006,7 @@ Three consequences follow, none of them obvious from the forwarding change alone
 
 **The calls are qualified, so they bind where they are written.** `xstd::popcount(block)` is a dependent call
 by a qualified name, and ADL does not apply to qualified names, so its candidates are the overloads visible at
-`intrin.hpp` — not at the instantiation. An adapter included afterwards declares its overload too late to be
+`intrinsic.hpp` — not at the instantiation. An adapter included afterwards declares its overload too late to be
 one. A translation unit reaching for an integer-class Block therefore includes that adapter first; the test
 tree does it in `test/block_types.hpp`, above every container header. The same rule decides where
 `test::block_basis` can be spelled, which is why it sits in that header rather than in one of its own: a

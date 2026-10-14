@@ -18,16 +18,16 @@ namespace xstd::bits::detail {
 template<class Bits>
 struct blocks_of;
 
-template<class Blocks, std::size_t N>
-struct blocks_of<bit_block_container<Blocks, N>>
+template<class Blocks, std::size_t N, bool Counted>
+struct blocks_of<bit_block_container<Blocks, N, Counted>>
 {
         using type = Blocks;
 
         static constexpr std::size_t width = N;
 };
 
-template<class Blocks, std::size_t N>
-struct blocks_of<bit_block_container<Blocks, N> const>
+template<class Blocks, std::size_t N, bool Counted>
+struct blocks_of<bit_block_container<Blocks, N, Counted> const>
 {
         using type = Blocks const;
 

@@ -12,7 +12,7 @@
 #include <xstd/bits/detail/block_compress_expand.hpp> // block_width, compress_blocks, expand_blocks, expand_indices, fill_blocks, fill_indices, gather_indices, scatter_and, scatter_assign, scatter_or, scatter_xor, slice_masks, stored_masks
 #include <xstd/bits/detail/borrowed_bits.hpp>         // borrowed_bits
 #include <xstd/bits/detail/gslice_index.hpp>          // gslice_access, gslice_index
-#include <xstd/bits/detail/intrin.hpp>                // popcount
+#include <xstd/bits/detail/intrinsic.hpp>             // popcount
 #include <xstd/bits/detail/ownership.hpp>             // owned_bits_t, owner_reading, storage_access, valarray_reading_tag
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
 #include <algorithm>                                  // all_of, count

@@ -98,13 +98,14 @@ class checker
                 m_disagreements += static_cast<int>(ours != theirs);
         }
 
-        // Position by position against a model of what the operation should have left.
+        // Position by position against a model of what the operation should have left, and the count beside them.
         auto same(model const& m, BB const& got)
                 -> void
         {
                 for (auto const i : std::views::iota(0UZ, m_n)) {
                         disagree(got.test(i), m[i]);
                 }
+                unequal(got.count(), static_cast<std::size_t>(std::ranges::count(m, true)));
         }
 
 public:
@@ -331,30 +332,37 @@ public:
                 -> void
         {
                 for (auto const i : std::views::iota(0UZ, m_n)) {
+                        // The count after writing position i: the others' bits, and whatever i holds now.
+                        auto const others = m_cardinality - static_cast<std::size_t>(m_mx[i]);
                         {
                                 auto& a = fresh_x();
                                 a.set(i);
                                 disagree(a.test(i), true);
+                                unequal(a.count(), others + 1UZ);
                         }
                         {
                                 auto& a = fresh_x();
                                 a.reset(i);
                                 disagree(a.test(i), false);
+                                unequal(a.count(), others);
                         }
                         {
                                 auto& a = fresh_x();
                                 a.flip(i);
                                 disagree(a.test(i), not m_mx[i]);
+                                unequal(a.count(), others + static_cast<std::size_t>(not m_mx[i]));
                         }
                         {
                                 auto& a = fresh_x();
                                 disagree(a.insert(i), not m_mx[i]);
                                 disagree(a.test(i), true);
+                                unequal(a.count(), others + 1UZ);
                         }
                         {
                                 auto& a = fresh_x();
                                 disagree(a.erase(i), m_mx[i]);
                                 disagree(a.test(i), false);
+                                unequal(a.count(), others);
                         }
                 }
         }
@@ -371,6 +379,7 @@ public:
                                 a[i] = m_x[i];
                         }
                         a.erase_unused();
+                        a.recount();
                         disagree(a == m_x, true);
                 }
                 {
@@ -378,8 +387,9 @@ public:
                         for (auto const i : std::views::iota(0UZ, m_x.num_blocks())) {
                                 a[i] = static_cast<BB::block_type>(-1);
                         }
-                        // The writer restores the invariant, which the reference hands it rather than doing itself.
+                        // The writer restores both invariants, which the reference hands it rather than doing itself.
                         a.erase_unused();
+                        a.recount();
                         disagree(a.all(), true);
                         unequal(a.count(), m_n);
                 }
@@ -726,6 +736,20 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ARunTimeWidthAgreesWithTheModel, Block, test::bloc
 {
         using T          = xstd::bits::detail::bit_block_container<std::vector<Block>>;
         constexpr auto D = test::digits_v<Block>;
+
+        auto disagreements = 0;
+        for (auto const n : {0UZ, 1UZ, D - 1, D, D + 1, (2 * D) - 1, 2 * D, (2 * D) + 1, 3 * D, (3 * D) + 1}) {
+                disagreements += sweep(T(n));
+        }
+        BOOST_CHECK_EQUAL(disagreements, 0);
+}
+
+// The set reading's unbounded storage keeps a count of its bits, and the same sweep checks it after every write.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ACountedRunTimeWidthAgreesWithTheModel, Block, test::block_types)
+{
+        using T          = xstd::bits::detail::set_bits_t<std::vector<Block>>;
+        constexpr auto D = test::digits_v<Block>;
+        static_assert(T::has_stored_count and not xstd::bits::detail::bit_block_container<std::vector<Block>>::has_stored_count);
 
         auto disagreements = 0;
         for (auto const n : {0UZ, 1UZ, D - 1, D, D + 1, (2 * D) - 1, 2 * D, (2 * D) + 1, 3 * D, (3 * D) + 1}) {
@@ -1672,6 +1696,150 @@ BOOST_AUTO_TEST_CASE(ABareBlockIsRefusedByTheConstraint)
 {
         static_assert(not names_a_bit_block_container<std::uint64_t>);
         static_assert(names_a_bit_block_container<std::array<std::uint64_t, 1>>);
+}
+
+namespace {
+
+// The bits set in the blocks, counted here rather than asked of the storage that keeps the count under test.
+template<class T>
+[[nodiscard]] auto popcount_of(T const& b)
+        -> std::size_t
+{
+        auto n = 0UZ;
+        for (auto const block : b.blocks()) {
+                n += static_cast<std::size_t>(std::popcount(block));
+        }
+        return n;
+}
+
+} // namespace
+
+namespace {
+
+using counted = xstd::bits::detail::set_bits_t<std::vector<std::uint8_t>>;
+
+// The kept count against the blocks' own popcount, and against the count the test expects.
+[[nodiscard]] auto keeps(counted const& b, std::size_t n)
+        -> bool
+{
+        return b.count() == popcount_of(b) and b.count() == n;
+}
+
+} // namespace
+
+// A width that moves: the positions that leave take their bits with them, and those that arrive bring the value.
+BOOST_AUTO_TEST_CASE(ACountedWidthKeepsItsCountAsTheWidthMoves)
+{
+        auto b = from_model<counted>(patterned(19));
+        BOOST_CHECK(keeps(b, 13UZ));
+        b.resize(30, true);
+        BOOST_CHECK(keeps(b, 24UZ));
+        b.resize(40, false);
+        BOOST_CHECK(keeps(b, 24UZ));
+        b.resize(10);
+        BOOST_CHECK(keeps(b, 7UZ));
+        b.push_back(true);
+        b.push_back(false);
+        BOOST_CHECK(keeps(b, 8UZ));
+        b.pop_back();
+        b.pop_back();
+        BOOST_CHECK(keeps(b, 7UZ));
+        b.append(std::uint8_t{0x0F});
+        BOOST_CHECK(keeps(b, 11UZ));
+        b.clear();
+        BOOST_CHECK(keeps(b, 0UZ));
+}
+
+// A range, one position, and the whole width, each written to either value.
+BOOST_AUTO_TEST_CASE(ACountedWidthKeepsItsCountThroughRangesAndFills)
+{
+        auto b = from_model<counted>(patterned(18));
+        b.set(2, 15, true);
+        BOOST_CHECK(keeps(b, 17UZ));
+        b.set(0, 9, false);
+        BOOST_CHECK(keeps(b, 9UZ));
+        b.assign(0, true);
+        BOOST_CHECK(keeps(b, 10UZ));
+        b.fill(false);
+        BOOST_CHECK(keeps(b, 0UZ));
+        b.fill(true);
+        BOOST_CHECK(keeps(b, 18UZ));
+        BOOST_CHECK(b.growing_insert(40));
+        BOOST_CHECK(keeps(b, 19UZ));
+        BOOST_CHECK(not b.growing_insert(40));
+        BOOST_CHECK(keeps(b, 19UZ));
+}
+
+// A transform rewrites every block, and a complement sets the bits above the width that only the last block holds.
+BOOST_AUTO_TEST_CASE(ACountedWidthKeepsItsCountThroughTransformsAndPermutations)
+{
+        auto const complement = [](std::uint8_t block) -> std::uint8_t { return static_cast<std::uint8_t>(~block); };
+        auto whole            = from_model<counted>(patterned(16));
+        whole.transform(complement);
+        BOOST_CHECK(keeps(whole, 5UZ));
+        auto part = from_model<counted>(patterned(13));
+        part.transform(complement);
+        BOOST_CHECK(keeps(part, 4UZ));
+        part.transform(from_model<counted>(patterned(13)), [](std::uint8_t x, std::uint8_t y) -> std::uint8_t { return static_cast<std::uint8_t>(x | y); });
+        BOOST_CHECK(keeps(part, 13UZ));
+        part.reset(6);
+        part.rotate(5);
+        part.reverse();
+        BOOST_CHECK(keeps(part, 12UZ));
+}
+
+// The set operations at two widths, the narrower one's missing blocks read as zero.
+BOOST_AUTO_TEST_CASE(ACountedWidthKeepsItsCountThroughTheSetOperationsAcrossWidths)
+{
+        auto const wide   = from_model<counted>(patterned(30));
+        auto const narrow = from_model<counted>(patterned(9));
+        auto c            = wide;
+        c &= narrow;
+        BOOST_CHECK(keeps(c, 6UZ));
+        c = wide;
+        c -= narrow;
+        BOOST_CHECK(keeps(c, 14UZ));
+        c = wide;
+        c ^= narrow;
+        BOOST_CHECK(keeps(c, 14UZ));
+        auto grown = counted(70);
+        grown.grow_to_admit(wide);
+        grown |= wide;
+        BOOST_CHECK(keeps(grown, 20UZ));
+}
+
+// Whole blocks in or out, and every copy and move, the moved-from source left with nothing to count.
+BOOST_AUTO_TEST_CASE(ACountedWidthKeepsItsCountThroughItsBlocksAndItsMoves)
+{
+        using T = xstd::bits::detail::set_bits_t<std::vector<std::uint8_t>>;
+        using A = std::allocator<std::uint8_t>;
+
+        auto adopted = T(xstd::from_blocks, std::vector<std::uint8_t>{0xFF, 0x01});
+        BOOST_CHECK_EQUAL(adopted.count(), 9UZ);
+        auto const allocated = T(xstd::from_blocks, std::vector<std::uint8_t>{0x03}, A());
+        BOOST_CHECK_EQUAL(allocated.count(), 2UZ);
+        adopted.replace(std::vector<std::uint8_t>{0x07});
+        BOOST_CHECK_EQUAL(adopted.count(), 3UZ);
+
+        auto copied = T(adopted, A());
+        BOOST_CHECK_EQUAL(copied.count(), 3UZ);
+        auto moved = T(std::move(copied), A());
+        BOOST_CHECK(moved.count() == 3UZ and copied.count() == 0UZ); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
+        auto taken = T(std::move(moved));
+        BOOST_CHECK(taken.count() == 3UZ and moved.count() == 0UZ); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
+
+        auto target = T();
+        copy_assign(target, allocated);
+        BOOST_CHECK_EQUAL(target.count(), 2UZ);
+        move_assign(target, taken);
+        BOOST_CHECK(target.count() == 3UZ and taken.count() == 0UZ); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the moved-from state is the check.
+
+        auto other = T(xstd::from_blocks, std::vector<std::uint8_t>{0xF0, 0xF0});
+        swap(target, other);
+        BOOST_CHECK(target.count() == 8UZ and other.count() == 3UZ);
+
+        auto const blocks = std::move(target).extract();
+        BOOST_CHECK(blocks.size() == 2UZ and target.count() == 0UZ); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): the extracted-from state is the check.
 }
 
 BOOST_AUTO_TEST_SUITE_END()

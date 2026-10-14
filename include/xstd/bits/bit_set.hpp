@@ -8,7 +8,7 @@
 
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>      // bit_index_mapping
 #include <xstd/bits/bit_key_mapping.hpp>                     // bit_key_mapping
-#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
+#include <xstd/bits/detail/bit_block_container.hpp>          // set_bits_t
 #include <xstd/bits/detail/num_blocks.hpp>                   // tiling_block
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
@@ -34,9 +34,9 @@ namespace xstd {
 // The set reading over a heap of blocks: the flagship, and the one name without a qualifier.
 template<class Key, xstd::unsigned_integer Block, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>, class Allocator = std::allocator<Block>>
         requires bits::detail::tiling_block<Block>
-class basic_bit_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>, Key, KeyMapping, Compare>
+class basic_bit_set : public bits::detail::set_adaptor<bits::detail::set_bits_t<std::vector<Block, Allocator>>, bits::detail::storage::owned, basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>, Key, KeyMapping, Compare>
 {
-        using base_type = bits::detail::set_adaptor<bits::detail::bit_block_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>, Key, KeyMapping, Compare>;
+        using base_type = bits::detail::set_adaptor<bits::detail::set_bits_t<std::vector<Block, Allocator>>, bits::detail::storage::owned, basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>, Key, KeyMapping, Compare>;
 
 public:
         using typename base_type::allocator_type;

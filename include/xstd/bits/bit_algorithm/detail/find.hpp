@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_FIND_HPP
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_FIND_HPP
 
-#include <xstd/bits/detail/intrin.hpp> // countl_zero, countr_zero
-#include <xstd/bits/detail/shift.hpp>  // partial_block_mask
-#include <algorithm>                   // min
-#include <cstddef>                     // size_t
+#include <xstd/bits/detail/intrinsic.hpp> // countl_zero, countr_zero
+#include <xstd/bits/detail/shift.hpp>     // partial_block_mask
+#include <algorithm>                      // min
+#include <cstddef>                        // size_t
 
 namespace xstd::bits::detail {
 

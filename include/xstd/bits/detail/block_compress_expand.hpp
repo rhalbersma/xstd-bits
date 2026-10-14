@@ -8,7 +8,7 @@
 
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
 #include <xstd/bits/detail/borrowed_bits.hpp>              // borrowed_bits
-#include <xstd/bits/detail/intrin.hpp>                     // popcount
+#include <xstd/bits/detail/intrinsic.hpp>                  // popcount
 #include <xstd/bits/detail/shift.hpp>                      // partial_block_mask, shl, shr
 #include <xstd/ints/bit/bit_compress.hpp>                  // bit_compress
 #include <xstd/ints/bit/bit_expand.hpp>                    // bit_expand

@@ -13,8 +13,8 @@
 #include <xstd/bits/bit_key_mapping.hpp>              // bit_key_mapping, bit_range_mapping
 #include <xstd/bits/bit_set.hpp>                      // bit_set
 #include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
-#include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container
-#include <xstd/bits/detail/ownership.hpp>             // storage
+#include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container, set_bits_t
+#include <xstd/bits/detail/ownership.hpp>             // owned_bits_t, storage
 #include <xstd/bits/detail/set_adaptor.hpp>           // set_adaptor
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                  // equal, ranges::equal
@@ -42,7 +42,7 @@ using T = xstd::basic_bit_set<std::size_t, std::uint8_t>;
 // The flagship: the set reading over a heap of blocks, built on the set adaptor.
 BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
-        static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, T>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::set_bits_t<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, T>>);
         static_assert(std::same_as<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::allocator<std::uint8_t>>, T>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
 }
 
@@ -171,6 +171,28 @@ BOOST_AUTO_TEST_CASE(TheShiftsTranslateWhateverTheWidth)
         BOOST_CHECK((b >> 4) == T({1}));
         BOOST_CHECK((b >> 300).empty());
         BOOST_CHECK((T() << 3).empty());
+}
+
+// A width that can grow keeps its key count beside the blocks, and a view over the set writes it as the owner does.
+BOOST_AUTO_TEST_CASE(TheKeyCountIsKeptThroughEveryHandle)
+{
+        static_assert(xstd::bits::detail::owned_bits_t<T>::has_stored_count);
+        static_assert(not xstd::bits::detail::owned_bits_t<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 200>>::has_stored_count);
+
+        auto s = T({1, 3, 200});
+        BOOST_CHECK_EQUAL(s.size(), 3UZ);
+        auto v = xstd::bit_set_view(s);
+        static_cast<void>(v.insert(7));
+        static_cast<void>(v.erase(1));
+        BOOST_CHECK_EQUAL(s.size(), 3UZ);
+        v |= xstd::bit_set_view(s);
+        v -= xstd::bit_set_view(s);
+        BOOST_CHECK(s.empty() and v.empty());
+        s.insert_range(std::views::iota(10UZ, 40UZ));
+        BOOST_CHECK_EQUAL(s.size(), 30UZ);
+        s <<= 100;
+        s >>= 120;
+        BOOST_CHECK_EQUAL(s.size(), 20UZ);
 }
 
 // Ascending keys, whatever the insertion order: what makes this a set rather than a bag of positions.

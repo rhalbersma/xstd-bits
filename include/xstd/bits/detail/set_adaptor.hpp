@@ -643,7 +643,11 @@ public:
         [[nodiscard]] constexpr auto empty() const noexcept
                 -> bool
         {
-                return begin() == end();
+                if constexpr (bits_type::has_stored_count) {
+                        return size() == 0UZ;
+                } else {
+                        return begin() == end();
+                }
         }
 
         [[nodiscard]] constexpr auto size() const noexcept
