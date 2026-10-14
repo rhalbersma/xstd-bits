@@ -272,7 +272,7 @@ public:
                 return m_indices.size();
         }
 
-        [[nodiscard]] constexpr auto within(std::size_t n) const noexcept
+        [[nodiscard]] auto within(std::size_t n) const noexcept
                 -> bool
         {
                 return all_below(m_indices, n);
