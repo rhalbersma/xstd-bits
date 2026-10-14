@@ -15,6 +15,7 @@
 #include <iterator>                                // ranges::distance
 #include <ranges>                                  // begin, end, range_difference_t, range_value_t, size
 #include <type_traits>                             // conditional_t, is_enum_v
+#include <utility>                                 // cmp_greater_equal
 
 // How a set owner's key maps onto a position and back: an order-preserving bijection onto the positions [0, N).
 namespace xstd {
@@ -131,6 +132,16 @@ template<class Key>
         requires std::is_enum_v<Key> and requires { enum_traits<Key>::values; }
 struct bit_key_mapping<Key> : std::conditional_t<bits::detail::are_consecutive(enum_traits<Key>::values), bit_range_mapping<Key, *std::ranges::begin(enum_traits<Key>::values), std::ranges::size(enum_traits<Key>::values)>, bit_find_mapping<Key, enum_traits<Key>::values>>
 {};
+
+// An enumeration ending in its author's count, with no list: the keys from E{} up to count, contiguous by its meaning.
+template<class Key>
+        requires std::is_enum_v<Key> and (not requires { enum_traits<Key>::values; }) and requires { Key::count; }
+struct bit_key_mapping<Key> : bit_range_mapping<Key, Key{}, bits::detail::key_distance(Key{}, Key::count)>
+{
+private:
+        // A count below zero would wrap round to a universe of nearly every value.
+        static_assert(std::cmp_greater_equal(bits::detail::ordinal(Key::count), 0));
+};
 
 } // namespace xstd
 

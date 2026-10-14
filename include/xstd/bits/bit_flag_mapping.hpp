@@ -6,9 +6,7 @@
 #ifndef XSTD_BITS_BIT_FLAG_MAPPING_HPP
 #define XSTD_BITS_BIT_FLAG_MAPPING_HPP
 
-#include <xstd/bits/detail/flag_block.hpp> // flag_mask, flag_width_v, flag_block_t, from_block, to_block
-#include <xstd/bits/detail/shift.hpp>      // shl
-#include <bit>                             // countr_zero, has_single_bit
+#include <xstd/bits/detail/flag_block.hpp> // default_flag_width_v, flag_block_t, flag_mask, flag_width_v, from_block, to_block, word_bit, word_count, word_countr_zero
 #include <cassert>                         // assert
 #include <cstddef>                         // size_t
 
@@ -16,7 +14,7 @@
 namespace xstd {
 
 // A one-bit value ranks at the position of its bit, and rank i is the value 1 << i: an enumeration, integer or bitset.
-template<class Key, std::size_t N = bits::detail::flag_width_v<Key>>
+template<class Key, std::size_t N = bits::detail::default_flag_width_v<Key>>
         requires bits::detail::flag_mask<Key>
 struct bit_flag_mapping
 {
@@ -24,7 +22,7 @@ private:
         static_assert(N <= bits::detail::flag_width_v<Key>);
 
 public:
-        // The unsigned block a mask is read and written as, every bit of it at its own position.
+        // The unsigned word a mask is read and written as, a block or an array of them, each bit at its own position.
         using block_type = bits::detail::flag_block_t<Key>;
 
         static constexpr std::size_t size = N;
@@ -34,7 +32,7 @@ public:
                 -> bool
         {
                 auto const block = bits::detail::to_block(key);
-                return std::has_single_bit(block) and static_cast<std::size_t>(std::countr_zero(block)) < N;
+                return bits::detail::word_count(block) == 1UZ and bits::detail::word_countr_zero(block) < N;
         }
 
         // The key has exactly one bit set; one at or above N ranks at size or above.
@@ -42,15 +40,15 @@ public:
                 -> std::size_t
         {
                 auto const block = bits::detail::to_block(key);
-                assert(std::has_single_bit(block));
-                return static_cast<std::size_t>(std::countr_zero(block));
+                assert(bits::detail::word_count(block) == 1UZ);
+                return bits::detail::word_countr_zero(block);
         }
 
         [[nodiscard]] static constexpr auto from_index(std::size_t index) noexcept
                 -> Key
         {
                 assert(index < N);
-                return bits::detail::from_block<Key>(bits::detail::shl(block_type{1}, index));
+                return bits::detail::from_block<Key>(bits::detail::word_bit<block_type>(index));
         }
 
         // Any value of the mask, one-bit or not, as the block holding its bits; from_block reads it back.
@@ -60,7 +58,7 @@ public:
                 return bits::detail::to_block(mask);
         }
 
-        [[nodiscard]] static constexpr auto from_block(block_type block) noexcept
+        [[nodiscard]] static constexpr auto from_block(block_type const& block) noexcept
                 -> Key
         {
                 return bits::detail::from_block<Key>(block);
