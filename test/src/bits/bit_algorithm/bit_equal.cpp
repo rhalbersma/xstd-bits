@@ -9,6 +9,7 @@
 #include <test/for_each_type.hpp>                // for_each_type
 #include <xstd/bits/bit_algorithm/bit_equal.hpp> // bit_equal
 #include <xstd/bits/bit_array.hpp>               // basic_bit_array, bit_array
+#include <xstd/bits/bit_bounded_vector.hpp>      // basic_bit_bounded_vector
 #include <xstd/bits/bit_fixed_set.hpp>           // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_key_mapping.hpp>         // bit_key_mapping
 #include <xstd/bits/bit_set.hpp>                 // bit_set
@@ -101,7 +102,14 @@ BOOST_AUTO_TEST_CASE(WindowsAndViewsCompareTheirOwnElements)
         BOOST_CHECK_EQUAL(wrong, 0);
         auto owner = xstd::bit_fixed_set<130>{0UZ, 64UZ, 129UZ};
         BOOST_CHECK(agrees(xstd::bit_set_view(owner), xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 130>{0UZ, 64UZ}));
-        BOOST_CHECK(agrees(xstd::bit_span(a), xstd::basic_bit_array<std::uint64_t, 21>()));
+        BOOST_CHECK(agrees(xstd::bit_span(a), xstd::basic_bit_array<std::uint64_t, 21>()) and agrees(xstd::bit_span(a), test::algorithm::patterned(xstd::basic_bit_array<std::uint64_t, 21>())));
+}
+
+// A capacity of nought against a run-time width that holds bools: the sizes still decide.
+BOOST_AUTO_TEST_CASE(ZeroCapacityAgainstARunTimeWidth)
+{
+        auto const none = xstd::basic_bit_bounded_vector<std::uint8_t, 0>();
+        BOOST_CHECK(agrees(none, xstd::bit_vector()) and agrees(none, xstd::bit_vector(1UZ)));
 }
 
 // In a constant expression, and over two of one reading and one width kind alone, as bit_hasher keeps them apart.

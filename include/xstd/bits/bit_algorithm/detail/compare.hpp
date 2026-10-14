@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_COMPARE_HPP
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_COMPARE_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // descends, first_mismatch, first_position, reads_keys, whole_sequence
+#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // bits_t, descends, first_mismatch, first_position, reads_keys, static_width, whole_sequence
 #include <xstd/bits/detail/comparisons.hpp>             // numeric_three_way, set_equal, three_way
 #include <xstd/bits/detail/intrin.hpp>                  // countr_zero
 #include <xstd/bits/detail/ownership.hpp>               // sequence_reading_tag, set_reading_tag, storage_access
@@ -19,6 +19,7 @@
 #include <cstdint>                                      // uint64_t
 #include <limits>                                       // numeric_limits
 #include <ranges>                                       // size
+#include <span>                                         // dynamic_extent
 #include <type_traits>                                  // remove_cvref_t
 #include <utility>                                      // declval
 
@@ -48,14 +49,20 @@ template<class Bits>
 template<class R1, class R2>
 concept same_storage = std::same_as<std::remove_cvref_t<decltype(storage_access::bits(std::declval<R1 const&>()))>, std::remove_cvref_t<decltype(storage_access::bits(std::declval<R2 const&>()))>>;
 
-// Whether two sequences of one size hold the same bools: in their blocks where they can, else a word at a time.
+// A sequence whose size two values of its type can disagree on: a run-time width over storage that can hold a bool.
+template<class R>
+concept varying_size = static_width<R>() == std::dynamic_extent and not bits_t<R>::has_zero_capacity;
+
+// Whether two sequences hold the same bools: in their blocks where they can, else a word at a time.
 template<class R1, class R2>
 [[nodiscard]] constexpr auto equal_bools(R1 const& r1, R2 const& r2) noexcept
         -> bool
 {
         auto const n = std::ranges::size(r1);
-        if (n != std::ranges::size(r2)) {
-                return false;
+        if constexpr (varying_size<R1> or varying_size<R2>) {
+                if (n != std::ranges::size(r2)) {
+                        return false;
+                }
         }
         auto const& x = storage_access::bits(r1);
         auto const& y = storage_access::bits(r2);
@@ -117,7 +124,11 @@ template<class R1, class R2>
                                 return (xw & first) != 0U ? std::strong_ordering::greater : std::strong_ordering::less;
                         }
                 }
-                return n1 <=> n2;
+                if constexpr (varying_size<R1> or varying_size<R2>) {
+                        return n1 <=> n2;
+                } else {
+                        return std::strong_ordering::equal;
+                }
         }
 }
 
@@ -139,7 +150,7 @@ template<class X, class Y>
                 auto const xw = word_at(x, k * word_digits, x.size());
                 auto const yw = word_at(y, k * word_digits, y.size());
                 if (xw != yw) {
-                        return xw <=> yw;
+                        return xw < yw ? std::strong_ordering::less : std::strong_ordering::greater;
                 }
         }
         return std::strong_ordering::equal;
