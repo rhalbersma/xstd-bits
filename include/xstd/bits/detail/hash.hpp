@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_HASH_HPP
 
 #include <xstd/bits/detail/bit_layout.hpp> // bits_per_byte, block_byte, block_copies_as_bytes, block_digits, byte_count, bytes_per_block
-#include <xstd/bits/detail/intrin.hpp>     // bools_per_block, expand_block
+#include <xstd/bits/detail/intrinsic.hpp>  // bools_per_block, expand_block
 #include <xstd/bits/detail/ownership.hpp>  // owner, reads, set_reading_tag, storage_access
 #include <xstd/bits/detail/shift.hpp>      // shr
 #include <boost/hash2/hash_append.hpp>     // hash_append, hash_append_size

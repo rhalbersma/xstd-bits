@@ -8,7 +8,7 @@
 
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>      // bit_index_mapping
 #include <xstd/bits/bit_key_mapping.hpp>                     // bit_key_mapping
-#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
+#include <xstd/bits/detail/bit_block_container.hpp>          // set_bits_t
 #include <xstd/bits/detail/num_blocks.hpp>                   // num_blocks_v, tiling_block
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
@@ -34,9 +34,9 @@ namespace xstd {
 // The set reading over the small-vector column; the allocator is Boost's own, as that container defaults to it.
 template<class Key, xstd::unsigned_integer Block, std::size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>, class Alloc = boost::container::new_allocator<Block>>
         requires bits::detail::tiling_block<Block>
-class basic_bit_small_set : public bits::detail::set_adaptor<bits::detail::bit_block_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>, Key, KeyMapping, Compare>
+class basic_bit_small_set : public bits::detail::set_adaptor<bits::detail::set_bits_t<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>, Key, KeyMapping, Compare>
 {
-        using base_type = bits::detail::set_adaptor<bits::detail::bit_block_container<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>, Key, KeyMapping, Compare>;
+        using base_type = bits::detail::set_adaptor<bits::detail::set_bits_t<boost::container::small_vector<Block, bits::detail::num_blocks_v<Block, N>, Alloc>>, bits::detail::storage::owned, basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>, Key, KeyMapping, Compare>;
 
         // A mapping that names a size closes the universe, and the width must be that size.
         static_assert(bits::detail::set::admits_width<KeyMapping, Key, N>);

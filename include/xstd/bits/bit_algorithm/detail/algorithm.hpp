@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_ALGORITHM_HPP
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_ALGORITHM_HPP
 
-#include <xstd/bits/detail/intrin.hpp>    // countr_zero
+#include <xstd/bits/detail/intrinsic.hpp> // countr_zero
 #include <xstd/bits/detail/ownership.hpp> // reads, sequence_reading_tag, set_reading_tag, storage_access
 #include <algorithm>                      // min
 #include <concepts>                       // same_as

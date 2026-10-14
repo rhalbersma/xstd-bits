@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_type_traits/bit_least.hpp>      // least_block_t
 #include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
 #include <xstd/bits/detail/bit_layout.hpp>              // bit_bytes, bytes_bits
-#include <xstd/bits/detail/intrin.hpp>                  // countr_zero, popcount
+#include <xstd/bits/detail/intrinsic.hpp>               // countr_zero, popcount
 #include <xstd/bits/detail/ordinal.hpp>                 // ordinal_t
 #include <xstd/bits/detail/shift.hpp>                   // shl
 #include <xstd/ints/concepts/integer.hpp>               // integer

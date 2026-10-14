@@ -109,6 +109,31 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparisonsAnswerAnArrayOfBools, V, Types)
         test::valarray::check_comparison<V>();
 }
 
+BOOST_AUTO_TEST_CASE_TEMPLATE(APointerConstructsThatManyElements, V, Types)
+{
+        test::valarray::check_pointer<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(ASliceGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_slice<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(AGsliceGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_gslice<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(AMaskGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_mask<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(AnIndexArrayGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_indirect<V>();
+}
+
 BOOST_AUTO_TEST_CASE_TEMPLATE(BeginAndEndMakeItARandomAccessRange, V, Types)
 {
         test::valarray::check_range<V>();
@@ -151,6 +176,25 @@ BOOST_AUTO_TEST_CASE(ItIsUsableInConstantExpressions)
                 auto v = xstd::bit_bounded_valarray<70>{true, false, true};
                 v.resize(68UZ, true);
                 return (v >> 67UZ)[0] and not(v << 68UZ).max();
+        }());
+}
+
+// A mask gathers, its proxy writes, and an array is read from a pointer and from a proxy, in a constant expression.
+BOOST_AUTO_TEST_CASE(TheMaskSubscriptIsUsableInConstantExpressions)
+{
+        static_assert([] -> bool {
+                using V   = xstd::bit_bounded_valarray<70>;
+                auto mask = V(false, 68UZ);
+                mask[1]   = true;
+                mask[65]  = true;
+                auto v    = V(false, 68UZ);
+                v[mask]   = V{true, true};
+                v[mask] &= V{false, true};
+                bool const bools[3] = {true, false, true}; // NOLINT(modernize-avoid-c-arrays): what the pointer reads.
+                auto const& read    = v;
+                auto const gathered = read[mask];
+                auto const proxied  = V(v[mask]);
+                return not gathered[0] and gathered[1] and (gathered == proxied).min() and V(bools, 3UZ)[2];
         }());
 }
 

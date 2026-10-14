@@ -105,4 +105,19 @@ BOOST_AUTO_TEST_CASE(AWidthInsideTheCapacityStaysOffTheHeap)
         BOOST_CHECK(allocations > 0);
 }
 
+// The count is kept on both sides of the inline capacity, and across the move from the buffer onto the heap.
+BOOST_AUTO_TEST_CASE(TheKeyCountIsKeptOnBothSidesOfTheCapacity)
+{
+        auto s = CountedSet();
+        s.insert(3);
+        s.insert(N - 1);
+        BOOST_CHECK_EQUAL(s.size(), 2UZ);
+        s.insert(5 * N);
+        BOOST_CHECK_EQUAL(s.size(), 3UZ);
+        static_cast<void>(s.erase(3));
+        BOOST_CHECK_EQUAL(s.size(), 2UZ);
+        s.clear();
+        BOOST_CHECK(s.empty());
+}
+
 BOOST_AUTO_TEST_SUITE_END()

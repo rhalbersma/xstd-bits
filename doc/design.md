@@ -86,7 +86,7 @@ storage whose `resize` is `noexcept` never takes that path.
 The element clause is `xstd::unsigned_integer`, and **not** the wider `bit_mask`, which would be the concept
 if the operators were all a block is asked for. They are not. Beyond them the body wants the `<bit>` intrinsics
 — `popcount`, `countr_zero` and `countl_zero`, each constrained on `xstd::unsigned_integer` in
-`detail/intrin.hpp` and reached at some thirty sites — a `numeric_limits<block_type>::digits` for
+`detail/intrinsic.hpp` and reached at some thirty sites — a `numeric_limits<block_type>::digits` for
 `bits_per_block`, and block arithmetic: `shl(unit, count) - unit`, and the `block & (block - 1)` step the set
 reading's block walk takes, where `bit_mask` omits `-` deliberately, subtraction and set difference
 being indistinguishable to a concept.
@@ -1383,9 +1383,10 @@ flavor, and a bit container hashes inside a user's Hash2-hashed aggregate as the
 | every set and set view | `std::set<Key, Compare>` | each key in iteration order, descending under `std::greater`, then `hash_append_size(count)` |
 
 A sequence's bools are not read through its proxies. `detail/hash.hpp` expands each 64-bit word of the bits
-into 64 bytes, through `detail/intrin.hpp`: one `_mm512_movm_epi8` where AVX-512BW is enabled, a `_pdep_u64`
-per byte where BMI2 is on x86-64, and otherwise, and in a constant expression, a 256-entry table of each byte's eight
-bools. Eight words go to an `update`, and the last stops at the width: no padding bit is ever a bool. Chunking
+into 64 bytes, through `detail/intrinsic.hpp`: one `_mm512_movm_epi8` where AVX-512BW is enabled, an
+`xstd::bit_expand` per byte where xstd-ints finds PDEP fast, which is BMI2 on x86-64 short of the AMD processors that
+microcode it and MSVC's `/arch:AVX2`, and otherwise, and in a constant expression, a 256-entry table of each byte's
+eight bools. Eight words go to an `update`, and the last stops at the width: no padding bit is ever a bool. Chunking
 does not change a Hash2 digest, so the expansion's grain is free. A set walks its keys, costing what `std::set`
 costs, and appends each as `Key`, so its message follows the platform's `std::size_t` as the model's does.
 `bit_block_container`, which is no reading, keeps its own hook over its blocks.
@@ -2480,30 +2481,33 @@ The containers here are principled versions of the standard's: `bit_vector` is w
 `std::inplace_vector<bool, N>`. None of those has a bitwise operator, so none of ours does. What `&=` means on a
 row of bools is **elementwise logical**, `a[i] = a[i] and b[i]` at every position, and the one standard type
 that spells it is `std::valarray<bool>`, R's logical vector. That is a reading of its own, the sequence read
-elementwise, with its own three owners over the sequence's storages:
+elementwise, with its own four owners over the sequence's storages:
 
 | | `std::valarray<bool>` packed |
 | :--- | :--- |
 | static size, `std::bitset<N>` read elementwise | `bit_fixed_valarray<N>` |
 | run-time size within a capacity `N` | `bit_bounded_valarray<N>` |
+| run-time size inline up to `N`, on the heap past it, in `<xstd/bits/ext/boost.hpp>` | `bit_small_valarray<N>` |
 | run-time size on the heap, `boost::dynamic_bitset` read elementwise | `bit_valarray` |
 
-All three are one `valarray_adaptor` over the storage, whose reading tag refines the sequence's: the algorithms of
+All four are one `valarray_adaptor` over the storage, whose reading tag refines the sequence's: the algorithms of
 [algorithms-not-members](#algorithms-not-members) and `xstd::bit_convert` take a valarray as they take a sequence, and
 a `bit_span` views one as a `std::span<bool>` views a `std::valarray<bool>`. Its proxy and iterators are the
 sequence's, handed out through a whole view of its own storage. On packed bits every elementwise operation is
 the set operation's own instruction a block at a time, so the reading costs nothing to serve.
 
 **The interface is `[valarray]`'s at `T = bool`, line by line.** `value_type`, and the proxy `reference` that
-stands in for `T&`; the default, count, value-and-count (the value first, as `[valarray.cons]` orders them) and
-list constructors; assignment from an array, a `bool` filling every element, and a list; `operator[]`, a proxy
-where `valarray` hands out `T&` and a `bool` where it hands out `const T&`; `swap`, `size`, `sum`, `min`, `max`,
+stands in for `T&`; the default, count, value-and-count (the value first, as `[valarray.cons]` orders them),
+pointer-and-count, list and proxy constructors; assignment from an array, a `bool` filling every element, a list
+and each of the four proxies; `operator[]`, a proxy where `valarray` hands out `T&` and a `bool` where it hands out
+`const T&`, and the four subscripts of `[valarray.sub]` described below; `swap`, `size`, `sum`, `min`, `max`,
 `shift`, `cshift`, `apply` in both shapes and `resize`, which assigns its value to every element as
 `[valarray.members]` says; `!`, `&=`, `|=` and `^=` against an array and a scalar; `&`, `|`, `^`, `&&`, `||` and
 the six comparisons over two arrays and over an array and a scalar on either side; `swap`, `begin` and `end` as
 non-members, which makes it a random-access range, and no member `begin` or `end`. A static size has no count
 constructors and no `resize`, and takes `std::array`'s list initialization and a built-in array of bools as
-`bit_array` does. Each array operator asserts that its operands have one size, the precondition `[valarray]` makes
+`bit_array` does; its pointer constructor and its constructors from a proxy assert that the count is the type's
+own. Each array operator asserts that its operands have one size, the precondition `[valarray]` makes
 undefined behaviour. Everything is `constexpr` as far as the storage is: the fixed one entirely, and structural at
 whole blocks; the heap one in a constant expression as `std::vector` is; the bounded one where its blocks are a
 `std::inplace_vector`. Besides `[valarray]`, the owners take `from_blocks` as every owner does.
@@ -2527,10 +2531,93 @@ whole blocks; the heap one in a constant expression as `std::vector` is; the bou
   `std::valarray`. Whole-array equality is `(v == w).min()`, or `xstd::bit_mismatch`.
 - **`apply` is asked twice.** A function of one `bool` is one of four, so `apply(func)` calls `func(false)` and
   `func(true)` once each and applies the answer a block at a time: a constant, the identity or a negation.
-- **No pointer constructor and no slices.** `valarray(const T*, size_t)` needs no packed form, a list or
-  `xstd::bit_convert` taking its place. `slice_array`, `gslice_array`, `mask_array` and `indirect_array`, and the
-  subscripts that make them, are deferred: each is a view with the valarray's operators, and a `bit_subspan`
-  already covers the contiguous slice.
+- **The proxies take scalar compound assignments and no shifts.** `[template.slice.array]` and its siblings
+  have `=` from a `T` but compound assignment only from an array; here `&=`, `|=` and `^=` take a `bool` too, as the
+  owners' do. Their `<<=` and `>>=` shift each element's value, which on a `bool` is arithmetic, and a position
+  shift over positions that need not be contiguous has no counterpart, so a proxy has neither.
+- **A fixed size gathers into the bounded array.** A const subscript returns a valarray of the run-time size it
+  selects, so `bit_fixed_valarray<N>` returns a `bit_bounded_valarray<N>` over the same block: no heap, and
+  `constexpr` as far as the bounded one is. A gather longer than `N`, which a slice of stride zero, a gslice or an
+  index array can make by repeating positions, throws `std::bad_alloc` as the bounded array does past its capacity.
+
+**The subscripts.** `[valarray.sub]`'s four each come in two forms: on a const array a gather into a valarray of
+its own, and on a non-const one a proxy, `bit_slice_array`, `bit_gslice_array`, `bit_mask_array` or
+`bit_indirect_array`, over the same block type. A proxy refers to its array's blocks, as `std::slice_array` refers
+to its `std::valarray`: it is made by the subscript alone, copies as a handle to the same elements, and must not
+outlive the array, or a mask or an index array it was made from, any more than the standard's must. Through a const
+proxy, `=`, `&=`, `|=` and `^=` take an array of the proxy's size or a `bool`, and assigning one proxy to another
+assigns elements, never the reference. An array here is any owner of the valarray reading over the same block, or
+another proxy, which gathers what it selects before any position is written, so `v[s] = v[t]` reads `v` before it
+writes it. A mask is any owner of the valarray reading over the same block and of the same size; a
+`std::valarray<bool>` would have to be packed into blocks the proxy then owns, so it is not taken. Every owner is
+constructible from each proxy, implicitly as `[valarray.cons]` makes it, and assignable from it, so the compound
+operators and the binary ones take a proxy on the right as they do in `std::valarray`.
+
+Each subscript asserts its positions lie inside the array, and the mask its size. `[indirect.array.assign]` leaves a
+write that names a position twice undefined, and the indirect proxy asserts against it, as every undefined case of
+`[valarray]` here is asserted. A slice of stride zero and a gslice that repeats a position are left defined by the
+standard, and write one position at a time, in order, so the last write to a position stands: libc++ does the same,
+and libstdc++ leaves a stride of zero's compound writes undone, its loop bounded by the stride times the size.
+
+**The gather and the scatter.** Each subscript runs on one of two paths. The mask path is a block at a time:
+a gather takes `xstd::bit_compress(src_k, mask_k)` of each block, P3104's PEXT, and lays it at a running output
+offset that grows by `popcount(mask_k)`, through the write side of `block_at` ([the-blit](#the-blit)); a scatter
+reads the next `popcount(mask_k)` bits at a running input offset through `block_at` and deposits them with
+`xstd::bit_expand`, PDEP, combining them with the block as the operator says: assignment keeps `d & ~m` and adds the
+deposit, `&=` is `d & (e | ~m)`, `|=` and `^=` take the deposit as it is. A scalar is a deposit of the whole mask
+or of nothing. A mask of all ones needs no permutation and passes the block through. The index path is a position
+at a time, through `test` and `assign`.
+
+| subscript | path |
+| :--- | :--- |
+| `v[std::slice]`, `v[bit_slice]` | a run at stride one, whole blocks copied from a block boundary and the rest through `block_at`; mask, a stride below the block width, one period of `stride / gcd(stride, digits)` masks made once with `xstd::bit_repeat` and loaded, the first and last blocks cut; index, a stride of zero or of a block or more |
+| `v[std::gslice]`, `v[bit_gslice]` | mask, where the positions ascend, from the `bit_gslice`'s stored words; index, where they repeat or turn back |
+| `v[mask]` | mask, the mask's own blocks |
+| `v[std::valarray<std::size_t>]` | index |
+
+**`bit_slice` and `bit_gslice`.** `std::slice` has no `constexpr` constructor, so a slice could never be taken in a
+constant expression; `bit_slice` is the same three numbers, `constexpr` and regular, and `v[std::slice]` forwards to
+`v[bit_slice]`. `std::gslice` works its positions out once, in its constructor, and keeps them private, so a subscript
+by one had to work them out again, every time. `bit_gslice` keeps them: where its shape says they ascend, which is
+whether each stride clears the span of every dimension inside it, a check on the lengths and strides alone, it stores
+one bit per position as 64-bit words, which every block width reads as its masks, a block of up to a word inside one
+word and a wider one across several; where they repeat or turn back, it stores the positions in row-major order. The
+index is immutable and shared between copies, so a proxy holds its own copy and never outlives what it reads, which a
+`std::gslice_array` referring to a `std::gslice` can. `v[std::gslice]` builds one per subscript.
+
+**Not worse than handwritten.** The benchmark holds each subscript to three columns: `std::valarray<bool>`, this
+library, and the same algorithm written by hand over raw 64-bit words with P3104's word functions, each gather
+returning a clear array of its own as `v[s]` does. A gather collects its packed bits in a register and stores each output
+block once, full: an or into memory per input block chains each update on the last store through store forwarding,
+which at stride eight, eight blocks to an output word, held it to two thirds of the handwritten loop. Where xstd-ints runs PEXT and PDEP in hardware, a full mask goes through
+them like any other; the shortcut that saves the portable kernels a full permutation mispredicts at high densities.
+
+Handwritten means what a programmer writes at the call site with the information the library has there, and no more:
+the block width, the kind of selection, and the stride or the mask words at run time, but not how dense the selection
+is. The handwritten column is therefore the library's own algorithm as a raw loop over the same blocks of the same
+owners, with no hints, and what it measures is the cost of the abstraction alone. On GCC 15 and Clang 22 that cost is
+nil: both columns compile to the same instructions per block. What remains between them is code layout. The gather
+stores an output block on a branch that depends on the data, and GCC places that store either in line, so the common
+path jumps over it, or ahead of the loop head, so every path takes one branch; which it picks depends on the
+surrounding function, not on the loop, and at five per cent density the difference is a cycle a block. Clang lays the
+two columns out alike. `-freorder-blocks-algorithm=simple` gives GCC the better layout at every density and is the
+user's to set for the whole program; `[[likely]]`, `[[unlikely]]` and `__builtin_expect_with_probability` each help one
+density and hurt another, and profile-guided layout fits whichever density it was trained on, so the kernels carry none
+of them.
+
+A programmer who knows the density knows something the library does not, and can beat it: by a branch hint that suits
+the data, or, for a sparse enough mask, by walking its set bits instead of permuting every block. That is not an
+abstraction penalty, any more than a counting sort over small keys is a penalty of `std::sort`. Where such knowledge
+should reach the library, it belongs in the interface, as a selection type with a path of its own, the way
+`bit_gslice` carries a shape a `std::gslice` cannot; none is added without a workload that needs it.
+
+The two permutations come from xstd-ints, which runs BMI2 where the target has it fast and portable kernels
+elsewhere, choosing at compile time. Neither is public here: no `std::ranges` algorithm packs selected elements, so
+there is no signature for an `xstd::bit_compress` over this library's ranges to borrow
+([algorithms-not-members](#algorithms-not-members)), and the block-range kernels stay in `detail`, under the proxies.
+
+`std::slice`, `std::gslice` and `std::valarray<std::size_t>` have no `constexpr` constructor, so a mask's subscripts
+and a `bit_slice`'s are the ones that run in a constant expression; they do, on the fixed and bounded arrays.
 
 **The kernels.** Each operator is one bitwise expression over a block of either side, after which the padding past
 `size()` is cleared, so a count over whole blocks stays right. A scalar is a block of all ones or all zeros.
@@ -3685,6 +3772,37 @@ than an oversight: a tail invariant is needed only where blockwise reads are **u
 `vector<bool>` reads element-wise and keeps no invariant, so `flip()` dirties the whole allocation and nothing
 notices. libc++'s reads blocks and masks at every read site. This tree reads blocks unmasked and masks at the
 four writes that can dirty them.
+
+### the-kept-count
+
+A set's `size()` is its storage's `count()`. At a static width, `bit_fixed_set<N>` and `bit_bounded_set<N>`, that is
+a popcount bounded by `N`: one or two instructions at a board's width, constant in the number of elements as
+`[container.reqmts]` measures it, and a kept count would charge every write a read and an add to save them. Where
+the width grows without bound, `bit_set` and `bit_small_set`, the popcount runs over every block the set has ever
+grown to, so a megabit set holding one key pays thousands of popcounts per `size()`, and per `empty()` with it.
+Those two keep the count as a member: `set_bits_t<Blocks>` is `bit_block_container<Blocks, N, true>` exactly where
+`unbounded_width<Blocks, N>` holds. `bit_vector` holds the same blocks without it, its `size()` being its width.
+
+The count is the storage's for the reason the padding invariant is
+([the-invariant-stays-in-the-storage](#the-invariant-stays-in-the-storage)): a `bit_set_view` over a `bit_set`
+writes through the owner's storage and never through the owner, so a count the owner held would go stale at the
+first insert through a view. `set_view_storage_t` maps a view over unbounded blocks onto the counted storage its
+owner holds. Every write keeps the count:
+
+- a single bit by the bit it read, which `insert` and `erase` already return;
+- a range, `set(n, len, value)`, by the range's popcount taken before the write;
+- the shifts by the positions they drop, and `resize` by the positions that leave and arrive, applied once the
+  growth has succeeded, so a refused allocation leaves the count with the blocks it describes;
+- `&=`, `|=`, `^=` and `-=` by a popcount summed in the loop that writes the blocks, so a set operation stays one
+  pass, and `transform` the same way, less what `erase_unused` is about to clear, which only the last block holds;
+- `set()`, `reset()` and `flip()` by arithmetic on the width, and a rotation or a reversal not at all, a
+  permutation of the bits leaving their number as it was.
+
+A writer of raw blocks, through `blocks()` or the subscript, owes `recount()` exactly as it owes `erase_unused()`;
+`bit_convert` into a run-time owner is the one such writer in the tree. The count is eager. A flag set by the bulk
+writes and cleared by a recount in `size()` would make a `const` member write, which `[res.on.data.races]` forbids
+without synchronization, as reference-counted copy-on-write strings found. In a debug build `count()` asserts the
+kept count against the popcount, so every test that asks a size also checks the invariant.
 
 ### width-is-capacity
 
@@ -4983,7 +5101,7 @@ Three consequences follow, none of them obvious from the forwarding change alone
 
 **The calls are qualified, so they bind where they are written.** `xstd::popcount(block)` is a dependent call
 by a qualified name, and ADL does not apply to qualified names, so its candidates are the overloads visible at
-`intrin.hpp` — not at the instantiation. An adapter included afterwards declares its overload too late to be
+`intrinsic.hpp` — not at the instantiation. An adapter included afterwards declares its overload too late to be
 one. A translation unit reaching for an integer-class Block therefore includes that adapter first; the test
 tree does it in `test/block_types.hpp`, above every container header. The same rule decides where
 `test::block_basis` can be spelled, which is why it sits in that header rather than in one of its own: a

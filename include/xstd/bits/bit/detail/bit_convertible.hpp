@@ -249,6 +249,7 @@ template<class To, class From>
         bits.resize(target_width<To>(width));
         source::copy(from, bits.blocks());
         bits.erase_unused();
+        bits.recount();
         if constexpr (reads<To, set_reading_tag> and owned_bits_t<To>::has_static_capacity) {
                 refuse_lost_keys(bits.size(), bits.count(), width, source::count(from));
         }

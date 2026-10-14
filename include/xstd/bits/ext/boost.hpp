@@ -6,10 +6,13 @@
 #ifndef XSTD_BITS_EXT_BOOST_HPP
 #define XSTD_BITS_EXT_BOOST_HPP
 
-// The set and sequence readings over Boost's small_vector, with no umbrella: an adapted library is asked for by name.
+// The three readings over Boost's small_vector, with no umbrella: an adapted library is asked for by name.
 
 // The sequence reading.
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // IWYU pragma: export; basic_bit_small_vector, bit_small_vector
+
+// The valarray reading.
+#include <xstd/bits/ext/boost/bit_small_valarray.hpp> // IWYU pragma: export; basic_bit_small_valarray, bit_small_valarray
 
 // The set reading.
 #include <xstd/bits/ext/boost/bit_small_set.hpp> // IWYU pragma: export; basic_bit_small_set, bit_small_set
