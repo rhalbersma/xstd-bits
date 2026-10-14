@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_algorithm.hpp> // bit_all_of, bit_count, bit_none_of
+#include <xstd/bits/bit_algorithm.hpp> // bit_all_of, bit_count, bit_fill, bit_none_of
 #include <xstd/bits/bit_set_view.hpp>  // bit_set_view
 #include <xstd/bits/bit_span.hpp>      // bit_span
 #include <xstd/bits/bit_subspan.hpp>   // bit_subspan
@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(AnArrayOfBlocksIsAStaticWidth)
         BOOST_CHECK(readings_agree_with(two, two));
         BOOST_CHECK(readings_agree_with(four, four));
 
-        xstd::bit_span(four).fill(true);
+        static_cast<void>(xstd::bit_fill(xstd::bit_span(four), true));
         BOOST_CHECK(std::ranges::equal(four, std::array<std::uint32_t, 4>{~0U, ~0U, ~0U, ~0U}));
         BOOST_CHECK(xstd::bit_all_of(xstd::bit_span(four)));
 }
@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE(AVectorOfBlocksIsARunTimeWidth)
         // A window reaches across the block boundary and writes only its own positions.
         auto const window = seq.subspan(30, 20);
         BOOST_CHECK(static_cast<bool>(window[10]));
-        window.fill(true);
+        static_cast<void>(xstd::bit_fill(window, true));
         BOOST_CHECK_EQUAL(blocks[0], 0xC000'0001U);
         BOOST_CHECK_EQUAL(blocks[1], 0x8003'FFFFU);
         BOOST_CHECK(readings_agree_with(blocks, blocks));
@@ -261,7 +261,7 @@ BOOST_AUTO_TEST_CASE(AViewIsNamedByItsBlocks)
         auto const seq = xstd::bit_span(blocks);
         seq[33]        = true;
         BOOST_CHECK_EQUAL(blocks[1], 0x02U);
-        xstd::bit_span(fixed).first<4>().fill(true);
+        static_cast<void>(xstd::bit_fill(xstd::bit_span(fixed).first<4>(), true));
         BOOST_CHECK_EQUAL(fixed[0], 0x000FU);
 }
 

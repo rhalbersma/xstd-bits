@@ -62,54 +62,10 @@ template<class S>
 constexpr bool can_clear = requires (S s) { s.clear(); };
 
 template<class S>
-constexpr bool can_fill = requires (S s) { s.fill(); };
-
-template<class S>
 constexpr bool can_swap = requires (S s) { s.swap(s); };
 
 template<class S>
 constexpr bool has_complement = requires (S s) { ~s; s & s; };
-
-// What for_each accepts, dependent so a rejected functor is a false rather than a hard error.
-template<class S, class F>
-constexpr bool walks = requires (S const& s, F f) { s.for_each(f); };
-
-template<class S, class F>
-constexpr bool walks_reverse = requires (S const& s, F f) { s.for_each_reverse(f); };
-
-// Functors overloaded on the value category.
-struct void_probe
-{
-        bool& took_a_reference;
-
-        auto operator()(std::size_t&&) const -> void {}
-
-        // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
-        [[maybe_unused]] auto operator()(std::size_t&) const
-                -> void
-        {
-                took_a_reference = true;
-        }
-};
-
-struct bool_probe
-{
-        bool& took_a_reference;
-
-        auto operator()(std::size_t&&) const
-                -> bool
-        {
-                return true;
-        }
-
-        // Never called is exactly what is under test, so say so rather than let -Wunused-member-function say it.
-        [[maybe_unused]] auto operator()(std::size_t&) const
-                -> bool
-        {
-                took_a_reference = true;
-                return true;
-        }
-};
 
 template<class Set>
 [[nodiscard]] auto keys(Set const& s)
@@ -199,11 +155,11 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
 // Where the trait does not let this handle write, the member is not there to call.
 BOOST_AUTO_TEST_CASE(WritingIsGatedByTheStorageNotByThisConst)
 {
-        static_assert(can_insert<View> and can_erase<View> and can_clear<View> and can_fill<View>);
+        static_assert(can_insert<View> and can_erase<View> and can_clear<View>);
         static_assert(can_insert<View const> and can_erase<View const> and can_clear<View const>);
         static_assert(can_insert<Owner> and can_swap<Owner> and has_complement<Owner>);
 
-        static_assert(not can_insert<Reader> and not can_erase<Reader> and not can_clear<Reader> and not can_fill<Reader>);
+        static_assert(not can_insert<Reader> and not can_erase<Reader> and not can_clear<Reader>);
         static_assert(not can_insert<Owner const> and not can_erase<Owner const> and not can_clear<Owner const>);
         static_assert(not can_swap<View> and not has_complement<View>);
 }
@@ -234,7 +190,7 @@ BOOST_AUTO_TEST_CASE(AViewWritesThroughToWhatItViews)
 
         v.clear();
         BOOST_CHECK(c.none());
-        v.fill();
+        v.insert_range(std::views::iota(0UZ, v.max_size()));
         BOOST_CHECK(c.all());
 }
 
@@ -278,12 +234,12 @@ BOOST_AUTO_TEST_CASE(MaxSizeIsThePositionsThereAreToHold)
         BOOST_CHECK_EQUAL(Heap().max_size(), xstd::bits::detail::bit_block_container<std::vector<std::uint64_t>>().max_size());
         BOOST_CHECK_LT(Heap().max_size(), std::numeric_limits<std::size_t>::max());
 
-        // A view cannot grow what it views, so its max_size is that width -- and filling it is what full() means.
+        // A view cannot grow what it views, so its max_size is that width -- and inserting every key below it fills it.
         auto v          = xstd::bits::detail::bit_block_container<std::vector<std::uint64_t>>(10UZ);
         auto const view = xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<std::vector<std::uint64_t>>, xstd::bits::detail::storage::borrowed>(v);
         BOOST_CHECK_EQUAL(view.max_size(), 10UZ);
         BOOST_CHECK(view.size() != view.max_size());
-        view.fill();
+        view.insert_range(std::views::iota(0UZ, view.max_size()));
         BOOST_CHECK(view.size() == view.max_size());
         BOOST_CHECK_EQUAL(view.size(), 10UZ);
 
@@ -737,123 +693,6 @@ BOOST_AUTO_TEST_CASE(ALeftShiftDropsTheKeysItCarriesPastMaxSize)
         }
 }
 
-// for_each is the block-at-a-time walk an iterator cannot be, so it must answer exactly what iteration answers.
-BOOST_AUTO_TEST_CASE(ForEachVisitsWhatIterationVisits)
-{
-        auto const positions = {0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 99UZ};
-
-        auto owner = Owner();
-        for (auto const p : positions) {
-                owner.insert(p);
-        }
-
-        auto blocked = Storage();
-        for (auto const p : positions) {
-                blocked.set(p);
-        }
-        auto const fv = View(blocked);
-
-        auto const collect         = [](auto const& s) -> std::vector<std::size_t> { auto v = std::vector<std::size_t>(); s.for_each        ([&](std::size_t p) -> void { v.push_back(p); }); return v; };
-        auto const collect_reverse = [](auto const& s) -> std::vector<std::size_t> { auto v = std::vector<std::size_t>(); s.for_each_reverse([&](std::size_t p) -> void { v.push_back(p); }); return v; };
-        auto const iterated        = [](auto const& s) -> std::vector<std::size_t> { return {s.begin(), s.end()}; };
-        auto const reversed        = [](auto const& s) -> std::vector<std::size_t> { return {s.rbegin(), s.rend()}; };
-
-        BOOST_CHECK(collect(owner) == iterated(owner));
-        BOOST_CHECK(collect(fv) == iterated(fv));
-
-        BOOST_CHECK(collect_reverse(owner) == reversed(owner));
-        BOOST_CHECK(collect_reverse(fv) == reversed(fv));
-
-        // An empty set calls nothing, in either direction, owned or viewed.
-        auto const empty  = Owner();
-        auto bnone        = Storage();
-        auto const bnonev = View(bnone);
-        auto calls        = 0UZ;
-        empty.for_each([&](std::size_t) -> void { ++calls; });
-        empty.for_each_reverse([&](std::size_t) -> void { ++calls; });
-        bnonev.for_each([&](std::size_t) -> void { ++calls; });
-        bnonev.for_each_reverse([&](std::size_t) -> void { ++calls; });
-        BOOST_CHECK_EQUAL(calls, 0UZ);
-}
-
-// A functor returning bool means "keep going", which is what a move generator wants once it has its answer.
-BOOST_AUTO_TEST_CASE(ForEachStopsWhenTheFunctorSaysSo)
-{
-        auto const positions = {0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 99UZ};
-
-        auto owner = Owner();
-        for (auto const p : positions) {
-                owner.insert(p);
-        }
-        auto viewed = Storage();
-        for (auto const p : positions) {
-                viewed.set(p);
-        }
-        auto const bv = View(viewed);
-
-        // Stop after the first position at or above 64, so the cut lands on a block boundary.
-        auto const upto = [](auto const& s) -> std::vector<std::size_t> {
-                auto v = std::vector<std::size_t>();
-                s.for_each([&](std::size_t p) -> bool { v.push_back(p); return p < 64UZ; });
-                return v;
-        };
-        auto const expected = std::vector<std::size_t>{0UZ, 1UZ, 63UZ, 64UZ};
-        BOOST_CHECK(upto(owner) == expected);
-        BOOST_CHECK(upto(bv) == expected);
-
-        auto const downto = [](auto const& s) -> std::vector<std::size_t> {
-                auto v = std::vector<std::size_t>();
-                s.for_each_reverse([&](std::size_t p) -> bool { v.push_back(p); return p > 64UZ; });
-                return v;
-        };
-        auto const expected_reverse = std::vector<std::size_t>{99UZ, 65UZ, 64UZ};
-        BOOST_CHECK(downto(owner) == expected_reverse);
-        BOOST_CHECK(downto(bv) == expected_reverse);
-
-        // Stopping at the very first position visits exactly one.
-        auto first_only = 0UZ;
-        owner.for_each([&](std::size_t) -> bool { ++first_only; return false; });
-        BOOST_CHECK_EQUAL(first_only, 1UZ);
-}
-
-// The functor is handed the position by value, and the constraint says so.
-BOOST_AUTO_TEST_CASE(ForEachHandsThePositionByValue)
-{
-        // By value, generic or not, and by const reference: all four read what they are given.
-        static_assert(walks<Owner, decltype([](std::size_t) -> void {})>);
-        static_assert(walks<Owner, decltype([](auto) -> void {})>);
-        static_assert(walks<Owner, decltype([](std::size_t const&) -> void {})>);
-        static_assert(walks<Owner, decltype([](auto const&) -> void {})>);
-
-        // A plain function is a functor too, and stays one.
-        static_assert(walks<Owner, void (*)(std::size_t)>);
-
-        // A functor returning bool to mean "keep going" is the other accepted shape.
-        static_assert(walks<Owner, decltype([](std::size_t) -> bool { return true; })>);
-
-        // And the two that would have written to nothing.
-        static_assert(not walks<Owner, decltype([](std::size_t&) -> void {})>);
-        static_assert(not walks<Owner, decltype([](auto&) -> void {})>);
-
-        // The mirror is constrained alike, and so is a view over foreign storage.
-        static_assert(walks_reverse<Owner, decltype([](std::size_t) -> void {})>);
-        static_assert(not walks_reverse<Owner, decltype([](std::size_t&) -> void {})>);
-        static_assert(not walks<View, decltype([](std::size_t&) -> void {})>);
-
-        // And the overload resolution the constraint cannot reach: an lvalue at the call would take the reference.
-        auto owner = Owner();
-        owner.insert(3UZ);
-        auto took_a_reference = false;
-        owner.for_each(void_probe{took_a_reference});
-        BOOST_CHECK(not took_a_reference);
-        owner.for_each(bool_probe{took_a_reference});
-        BOOST_CHECK(not took_a_reference);
-        owner.for_each_reverse(void_probe{took_a_reference});
-        BOOST_CHECK(not took_a_reference);
-        owner.for_each_reverse(bool_probe{took_a_reference});
-        BOOST_CHECK(not took_a_reference);
-}
-
 // back() has a non-empty set as its precondition, and a zero width has no non-empty state to ask it in.
 BOOST_AUTO_TEST_CASE(AZeroWidthAnswersBackWithoutScanning)
 {
@@ -1269,19 +1108,6 @@ BOOST_AUTO_TEST_CASE(ADescendingOrderAcrossWidthsComparesAlignedBlocks)
         BOOST_CHECK((grown(10UZ, {1UZ, 5UZ}) <=> grown(300UZ, {200UZ})) == std::strong_ordering::less);
         BOOST_CHECK((grown(300UZ, {200UZ}) <=> grown(10UZ, {1UZ, 5UZ})) == std::strong_ordering::greater);
         BOOST_CHECK((grown(10UZ, {7UZ}) <=> grown(300UZ, {1UZ, 5UZ})) == std::strong_ordering::greater);
-}
-
-// for_each walks in the iteration order and for_each_reverse against it, whichever the direction.
-BOOST_AUTO_TEST_CASE(ForEachFollowsTheComparator)
-{
-        auto const s  = descending_fixed{0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 129UZ};
-        auto forward  = std::vector<std::size_t>();
-        auto backward = std::vector<std::size_t>();
-        s.for_each([&](std::size_t k) -> void { forward.push_back(k); });
-        s.for_each_reverse([&](std::size_t k) -> void { backward.push_back(k); });
-        BOOST_CHECK(forward == (std::vector<std::size_t>{s.begin(), s.end()}));
-        BOOST_CHECK(backward == (std::vector<std::size_t>{s.rbegin(), s.rend()}));
-        BOOST_CHECK(forward == (std::vector<std::size_t>{129UZ, 65UZ, 64UZ, 63UZ, 1UZ, 0UZ}));
 }
 
 // A view reads the positions it refers to in ascending order, whatever the owner's comparator.

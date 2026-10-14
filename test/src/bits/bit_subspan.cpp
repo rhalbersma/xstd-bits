@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <xstd/bits/bit_algorithm/bit_fill.hpp>     // bit_fill
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_subspan.hpp>                // bit_subspan
@@ -40,7 +41,7 @@ template<class X>
 constexpr bool has_subspan = requires (X x) { x.subspan(0UZ); x.first(0UZ); x.last(0UZ); };
 
 template<class X>
-constexpr bool can_fill = requires (X x) { x.fill(true); };
+constexpr bool can_fill = requires (X x) { xstd::bit_fill(x, true); };
 
 template<class X>
 constexpr bool has_bulk_ops = requires (X x) { x &= x; x |= x; x ^= x; };
@@ -92,7 +93,7 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(not has_bulk_ops<Span>);
         static_assert(not has_shifts<Span>);
 
-        // Over a const storage nothing writes: fill asks Bits, not the const-stripped bits_type.
+        // Over a const storage nothing writes: bit_fill asks Bits, not the const-stripped bits_type.
         static_assert(not can_fill<CSub>);
         static_assert(not can_fill<CSpan>);
         static_assert(std::ranges::random_access_range<CSub>); // reading is untouched
@@ -125,7 +126,7 @@ BOOST_AUTO_TEST_CASE(AWindowWritesThrough)
         BOOST_CHECK(static_cast<bool>(a[9]));
 }
 
-// fill on a window: a masked block at a time over our storage, one position at a time over a foreign one.
+// bit_fill on a window: a masked block at a time, whatever blocks the storage holds.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AWindowFillsItsPositionsAlone, T, ViewedTypes)
 {
         for (auto const off : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 15UZ}) {
@@ -140,10 +141,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AWindowFillsItsPositionsAlone, T, ViewedTypes)
                                 v[i]     = true;
                                 model[i] = true;
                         }
-                        v.subspan(off, count).fill(true);
+                        static_cast<void>(xstd::bit_fill(v.subspan(off, count), true));
                         std::ranges::fill(model.begin() + static_cast<std::ptrdiff_t>(off), model.begin() + static_cast<std::ptrdiff_t>(off + count), true);
                         BOOST_CHECK(std::ranges::equal(v, model));
-                        v.subspan(off, count).fill(false);
+                        static_cast<void>(xstd::bit_fill(v.subspan(off, count), false));
                         std::ranges::fill(model.begin() + static_cast<std::ptrdiff_t>(off), model.begin() + static_cast<std::ptrdiff_t>(off + count), false);
                         BOOST_CHECK(std::ranges::equal(v, model));
                 }
@@ -171,7 +172,7 @@ BOOST_AUTO_TEST_CASE(AStaticWindowCarriesItsWidthInItsType)
         static_assert(sizeof(v.first<4>()) + sizeof(std::size_t) == sizeof(v.first(4)));
 
         // A masked block at a time, as a dynamic window fills.
-        v.subspan<8, 8>().fill(true);
+        static_cast<void>(xstd::bit_fill(v.subspan<8, 8>(), true));
         BOOST_CHECK_EQUAL(std::ranges::count(a, true), 8);
         BOOST_CHECK(a[8] and a[15] and not a[7] and not a[16]);
 }

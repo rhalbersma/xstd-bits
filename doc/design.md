@@ -881,8 +881,8 @@ operations on a window ([windows](#windows)).
 
 `bit_block_container::block_at(pos, value, mask)` is its write side, on our storage alone as `set_block`
 is: the bits of `value` under `mask` land at `[pos, pos + digits)`, split over two blocks where `pos` is not
-aligned, the tail kept clear. Every masked write goes through it: the storage's ranged `set`, a
-window's `fill`, and a window's bulk operators, each walking the blocks a range spans with the mask of what each
+aligned, the tail kept clear. Every masked write goes through it: the storage's ranged `set`,
+`xstd::bit_fill` over a window, the copy algorithms at any two offsets, and a window's bulk operators, each walking the blocks a range spans with the mask of what each
 holds, whole blocks and a partial one at the end.
 
 ### the-funnel-shift
@@ -2086,16 +2086,17 @@ have no subviews either; they assert their preconditions rather than throw, and 
 to-the-end sentinel. A window is a view in `std::ranges`' sense and borrowed like `span`, and like `span` it
 neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-precedent)).
 
-A window's end blocks are shared with what lies outside it, so its one bulk operation is masked blocks: `fill`
-over a window of ours is `bit_block_container::set(pos, len, value)`, a block at a time through `block_at`, and
-one position at a time over a window of anything else. Like `std::span`, no view combines: elementwise logic is
+A window's end blocks are shared with what lies outside it, so every write to one is masked blocks:
+`xstd::bit_fill` over a window is `bit_block_container::set(pos, len, value)`, a block at a time through
+`block_at`, and the copies, `bit_sort` and `bit_partition` write a window the same way
+([algorithms-not-members](#algorithms-not-members)). Like `std::span`, no view combines: elementwise logic is
 the valarray reading's, over an owner ([the-valarray-reading](#the-valarray-reading)), and no sequence has shifts,
 window or whole ([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)).
 
 **A window over a const storage writes nothing, and the predicate has to be asked of the right type to say so.**
 `bits_type` is `Bits` with the const stripped, because a view over a const owner names `Bits const` and the
 typedef wants the storage's own name. Asking whether *that* takes a write is always yes, so a writer is
-constrained through the storage expression itself, which carries the const: `fill` drops out of overload
+constrained through the storage expression itself, which carries the const: `xstd::bit_fill` drops out of overload
 resolution on a const window rather than failing inside its body. `set_adaptor`'s const view does the same: every
 one of its mutators constrains through the storage expression.
 
@@ -2267,8 +2268,28 @@ Every block-wise operation the standard expresses as an algorithm over the eleme
 `<xstd/bits.hpp>`, as a free function named `xstd::bit_` and the algorithm's name. Each takes the arguments the
 `std::ranges` algorithm takes and returns what it returns: `xstd::bit_count` a `range_difference_t`, signed as
 `std::ranges::count`'s is, `xstd::bit_mismatch` a `std::ranges::mismatch_result`, `xstd::bit_rotate` a
-`borrowed_subrange_t` and `xstd::bit_reverse` a `borrowed_iterator_t`. The `std::ranges` call over the same container
-is the specification, and the tests hold each algorithm to it; what the prefix adds is the blocks.
+`borrowed_subrange_t`, `xstd::bit_copy` a `std::ranges::copy_result` and `xstd::bit_for_each` a
+`std::ranges::for_each_result`. The `std::ranges` call over the same container is the specification, and the tests
+hold each algorithm to it, on `std::vector<bool>` and `std::set<std::size_t>` models of every column's inputs;
+what the prefix adds is the blocks.
+
+**Which algorithms get a `bit_` form.** One whose work on packed bits is a pass over blocks rather than a walk of
+proxies: it beats a bit at a time because a block answers, moves or writes `digits` positions in one instruction,
+or, on the set reading, because a loop can hold a block an iterator cannot. That is the whole list below, and it is
+a closed list in the sense that an algorithm not on it is one of two kinds. **It reduces to one of these on
+bools**: every `false` is like every other, so `stable_sort`, `nth_element`, `partial_sort` and `ranges::sort` with
+`std::ranges::less` are all `bit_sort`, `stable_partition` is `bit_partition`, `count(v, false)` is
+`ssize(v) - bit_count(v)`, `find_if(v, std::identity())` is `bit_find(v, true)`, `fill_n` and `copy_n` are
+`bit_fill` and `bit_copy` over a `subspan`, `lexicographical_compare` is `bit_lexicographical_compare_three_way(a, b)
+< 0`, and `upper_bound`, `lower_bound` and `equal_range` over a sorted sequence are `bit_partition_point` and
+`bit_find`. **Or packing gains it nothing**: an algorithm taking a predicate or a function of an element the
+algorithm cannot see as a block -- `count_if`, `find_if` with a lambda, `remove_if`, `unique`, `search` with a
+comparator -- calls the caller's code once per element whatever the storage, and `std::ranges` already runs it
+correctly over these ranges. `bit_transform` is the exception that proves the rule: a function of one or two
+`bool`s has a truth table of two or four entries, so the algorithm asks it once per entry and applies the table as
+one block expression. A rejected predicate would have no such table, since a predicate's type does not say what it
+tests; the set reading's predicate algorithms are the one family still open, the walk of
+[the-set-for-each](#the-set-for-each) carrying a predicate as cheaply as it carries a functor.
 
 | algorithm | `std::ranges` equivalent | reading | a window |
 | :--- | :--- | :--- | :--- |
@@ -2276,9 +2297,30 @@ is the specification, and the tests hold each algorithm to it; what the prefix a
 | `bit_all_of(r)` | `all_of(r, std::identity())` | sequence | yes |
 | `bit_any_of(r)` | `any_of(r, std::identity())` | sequence | yes |
 | `bit_none_of(r)` | `none_of(r, std::identity())` | sequence | yes |
+| `bit_find(r, value)` | `find(r, value)` | sequence | yes |
+| `bit_find_last(r, value)` | `find_last(r, value)` | sequence | yes |
 | `bit_mismatch(r1, r2)` | `mismatch(r1, r2)` | sequence | yes, a `bool` at a time |
+| `bit_is_sorted(r)` | `is_sorted(r)` | sequence | yes |
+| `bit_is_partitioned(r)` | `is_partitioned(r, std::identity())` | sequence | yes |
+| `bit_partition_point(r)` | `partition_point(r, std::identity())` | sequence | yes |
+| `bit_copy(r, out)` | `copy(r, out)` | sequence | yes, either side |
+| `bit_copy_backward(r, out)` | `copy_backward(r, out)` | sequence | yes, either side |
+| `bit_move(r, out)` | `move(r, out)` | sequence | yes, either side |
+| `bit_swap_ranges(r1, r2)` | `swap_ranges(r1, r2)` | sequence | yes |
+| `bit_reverse_copy(r, out)` | `reverse_copy(r, out)` | sequence | yes, either side |
+| `bit_rotate_copy(r, middle, out)` | `rotate_copy(r, middle, out)` | sequence | yes, either side |
+| `bit_transform(r, out, f)` | `transform(r, out, f)` | sequence | yes, either side |
+| `bit_transform(r1, r2, out, f)` | `transform(r1, r2, out, f)` | sequence | yes, every side |
+| `bit_fill(r, value)` | `fill(r, value)` | sequence | yes |
+| `bit_sort(r)` | `sort(r)` | sequence | yes |
+| `bit_partition(r)` | `partition(r, std::identity())` | sequence | yes |
 | `bit_reverse(r)` | `reverse(r)` | sequence | no |
 | `bit_rotate(r, middle)` | `rotate(r, middle)` | sequence | no |
+| `bit_shift_left(r, n)` | `shift_left(r, n)` | sequence | no |
+| `bit_shift_right(r, n)` | `shift_right(r, n)` | sequence | no |
+| `bit_for_each(r, f)` | `for_each(r, f)`, and over `std::views::reverse(r)` | both | yes |
+| `bit_equal(r1, r2)` | `equal(r1, r2)` | both | yes |
+| `bit_lexicographical_compare_three_way(r1, r2)` | `lexicographical_compare_three_way` over both ranges | both | yes |
 | `bit_includes(s1, s2)` | `includes(s1, s2)` | set | — |
 | `bit_intersects(s1, s2)` | `set_intersection(s1, s2, out)`, writing a key | set | — |
 | `bit_disjoint(s1, s2)` | `set_intersection(s1, s2, out)`, writing nothing | set | — |
@@ -2286,6 +2328,10 @@ is the specification, and the tests hold each algorithm to it; what the prefix a
 | `bit_set_union(s1, s2)` | range-v3's `views::set_union(s1, s2)`, as a set | set | — |
 | `bit_set_difference(s1, s2)` | range-v3's `views::set_difference(s1, s2)`, as a set | set | — |
 | `bit_set_symmetric_difference(s1, s2)` | range-v3's `views::set_symmetric_difference(s1, s2)`, as a set | set | — |
+| `bit_advance(it, n)`, `bit_advance(it, n, bound)` | `advance(it, n)`, `advance(it, n, bound)` | set | — |
+| `bit_next(it, n)`, `bit_next(it, n, bound)` | `next(it, n)`, `next(it, n, bound)` | set | — |
+| `bit_prev(it, n)`, `bit_prev(it, n, bound)` | `prev(it, n)`, `prev(it, n, bound)` | set | — |
+| `bit_distance(first, last)` | `distance(first, last)` | set | — |
 
 **Free, because the counterpart has no such member.** `std::vector<bool>` has no `count`, `std::array` no `rotate`
 and `std::set` no `is_subset_of`, and a member would answer a question the counterpart's synopsis does not ask, in
@@ -2297,16 +2343,76 @@ argument modulo the size. An algorithm takes the shape `std::ranges` already fix
 so these take the `bit_` prefix instead, and a call says which of the two it is.
 
 **One door to the blocks.** An algorithm reaches the storage through `storage_access`, the one friend both adaptors
-declare, as libc++'s overloads reach `vector<bool>`'s words through the `__bit_iterator` they are written against.
-Nothing else about the container is opened: each algorithm asks the storage member that answers it, `count`, `all`,
-`any`, `none`, `first_difference`, `reverse` or `rotate`, over a whole sequence's blocks, and over a window's blocks
-masked at its ends ([windows](#windows)); `bit_includes` and `bit_intersects` read the blocks themselves.
+and their iterators declare, as libc++'s overloads reach `vector<bool>`'s words through the `__bit_iterator` they are
+written against. Nothing else about the container is opened: each algorithm asks the storage member that answers it,
+`count`, `all`, `any`, `none`, `first_difference`, `reverse`, `rotate`, `fill`, the ranged `set` and `count`, or the
+shifts, over a whole sequence's blocks, and reads and writes a window's blocks through both sides of `block_at`
+([the-blit](#the-blit), [windows](#windows)); `bit_includes` and `bit_intersects` read the blocks themselves. An
+iterator opens the same door: `storage_access` hands an algorithm the storage an iterator steps over and the
+position it stands at, which is how `bit_copy` writes through an output iterator and `bit_advance` moves one.
 
-**Whole sequences and windows.** `bit_reverse` and `bit_rotate` write, and take an owner or a whole view, never a
-window or a `const` sequence: a window shares its end blocks with positions outside it. The five
-that read take a window too. `bit_mismatch` takes two operands of one type, and compares two whole sequences a block
-at a time, at two run-time sizes as well, stopping at the shorter's end as `std::ranges::mismatch` does; two windows
-it compares a `bool` at a time through `std::ranges::mismatch` itself.
+**Whole sequences and windows.** `bit_reverse`, `bit_rotate` and the two shifts permute a whole storage in place,
+and take an owner or a whole view, never a window or a `const` sequence: a window shares its end blocks with
+positions outside it, and its permutation would be a masked walk of its own. Everything else takes a window,
+reading its blocks at its offset through `block_at` and writing them masked to its own positions. `bit_mismatch`
+takes two operands of one type, and compares two whole sequences a block at a time, at two run-time sizes as well,
+stopping at the shorter's end as `std::ranges::mismatch` does; two windows it compares a `bool` at a time through
+`std::ranges::mismatch` itself.
+
+**The writes, at any two offsets.** `bit_copy`, `bit_copy_backward`, `bit_move`, `bit_reverse_copy`,
+`bit_rotate_copy` and `bit_transform` read their source and write their destination a block of the destination at
+a time: the source's bits at any offset, assembled from its own blocks where the two block types differ, land
+through the write side of `block_at` under the mask of how many remain. So source and destination may sit at
+different offsets in different storages over different block types, and nothing walks a proxy. Overlap follows the
+standard's rules: `bit_copy` writes lowest first, so a destination below its source is safe, as
+`std::ranges::copy` allows; `bit_copy_backward` writes highest first, for a destination above; and `bit_transform`
+may write over its first input in place. `bit_swap_ranges` trades a block of the narrower of two block types at a
+time. `bit_fill`, `bit_sort` and `bit_partition` are the storage's ranged `set`: sorting bools is counting the ones
+and filling the zeros before them, partitioning them is the same fill the other way round, and both are stable,
+every `false` being like every other. `bit_shift_left(v, n)` is `std::ranges::shift_left`, element `i` taking
+element `i + n`, which is the storage's `>>=` because a sequence's front is a bit string's low end
+([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)); `bit_shift_right` is the storage's `<<=`. Each leaves the
+positions it vacates `false`, which `std::ranges` leaves valid but unspecified, and a shift by the size or more has
+no effect, as the standard's has none.
+
+**`bit_transform` asks its function once per entry of a truth table.** A function of one `bool` is one of four --
+constant `false`, constant `true`, the identity or negation -- so the unary form calls `f(false)` and `f(true)` once
+each, as the valarray's `apply` does ([the-valarray-reading](#the-valarray-reading)), and applies
+`(x & T) | (~x & F)` a block at a time, `T` and `F` being blocks of all ones or all zeros by the answers. A function
+of two `bool`s is one of sixteen, so the binary form calls `f` on the four pairs once each and applies
+`(x & y & T11) | (x & ~y & T10) | (~x & y & T01) | (~x & ~y & T00)`. `std::bit_and<>`, `std::logical_or<>`,
+`std::not_equal_to<>` and an arbitrary lambda all take that one path, there being nothing a functor's type says that
+its four answers do not. The difference from `std::ranges::transform` is the number of calls, two or four rather
+than one per element, which a function with side effects would see; its result over the sequence is the same.
+
+**`bit_for_each` walks either reading** a block at a time and hands its functor each element by value
+([the-set-for-each](#the-set-for-each), [the-sequence-for-each](#the-sequence-for-each),
+[the-functor-takes-a-value](#the-functor-takes-a-value)); the walk against the order is the overload on
+`std::views::reverse` over a range of ours, so the containers' `for_each` and `for_each_reverse` members became one
+algorithm with the standard's spelling for both directions.
+
+**`bit_equal` and `bit_lexicographical_compare_three_way` cross block types and storages.** Every owner's `==` and
+`<=>` stays a hidden friend over its own type, as `std::array<T, 3>` does not compare with `std::array<T, 4>`;
+containers of different types compare through these two, as through `std::ranges::equal` and
+`std::lexicographical_compare_three_way`. Two operands of one storage type compare in their own blocks, by the
+storage's `first_difference`, the set reading's `set_equal` and the reading's own three-way; any other pair compares
+64-bit words assembled from each side's blocks at each side's offset. The set reading's order is `std::set`'s, the
+keys in iteration order, lexicographic over ascending keys and the masks as numbers over descending ones. The
+operands must be of one reading, a set's of one key, mapping and comparator, and of one width kind: two widths
+fixed in the type and equal, or two run-time widths. The width kind is what `bit_hasher` hashes differently
+([the-hashing-invariant](#the-hashing-invariant)), so whatever compares equal hashes equal, and
+`xstd::bit_equal_to`, the transparent equality over `bit_equal`, pairs with the transparent `bit_hasher` for a
+lookup across block types and storages: `std::unordered_set<K, xstd::bit_hasher<>, xstd::bit_equal_to>::find` takes a
+view, or the same value over narrower blocks.
+
+**The iterator operations are rank and select.** `std::ranges::advance`, `next`, `prev` and `distance` over a set's
+iterators step one key at a time; `bit_advance(it, n)` skips whole blocks by their popcount until the block holding
+the target key, then selects within it, counting from the top when it walks down, so it costs `n / digits` blocks
+rather than `n` scans. Its bounded form stops at `bound` and answers the steps it did not take, signed as `n` is, as
+`std::ranges::advance` does; `bit_next` and `bit_prev` are it over a copy. `bit_distance(first, last)` is a popcount
+over the whole blocks between two iterators and the masked ends, so select is `*bit_next(s.begin(), n)` and the rank
+of `k` is `bit_distance(s.begin(), s.lower_bound(k))`. The select within one block is xstd-ints' `xstd::bit_select`,
+`pdep` and a `countr_zero` where BMI2 is fast and a broadword select elsewhere.
 
 **The second set converts.** `bit_includes`, `bit_intersects` and `bit_disjoint` take `S const& s1, std::type_identity_t<S> const& s2`:
 `S` deduces from the first argument alone, and the second converts to it. That puts a flag set's mask on the second
@@ -2799,8 +2905,8 @@ leaves every member signature as it is. Position order is structural, so a compa
 rejected by the owners' template heads. The mapping comes first because the direction is defined over the order
 `to_index` preserves. Under `std::greater` the set behaves as `std::set<Key, std::greater<Key>>` specifies: `begin()`
 is the highest set position and `++` steps down, `lower_bound` is the largest key not above its argument and
-`upper_bound` the largest below it, `key_comp()` and `value_comp()` return `std::greater`, and `for_each` walks in that
-order with `for_each_reverse` against it. The iterator carries the direction rather than wrapping
+`upper_bound` the largest below it, `key_comp()` and `value_comp()` return `std::greater`, and `xstd::bit_for_each` walks
+in that order, and against it over `std::views::reverse`. The iterator carries the direction rather than wrapping
 `std::reverse_iterator`, which would step back on every dereference; both directions end at `size()`. Equality, set
 algebra, hashing and the block exchange are unchanged, since they see the same blocks. `<=>` is
 `[associative.reqmts]`' lexicographic comparison of the keys in iteration order, which over descending keys is the masks
@@ -3513,7 +3619,7 @@ a == b       : true          a, b both { 1 3 }
 inputs, unequal outputs. At a **static** width there is no such gap, because `N` is part of the type and
 equal sets share it, so `operator~` is constrained on `has_static_width` and `bit_fixed_set<N>` keeps it.
 `bit_set` keeps toggling one key, which needs no universe -- an enumerator's `^=`, or `contains` and then `erase` or
-`insert` -- along with `fill()` and the four set operators. The alternative -- letting `~` read the width --
+`insert` -- along with the four set operators. The alternative -- letting `~` read the width --
 would make the width value for exactly one operation, which is the thing this section says the set reading
 does not do.
 
@@ -4086,9 +4192,10 @@ view over a storage with one of a view over the same storage made const, names o
 
 ### the-set-for-each
 
-`for_each(f)` and `for_each_reverse(f)` on the set reading walk blocks where the iterator walks positions, and
-the difference is not block-parallelism -- the functor still sees every set position, one at a time. It is
-where the loop's state may live.
+`xstd::bit_for_each(s, f)` on the set reading walks blocks where the iterator walks positions, and
+`xstd::bit_for_each(std::views::reverse(s), f)` walks them the other way. The difference is not
+block-parallelism -- the functor still sees every set position, one at a time. It is where the loop's state may
+live.
 
 `operator++` is **flat**. It has to re-derive the block from `(pointer, position)` on every step, because an
 iterator stays copyable and restartable and therefore cannot keep a partially consumed block between two
@@ -4100,26 +4207,31 @@ Measured against the range-for at 4.08x to 5.05x, on GCC 15 and clang 22, and th
 carrying twenty pieces as at 2^22 with 40% density. That stability is itself the point: `find_next` is
 inherently serial, no vectorizer engages on either side, and the answer does not move with the compiler --
 unlike the sequence reading, where the same question gives answers ranging from 1.24x ahead to 11.4x ahead
-depending on which one is asked ([the-sequence-ladder](#the-sequence-ladder)).
+depending on which one is asked ([the-sequence-ladder](#the-sequence-ladder)). The figures were taken when the walk
+was the containers' `for_each` member; the algorithm is that member's loop, moved out unchanged.
 
 Three decisions the shape forced:
 
-**A functor may return `bool` to mean "keep going".** A `void` one always continues. That is what a move
-generator wants once it has found its answer, and it is one `if constexpr` on `is_invocable_r_v<bool, F&,
-size_t>`. Nothing else is accepted: a functor returning something else is a caller error rather than a value
-to discard quietly.
+**The functor's answer is ignored, as `std::ranges::for_each` ignores it.** The member let a functor return
+`bool` to mean "keep going", and that is the one thing that did not move with it: `std::ranges::for_each` is the
+specification ([algorithms-not-members](#algorithms-not-members)), it calls a functor returning `bool` on every
+element, and an algorithm that stopped would disagree with it on exactly the functors that look like predicates.
+A walk that stops at an answer is `find_if`'s and `any_of`'s, whose set-reading forms take a predicate where this
+takes a functor.
 
 **The descending walk clears the bit it just reported.** `w & (w - 1)` drops the lowest set bit and has no
-descending twin, so `for_each_reverse` takes `digits - 1 - countl_zero(w)` for the position and clears exactly
-that bit. The set reading iterates both ways and so does this.
+descending twin, so the walk against the order takes `digits - 1 - countl_zero(w)` for the position and clears
+exactly that bit. The set reading iterates both ways and so does this, and the reverse is the overload on
+`std::views::reverse` over a set of ours, held through its `ref_view` or as a view, rather than a second name:
+`for_each_reverse` named a direction that `std::ranges` spells as a view.
 
-**A range with no block access takes the iterator.** There the walk is the range-for it is written to beat,
-still correct and still the same answer: the same tiers `fill` uses ([windows](#windows)).
+**It returns what `std::ranges::for_each` returns**, the end as a `borrowed_iterator_t` and the functor moved
+back, so a functor that counts or collects hands its state back as the standard's does.
 
 What is *not* here is a fat iterator carrying the residual block. Measured, it runs 2.56x to 3.80x against the
-walk's 4.00x to 5.27x, so it is both slower than the member and the only one of the two that changes a
+walk's 4.00x to 5.27x, so it is both slower than the walk and the only one of the two that changes a
 contract: an iterator that caches a block stops observing an erase that lands ahead of it, where a closed loop
-caching the same block is unobservable. The member is the faster half and the safer half at once, which is
+caching the same block is unobservable. The walk is the faster half and the safer half at once, which is
 rare enough to record.
 
 ### void-is-a-return-type
@@ -4367,12 +4479,12 @@ class subscripts and `std::ranges::contiguous_range` does not promise that.
 
 ### the-functor-takes-a-value
 
-Both `for_each`es hand their functor a **prvalue** -- as `auto(x)`, C++23's decay-copy in the language
-([P0849R8](https://wg21.link/P0849R8)) -- and both members say so with `requires std::invocable<F&, bool>` and
-`requires std::invocable<F&, size_t>`. That is one fix for one defect, spelled in two places because it is
+`xstd::bit_for_each` hands its functor a **prvalue** -- as `auto(x)`, C++23's decay-copy in the language
+([P0849R8](https://wg21.link/P0849R8)) -- and says so with `requires std::invocable<F&, range_value_t<R>>`, a `bool`
+on the sequence reading and the key on the set reading. That is one fix for one defect, spelled in two places because it is
 worth catching at the interface and worth being right in the body.
 
-It is spelled through a three-line `decay_copy` helper per adaptor, because MSVC 2022 does not implement
+It is spelled through a three-line `decay_copy` helper beside the walks, because MSVC 2022 does not implement
 P0849R8 and the stable rung is on the matrix ([the-views-are-the-adaptors](#the-views-are-the-adaptors)). Without
 that rung `auto(x)` would do, the paper's own spelling, which clang-tidy has nothing to say about. The other way
 round it -- `T{x}` -- reads to clang-tidy as a cast to the type it already has, so it is not the alternative.
@@ -4397,17 +4509,16 @@ from it, as it does for the reference-taking functor.
 The two halves earn their place separately:
 
 - **The constraint** puts the rejection at the interface, where it reads "constraint not satisfied" and names
-  the member, instead of erupting somewhere inside `walk_blocks`. It is also what makes the rejection *testable*:
+  the algorithm, instead of erupting somewhere inside the walk. It is also what makes the rejection *testable*:
   a hard error in a template body is not something `static_assert(not ...)` can see, so a probe without the
   constraint reports everything as fine.
 - **The prvalue** is what the constraint cannot reach. `std::invocable<F&, bool>` is satisfied by a functor
   overloaded on the value category, so the constraint cannot say which overload runs; only the call can. The
-  tests pin it with exactly that: a functor with `operator()(bool&&)` and `operator()(bool&)` that records which
-  one it got, one per arm of the `if constexpr`, on both readings. Reverting either arm of either reading to an
-  lvalue fails the suite.
+  tests pin it with exactly that: a functor with `operator()(T&&)` and `operator()(T&)` that records which one it
+  got, on both readings and in both directions. Reverting any of the four walks to an lvalue fails the suite.
 
 Accepted, and unchanged: by value, by `auto`, by `const&`, by `auto const&`, a function pointer, and a functor
-returning `bool` to mean "keep going". Writing *through* the sequence is the range-for's job and remains so --
+returning anything, whose answer is dropped as `std::ranges::for_each` drops it. Writing *through* the sequence is the range-for's job and remains so --
 `for (auto r : v) r = true;` writes, because the proxy is what an iterator dereferences to.
 
 ### the-sequence-aggregates
@@ -4491,13 +4602,13 @@ the padding ([padding](#padding)).
 
 ### the-sequence-for-each
 
-`for_each(f)` on the sequence reading is the set reading's member ([the-set-for-each](#the-set-for-each))
+`xstd::bit_for_each(v, f)` on the sequence reading is the set reading's walk ([the-set-for-each](#the-set-for-each))
 transposed: an outer loop over blocks, an inner loop over the bits of one block, so the reload that
 `operator++` must perform on every step becomes the inner loop's exit test. The functor takes what this
-reading's iterator dereferences to, a `bool`, where the set reading's takes a position, and may return `void`,
-or `bool` to mean "keep going", by the same one `if constexpr`.
+reading's iterator dereferences to, a `bool`, where the set reading's takes a position. A window walks its own
+positions, its blocks read through `block_at` at its offset.
 
-The reason it has to be a member is the same and the payoff is **not**. Measured across GCC 15, GCC 16, clang
+The reason for the walk is the same and the payoff is **not**. Measured across GCC 15, GCC 16, clang
 20 and clang 22, no iterator layout beats the current `(container pointer, index)` on this reading: a block
 pointer plus offset ties, and a cached residual block is *worse*, because `operator++` is flat and the reload
 test becomes a per-bit branch. So whatever `for_each` wins is loop structure, and loop structure is exactly
@@ -4511,13 +4622,14 @@ what a vectorizer needs:
 **The win is the vectorizer's, not the loop's.** Where the body carries a loop-carried dependence there is
 nothing to hoist and the two are parity; where it does not, the outer-loop-over-blocks shape lets GCC
 vectorize what the flat `operator++` hides. And under clang 22 the range-for already vectorizes -- 2021 µs
-against `for_each`'s 1900, 1.06x -- so on that compiler the member buys almost nothing on this reading.
+against `for_each`'s 1900, 1.06x -- so on that compiler the walk buys almost nothing on this reading.
 
 That is a narrower claim than a general speed-up, and it is the measured one. `for_each` is still
 worth having: it is never slower, it is 8x ahead on the compiler and body shape where the range-for leaves
 the most on the table, and it is the spelling that lets the library choose the loop rather than the caller.
-There is no `for_each_reverse` here, because unlike the set reading's, nothing about this walk is asymmetric:
-a reverse sequence walk is `std::ranges::reverse_view` over a random-access range, and it costs the same.
+The reverse walk is the same overload on `std::views::reverse` the set reading takes, blocks from the top and
+each block's bits from its top, so the two readings spell a backward walk alike; over a random-access range the
+range-for over `std::ranges::reverse_view` costs about the same, and the overload is there for the symmetry.
 
 ### read-only-set-proxy
 
@@ -4709,7 +4821,7 @@ more rungs would only re-derive it.
 The **segmented** sieve is the one that pays. Base primes below `sqrt(n)` once, then a single window walked
 over the rest, so peak memory is `O(sqrt(n) + W)` whatever `n` is. `Window` is a template parameter carrying
 its own extent, which makes `bit_fixed_set<W>` the natural argument: a compile-time width that allocates
-nothing in the loop, `fill`ed and struck and read once per segment.
+nothing in the loop, refilled as `~Window()` and struck and read once per segment.
 
 It is **faster than the bounded sieve, not merely thriftier**: 4.05 ms against 7.01 ms at `2^20`, about
 **1.7 times**, and ahead at every rung. Asymptotically the two do the same work; the difference is that a
@@ -5503,7 +5615,7 @@ Minor **semantic differences** between common functionality in `xstd::bit_fixed_
 
 - the `xstd::bit_fixed_set` member function `max_size` is `constexpr`, and at a static width its value is a constant expression usable wherever `N` is. It is a **member** rather than a `static` member function because `std::set`'s is a member: each reading takes the shape its own counterpart spells, which is why the sequence reading's middle column has a `static` one instead — `[inplace.vector.capacity]` spells all four of `capacity`, `max_size`, `reserve` and `shrink_to_fit` static there, and `xstd::bit_bounded_vector<N>::capacity()` answers without an object accordingly ([design.md#max-size-is-the-bits](#max-size-is-the-bits)). So for the set reading `s.max_size()` is a constant expression and `decltype(s)::max_size()` does not compile.
 - the `xstd::bit_fixed_set` iterators are **proxy iterators**, and taking their address yields **proxy references**. The difference should be undetectable. See the FAQ at the end of this document.
-- the `xstd::bit_fixed_set` member `fill` does not exist for `std::set`.
+- every key at once is `~xstd::bit_fixed_set<N>()`, the complement of the empty set, where `std::bitset` has `set()`.
 - `xstd::bit_fixed_set<N>` exchanges bits with any field of `N` bits through a **named pair**, the tagged constructor `bit_fixed_set<N>(xstd::from_blocks, b)` and `xstd::bit_convert<B>(s)`, which also crosses with anything else that has bit storage, not through an untagged constructor or a conversion operator. What they admit is named by a concept rather than by a type: an unsigned integer or a sequence of them, whose layout the language and the sequence state between them, or a field of bits that `bits::detail::bit_layout` reads on `std::bit_cast`'s terms, trivially copyable on a little-endian target with room for `N` bits — so `std::bitset<N>` rides in on the same rule as `unsigned long long`, and a big-endian target or a type too small for `N` fails to compile rather than converting quietly. The widths are the same `N` and a static width is a capacity under this reading, so position `n` here is bit `n` there: nothing truncates, nothing grows, nothing throws, and the round trip is the identity. It is `constexpr` at every width, and a copy rather than a walk over positions.
 
   A name rather than a conversion, because the integer family is the one a set reader can still misread, and only a name answers it at the call site, where the reader is: `bit_fixed_set<32>(xstd::from_blocks, 5u)` is the set of positions the **value** five has, `{0, 2}`, not the set `{5}` ([design.md#the-bytes-they-agree-on](#the-bytes-they-agree-on)). `from_blocks` is a constructor on an owner; `bit_convert` also reads a set view, which spans a whole container and so has that container's bytes. The run-time-width `xstd::bit_set` has no `from_blocks`, a `std::bitset` naming one `N` that a growing set has no single value for; it crosses through `bit_convert` alone, which carries the width along.
@@ -5516,7 +5628,7 @@ Almost all existing `std::bitset<N>` code has **a direct translation** (i.e. ach
 
 | `std::bitset<N>`                | `xstd::bit_fixed_set<N>`              | Notes                                           |
 | :---------------                | :-----------------              | :----                                           |
-| `bs.set()`                      | `bs.fill()`                     | not a member of `std::set<int>`                 |
+| `bs.set()`                      | `bs = ~decltype(bs)()`          | the complement of the empty set                 |
 | `bs.set(n)`                     | `bs.add(n)` <br> `bs.insert(n)` | `out_of_range` past `N`, where `std::bitset` throws it too |
 | `bs.set(n, v)` <br> `bs[n] = v` | `v ? bs.add(n) : bs.pop(n)`     | `out_of_range` past `N` on the insert; the erase is total |
 | `bs.reset()`                    | `bs.clear()`                    | returns `void` as `std::set<int>`, not `*this` as `std::bitset<N>`  |

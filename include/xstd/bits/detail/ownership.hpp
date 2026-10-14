@@ -90,6 +90,29 @@ struct storage_access
         {
                 return static_cast<Reading::adaptor_type const&>(r).offset();
         }
+
+        // The storage a set's iterator steps over: what it points to, or storage rebuilt over the blocks it holds.
+        template<class Iterator>
+        [[nodiscard]] static constexpr auto iterated_bits(Iterator const& it) noexcept
+                -> decltype(auto)
+        {
+                return *it.m_ptr;
+        }
+
+        // Where an iterator stands in that storage, the width itself at the end.
+        template<class Iterator>
+        [[nodiscard]] static constexpr auto position(Iterator const& it) noexcept
+                -> std::size_t
+        {
+                return it.m_idx;
+        }
+
+        template<class Iterator>
+        static constexpr auto reposition(Iterator& it, std::size_t n) noexcept
+                -> void
+        {
+                it.m_idx = n;
+        }
 };
 
 // Whether a container, owner or view, reads its blocks as R: a refinement of R answers for R.

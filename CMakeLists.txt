@@ -30,7 +30,7 @@ if(NOT xstd-ints_FOUND)
         xstd-ints
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-ints.git
         # Pinned to a commit on xstd-ints' main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 032a37c99cbb1cd27675a4bc1f44a06429c76e31
+        GIT_TAG bc720fc52103b337e689f0a0f227d472e7bda647
     )
     FetchContent_MakeAvailable(xstd-ints)
 endif()
@@ -75,20 +75,49 @@ target_sources(
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
+        include/xstd/bits/bit_algorithm/detail/blit.hpp
+        include/xstd/bits/bit_algorithm/detail/compare.hpp
+        include/xstd/bits/bit_algorithm/detail/find.hpp
+        include/xstd/bits/bit_algorithm/detail/select.hpp
+        include/xstd/bits/bit_algorithm/detail/walk.hpp
+        include/xstd/bits/bit_algorithm/bit_advance.hpp
         include/xstd/bits/bit_algorithm/bit_all_of.hpp
         include/xstd/bits/bit_algorithm/bit_any_of.hpp
+        include/xstd/bits/bit_algorithm/bit_copy.hpp
+        include/xstd/bits/bit_algorithm/bit_copy_backward.hpp
         include/xstd/bits/bit_algorithm/bit_count.hpp
         include/xstd/bits/bit_algorithm/bit_disjoint.hpp
+        include/xstd/bits/bit_algorithm/bit_distance.hpp
+        include/xstd/bits/bit_algorithm/bit_equal.hpp
+        include/xstd/bits/bit_algorithm/bit_fill.hpp
+        include/xstd/bits/bit_algorithm/bit_find.hpp
+        include/xstd/bits/bit_algorithm/bit_find_last.hpp
+        include/xstd/bits/bit_algorithm/bit_for_each.hpp
         include/xstd/bits/bit_algorithm/bit_includes.hpp
         include/xstd/bits/bit_algorithm/bit_intersects.hpp
+        include/xstd/bits/bit_algorithm/bit_is_partitioned.hpp
+        include/xstd/bits/bit_algorithm/bit_is_sorted.hpp
+        include/xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp
         include/xstd/bits/bit_algorithm/bit_mismatch.hpp
+        include/xstd/bits/bit_algorithm/bit_move.hpp
+        include/xstd/bits/bit_algorithm/bit_next.hpp
         include/xstd/bits/bit_algorithm/bit_none_of.hpp
+        include/xstd/bits/bit_algorithm/bit_partition.hpp
+        include/xstd/bits/bit_algorithm/bit_partition_point.hpp
+        include/xstd/bits/bit_algorithm/bit_prev.hpp
         include/xstd/bits/bit_algorithm/bit_reverse.hpp
+        include/xstd/bits/bit_algorithm/bit_reverse_copy.hpp
         include/xstd/bits/bit_algorithm/bit_rotate.hpp
+        include/xstd/bits/bit_algorithm/bit_rotate_copy.hpp
         include/xstd/bits/bit_algorithm/bit_set_difference.hpp
         include/xstd/bits/bit_algorithm/bit_set_intersection.hpp
         include/xstd/bits/bit_algorithm/bit_set_symmetric_difference.hpp
         include/xstd/bits/bit_algorithm/bit_set_union.hpp
+        include/xstd/bits/bit_algorithm/bit_shift_left.hpp
+        include/xstd/bits/bit_algorithm/bit_shift_right.hpp
+        include/xstd/bits/bit_algorithm/bit_sort.hpp
+        include/xstd/bits/bit_algorithm/bit_swap_ranges.hpp
+        include/xstd/bits/bit_algorithm/bit_transform.hpp
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bit.hpp
         include/xstd/bits/bit/bit_convert.hpp
@@ -109,6 +138,7 @@ target_sources(
         include/xstd/bits/bit_set_view.hpp
         include/xstd/bits/bit_span.hpp
         include/xstd/bits/bit_fixed_set.hpp
+        include/xstd/bits/bit_equal_to.hpp
         include/xstd/bits/bit_hasher.hpp
         include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_type_traits.hpp
@@ -131,7 +161,6 @@ target_sources(
         include/xstd/bits/detail/block_intersects.hpp
         include/xstd/bits/detail/comparisons.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp
-        include/xstd/bits/detail/functor.hpp
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
         include/xstd/bits/detail/flag_block.hpp
