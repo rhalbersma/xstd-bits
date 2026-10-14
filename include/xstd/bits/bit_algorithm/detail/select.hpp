@@ -6,15 +6,15 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_SELECT_HPP
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_SELECT_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp>    // descends
-#include <xstd/bits/bit_algorithm/detail/block_select.hpp> // block_select
-#include <xstd/bits/detail/intrin.hpp>                     // popcount
-#include <xstd/bits/detail/ownership.hpp>                  // storage_access
-#include <xstd/bits/detail/shift.hpp>                      // partial_block_mask
-#include <cassert>                                         // assert
-#include <cstddef>                                         // ptrdiff_t, size_t
-#include <iterator>                                        // iter_reference_t
-#include <ranges>                                          // iota
+#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // descends
+#include <xstd/bits/detail/intrin.hpp>                  // popcount
+#include <xstd/bits/detail/ownership.hpp>               // storage_access
+#include <xstd/bits/detail/shift.hpp>                   // partial_block_mask
+#include <xstd/ints/bit/bit_select.hpp>                 // bit_select
+#include <cassert>                                      // assert
+#include <cstddef>                                      // ptrdiff_t, size_t
+#include <iterator>                                     // iter_reference_t
+#include <ranges>                                       // iota
 
 namespace xstd::bits::detail {
 
@@ -56,7 +56,7 @@ template<class Bits>
                 auto const block = masked_block(c, index, first, last);
                 auto const count = popcount(block);
                 if (n <= count) {
-                        return {.position = (index * digits) + block_select(block, n - 1UZ), .missing = 0UZ};
+                        return {.position = (index * digits) + static_cast<std::size_t>(xstd::bit_select(block, static_cast<int>(n - 1UZ))), .missing = 0UZ};
                 }
                 n -= count;
         }
@@ -78,7 +78,7 @@ template<class Bits>
                 auto const block = masked_block(c, index, first, last);
                 auto const count = popcount(block);
                 if (n <= count) {
-                        return {.position = (index * digits) + block_select(block, count - n), .missing = 0UZ};
+                        return {.position = (index * digits) + static_cast<std::size_t>(xstd::bit_select(block, static_cast<int>(count - n))), .missing = 0UZ};
                 }
                 n -= count;
         }

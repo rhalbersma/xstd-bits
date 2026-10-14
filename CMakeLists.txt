@@ -30,7 +30,7 @@ if(NOT xstd-ints_FOUND)
         xstd-ints
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-ints.git
         # Pinned to a commit on xstd-ints' main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 032a37c99cbb1cd27675a4bc1f44a06429c76e31
+        GIT_TAG bc720fc52103b337e689f0a0f227d472e7bda647
     )
     FetchContent_MakeAvailable(xstd-ints)
 endif()
@@ -76,7 +76,6 @@ target_sources(
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
         include/xstd/bits/bit_algorithm/detail/blit.hpp
-        include/xstd/bits/bit_algorithm/detail/block_select.hpp
         include/xstd/bits/bit_algorithm/detail/compare.hpp
         include/xstd/bits/bit_algorithm/detail/find.hpp
         include/xstd/bits/bit_algorithm/detail/select.hpp

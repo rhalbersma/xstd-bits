@@ -2411,9 +2411,8 @@ the target key, then selects within it, counting from the top when it walks down
 rather than `n` scans. Its bounded form stops at `bound` and answers the steps it did not take, signed as `n` is, as
 `std::ranges::advance` does; `bit_next` and `bit_prev` are it over a copy. `bit_distance(first, last)` is a popcount
 over the whole blocks between two iterators and the masked ends, so select is `*bit_next(s.begin(), n)` and the rank
-of `k` is `bit_distance(s.begin(), s.lower_bound(k))`. The select within one block is one function,
-`block_select`, which clears the set bits below the target and takes a `countr_zero`; it is the swap point for a
-broadword or `pdep` select from xstd-ints.
+of `k` is `bit_distance(s.begin(), s.lower_bound(k))`. The select within one block is xstd-ints' `xstd::bit_select`,
+`pdep` and a `countr_zero` where BMI2 is fast and a broadword select elsewhere.
 
 **The second set converts.** `bit_includes`, `bit_intersects` and `bit_disjoint` take `S const& s1, std::type_identity_t<S> const& s2`:
 `S` deduces from the first argument alone, and the second converts to it. That puts a flag set's mask on the second
