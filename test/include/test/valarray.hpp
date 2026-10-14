@@ -38,7 +38,7 @@
 #include <ranges>                                   // begin, contiguous_range, end, iota, iterator_t, random_access_range, range_value_t, size, sized_range, ssize, to
 #include <span>                                     // dynamic_extent
 #include <type_traits>                              // is_default_constructible_v
-#include <utility>                                  // declval, move
+#include <utility>                                  // declval, move, to_underlying
 #include <vector>                                   // vector
 
 // Every member and operator of the four valarrays, each held to the same operation on a std::vector<bool>.
@@ -789,7 +789,7 @@ auto check_writes(model const& a, std::vector<std::size_t> const& positions, Sel
         auto const count = positions.size();
         auto const ps    = patterns(count);
         for (auto const w : writes) {
-                BOOST_TEST_CONTEXT("write " << static_cast<int>(w))
+                BOOST_TEST_CONTEXT("write " << static_cast<int>(std::to_underlying(w)))
                 {
                         for (auto const& b : {ps[4], model(count, true)}) {
                                 auto const expected = written(w, a, positions, b);
@@ -953,7 +953,7 @@ auto check_slice()
 [[nodiscard]] inline auto gslices(std::size_t n)
         -> std::vector<std::gslice>
 {
-        auto candidates = std::vector<std::gslice>{
+        auto const candidates = std::vector<std::gslice>{
                 std::gslice(),
                 gslice_of(0UZ, {0UZ}, {1UZ}),
                 gslice_of(0UZ, {2UZ, 0UZ}, {1UZ, 1UZ}),
