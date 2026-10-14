@@ -226,6 +226,13 @@ if(PROJECT_IS_TOP_LEVEL)
         # Above both, and not inside test/: benchmark/ is configured first, so a target declared in test/ does not exist yet when the benchmarks ask for it. Both trees grade over the same two integer classes.
         include(${CMAKE_CURRENT_LIST_DIR}/cmake/int128.cmake)
 
+        # clang-cl reports CXX_COMPILER_ID Clang but understands only MSVC-style driver flags. Probed here, once for both trees that choose their warning flags by it, and inside this block, so an add_subdirectory consumer inherits nothing from it.
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+            set(${project_id}_is_clang_cl ON)
+        else()
+            set(${project_id}_is_clang_cl OFF)
+        endif()
+
         # Off by default, and the GCC ladder alone turns it on. A benchmark measures the library rather than being part of it, so seven compiler ladders, fifteen sanitizer legs and both analysers building one bought nothing the one ladder does not: its Release legs run the smoke test benchmark/CMakeLists.txt registers, which is what keeps this tree compiling and running against the current API. A local build that wants the benchmarks asks for them. The coverage job needs it off for a second reason, which its own stub records: gcovr drops benchmark/ as a source path, but a benchmark is not a source there -- it is a translation unit that INSTANTIATES the library's templates, and those instantiations live in include/ where they are counted. That job configures Debug, where no benchmark registers as a test, so they would compile and never run, and every branch of an instantiation no test TU also makes is uncovered by construction. One Block-width benchmark put nine such branches in the denominator and covered none.
         option(${project_option_prefix}_BUILD_BENCHMARKS "Build the benchmark tree alongside the tests" OFF)
 

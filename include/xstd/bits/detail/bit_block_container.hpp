@@ -568,13 +568,20 @@ public:
                 }
         }
 
-        // A whole field of bits in over the byte primitive, the width being known here; bit_convert reads them out.
+        // A whole field of bits in, the width being known here; bit_convert reads them out.
         template<class Bits>
                 requires exchanges_bits<Bits>
         constexpr auto assign_bits(Bits const& b) noexcept
                 -> void
         {
-                assign_bytes(bit_bytes<bit_extent>(b));
+                if constexpr (fixed_blocks_source<Bits, bit_extent> and std::same_as<std::ranges::range_value_t<decltype(block_span(b))>, block_type>) {
+                        // Block for block, as GCC does not fold a copy of byte_count<N> bytes back into whole blocks.
+                        std::ranges::fill(m_blocks, zero);
+                        std::ranges::copy(block_span(b).template first<static_num_blocks>(), std::ranges::begin(m_blocks));
+                        erase_unused();
+                } else {
+                        assign_bytes(bit_bytes<bit_extent>(b));
+                }
         }
 
         template<std::size_t E>

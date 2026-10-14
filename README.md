@@ -11,13 +11,13 @@
 [![Standard](https://img.shields.io/badge/c%2B%2B-23-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization)
 [![License](https://img.shields.io/badge/license-Boost-blue.svg)](https://opensource.org/licenses/BSL-1.0)
 [![GCC](https://github.com/rhalbersma/xstd-bits/actions/workflows/gcc.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/gcc.yml)
-[![Emscripten](https://github.com/rhalbersma/xstd-bits/actions/workflows/emscripten.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/emscripten.yml)
 [![MinGW](https://github.com/rhalbersma/xstd-bits/actions/workflows/mingw.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/mingw.yml)
 [![Clang](https://github.com/rhalbersma/xstd-bits/actions/workflows/clang.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/clang.yml)
 [![Clang-libc++](https://github.com/rhalbersma/xstd-bits/actions/workflows/clang-libc%2B%2B.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/clang-libc%2B%2B.yml)
 [![Apple Clang](https://github.com/rhalbersma/xstd-bits/actions/workflows/apple-clang.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/apple-clang.yml)
 [![Clang-CL](https://github.com/rhalbersma/xstd-bits/actions/workflows/clang-cl.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/clang-cl.yml)
 [![MSVC](https://github.com/rhalbersma/xstd-bits/actions/workflows/msvc.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/msvc.yml)
+[![Emscripten](https://github.com/rhalbersma/xstd-bits/actions/workflows/emscripten.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/emscripten.yml)
 [![Coverage](https://codecov.io/gh/rhalbersma/xstd-bits/branch/main/graph/badge.svg)](https://codecov.io/gh/rhalbersma/xstd-bits)
 [![Consumption](https://github.com/rhalbersma/xstd-bits/actions/workflows/consumption.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/consumption.yml)
 [![Sanitizers](https://github.com/rhalbersma/xstd-bits/actions/workflows/sanitizers.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/sanitizers.yml)
@@ -224,6 +224,37 @@ The **segmented** sieve is the one that pays. Base primes below `√n` once, the
 
 All three agree, and the test asserts that rather than the README claiming it.
 
+### A packed `std::vector<bool>`
+
+`xstd::bit_vector` is `std::vector<bool>` with the packing declared in its name rather than hidden in a specialization: the same interface, so the code around it stays, and the same proxy reference, so the `std::ranges` algorithms run over it unchanged. What it adds is the algorithms that read the blocks rather than the bools:
+
+```cpp
+#include <xstd/bits/bit_algorithm.hpp> // bit_count, bit_rotate
+#include <xstd/bits/bit_vector.hpp>    // bit_vector
+#include <algorithm>                    // count, equal
+#include <cassert>                      // assert
+#include <format>                       // format
+#include <vector>                       // vector
+
+auto main() -> int
+{
+        auto v = xstd::bit_vector{true, false, true};
+        v.push_back(true);
+        v.resize(6);
+        v[1] = not v[1];
+        assert(std::format("{}", v) == "[true, true, true, true, false, false]");
+
+        assert(xstd::bit_count(v) == std::ranges::count(v, true));
+        xstd::bit_rotate(v, v.begin() + 4);
+        assert(std::format("{}", v) == "[false, false, true, true, true, true]");
+
+        auto const w = std::vector<bool>(v.begin(), v.end());
+        assert(std::ranges::equal(v, w));
+}
+```
+
+A sequence formats in brackets, as `std::vector<bool>` does, where a set formats in braces. `std::ranges::count(v, true)` walks the proxies a bool at a time, and `xstd::bit_count(v)` answers the same question, with the same signed result, a popcount per block; `xstd::bit_rotate(v, middle)` is `std::ranges::rotate(v, middle)` done over the blocks. [design.md](doc/design.md#the-sequence-aggregates) has the measurements.
+
 ### Hashing, and choosing the algorithm
 
 Every owner, and every set view, hashes, and equal values hash equal whatever holds them. Behind it is [Boost.Hash2](https://www.boost.org/doc/libs/release/libs/hash2/), and there are two hashers, by what they hash:
@@ -376,10 +407,9 @@ libraries) in both Debug and Release mode:
 | macOS | Apple Clang | libc++ | 17.0.0 (Xcode 16.4) | 21.0.0 (Xcode 26.6) | — | [![Apple Clang](https://github.com/rhalbersma/xstd-bits/actions/workflows/apple-clang.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/apple-clang.yml) |
 | Windows | Clang-CL | MSVC | 19.1.5 (VS 2022) | 20.1.8 (VS 2026) | 20.1.8 (VS 2026-Preview) | [![Clang-CL](https://github.com/rhalbersma/xstd-bits/actions/workflows/clang-cl.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/clang-cl.yml) |
 | Windows | MSVC | MSVC | 2022 | 2026 | 2026-Preview | [![MSVC](https://github.com/rhalbersma/xstd-bits/actions/workflows/msvc.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/msvc.yml) |
+| Web | Emscripten | libc++ | 6.0.12 | — | — | [![Emscripten](https://github.com/rhalbersma/xstd-bits/actions/workflows/emscripten.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/emscripten.yml) |
 
-Two more legs build for 32-bit targets, on the stable rung in Debug: i686 with GCC `-m32`, where `size_t` is 32 bits and there is no `__int128`, in the GCC workflow; and wasm32 with Emscripten, run under node, where `size_t` is 32 bits but 64-bit integers keep their 8-byte alignment.
-
-[![Emscripten](https://github.com/rhalbersma/xstd-bits/actions/workflows/emscripten.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/emscripten.yml)
+The `Web` row runs one Emscripten release on the stable rung, in Debug: wasm32 under node, where `size_t` is 32 bits but 64-bit integers keep their 8-byte alignment. The GCC workflow adds the other 32-bit leg, i686 with GCC `-m32`, where `size_t` is 32 bits and there is no `__int128`.
 
 `Apple Clang` has no `Development` entry because Apple doesn't publish Apple Clang dev snapshots the way LLVM does; that leg tests the latest stable Xcode release from each of the two supported series. `MinGW` has none either: WinLibs publishes no GCC trunk build between stable branches, and the shared workflow drops that rung with a notice rather than failing, so the row names the two that actually run. The `Linux | GCC` row keeps its `17-SVN` — that ladder is unaffected.
 
