@@ -244,19 +244,19 @@ public:
         }
 
         // [valarray.cons]: as many elements as a proxy selects, which at a fixed size must be the type's own size.
-        [[nodiscard]] constexpr valarray_adaptor(xstd::bit_slice_array<block_type> const& a)
+        [[nodiscard]] constexpr explicit(false) valarray_adaptor(xstd::bit_slice_array<block_type> const& a) // NOLINT(misc-explicit-constructor)
                 : valarray_adaptor(gathering(), a)
         {}
 
-        [[nodiscard]] constexpr valarray_adaptor(xstd::bit_gslice_array<block_type> const& a)
+        [[nodiscard]] constexpr explicit(false) valarray_adaptor(xstd::bit_gslice_array<block_type> const& a) // NOLINT(misc-explicit-constructor)
                 : valarray_adaptor(gathering(), a)
         {}
 
-        [[nodiscard]] constexpr valarray_adaptor(xstd::bit_mask_array<block_type> const& a)
+        [[nodiscard]] constexpr explicit(false) valarray_adaptor(xstd::bit_mask_array<block_type> const& a) // NOLINT(misc-explicit-constructor)
                 : valarray_adaptor(gathering(), a)
         {}
 
-        [[nodiscard]] constexpr valarray_adaptor(xstd::bit_indirect_array<block_type> const& a)
+        [[nodiscard]] constexpr explicit(false) valarray_adaptor(xstd::bit_indirect_array<block_type> const& a) // NOLINT(misc-explicit-constructor)
                 : valarray_adaptor(gathering(), a)
         {}
 

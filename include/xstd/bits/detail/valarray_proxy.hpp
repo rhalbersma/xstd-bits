@@ -14,15 +14,12 @@
 #include <xstd/bits/detail/gslice_index.hpp>          // gslice_access, gslice_index
 #include <xstd/bits/detail/intrin.hpp>                // popcount
 #include <xstd/bits/detail/ownership.hpp>             // owned_bits_t, owner_reading, storage_access, valarray_reading_tag
-#include <xstd/bits/detail/shift.hpp>                 // shl
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
-#include <algorithm>                                  // adjacent_find, all_of, count
+#include <algorithm>                                  // all_of, count
 #include <cassert>                                    // assert
 #include <concepts>                                   // derived_from, same_as
 #include <cstddef>                                    // size_t
-#include <functional>                                 // greater_equal
 #include <iterator>                                   // ssize
-#include <ranges>                                     // iota
 #include <span>                                       // span
 #include <type_traits>                                // remove_cvref_t
 #include <utility>                                    // forward
@@ -37,14 +34,14 @@ template<class V, class Block>
 concept valarray_owner_of = owner_reading<std::remove_cvref_t<V>, valarray_reading_tag> and std::same_as<typename owned_bits_t<std::remove_cvref_t<V>>::block_type, Block>;
 
 // Whether every position is below n, which each subscript asserts of the positions it selects.
-[[nodiscard]] inline auto all_below(std::span<std::size_t const> indices, std::size_t n) noexcept
+[[nodiscard]] constexpr auto all_below(std::span<std::size_t const> indices, std::size_t n) noexcept
         -> bool
 {
         return std::ranges::all_of(indices, [=](std::size_t i) noexcept -> bool { return i < n; });
 }
 
 // Whether no position is named twice, which [indirect.array.assign] leaves undefined.
-[[nodiscard]] inline auto names_each_once(std::span<std::size_t const> indices, std::size_t width)
+[[nodiscard]] constexpr auto names_each_once(std::span<std::size_t const> indices, std::size_t width)
         -> bool
 {
         auto seen = std::vector<bool>(width);
@@ -272,7 +269,7 @@ public:
                 return m_indices.size();
         }
 
-        [[nodiscard]] auto within(std::size_t n) const noexcept
+        [[nodiscard]] constexpr auto within(std::size_t n) const noexcept
                 -> bool
         {
                 return all_below(m_indices, n);
