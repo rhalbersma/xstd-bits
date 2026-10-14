@@ -255,13 +255,22 @@ template<class To, class From>
         return to;
 }
 
+// Two of our owners over one block type, whose blocks line up one for one as far as the narrower reaches.
+template<class To, class From>
+concept same_block_owners = owner<To> and owner<From> and std::same_as<typename owned_bits_t<To>::block_type, typename owned_bits_t<From>::block_type>;
+
 // Into a fixed width at least as wide: the bytes cross whole into zeros, and nothing can be lost.
 template<fixed_target To, fixed_width From>
         requires (bit_width_v<From> <= bit_width_v<To>)
 [[nodiscard]] constexpr auto convert_fixed(From const& from) noexcept
         -> To
 {
-        if constexpr (bit_width_v<From> == bit_width_v<To>) {
+        if constexpr (same_block_owners<To, From>) {
+                // Block for block into zeros, as GCC does not fold a byte-wise copy back into whole blocks.
+                auto to = To();
+                std::ranges::copy(storage_access::bits(from).blocks(), storage_access::bits(to).blocks().begin());
+                return to;
+        } else if constexpr (bit_width_v<From> == bit_width_v<To>) {
                 return from_fixed_bytes<To>(fixed_bytes(from));
         } else {
                 // The source's last byte is clear past its width, so the target's positions past it stay clear.

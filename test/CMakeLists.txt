@@ -10,13 +10,6 @@ find_package(
 )
 find_package(range-v3 CONFIG REQUIRED)
 
-# clang-cl reports CXX_COMPILER_ID Clang but understands only MSVC-style driver flags.
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-    set(${project_id}_is_clang_cl ON)
-else()
-    set(${project_id}_is_clang_cl OFF)
-endif()
-
 set(cxx_compile_definitions
     BOOST_ALL_NO_LIB
     BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE

@@ -414,7 +414,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 break;
                         }
                         case 21: {
-                                check.step("erase_if, fill, ~");
+                                check.step("erase_if, ~X(), ~");
                                 auto const r    = in.below(keys);
                                 auto const d    = in.below(7UZ) + 1UZ;
                                 auto const pred = [=](std::size_t k) -> bool { return k % d == r % d; };
@@ -422,7 +422,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 if constexpr (static_width<X>) {
                                         auto const all = std::views::iota(0UZ, keys) | std::ranges::to<model>();
                                         if (in.boolean()) {
-                                                x.fill();
+                                                x = ~X();
                                                 m = all;
                                         } else {
                                                 x = ~x;

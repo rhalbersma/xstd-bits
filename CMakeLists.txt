@@ -30,7 +30,7 @@ if(NOT xstd-ints_FOUND)
         xstd-ints
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-ints.git
         # Pinned to a commit on xstd-ints' main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 032a37c99cbb1cd27675a4bc1f44a06429c76e31
+        GIT_TAG bc720fc52103b337e689f0a0f227d472e7bda647
     )
     FetchContent_MakeAvailable(xstd-ints)
 endif()
@@ -75,20 +75,49 @@ target_sources(
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
+        include/xstd/bits/bit_algorithm/detail/blit.hpp
+        include/xstd/bits/bit_algorithm/detail/compare.hpp
+        include/xstd/bits/bit_algorithm/detail/find.hpp
+        include/xstd/bits/bit_algorithm/detail/select.hpp
+        include/xstd/bits/bit_algorithm/detail/walk.hpp
+        include/xstd/bits/bit_algorithm/bit_advance.hpp
         include/xstd/bits/bit_algorithm/bit_all_of.hpp
         include/xstd/bits/bit_algorithm/bit_any_of.hpp
+        include/xstd/bits/bit_algorithm/bit_copy.hpp
+        include/xstd/bits/bit_algorithm/bit_copy_backward.hpp
         include/xstd/bits/bit_algorithm/bit_count.hpp
         include/xstd/bits/bit_algorithm/bit_disjoint.hpp
+        include/xstd/bits/bit_algorithm/bit_distance.hpp
+        include/xstd/bits/bit_algorithm/bit_equal.hpp
+        include/xstd/bits/bit_algorithm/bit_fill.hpp
+        include/xstd/bits/bit_algorithm/bit_find.hpp
+        include/xstd/bits/bit_algorithm/bit_find_last.hpp
+        include/xstd/bits/bit_algorithm/bit_for_each.hpp
         include/xstd/bits/bit_algorithm/bit_includes.hpp
         include/xstd/bits/bit_algorithm/bit_intersects.hpp
+        include/xstd/bits/bit_algorithm/bit_is_partitioned.hpp
+        include/xstd/bits/bit_algorithm/bit_is_sorted.hpp
+        include/xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp
         include/xstd/bits/bit_algorithm/bit_mismatch.hpp
+        include/xstd/bits/bit_algorithm/bit_move.hpp
+        include/xstd/bits/bit_algorithm/bit_next.hpp
         include/xstd/bits/bit_algorithm/bit_none_of.hpp
+        include/xstd/bits/bit_algorithm/bit_partition.hpp
+        include/xstd/bits/bit_algorithm/bit_partition_point.hpp
+        include/xstd/bits/bit_algorithm/bit_prev.hpp
         include/xstd/bits/bit_algorithm/bit_reverse.hpp
+        include/xstd/bits/bit_algorithm/bit_reverse_copy.hpp
         include/xstd/bits/bit_algorithm/bit_rotate.hpp
+        include/xstd/bits/bit_algorithm/bit_rotate_copy.hpp
         include/xstd/bits/bit_algorithm/bit_set_difference.hpp
         include/xstd/bits/bit_algorithm/bit_set_intersection.hpp
         include/xstd/bits/bit_algorithm/bit_set_symmetric_difference.hpp
         include/xstd/bits/bit_algorithm/bit_set_union.hpp
+        include/xstd/bits/bit_algorithm/bit_shift_left.hpp
+        include/xstd/bits/bit_algorithm/bit_shift_right.hpp
+        include/xstd/bits/bit_algorithm/bit_sort.hpp
+        include/xstd/bits/bit_algorithm/bit_swap_ranges.hpp
+        include/xstd/bits/bit_algorithm/bit_transform.hpp
         include/xstd/bits/bit_array.hpp
         include/xstd/bits/bit.hpp
         include/xstd/bits/bit/bit_convert.hpp
@@ -109,6 +138,7 @@ target_sources(
         include/xstd/bits/bit_set_view.hpp
         include/xstd/bits/bit_span.hpp
         include/xstd/bits/bit_fixed_set.hpp
+        include/xstd/bits/bit_equal_to.hpp
         include/xstd/bits/bit_hasher.hpp
         include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_type_traits.hpp
@@ -131,7 +161,6 @@ target_sources(
         include/xstd/bits/detail/block_intersects.hpp
         include/xstd/bits/detail/comparisons.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp
-        include/xstd/bits/detail/functor.hpp
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrin.hpp
         include/xstd/bits/detail/flag_block.hpp
@@ -225,6 +254,13 @@ if(PROJECT_IS_TOP_LEVEL)
 
         # Above both, and not inside test/: benchmark/ is configured first, so a target declared in test/ does not exist yet when the benchmarks ask for it. Both trees grade over the same two integer classes.
         include(${CMAKE_CURRENT_LIST_DIR}/cmake/int128.cmake)
+
+        # clang-cl reports CXX_COMPILER_ID Clang but understands only MSVC-style driver flags. Probed here, once for both trees that choose their warning flags by it, and inside this block, so an add_subdirectory consumer inherits nothing from it.
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+            set(${project_id}_is_clang_cl ON)
+        else()
+            set(${project_id}_is_clang_cl OFF)
+        endif()
 
         # Off by default, and the GCC ladder alone turns it on. A benchmark measures the library rather than being part of it, so seven compiler ladders, fifteen sanitizer legs and both analysers building one bought nothing the one ladder does not: its Release legs run the smoke test benchmark/CMakeLists.txt registers, which is what keeps this tree compiling and running against the current API. A local build that wants the benchmarks asks for them. The coverage job needs it off for a second reason, which its own stub records: gcovr drops benchmark/ as a source path, but a benchmark is not a source there -- it is a translation unit that INSTANTIATES the library's templates, and those instantiations live in include/ where they are counted. That job configures Debug, where no benchmark registers as a test, so they would compile and never run, and every branch of an instantiation no test TU also makes is uncovered by construction. One Block-width benchmark put nine such branches in the denominator and covered none.
         option(${project_option_prefix}_BUILD_BENCHMARKS "Build the benchmark tree alongside the tests" OFF)

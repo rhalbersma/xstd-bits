@@ -13,11 +13,10 @@
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                  // three_way
-#include <xstd/bits/detail/functor.hpp>                      // invoke_continues
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
 #include <xstd/bits/detail/owner_members.hpp>                // owner_members
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
-#include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl, shr
+#include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ptr_t, storage_ref_t
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks_t
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
@@ -29,7 +28,7 @@
 #include <algorithm>                                         // copy, min, remove_if
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
-#include <concepts>                                          // constructible_from, derived_from, invocable, same_as
+#include <concepts>                                          // constructible_from, derived_from, same_as
 #include <cstddef>                                           // ptrdiff_t, size_t
 #include <format>                                            // format, formatter
 #include <functional>                                        // hash
@@ -37,7 +36,7 @@
 #include <iterator>                                          // input_iterator, make_reverse_iterator, random_access_iterator_tag, reverse_iterator, sentinel_for
 #include <new>                                               // bad_alloc
 #include <optional>                                          // nullopt, optional
-#include <ranges>                                            // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, iota, range_reference_t, size, sized_range, subrange
+#include <ranges>                                            // begin, enable_borrowed_range, enable_view, end, from_range_t, input_range, range_reference_t, size, sized_range, subrange
 #include <source_location>                                   // source_location
 #include <span>                                              // dynamic_extent
 #include <stdexcept>                                         // out_of_range
@@ -49,25 +48,6 @@
 namespace xstd::bits::detail {
 
 namespace sequence {
-
-// Every position, lowest first, a block at a time: the reload is the inner loop's exit test.
-template<class Bits, class F>
-constexpr auto walk_blocks(Bits const& c, std::size_t offset, std::size_t size, F& f)
-        -> void
-{
-        using block_type      = Bits::block_type;
-        constexpr auto digits = Bits::bits_per_block;
-
-        for (auto k = 0UZ; k < size; k += digits) {
-                auto const count = std::ranges::min(digits, size - k);
-                auto const block = c.block_at(offset + k);
-                for (auto const n : std::views::iota(0UZ, count)) {
-                        if (not invoke_continues(f, (shr(block, n) & block_type{1}) != block_type{})) {
-                                return;
-                        }
-                }
-        }
-}
 
 // The storage's block type: P0634 makes an alias-declaration type-only, where a template argument is not.
 template<class Bits>
@@ -346,6 +326,9 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
                 friend sequence_adaptor;
 
                 friend class basic_reference<IsConst>;
+
+                // The algorithms that step or write a block at a time reach the storage and position through this door.
+                friend struct storage_access;
 
                 [[nodiscard]] constexpr basic_iterator(storage_ptr_t<storage_type> ptr, std::size_t idx) noexcept
                         : m_ptr(ptr)
@@ -1018,20 +1001,12 @@ public:
                 : members_type(std::in_place, handle_of(other))
         {}
 
-        // fill: a masked block at a time over a window of ours, one position at a time over any other.
-        constexpr auto fill(this auto&& self, value_type const& u) noexcept
+        // [array.members]' fill, std::array's alone among the models: xstd::bit_fill fills any other sequence.
+        constexpr auto fill(value_type const& u) noexcept
                 -> void
-                requires (is_window and requires (std::size_t i) { self.bits().assign(i, u); }) or (not is_window and requires { self.bits().fill(u); })
+                requires is_owner and bits_type::has_static_size
         {
-                if constexpr (not is_window) {
-                        self.bits().fill(u);
-                } else if constexpr (requires { self.bits().set(self.offset(), self.size(), u); }) {
-                        self.bits().set(self.offset(), self.size(), u);
-                } else {
-                        for (auto const i : std::views::iota(self.offset(), self.offset() + self.size())) {
-                                self.bits().assign(i, u);
-                        }
-                }
+                m_bits.fill(u);
         }
 
         // iterators, spelled over what the accessor hands this self: deep const for an owner, shallow for a view.
@@ -1079,15 +1054,6 @@ public:
                 -> const_reverse_iterator
         {
                 return std::make_reverse_iterator(cbegin());
-        }
-
-        // The sequence reading a block at a time, which the range-for cannot be.
-        template<class F>
-                requires std::invocable<F&, bool>
-        constexpr auto for_each(this auto&& self, F f)
-                -> void
-        {
-                sequence::walk_blocks(self.bits(), self.offset(), self.size(), f);
         }
 
         // capacity; max_size() is the positions there are to hold, which only a growing one can extend.

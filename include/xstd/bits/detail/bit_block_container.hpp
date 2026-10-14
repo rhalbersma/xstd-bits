@@ -568,13 +568,20 @@ public:
                 }
         }
 
-        // A whole field of bits in over the byte primitive, the width being known here; bit_convert reads them out.
+        // A whole field of bits in, the width being known here; bit_convert reads them out.
         template<class Bits>
                 requires exchanges_bits<Bits>
         constexpr auto assign_bits(Bits const& b) noexcept
                 -> void
         {
-                assign_bytes(bit_bytes<bit_extent>(b));
+                if constexpr (fixed_blocks_source<Bits, bit_extent> and std::same_as<std::ranges::range_value_t<decltype(block_span(b))>, block_type>) {
+                        // Block for block, as GCC does not fold a copy of byte_count<N> bytes back into whole blocks.
+                        std::ranges::fill(m_blocks, zero);
+                        std::ranges::copy(block_span(b).template first<static_num_blocks>(), std::ranges::begin(m_blocks));
+                        erase_unused();
+                } else {
+                        assign_bytes(bit_bytes<bit_extent>(b));
+                }
         }
 
         template<std::size_t E>
@@ -1356,6 +1363,29 @@ public:
                 return found == std::ranges::end(blocks) ? n : *found;
         }
 
+        // A block's bits end for end, as log2(digits) swaps of ever narrower halves where the width has them.
+        [[nodiscard]] static constexpr auto reversed(block_type block) noexcept
+                -> block_type
+        {
+                if constexpr (std::has_single_bit(bits_per_block)) {
+                        auto mask = shr(ones, bits_per_block / 2UZ);
+                        for (auto width = bits_per_block / 2UZ; 0UZ < width; width /= 2UZ) {
+                                block = static_cast<block_type>(static_cast<block_type>(shr(block, width) & mask) | shl(static_cast<block_type>(block & mask), width));
+                                mask  = static_cast<block_type>(mask ^ shl(mask, width / 2UZ));
+                        }
+                        return block;
+                } else {
+                        // A width with no halves to swap, as a bit-precise block may have: one position at a time.
+                        auto reversed_block = zero;
+                        for (auto const i : std::views::iota(0UZ, bits_per_block)) {
+                                if (bits::detail::block_intersects(block, shl(unit, i))) {
+                                        reversed_block = static_cast<block_type>(reversed_block | shl(unit, left_bit - i));
+                                }
+                        }
+                        return reversed_block;
+                }
+        }
+
 private:
         // The blocks refuse growth a whole block at a time, so a capacity short of their last bit is held here.
         static constexpr auto check_capacity(std::size_t n [[maybe_unused]])
@@ -1523,29 +1553,6 @@ private:
         {
                 auto const gap = (num_blocks() * bits_per_block) - size();
                 for_each_block(size() - n, n, [&](std::size_t pos, block_type mask) -> void { block_at(pos, block_at(pos + gap), mask); });
-        }
-
-        // A block's bits end for end, as log2(digits) swaps of ever narrower halves where the width has them.
-        [[nodiscard]] static constexpr auto reversed(block_type block) noexcept
-                -> block_type
-        {
-                if constexpr (std::has_single_bit(bits_per_block)) {
-                        auto mask = shr(ones, bits_per_block / 2UZ);
-                        for (auto width = bits_per_block / 2UZ; 0UZ < width; width /= 2UZ) {
-                                block = static_cast<block_type>(static_cast<block_type>(shr(block, width) & mask) | shl(static_cast<block_type>(block & mask), width));
-                                mask  = static_cast<block_type>(mask ^ shl(mask, width / 2UZ));
-                        }
-                        return block;
-                } else {
-                        // A width with no halves to swap, as a bit-precise block may have: one position at a time.
-                        auto reversed_block = zero;
-                        for (auto const i : std::views::iota(0UZ, bits_per_block)) {
-                                if (bits::detail::block_intersects(block, shl(unit, i))) {
-                                        reversed_block = static_cast<block_type>(reversed_block | shl(unit, left_bit - i));
-                                }
-                        }
-                        return reversed_block;
-                }
         }
 
         [[nodiscard]] constexpr auto last_block() const noexcept
