@@ -849,14 +849,18 @@ public:
                 -> bit_block_container&
         {
                 assert(size() == other.size());
-                auto written = 0UZ;
-                for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                        m_blocks[i] = f(m_blocks[i], other.m_blocks[i]);
-                        if constexpr (has_stored_count) {
+                if constexpr (has_stored_count) {
+                        auto written = 0UZ;
+                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                m_blocks[i] = f(m_blocks[i], other.m_blocks[i]);
                                 written += bits::detail::popcount(m_blocks[i]);
                         }
+                        store_count(written - counted_above());
+                } else {
+                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                m_blocks[i] = f(m_blocks[i], other.m_blocks[i]);
+                        }
                 }
-                store_count(written - counted_above());
                 erase_unused();
                 return *this;
         }
@@ -866,14 +870,18 @@ public:
         constexpr auto transform(F f) noexcept
                 -> bit_block_container&
         {
-                auto written = 0UZ;
-                for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                        m_blocks[i] = f(m_blocks[i]);
-                        if constexpr (has_stored_count) {
+                if constexpr (has_stored_count) {
+                        auto written = 0UZ;
+                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                m_blocks[i] = f(m_blocks[i]);
                                 written += bits::detail::popcount(m_blocks[i]);
                         }
+                        store_count(written - counted_above());
+                } else {
+                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                m_blocks[i] = f(m_blocks[i]);
+                        }
                 }
-                store_count(written - counted_above());
                 erase_unused();
                 return *this;
         }
@@ -1424,14 +1432,18 @@ private:
         constexpr auto combine_blocks(Op op, Operand operand) noexcept
                 -> void
         {
-                auto kept = 0UZ;
-                for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                        op(this->m_blocks[i], operand(i));
-                        if constexpr (has_stored_count) {
+                if constexpr (has_stored_count) {
+                        auto kept = 0UZ;
+                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                op(this->m_blocks[i], operand(i));
                                 kept += bits::detail::popcount(this->m_blocks[i]);
                         }
+                        store_count(kept);
+                } else {
+                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                op(this->m_blocks[i], operand(i));
+                        }
                 }
-                store_count(kept);
         }
 
         // The blocks refuse growth a whole block at a time, so a capacity short of their last bit is held here.
