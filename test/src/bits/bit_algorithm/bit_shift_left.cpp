@@ -68,10 +68,16 @@ BOOST_AUTO_TEST_CASE(AgreesWithRangesShiftLeftOverEveryColumn)
 // In a constant expression, and over whole writable sequences of ours alone: no window, which shares its end blocks.
 BOOST_AUTO_TEST_CASE(ShiftsWholeWritableSequencesAlone)
 {
-        static_assert([] -> bool {
+        constexpr auto shifts_across_a_block = [] -> bool {
                 auto a = test::algorithm::patterned(xstd::bit_array<70>());
                 return agrees(a, 3);
-        }());
+        };
+#if defined(_MSC_VER) && !defined(__clang__)
+        // MSVC stops with an internal compiler error (C1001) evaluating this shift in a constant expression.
+        BOOST_CHECK(shifts_across_a_block());
+#else
+        static_assert(shifts_across_a_block());
+#endif
         static_assert(shiftable<xstd::bit_array<8>&> and shiftable<xstd::bit_valarray&> and shiftable<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>()))>);
         static_assert(not shiftable<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>()).subspan(1UZ, 3UZ))>);
         static_assert(not shiftable<xstd::bit_array<8> const&> and not shiftable<std::vector<bool>&> and not shiftable<xstd::bit_fixed_set<8>&>);

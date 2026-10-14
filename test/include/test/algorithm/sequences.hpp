@@ -6,6 +6,13 @@
 #ifndef TEST_ALGORITHM_SEQUENCES_HPP
 #define TEST_ALGORITHM_SEQUENCES_HPP
 
+#ifdef _MSC_VER
+
+// xstd::bit_array<0> gives bogus "unreachable code" warnings, ahead of the containers this header includes
+#pragma warning(disable : 4702)
+
+#endif
+
 #include <test/sequence/factory.hpp> // limit_v, make_sequence, static_width, stripes
 #include <test/spec/sequence.hpp>    // bounded, dynamic, fixed, small
 #include <xstd/bits/bit_span.hpp>    // bit_span

@@ -6,6 +6,13 @@
 #ifndef TEST_ALGORITHM_SETS_HPP
 #define TEST_ALGORITHM_SETS_HPP
 
+#ifdef _MSC_VER
+
+// xstd::bit_fixed_set<0> gives bogus "unreachable code" warnings, ahead of the containers this header includes
+#pragma warning(disable : 4702)
+
+#endif
+
 #include <test/sequence/factory.hpp>     // stripes
 #include <test/set/exhaustive.hpp>       // limit_v, static_width
 #include <test/spec/set.hpp>             // bounded, dynamic, fixed, small, user_storage
