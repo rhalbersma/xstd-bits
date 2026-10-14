@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_WALK_HPP
 
 #include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // descends, first_position, reads_keys
-#include <xstd/bits/detail/intrin.hpp>                  // countl_zero, countr_zero
+#include <xstd/bits/detail/intrinsic.hpp>               // countl_zero, countr_zero
 #include <xstd/bits/detail/ownership.hpp>               // storage_access
 #include <xstd/bits/detail/shift.hpp>                   // shl, shr
 #include <xstd/misc/concepts/specialization_of.hpp>     // specialization_of

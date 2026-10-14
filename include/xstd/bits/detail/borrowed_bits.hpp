@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_BORROWED_BITS_HPP
 
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
-#include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container
+#include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container, set_bits_t, unbounded_width
 #include <xstd/bits/detail/bit_block_range.hpp>            // bit_block_range
 #include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
 #include <cstddef>                                         // size_t
@@ -59,6 +59,21 @@ struct view_storage_for<std::span<Block, E>, N>
 
 template<class Blocks, std::size_t N>
 using view_storage_t = view_storage_for<Blocks, N>::type;
+
+// The set reading's view over an owner's blocks refers to the storage that owner holds, its key count included.
+template<class Blocks, std::size_t N>
+struct set_view_storage_for : view_storage_for<Blocks, N>
+{};
+
+template<class Blocks, std::size_t N>
+        requires unbounded_width<std::remove_const_t<Blocks>, N>
+struct set_view_storage_for<Blocks, N>
+{
+        using type = const_as_t<Blocks, set_bits_t<std::remove_const_t<Blocks>, N>>;
+};
+
+template<class Blocks, std::size_t N>
+using set_view_storage_t = set_view_storage_for<Blocks, N>::type;
 
 // The blocks a guide deduces from what it is handed: a block as itself, a range as the span that lends it.
 template<class W>

@@ -20,7 +20,7 @@
 #include <xstd/bits/bit_key_mapping.hpp>               // bit_key_mapping, enum_traits
 #include <xstd/bits/bit_set.hpp>                       // basic_bit_set, bit_set
 #include <xstd/bits/bit_set_view.hpp>                  // bit_set_view
-#include <xstd/bits/detail/bit_block_container.hpp>    // bit_block_container
+#include <xstd/bits/detail/bit_block_container.hpp>    // bit_block_container, set_bits_t
 #include <xstd/bits/detail/ownership.hpp>              // owned_bits_t, storage
 #include <xstd/bits/detail/set_adaptor.hpp>            // set_adaptor
 #include <xstd/bits/ext/boost/bit_small_set.hpp>       // basic_bit_small_set
@@ -134,9 +134,9 @@ constexpr bool compares_with = requires (X const& x, Y const& y) { x == y; };
 BOOST_AUTO_TEST_CASE(AnOwnerIsATypeOfItsOwnOverItsStorage)
 {
         static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 20>>, xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>, 20>>);
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_set<std::size_t, std::uint32_t>>, xstd::bits::detail::bit_block_container<std::vector<std::uint32_t>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_set<std::size_t, std::uint32_t>>, xstd::bits::detail::set_bits_t<std::vector<std::uint32_t>>>);
         static_assert(not compares_with<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 24>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>>>>);
-        static_assert(not compares_with<xstd::basic_bit_set<std::size_t, std::uint32_t>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<std::vector<std::uint32_t>>>>);
+        static_assert(not compares_with<xstd::basic_bit_set<std::size_t, std::uint32_t>, xstd::bits::detail::set_adaptor<xstd::bits::detail::set_bits_t<std::vector<std::uint32_t>>>>);
         BOOST_CHECK(true);
 }
 
@@ -722,7 +722,7 @@ namespace {
 [[nodiscard]] auto width_of(xstd::bit_set& s)
         -> std::size_t
 {
-        return xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<std::vector<std::size_t>>, xstd::bits::detail::storage::borrowed>(s).max_size();
+        return xstd::bits::detail::set_adaptor<xstd::bits::detail::set_bits_t<std::vector<std::size_t>>, xstd::bits::detail::storage::borrowed>(s).max_size();
 }
 
 } // namespace
