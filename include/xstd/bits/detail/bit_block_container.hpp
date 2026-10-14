@@ -13,7 +13,7 @@
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, container_source, copy_bits, fixed_blocks_source
 #include <xstd/bits/detail/block_intersects.hpp>             // block_intersects
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
-#include <xstd/bits/detail/intrin.hpp>                       // countl_zero, countr_zero, popcount
+#include <xstd/bits/detail/intrinsic.hpp>                    // countl_zero, countr_zero, popcount
 #include <xstd/bits/detail/num_blocks.hpp>                   // holds_width, num_blocks_v, whole_blocks_width_v
 #include <xstd/bits/detail/owned_bit_blocks.hpp>             // owned_bit_blocks
 #include <xstd/bits/detail/resizable_bit_blocks.hpp>         // resizable_bit_blocks

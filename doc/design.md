@@ -86,7 +86,7 @@ storage whose `resize` is `noexcept` never takes that path.
 The element clause is `xstd::unsigned_integer`, and **not** the wider `bit_mask`, which would be the concept
 if the operators were all a block is asked for. They are not. Beyond them the body wants the `<bit>` intrinsics
 — `popcount`, `countr_zero` and `countl_zero`, each constrained on `xstd::unsigned_integer` in
-`detail/intrin.hpp` and reached at some thirty sites — a `numeric_limits<block_type>::digits` for
+`detail/intrinsic.hpp` and reached at some thirty sites — a `numeric_limits<block_type>::digits` for
 `bits_per_block`, and block arithmetic: `shl(unit, count) - unit`, and the `block & (block - 1)` step the set
 reading's block walk takes, where `bit_mask` omits `-` deliberately, subtraction and set difference
 being indistinguishable to a concept.
@@ -1383,9 +1383,10 @@ flavor, and a bit container hashes inside a user's Hash2-hashed aggregate as the
 | every set and set view | `std::set<Key, Compare>` | each key in iteration order, descending under `std::greater`, then `hash_append_size(count)` |
 
 A sequence's bools are not read through its proxies. `detail/hash.hpp` expands each 64-bit word of the bits
-into 64 bytes, through `detail/intrin.hpp`: one `_mm512_movm_epi8` where AVX-512BW is enabled, a `_pdep_u64`
-per byte where BMI2 is on x86-64, and otherwise, and in a constant expression, a 256-entry table of each byte's eight
-bools. Eight words go to an `update`, and the last stops at the width: no padding bit is ever a bool. Chunking
+into 64 bytes, through `detail/intrinsic.hpp`: one `_mm512_movm_epi8` where AVX-512BW is enabled, an
+`xstd::bit_expand` per byte where xstd-ints finds PDEP fast, which is BMI2 on x86-64 short of the AMD processors that
+microcode it and MSVC's `/arch:AVX2`, and otherwise, and in a constant expression, a 256-entry table of each byte's
+eight bools. Eight words go to an `update`, and the last stops at the width: no padding bit is ever a bool. Chunking
 does not change a Hash2 digest, so the expansion's grain is free. A set walks its keys, costing what `std::set`
 costs, and appends each as `Key`, so its message follows the platform's `std::size_t` as the model's does.
 `bit_block_container`, which is no reading, keeps its own hook over its blocks.
@@ -4919,7 +4920,7 @@ Three consequences follow, none of them obvious from the forwarding change alone
 
 **The calls are qualified, so they bind where they are written.** `xstd::popcount(block)` is a dependent call
 by a qualified name, and ADL does not apply to qualified names, so its candidates are the overloads visible at
-`intrin.hpp` — not at the instantiation. An adapter included afterwards declares its overload too late to be
+`intrinsic.hpp` — not at the instantiation. An adapter included afterwards declares its overload too late to be
 one. A translation unit reaching for an integer-class Block therefore includes that adapter first; the test
 tree does it in `test/block_types.hpp`, above every container header. The same rule decides where
 `test::block_basis` can be spelled, which is why it sits in that header rather than in one of its own: a

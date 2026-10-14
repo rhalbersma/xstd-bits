@@ -8,7 +8,7 @@
 
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container_type
 #include <xstd/bits/detail/block_intersects.hpp>    // block_intersects
-#include <xstd/bits/detail/intrin.hpp>              // countr_zero
+#include <xstd/bits/detail/intrinsic.hpp>           // countr_zero
 #include <xstd/bits/detail/ownership.hpp>           // sequence_reading_tag, set_reading_tag
 #include <xstd/bits/detail/shift.hpp>               // shl
 #include <algorithm>                                // equal, max, min

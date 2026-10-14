@@ -11,7 +11,7 @@
 #include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
-#include <xstd/bits/detail/intrin.hpp>              // bools_per_block, byte_bools, expand_block, expand_block_by_table
+#include <xstd/bits/detail/intrinsic.hpp>           // bools_per_block, byte_bools, expand_block, expand_block_by_table
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
 #include <xstd/bits/from_blocks.hpp>                // from_blocks
