@@ -533,8 +533,8 @@ auto wide_bitset_mismatches()
         for (auto const& a : wide_masks<M>()) {
                 X const x = a;
                 mismatches += static_cast<std::size_t>(mask(x) != a or x != a or x.size() != a.count());
-                auto keys  = std::vector<mask>(x.begin(), x.end());
-                auto model = std::vector<mask>();
+                auto const keys = std::vector<mask>(x.begin(), x.end());
+                auto model      = std::vector<mask>();
                 for (auto i = M - 1UZ; i < M; --i) {
                         if (a.test(i)) {
                                 model.push_back(mask().set(i));

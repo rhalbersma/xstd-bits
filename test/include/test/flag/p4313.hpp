@@ -27,28 +27,28 @@ template<test::p4313::bitmask_like T>
 [[nodiscard]] constexpr auto operator|(T lhs, T rhs) noexcept
         -> T
 {
-        return static_cast<T>(std::to_underlying(lhs) | std::to_underlying(rhs));
+        return static_cast<T>(std::to_underlying(lhs) | std::to_underlying(rhs)); // NOLINT(bugprone-signed-bitwise): P4313R1's operator, over the paper's int
 }
 
 template<test::p4313::bitmask_like T>
 [[nodiscard]] constexpr auto operator&(T lhs, T rhs) noexcept
         -> T
 {
-        return static_cast<T>(std::to_underlying(lhs) & std::to_underlying(rhs));
+        return static_cast<T>(std::to_underlying(lhs) & std::to_underlying(rhs)); // NOLINT(bugprone-signed-bitwise): P4313R1's operator, over the paper's int
 }
 
 template<test::p4313::bitmask_like T>
 [[nodiscard]] constexpr auto operator^(T lhs, T rhs) noexcept
         -> T
 {
-        return static_cast<T>(std::to_underlying(lhs) ^ std::to_underlying(rhs));
+        return static_cast<T>(std::to_underlying(lhs) ^ std::to_underlying(rhs)); // NOLINT(bugprone-signed-bitwise): P4313R1's operator, over the paper's int
 }
 
 template<test::p4313::bitmask_like T>
 [[nodiscard]] constexpr auto operator~(T lhs) noexcept
         -> T
 {
-        return static_cast<T>(~std::to_underlying(lhs));
+        return static_cast<T>(~std::to_underlying(lhs)); // NOLINT(bugprone-signed-bitwise): P4313R1's operator, over the paper's int
 }
 
 template<test::p4313::bitmask_like T>

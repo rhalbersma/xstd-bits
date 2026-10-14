@@ -84,13 +84,13 @@ enum alignment_flag // NOLINT(performance-enum-size): Qt declares it with no und
         align_hcenter    = 0x0004,
         align_justify    = 0x0008,
         align_absolute   = 0x0010,
-        align_horizontal = align_left | align_right | align_hcenter | align_justify | align_absolute,
+        align_horizontal = align_left | align_right | align_hcenter | align_justify | align_absolute, // NOLINT(bugprone-signed-bitwise): Qt's enumerator, on int
         align_top        = 0x0020,
         align_bottom     = 0x0040,
         align_vcenter    = 0x0080,
         align_baseline   = 0x0100,
-        align_vertical   = align_top | align_bottom | align_vcenter | align_baseline,
-        align_center     = align_vcenter | align_hcenter,
+        align_vertical   = align_top | align_bottom | align_vcenter | align_baseline, // NOLINT(bugprone-signed-bitwise): Qt's enumerator, on int
+        align_center     = align_vcenter | align_hcenter,                             // NOLINT(bugprone-signed-bitwise): Qt's enumerator, on int
 };
 
 // Q_DECLARE_OPERATORS_FOR_FLAGS: two enumerators combine into the flags type, never into the enumeration.

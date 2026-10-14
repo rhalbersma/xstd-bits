@@ -27,42 +27,42 @@ namespace app {
 enum class permission // NOLINT(performance-enum-size): the paper's declaration, on int
 {
         none    = 0,
-        read    = 1 << 0,
-        write   = 1 << 1,
-        execute = 1 << 2,
+        read    = 1 << 0, // NOLINT(bugprone-signed-bitwise): the paper's enumerator, on int
+        write   = 1 << 1, // NOLINT(bugprone-signed-bitwise): the paper's enumerator, on int
+        execute = 1 << 2, // NOLINT(bugprone-signed-bitwise): the paper's enumerator, on int
 };
 
 // The same enumeration with its operators written beside it, as a bitmask type is today.
 enum class permission_by_hand // NOLINT(performance-enum-size): the paper's declaration, on int
 {
         none    = 0,
-        read    = 1 << 0,
-        write   = 1 << 1,
-        execute = 1 << 2,
+        read    = 1 << 0, // NOLINT(bugprone-signed-bitwise): the paper's enumerator, on int
+        write   = 1 << 1, // NOLINT(bugprone-signed-bitwise): the paper's enumerator, on int
+        execute = 1 << 2, // NOLINT(bugprone-signed-bitwise): the paper's enumerator, on int
 };
 
 [[nodiscard]] constexpr auto operator|(permission_by_hand a, permission_by_hand b) noexcept
         -> permission_by_hand
 {
-        return static_cast<permission_by_hand>(std::to_underlying(a) | std::to_underlying(b));
+        return static_cast<permission_by_hand>(std::to_underlying(a) | std::to_underlying(b)); // NOLINT(bugprone-signed-bitwise): the paper's operator, on int
 }
 
 [[nodiscard]] constexpr auto operator&(permission_by_hand a, permission_by_hand b) noexcept
         -> permission_by_hand
 {
-        return static_cast<permission_by_hand>(std::to_underlying(a) & std::to_underlying(b));
+        return static_cast<permission_by_hand>(std::to_underlying(a) & std::to_underlying(b)); // NOLINT(bugprone-signed-bitwise): the paper's operator, on int
 }
 
 [[nodiscard]] constexpr auto operator^(permission_by_hand a, permission_by_hand b) noexcept
         -> permission_by_hand
 {
-        return static_cast<permission_by_hand>(std::to_underlying(a) ^ std::to_underlying(b));
+        return static_cast<permission_by_hand>(std::to_underlying(a) ^ std::to_underlying(b)); // NOLINT(bugprone-signed-bitwise): the paper's operator, on int
 }
 
 [[nodiscard]] constexpr auto operator~(permission_by_hand a) noexcept
         -> permission_by_hand
 {
-        return static_cast<permission_by_hand>(~std::to_underlying(a));
+        return static_cast<permission_by_hand>(~std::to_underlying(a)); // NOLINT(bugprone-signed-bitwise): the paper's operator, on int
 }
 
 constexpr auto operator|=(permission_by_hand& a, permission_by_hand b) noexcept
@@ -86,8 +86,8 @@ constexpr auto operator^=(permission_by_hand& a, permission_by_hand b) noexcept
 // Marked for the operators that are declared only after the xstd headers.
 enum class late_permission : unsigned char
 {
-        read  = 1 << 0,
-        write = 1 << 1,
+        read  = 1U << 0U,
+        write = 1U << 1U,
 };
 
 } // namespace app
@@ -95,8 +95,8 @@ enum class late_permission : unsigned char
 // The global namespace, which an enumeration declared there brings into argument-dependent lookup.
 enum class global_permission : unsigned char
 {
-        read  = 1 << 0,
-        write = 1 << 1,
+        read  = 1U << 0U,
+        write = 1U << 1U,
 };
 
 template<>
