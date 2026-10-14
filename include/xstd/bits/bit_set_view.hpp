@@ -10,7 +10,7 @@
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
 #include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/blocks.hpp>                     // blocks_of_t, blocks_width_v
-#include <xstd/bits/detail/borrowed_bits.hpp>              // borrowable_block, borrowable_blocks, lent_blocks_t, view_storage_t
+#include <xstd/bits/detail/borrowed_bits.hpp>              // borrowable_block, borrowable_blocks, lent_blocks_t, set_view_storage_t
 #include <xstd/bits/detail/ownership.hpp>                  // owned_bits_t, owner_reading, set_reading_tag, storage
 #include <xstd/bits/detail/set_adaptor.hpp>                // set_adaptor
 #include <boost/container_hash/is_range.hpp>               // is_range
@@ -24,9 +24,9 @@ namespace xstd {
 
 // A class rather than an alias to the referring adaptor, so deduction and diagnostics name the view itself.
 template<bit_blocks Blocks, std::size_t N = bit_blocks_extent_v<Blocks>>
-class bit_set_view : public bits::detail::set_adaptor<bits::detail::view_storage_t<Blocks, N>, bits::detail::storage::borrowed, bit_set_view<Blocks, N>>
+class bit_set_view : public bits::detail::set_adaptor<bits::detail::set_view_storage_t<Blocks, N>, bits::detail::storage::borrowed, bit_set_view<Blocks, N>>
 {
-        using base_type = bits::detail::set_adaptor<bits::detail::view_storage_t<Blocks, N>, bits::detail::storage::borrowed, bit_set_view<Blocks, N>>;
+        using base_type = bits::detail::set_adaptor<bits::detail::set_view_storage_t<Blocks, N>, bits::detail::storage::borrowed, bit_set_view<Blocks, N>>;
 
 public:
         using base_type::base_type;

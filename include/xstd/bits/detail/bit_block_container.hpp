@@ -199,20 +199,50 @@ struct structural_bit_members : bits::detail::allocator_base_type<Blocks>
         [[nodiscard]] friend auto operator==(structural_bit_members const&, structural_bit_members const&) -> bool = default;
 };
 
-// Access cannot follow the width, so the base does: public members where there are no unused bits to keep clear.
+// A width that grows without bound, and with it a popcount that does: where a set reading keeps its key count.
 template<class Blocks, std::size_t N>
+concept unbounded_width = resizable_bit_blocks<Blocks> and N == std::dynamic_extent;
+
+// The width, the bits set within it and the blocks, each moved by every write so that size() reads the second.
+template<class Width, class Blocks>
+class counted_bit_members : public bits::detail::allocator_base_type<Blocks>
+{
+protected:
+        Width m_size{};
+
+        std::size_t m_count{};
+
+        Blocks m_blocks{};
+
+public:
+        [[nodiscard]] counted_bit_members() = default;
+
+        template<class W, class... Args>
+        [[nodiscard]] constexpr explicit counted_bit_members(W&& w, Args&&... args) noexcept(std::is_nothrow_constructible_v<Blocks, Args...>)
+                : m_size(std::forward<W>(w))
+                , m_blocks(std::forward<Args>(args)...)
+        {}
+
+        [[nodiscard]] friend auto operator==(counted_bit_members const&, counted_bit_members const&) -> bool = default;
+};
+
+// Access cannot follow the width, so the base does: public members where there are no unused bits to keep clear.
+template<class Blocks, std::size_t N, bool Counted>
 using bit_members_t = std::conditional_t<
         structural_blocks_v<Blocks, N>,
         structural_bit_members<width_member_t<Blocks, N>, Blocks>,
-        bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>>;
+        std::conditional_t<
+                Counted,
+                counted_bit_members<width_member_t<Blocks, N>, Blocks>,
+                bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>>>;
 
-// The one vehicle: it owns the unused-tail invariant, and has no iterators.
-template<class Blocks, std::size_t N = default_extent_v<Blocks>>
+// The one vehicle: it owns the unused-tail invariant, and the key count where it keeps one, and has no iterators.
+template<class Blocks, std::size_t N = default_extent_v<Blocks>, bool Counted = false>
         requires ((bit_block_range<Blocks> and owned_bit_blocks<Blocks> and admits_owner_extent<Blocks, N>()) or (borrowed_block_span<Blocks> and N == default_extent_v<Blocks>)) and
-                 holds_width<std::ranges::range_value_t<Blocks>, N>
-class bit_block_container : public bit_members_t<Blocks, N>
+                 holds_width<std::ranges::range_value_t<Blocks>, N> and ((not Counted) or unbounded_width<Blocks, N>)
+class bit_block_container : public bit_members_t<Blocks, N, Counted>
 {
-        using members_type = bit_members_t<Blocks, N>;
+        using members_type = bit_members_t<Blocks, N, Counted>;
         using members_type::m_blocks;
         using members_type::m_size;
 
@@ -231,6 +261,9 @@ public:
 
         // A capacity of nought holds no position, so the width is zero without a member to store it in.
         static constexpr bool has_zero_capacity = zero_capacity<Blocks, N>;
+
+        // The bits set, kept as a member that every write here moves, so that count() reads it rather than the blocks.
+        static constexpr bool has_stored_count = Counted;
 
         // Every block pattern a value, so the blocks are public and the container a structural type.
         static constexpr bool is_structural = structural_blocks_v<Blocks, N>;
@@ -322,6 +355,7 @@ public:
         {
                 assert(num_blocks() <= max_num_blocks);
                 assert(not has_static_capacity or size() <= N);
+                recount();
         }
 
         // Any bits of a layout this width reads, assigned position by position; for Blocks itself, adopting wins.
@@ -352,13 +386,16 @@ public:
         {
                 take_blocks(blocks);
                 assert(num_blocks() <= max_num_blocks);
+                recount();
         }
 
         // [container.alloc.reqmts]'s allocator-extended copy and move; the moved-from is left empty.
         [[nodiscard]] constexpr bit_block_container(bit_block_container const& other, allocator_param_t<Blocks> const& alloc)
                 requires has_stored_size and allocator_aware<Blocks>
                 : members_type(other.m_size, other.m_blocks, alloc)
-        {}
+        {
+                store_count(other.stored_count());
+        }
 
         [[nodiscard]] constexpr bit_block_container(bit_block_container&& other, allocator_param_t<Blocks> const& alloc)
                 requires has_stored_size and allocator_aware<Blocks>
@@ -366,6 +403,7 @@ public:
         {
                 take_blocks(other.m_blocks);
                 other.m_blocks.clear();
+                store_count(other.take_count());
         }
 
         // Declared because the moves below are; a static width keeps all four trivial where its blocks are.
@@ -383,6 +421,7 @@ public:
                 if (this != &other) {
                         copy_blocks(other.m_blocks);
                         m_size = other.m_size;
+                        store_count(other.stored_count());
                 }
                 return *this;
         }
@@ -401,6 +440,7 @@ public:
                 : members_type(std::exchange(other.m_size, 0UZ), std::move(other.m_blocks))
         {
                 other.m_blocks.clear();
+                store_count(other.take_count());
         }
 
         // Assigned in place: a moved-into temporary would allocate the proxy a debug MSVC vector keeps, and can throw.
@@ -414,6 +454,7 @@ public:
                 move_blocks(other.m_blocks);
                 m_size = std::exchange(other.m_size, 0UZ);
                 other.m_blocks.clear();
+                store_count(other.take_count());
                 return *this;
         }
 
@@ -434,6 +475,7 @@ public:
                 assert(not has_static_capacity or std::ranges::size(blocks) * bits_per_block <= N);
                 m_blocks = std::move(blocks);
                 store_size(num_blocks() * bits_per_block);
+                recount();
         }
 
         // flat_set's extract: the blocks go out whole, tail clear, and the source is left at width zero.
@@ -444,6 +486,7 @@ public:
                 auto blocks = std::move(m_blocks);
                 m_blocks.clear();
                 store_size(0UZ);
+                store_count(0UZ);
                 return blocks;
         }
 
@@ -630,7 +673,9 @@ public:
                 -> bit_block_container&
         {
                 assert(n <= size() and len <= size() - n);
+                auto const before = counted_in(n, len);
                 for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(pos, value ? ones : zero, mask); });
+                store_count(stored_count() - before + (len * static_cast<std::size_t>(value)));
                 return *this;
         }
 
@@ -640,7 +685,7 @@ public:
         {
                 assert(n <= size() and len <= size() - n);
                 auto c = 0UZ;
-                for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { c += popcount(static_cast<block_type>(block_at(pos) & mask)); });
+                for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { c += bits::detail::popcount(static_cast<block_type>(block_at(pos) & mask)); });
                 return c;
         }
 
@@ -773,103 +818,28 @@ public:
         }
 
         // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
-        constexpr auto operator&=(bit_block_container const& other [[maybe_unused]]) noexcept
+        constexpr auto operator&=(bit_block_container const& other) noexcept
                 -> bit_block_container&
         {
-                if constexpr (has_static_size and static_num_blocks == 1) {
-                        this->m_blocks[0] &= other.m_blocks[0];
-                } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        this->m_blocks[0] &= other.m_blocks[0];
-                        this->m_blocks[1] &= other.m_blocks[1];
-                } else if constexpr (not(has_static_size and N == 0)) {
-                        if constexpr (not has_static_size) {
-                                if (this->size() != other.size()) {
-                                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                                                this->m_blocks[i] &= other.padded_block(i);
-                                        }
-                                        return *this;
-                                }
-                        }
-                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                                this->m_blocks[i] &= other.m_blocks[i];
-                        }
-                }
-                return *this;
+                return combine(other, [](block_type& lhs, block_type rhs) -> void { lhs &= rhs; });
         }
 
-        // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
-        constexpr auto operator|=(bit_block_container const& other [[maybe_unused]]) noexcept
+        constexpr auto operator|=(bit_block_container const& other) noexcept
                 -> bit_block_container&
         {
-                if constexpr (has_static_size and static_num_blocks == 1) {
-                        this->m_blocks[0] |= other.m_blocks[0];
-                } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        this->m_blocks[0] |= other.m_blocks[0];
-                        this->m_blocks[1] |= other.m_blocks[1];
-                } else if constexpr (not(has_static_size and N == 0)) {
-                        if constexpr (not has_static_size) {
-                                if (this->size() != other.size()) {
-                                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                                                this->m_blocks[i] |= other.padded_block(i);
-                                        }
-                                        return *this;
-                                }
-                        }
-                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                                this->m_blocks[i] |= other.m_blocks[i];
-                        }
-                }
-                return *this;
+                return combine(other, [](block_type& lhs, block_type rhs) -> void { lhs |= rhs; });
         }
 
-        // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
-        constexpr auto operator^=(bit_block_container const& other [[maybe_unused]]) noexcept
+        constexpr auto operator^=(bit_block_container const& other) noexcept
                 -> bit_block_container&
         {
-                if constexpr (has_static_size and static_num_blocks == 1) {
-                        this->m_blocks[0] ^= other.m_blocks[0];
-                } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        this->m_blocks[0] ^= other.m_blocks[0];
-                        this->m_blocks[1] ^= other.m_blocks[1];
-                } else if constexpr (not(has_static_size and N == 0)) {
-                        if constexpr (not has_static_size) {
-                                if (this->size() != other.size()) {
-                                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                                                this->m_blocks[i] ^= other.padded_block(i);
-                                        }
-                                        return *this;
-                                }
-                        }
-                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                                this->m_blocks[i] ^= other.m_blocks[i];
-                        }
-                }
-                return *this;
+                return combine(other, [](block_type& lhs, block_type rhs) -> void { lhs ^= rhs; });
         }
 
-        // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
-        constexpr auto operator-=(bit_block_container const& other [[maybe_unused]]) noexcept
+        constexpr auto operator-=(bit_block_container const& other) noexcept
                 -> bit_block_container&
         {
-                if constexpr (has_static_size and static_num_blocks == 1) {
-                        this->m_blocks[0] &= static_cast<block_type>(~other.m_blocks[0]);
-                } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        this->m_blocks[0] &= static_cast<block_type>(~other.m_blocks[0]);
-                        this->m_blocks[1] &= static_cast<block_type>(~other.m_blocks[1]);
-                } else if constexpr (not(has_static_size and N == 0)) {
-                        if constexpr (not has_static_size) {
-                                if (this->size() != other.size()) {
-                                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                                                this->m_blocks[i] &= static_cast<block_type>(~other.padded_block(i));
-                                        }
-                                        return *this;
-                                }
-                        }
-                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                                this->m_blocks[i] &= static_cast<block_type>(~other.m_blocks[i]);
-                        }
-                }
-                return *this;
+                return combine(other, [](block_type& lhs, block_type rhs) -> void { lhs &= static_cast<block_type>(~rhs); });
         }
 
         // An elementwise kernel over two storages of one width: each block through f, then the padding cleared.
@@ -878,9 +848,14 @@ public:
                 -> bit_block_container&
         {
                 assert(size() == other.size());
+                auto written = 0UZ;
                 for (auto const i : std::views::iota(0UZ, num_blocks())) {
                         m_blocks[i] = f(m_blocks[i], other.m_blocks[i]);
+                        if constexpr (has_stored_count) {
+                                written += bits::detail::popcount(m_blocks[i]);
+                        }
                 }
+                store_count(written - counted_above());
                 erase_unused();
                 return *this;
         }
@@ -890,9 +865,14 @@ public:
         constexpr auto transform(F f) noexcept
                 -> bit_block_container&
         {
+                auto written = 0UZ;
                 for (auto const i : std::views::iota(0UZ, num_blocks())) {
                         m_blocks[i] = f(m_blocks[i]);
+                        if constexpr (has_stored_count) {
+                                written += bits::detail::popcount(m_blocks[i]);
+                        }
                 }
+                store_count(written - counted_above());
                 erase_unused();
                 return *this;
         }
@@ -901,6 +881,8 @@ public:
                 -> bit_block_container&
         {
                 assert(is_valid(n));
+                // The top n positions shift out, and only they.
+                count_down(counted_in(size() - n, n));
                 if constexpr (has_static_size and static_num_blocks == 0) {
                         // No blocks to move, and the general arm would hand a null pointer to fill_n.
                 } else if constexpr (has_static_size and static_num_blocks == 1) {
@@ -930,6 +912,8 @@ public:
                 -> bit_block_container&
         {
                 assert(is_valid(n));
+                // The bottom n positions shift out, and only they.
+                count_down(counted_in(0UZ, n));
                 if constexpr (has_static_size and static_num_blocks == 0) {
                         // No blocks to move, and the general arm would hand a null pointer to fill_n.
                 } else if constexpr (has_static_size and static_num_blocks == 1) {
@@ -999,6 +983,7 @@ public:
                         std::ranges::fill(m_blocks, ones);
                         erase_unused();
                 }
+                store_count(size());
                 assert(all());
                 return *this;
         }
@@ -1007,6 +992,7 @@ public:
                 -> bit_block_container&
         {
                 std::ranges::fill(m_blocks, zero);
+                store_count(0UZ);
                 assert(none());
                 return *this;
         }
@@ -1025,6 +1011,7 @@ public:
                         }
                 }
                 erase_unused();
+                store_count(size() - stored_count());
                 return *this;
         }
 
@@ -1034,6 +1021,9 @@ public:
                 // m_size is empty_type under a static width, and swapping that is a no-op.
                 std::ranges::swap(this->m_size, other.m_size);
                 std::ranges::swap(this->m_blocks, other.m_blocks);
+                if constexpr (has_stored_count) {
+                        std::ranges::swap(this->m_count, other.m_count);
+                }
         }
 
         // ranges::swap finds a free swap by ADL and a member never, so the member is reached through this.
@@ -1104,6 +1094,7 @@ public:
                         m_blocks.push_back(value);
                 }
                 store_size(size() + bits_per_block);
+                count_up(bits::detail::popcount(value));
         }
 
         // In bits, where the blocks have the member: vector and inplace_vector do, array does not.
@@ -1138,6 +1129,9 @@ public:
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
+                if constexpr (has_stored_count) {
+                        count_up(static_cast<std::size_t>(not bits::detail::block_intersects(block, mask)));
+                }
                 block |= mask;
                 assert(test(n));
                 return *this;
@@ -1150,6 +1144,7 @@ public:
                 auto&& [block, mask] = block_mask(n);
                 auto const inserted  = not bits::detail::block_intersects(block, mask);
                 block |= mask;
+                count_up(static_cast<std::size_t>(inserted));
                 assert(test(n));
                 return inserted;
         }
@@ -1188,6 +1183,9 @@ public:
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
+                if constexpr (has_stored_count) {
+                        count_down(static_cast<std::size_t>(bits::detail::block_intersects(block, mask)));
+                }
                 block &= static_cast<block_type>(~mask);
                 assert(not test(n));
                 return *this;
@@ -1200,6 +1198,7 @@ public:
                 auto&& [block, mask] = block_mask(n);
                 auto const erased    = bits::detail::block_intersects(block, mask);
                 block &= static_cast<block_type>(~mask);
+                count_down(static_cast<std::size_t>(erased));
                 assert(not test(n));
                 return erased;
         }
@@ -1209,6 +1208,11 @@ public:
         {
                 assert(is_valid(n));
                 auto&& [block, mask] = block_mask(n);
+                if constexpr (has_stored_count) {
+                        // Up one for a bit that was clear and down one for a bit that was set, without a branch.
+                        count_up(1UZ);
+                        count_down(2UZ * static_cast<std::size_t>(bits::detail::block_intersects(block, mask)));
+                }
                 block ^= mask;
                 return *this;
         }
@@ -1225,17 +1229,20 @@ public:
         [[nodiscard]] constexpr auto count() const noexcept
                 -> std::size_t
         {
-                if constexpr (has_static_size and N == 0) {
-                        return 0UZ;
-                } else if constexpr (has_static_size and static_num_blocks == 1) {
-                        return bits::detail::popcount(m_blocks[0]);
-                } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        return bits::detail::popcount(m_blocks[0]) + bits::detail::popcount(m_blocks[1]);
+                if constexpr (has_stored_count) {
+                        assert(this->m_count == count_blocks());
+                        return this->m_count;
                 } else {
-                        return std::ranges::fold_left(
-                                m_blocks | std::views::transform([](auto block) { return bits::detail::popcount(block); }),
-                                0UZ, std::plus<>()
-                        );
+                        return count_blocks();
+                }
+        }
+
+        // Public for the reason erase_unused is: whoever writes the blocks directly restores the count they moved.
+        constexpr auto recount() noexcept
+                -> void
+        {
+                if constexpr (has_stored_count) {
+                        this->m_count = count_blocks();
                 }
         }
 
@@ -1387,6 +1394,45 @@ public:
         }
 
 private:
+        // The four compound operators' one kernel: unrolled at one and two static blocks, else a loop.
+        template<class Op>
+        constexpr auto combine(bit_block_container const& other [[maybe_unused]], Op op [[maybe_unused]]) noexcept
+                -> bit_block_container&
+        {
+                if constexpr (has_static_size and static_num_blocks == 1) {
+                        op(this->m_blocks[0], other.m_blocks[0]);
+                } else if constexpr (has_static_size and static_num_blocks == 2) {
+                        op(this->m_blocks[0], other.m_blocks[0]);
+                        op(this->m_blocks[1], other.m_blocks[1]);
+                } else if constexpr (has_static_size and N != 0) {
+                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                                op(this->m_blocks[i], other.m_blocks[i]);
+                        }
+                } else if constexpr (not has_static_size) {
+                        if (this->size() != other.size()) {
+                                combine_blocks(op, [&](std::size_t i) -> block_type { return other.padded_block(i); });
+                        } else {
+                                combine_blocks(op, [&](std::size_t i) -> block_type { return other.m_blocks[i]; });
+                        }
+                }
+                return *this;
+        }
+
+        // A run-time width's loop, which sums the kept count in the same pass that writes the blocks.
+        template<class Op, class Operand>
+        constexpr auto combine_blocks(Op op, Operand operand) noexcept
+                -> void
+        {
+                auto kept = 0UZ;
+                for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                        op(this->m_blocks[i], operand(i));
+                        if constexpr (has_stored_count) {
+                                kept += bits::detail::popcount(this->m_blocks[i]);
+                        }
+                }
+                store_count(kept);
+        }
+
         // The blocks refuse growth a whole block at a time, so a capacity short of their last bit is held here.
         static constexpr auto check_capacity(std::size_t n [[maybe_unused]])
                 -> void
@@ -1461,6 +1507,7 @@ private:
                                         } catch (...) {
                                                 m_blocks.clear();
                                                 m_size = 0UZ;
+                                                store_count(0UZ);
                                                 throw;
                                         }
                                 }
@@ -1641,7 +1688,11 @@ private:
                 requires has_stored_size
         {
                 check_capacity(n);
-                auto const count = blocks_for(n);
+                // Positions [n, size()) leave and [size(), n) arrive holding value, counted once the growth succeeds.
+                auto const kept    = std::ranges::min(n, size());
+                auto const leaving = counted_in(kept, size() - kept);
+                auto const arrived = (std::ranges::max(n, size()) - size()) * static_cast<std::size_t>(value);
+                auto const count   = blocks_for(n);
                 if (value and n > size()) {
                         // Which bits become new is read off the old width, and written only once the blocks have grown.
                         auto const partial   = has_unused_bits();
@@ -1657,6 +1708,7 @@ private:
                 }
                 store_size(n);
                 erase_unused();
+                store_count(stored_count() - leaving + arrived);
         }
 
         // The width written back, where there is one to write: a capacity of nought's is zero without a member.
@@ -1667,6 +1719,94 @@ private:
                         assert(n == 0UZ);
                 } else {
                         m_size = n;
+                }
+        }
+
+        // The kept count, where there is one: each writer below moves it by what the write changed.
+        [[nodiscard]] constexpr auto stored_count() const noexcept
+                -> std::size_t
+        {
+                if constexpr (has_stored_count) {
+                        return this->m_count;
+                } else {
+                        return 0UZ;
+                }
+        }
+
+        constexpr auto store_count(std::size_t n [[maybe_unused]]) noexcept
+                -> void
+        {
+                if constexpr (has_stored_count) {
+                        this->m_count = n;
+                }
+        }
+
+        // The bits set in [n, n + len) where a count is kept, read before a write over that range changes them.
+        [[nodiscard]] constexpr auto counted_in(std::size_t n [[maybe_unused]], std::size_t len [[maybe_unused]]) const noexcept
+                -> std::size_t
+        {
+                if constexpr (has_stored_count) {
+                        return count(n, len);
+                } else {
+                        return 0UZ;
+                }
+        }
+
+        // The bits above the width, all in the last block: what erase_unused takes from a count that included them.
+        [[nodiscard]] constexpr auto counted_above() const noexcept
+                -> std::size_t
+        {
+                if constexpr (has_stored_count) {
+                        if (has_unused_bits()) {
+                                return bits::detail::popcount(static_cast<block_type>(m_blocks[last_block()] & static_cast<block_type>(~used_bits())));
+                        }
+                }
+                return 0UZ;
+        }
+
+        // A moved-from source keeps no bits, so its count goes with its blocks.
+        [[nodiscard]] constexpr auto take_count() noexcept
+                -> std::size_t
+        {
+                if constexpr (has_stored_count) {
+                        return std::exchange(this->m_count, 0UZ);
+                } else {
+                        return 0UZ;
+                }
+        }
+
+        constexpr auto count_up(std::size_t n [[maybe_unused]]) noexcept
+                -> void
+        {
+                if constexpr (has_stored_count) {
+                        this->m_count += n;
+                }
+        }
+
+        constexpr auto count_down(std::size_t n [[maybe_unused]]) noexcept
+                -> void
+        {
+                if constexpr (has_stored_count) {
+                        assert(n <= this->m_count);
+                        this->m_count -= n;
+                }
+        }
+
+        // The popcount itself, which count() answers with where no count is kept.
+        [[nodiscard]] constexpr auto count_blocks() const noexcept
+                -> std::size_t
+        {
+                if constexpr (has_static_size and N == 0) {
+                        return 0UZ;
+                } else if constexpr (has_static_size and static_num_blocks == 1) {
+                        return bits::detail::popcount(m_blocks[0]);
+                } else if constexpr (has_static_size and static_num_blocks == 2) {
+                        return bits::detail::popcount(m_blocks[0]) + bits::detail::popcount(m_blocks[1]);
+                } else {
+                        return std::ranges::fold_left(
+                                m_blocks | std::views::transform([](auto block) { return bits::detail::popcount(block); }),
+                                0UZ, std::plus<>()
+                        );
                 }
         }
 
@@ -1705,11 +1845,15 @@ bit_block_container(xstd::from_blocks_t, Block const (&)[K]) -> bit_block_contai
 template<class T>
 inline constexpr bool is_bit_block_container_v = false;
 
-template<class Blocks, std::size_t N>
-inline constexpr bool is_bit_block_container_v<bit_block_container<Blocks, N>> = true;
+template<class Blocks, std::size_t N, bool Counted>
+inline constexpr bool is_bit_block_container_v<bit_block_container<Blocks, N, Counted>> = true;
 
 template<class T>
 concept bit_block_container_type = is_bit_block_container_v<std::remove_const_t<T>>;
+
+// The storage a set reading holds over these blocks: the key count kept exactly where the width grows unbounded.
+template<class Blocks, std::size_t N = default_extent_v<Blocks>>
+using set_bits_t = bit_block_container<Blocks, N, unbounded_width<Blocks, N>>;
 
 } // namespace xstd::bits::detail
 
