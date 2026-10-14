@@ -210,7 +210,8 @@ class counted_bit_members : public bits::detail::allocator_base_type<Blocks>
 protected:
         Width m_size{};
 
-        std::size_t m_count{};
+        // The width's type, so that where blocks out-align a size_t the count fills what would be padding.
+        Width m_count{};
 
         Blocks m_blocks{};
 
@@ -1230,8 +1231,8 @@ public:
                 -> std::size_t
         {
                 if constexpr (has_stored_count) {
-                        assert(this->m_count == count_blocks());
-                        return this->m_count;
+                        assert(stored_count() == count_blocks());
+                        return stored_count();
                 } else {
                         return count_blocks();
                 }
@@ -1242,7 +1243,7 @@ public:
                 -> void
         {
                 if constexpr (has_stored_count) {
-                        this->m_count = count_blocks();
+                        store_count(count_blocks());
                 }
         }
 
@@ -1727,7 +1728,7 @@ private:
                 -> std::size_t
         {
                 if constexpr (has_stored_count) {
-                        return this->m_count;
+                        return static_cast<std::size_t>(this->m_count);
                 } else {
                         return 0UZ;
                 }
@@ -1768,18 +1769,16 @@ private:
         [[nodiscard]] constexpr auto take_count() noexcept
                 -> std::size_t
         {
-                if constexpr (has_stored_count) {
-                        return std::exchange(this->m_count, 0UZ);
-                } else {
-                        return 0UZ;
-                }
+                auto const n = stored_count();
+                store_count(0UZ);
+                return n;
         }
 
         constexpr auto count_up(std::size_t n [[maybe_unused]]) noexcept
                 -> void
         {
                 if constexpr (has_stored_count) {
-                        this->m_count += n;
+                        store_count(stored_count() + n);
                 }
         }
 
@@ -1787,8 +1786,8 @@ private:
                 -> void
         {
                 if constexpr (has_stored_count) {
-                        assert(n <= this->m_count);
-                        this->m_count -= n;
+                        assert(n <= stored_count());
+                        store_count(stored_count() - n);
                 }
         }
 
