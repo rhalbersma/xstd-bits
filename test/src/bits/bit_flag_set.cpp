@@ -24,7 +24,7 @@
 #include <xstd/ints/concepts/bit_mask.hpp>              // bit_mask
 #include <xstd/ints/cstdint.hpp>                        // int128, uint128
 #include <boost/test/unit_test.hpp>                     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                                    // ranges::equal, ranges::includes, ranges::set_difference, ranges::set_intersection, ranges::set_symmetric_difference, ranges::set_union
+#include <algorithm>                                    // ranges::equal, ranges::includes, ranges::reverse, ranges::set_difference, ranges::set_intersection, ranges::set_symmetric_difference, ranges::set_union
 #include <array>                                        // array, to_array
 #include <bit>                                          // bit_cast, bit_floor, countr_zero, has_single_bit, popcount
 #include <bitset>                                       // bitset
@@ -535,11 +535,12 @@ auto wide_bitset_mismatches()
                 mismatches += static_cast<std::size_t>(mask(x) != a or x != a or x.size() != a.count());
                 auto const keys = std::vector<mask>(x.begin(), x.end());
                 auto model      = std::vector<mask>();
-                for (auto i = M - 1UZ; i < M; --i) {
+                for (auto const i : std::views::iota(0UZ, M)) {
                         if (a.test(i)) {
                                 model.push_back(mask().set(i));
                         }
                 }
+                std::ranges::reverse(model);
                 mismatches += static_cast<std::size_t>(keys != model);
                 for (auto const& b : wide_masks<M>()) {
                         mismatches += static_cast<std::size_t>(mask(x | b) != (a | b) or mask(b | x) != (b | a));
