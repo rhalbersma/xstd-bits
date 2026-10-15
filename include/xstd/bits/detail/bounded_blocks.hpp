@@ -6,12 +6,12 @@
 #ifndef XSTD_BITS_DETAIL_BOUNDED_BLOCKS_HPP
 #define XSTD_BITS_DETAIL_BOUNDED_BLOCKS_HPP
 
-#include <xstd/bits/detail/nonvolatile.hpp> // nonvolatile
-#include <cstddef>                          // size_t
-#include <iterator>                         // input_iterator
-#include <new>                              // bad_alloc
-#include <type_traits>                      // conditional_t, is_const_v, is_empty_v, remove_reference_t
-#include <version>                          // IWYU pragma: keep; __cpp_lib_inplace_vector
+#include <xstd/bits/detail/non_volatile.hpp> // non_volatile
+#include <cstddef>                           // size_t
+#include <iterator>                          // input_iterator
+#include <new>                               // bad_alloc
+#include <type_traits>                       // conditional_t, is_const_v, is_empty_v, remove_reference_t
+#include <version>                           // IWYU pragma: keep; __cpp_lib_inplace_vector
 
 namespace xstd::bits::detail {
 
@@ -38,13 +38,13 @@ public:
                 return nullptr;
         }
 
-        [[nodiscard]] constexpr auto begin(this nonvolatile auto&& self) noexcept
+        [[nodiscard]] constexpr auto begin(this non_volatile auto&& self) noexcept
                 -> pointer_t<decltype(self)>
         {
                 return self.data();
         }
 
-        [[nodiscard]] constexpr auto end(this nonvolatile auto&& self) noexcept
+        [[nodiscard]] constexpr auto end(this non_volatile auto&& self) noexcept
                 -> pointer_t<decltype(self)>
         {
                 return self.data();

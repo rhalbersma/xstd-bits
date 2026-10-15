@@ -15,7 +15,7 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                  // three_way
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
-#include <xstd/bits/detail/nonvolatile.hpp>                  // nonvolatile
+#include <xstd/bits/detail/non_volatile.hpp>                 // non_volatile
 #include <xstd/bits/detail/owner_members.hpp>                // owner_members
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
@@ -257,7 +257,7 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
         using members_type::m_bits;
 
         // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
-        [[nodiscard]] constexpr auto bits(this nonvolatile auto&& self) noexcept
+        [[nodiscard]] constexpr auto bits(this non_volatile auto&& self) noexcept
                 -> auto&&
         {
                 if constexpr (is_owner) {
@@ -1032,24 +1032,24 @@ public:
         }
 
         // iterators, spelled over what the accessor hands this self: deep const for an owner, shallow for a view.
-        [[nodiscard]] constexpr auto begin(this nonvolatile auto&& self) noexcept
+        [[nodiscard]] constexpr auto begin(this non_volatile auto&& self) noexcept
                 -> iterator_t<decltype(self)>
         {
                 return {&self.bits(), self.offset()};
         }
 
-        [[nodiscard]] constexpr auto end(this nonvolatile auto&& self) noexcept
+        [[nodiscard]] constexpr auto end(this non_volatile auto&& self) noexcept
                 -> iterator_t<decltype(self)>
         {
                 return {&self.bits(), self.offset() + self.size()};
         }
 
-        [[nodiscard]] constexpr auto rbegin(this nonvolatile auto&& self) noexcept
+        [[nodiscard]] constexpr auto rbegin(this non_volatile auto&& self) noexcept
         {
                 return std::make_reverse_iterator(self.end());
         }
 
-        [[nodiscard]] constexpr auto rend(this nonvolatile auto&& self) noexcept
+        [[nodiscard]] constexpr auto rend(this non_volatile auto&& self) noexcept
         {
                 return std::make_reverse_iterator(self.begin());
         }
@@ -1201,14 +1201,14 @@ public:
         }
 
         // element access, [] unchecked and at() throwing as [array] has them.
-        [[nodiscard]] constexpr auto operator[](this nonvolatile auto&& self, size_type n) noexcept
+        [[nodiscard]] constexpr auto operator[](this non_volatile auto&& self, size_type n) noexcept
                 -> reference_t<decltype(self)>
         {
                 XSTD_BITS_ASSERT(n < self.size());
                 return {&self.bits(), self.offset() + n};
         }
 
-        [[nodiscard]] constexpr auto at(this nonvolatile auto&& self, size_type n)
+        [[nodiscard]] constexpr auto at(this non_volatile auto&& self, size_type n)
                 -> reference_t<decltype(self)>
         {
                 if (n < self.size()) {
@@ -1218,14 +1218,14 @@ public:
         }
 
         // Both are preconditions in [sequence.reqmts]; each assert is spread so the coverage gate excludes it.
-        [[nodiscard]] constexpr auto front(this nonvolatile auto&& self) noexcept
+        [[nodiscard]] constexpr auto front(this non_volatile auto&& self) noexcept
                 -> reference_t<decltype(self)>
         {
                 XSTD_BITS_ASSERT(not self.empty());
                 return {&self.bits(), self.offset()};
         }
 
-        [[nodiscard]] constexpr auto back(this nonvolatile auto&& self) noexcept
+        [[nodiscard]] constexpr auto back(this non_volatile auto&& self) noexcept
                 -> reference_t<decltype(self)>
         {
                 XSTD_BITS_ASSERT(not self.empty());
