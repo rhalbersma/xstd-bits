@@ -8,6 +8,7 @@
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>    // bit_blocks
 #include <xstd/bits/bit_set.hpp>                    // bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                                    // array
@@ -36,9 +37,18 @@ concept holds_blocks = requires { typename xstd::bits::detail::bit_block_contain
 template<class W>
 concept names_a_view = requires { typename xstd::bit_set_view<W>; };
 
+template<class R>
+concept deduces_a_view = requires (R& r) { xstd::bit_set_view(r); };
+
+template<class R>
+concept deduces_a_span = requires (R& r) { xstd::bit_span(r); };
+
 // Built-in arrays of blocks, named once so the storage under test is spelled where the check can be told why.
 using four_blocks        = std::uint64_t[4];       // NOLINT(modernize-avoid-c-arrays): the storage under test
 using three_const_blocks = std::uint16_t const[3]; // NOLINT(modernize-avoid-c-arrays): the storage under test
+
+// A register array, whose every access must stay one volatile access: block algorithms copy and merge them.
+using two_volatile_blocks = std::uint32_t volatile[2]; // NOLINT(modernize-avoid-c-arrays): the storage under test
 
 } // namespace
 
@@ -74,6 +84,17 @@ BOOST_AUTO_TEST_CASE(TheStorageAndTheViewsAreNamedByBitStorage)
         static_assert(names_a_view<std::uint64_t const> and names_a_view<std::span<std::uint32_t>>);
         static_assert(not holds_blocks<std::bitset<64>> and not holds_blocks<xstd::bit_set>);
         static_assert(not names_a_view<std::vector<bool>> and not names_a_view<int>);
+        BOOST_CHECK(true);
+}
+
+// Volatile blocks are no bit storage: a register array is turned away at the constraint, not deep in a block algorithm.
+BOOST_AUTO_TEST_CASE(VolatileBlocksAreNotBitStorage)
+{
+        static_assert(not xstd::bit_blocks<std::uint32_t volatile> and not xstd::bit_blocks<std::uint32_t const volatile>);
+        static_assert(not xstd::bit_blocks<std::span<std::uint32_t volatile>> and not xstd::bit_blocks<two_volatile_blocks>);
+        static_assert(not holds_blocks<std::span<std::uint32_t volatile>> and not names_a_view<std::uint64_t volatile>);
+        static_assert(not deduces_a_view<two_volatile_blocks> and not deduces_a_span<two_volatile_blocks>);
+        static_assert(deduces_a_view<three_const_blocks> and deduces_a_span<four_blocks>);
         BOOST_CHECK(true);
 }
 
