@@ -514,12 +514,13 @@ template<std::size_t M>
 auto numeric_order(std::bitset<M> const& a, std::bitset<M> const& b)
         -> std::strong_ordering
 {
-        for (auto i = M - 1UZ; i < M; --i) {
+        auto order = std::strong_ordering::equal;
+        for (auto const i : std::views::iota(0UZ, M)) {
                 if (a.test(i) != b.test(i)) {
-                        return a.test(i) ? std::strong_ordering::greater : std::strong_ordering::less;
+                        order = a.test(i) ? std::strong_ordering::greater : std::strong_ordering::less;
                 }
         }
-        return std::strong_ordering::equal;
+        return order;
 }
 
 // How often a flag type over std::bitset<M> answers otherwise than std::bitset's own operators, over pairs of masks.
