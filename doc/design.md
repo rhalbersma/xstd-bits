@@ -3787,6 +3787,18 @@ grown to, so a megabit set holding one key pays thousands of popcounts per `size
 Those two keep the count as a member: `set_bits_t<Blocks>` is `bit_block_container<Blocks, N, true>` exactly where
 `unbounded_width<Blocks, N>` holds. `bit_vector` holds the same blocks without it, its `size()` being its width.
 
+Only the count is kept, not where the keys are. `begin()` and every step of an iterator scan a block at a time for
+the next key, so a step costs one plus the empty blocks it skips, and those skips add up over a whole traversal to the
+blocks once: a loop from `begin()` to `end()` costs O(width / w + `size()`), the scan `boost::dynamic_bitset`'s
+`find_next` and Java's `BitSet.nextSetBit` make too. At a static width that is bounded by `N`, and so constant as the
+standard counts. At a growing width it is the departure: `[iterator.requirements.general]` asks for amortized
+constant steps, which a dense set meets and a sparse one does not, and the width scanned is the largest the set has
+grown to, since neither `erase` nor `clear()` shrinks it ([width-is-capacity](#width-is-capacity)). No cheap
+bookkeeping closes the gap. A kept first block would make `begin()` constant for a word and a branch in every
+writer, and leave every `++` scanning as before; only tracking every key, which is the representation this library
+exists to avoid, would make the steps constant. `size()` and `empty()` are different: a loop condition calls them
+once per iteration, and keeping them costs an add per write.
+
 The count is the storage's for the reason the padding invariant is
 ([the-invariant-stays-in-the-storage](#the-invariant-stays-in-the-storage)): a `bit_set_view` over a `bit_set`
 writes through the owner's storage and never through the owner, so a count the owner held would go stale at the
