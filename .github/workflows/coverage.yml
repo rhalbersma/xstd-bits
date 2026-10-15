@@ -25,7 +25,7 @@ on:
 jobs:
   coverage:
     # Ahead of v0.8.1, for the unwind-resume exclusion on a bare closing brace, without which 100 can never be met.
-    uses: rhalbersma/cpp-ci/.github/workflows/coverage.yml@b4480c08412ae7305ebb39faf7fd3476c143e000 # rhalbersma/cpp-ci#65, for the XSTD_BITS_ASSERT exclusion
+    uses: rhalbersma/cpp-ci/.github/workflows/coverage.yml@e3eb6677e832a978e2603004101796173ab06a93 # main after v0.13.0, for the XSTD_BITS_ASSERT exclusion
     with:
       # Not built here at all, which the exclude alone could not achieve: gcovr drops benchmark/ as a SOURCE path, but a benchmark TU instantiates the library's templates and those instantiations are counted in include/. This job configures Debug, where benchmark/CMakeLists.txt registers no test, so they would compile and never run -- every branch of an instantiation no test also makes, uncovered by construction.
       cmake_args: -DXSTD_BITS_BUILD_BENCHMARKS=OFF
