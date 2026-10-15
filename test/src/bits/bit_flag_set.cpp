@@ -576,9 +576,13 @@ concept names_a_narrow_flag_type = requires { typename xstd::bit_flag_set<Mask, 
 template<class X, auto Value>
 constexpr bool brace_initializes = requires { X{Value}; };
 
+#ifndef NDEBUG
+
 // Whether making a flag type is a constant expression, which an assertion failing on the way in is not.
 template<auto Make>
 constexpr bool constant_evaluates = requires { typename std::bool_constant<(Make(), true)>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+
+#endif
 
 // Whether the flag type over Mask converts to bool through Mask, as an if statement's condition does.
 template<class Mask, std::size_t N>
