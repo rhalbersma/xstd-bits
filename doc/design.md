@@ -44,9 +44,13 @@ blocks, `std::uint64_t[4]`, is bit storage and not owned bit storage: it is not 
 assignment nor an `==` over its blocks, so no owner holds one and no `bit_block_container` has it as `Blocks`. The tag
 constructors, `xstd::bit_convert` and the views read it as they read the `std::array` of the same blocks.
 
-**`bit_blocks` is two cases joined.** One block is an `xstd::unsigned_integer`, const or not, as that concept
-already admits a cv-qualified integer; the exposition-only `bit_block_range` is a sized contiguous range of them that
-subscripts; `xstd::bit_blocks` is either, and is the one of the three a user names. Code that treats the scalar and
+**`bit_blocks` is two cases joined.** One block is an `xstd::unsigned_integer`, const or not, but never volatile:
+that concept is cv-transparent, for the reasons xstd-ints'
+[design notes](https://github.com/rhalbersma/xstd-ints/blob/main/doc/design.md#integer-types) give, and `bit_blocks`
+refuses `volatile` on top of it, since a block algorithm copies, merges and vectorizes the accesses a memory-mapped
+register must keep one by one. The exposition-only `bit_block_range` is a sized contiguous range of such blocks that
+subscripts, and reads the `volatile` off the range's reference type, since `range_value_t` drops it;
+`xstd::bit_blocks` is either, and is the one of the three a user names. Code that treats the scalar and
 the range differently branches on `xstd::unsigned_integer`, and `bit_block_container` asks `bit_block_range` of its
 `Blocks`, which is how a bare block is refused at the constraint while contiguity is named rather than implied.
 

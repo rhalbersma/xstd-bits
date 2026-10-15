@@ -9,7 +9,7 @@
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <cstddef>                                 // size_t
 #include <span>                                    // span
-#include <type_traits>                             // is_const_v
+#include <type_traits>                             // is_const_v, is_volatile_v
 
 namespace xstd::bits::detail {
 
@@ -17,7 +17,7 @@ template<class C>
 inline constexpr bool is_block_span = false;
 
 template<class Block, std::size_t E>
-        requires xstd::unsigned_integer<Block> and (not std::is_const_v<Block>)
+        requires xstd::unsigned_integer<Block> and (not std::is_const_v<Block>) and (not std::is_volatile_v<Block>)
 inline constexpr bool is_block_span<std::span<Block, E>> = true;
 
 // Blocks someone else owns, written through a span: a handle, so neither regular nor deep-const.
