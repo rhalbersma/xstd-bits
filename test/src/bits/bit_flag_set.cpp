@@ -53,7 +53,7 @@
 #include <utility>                                      // pair, to_underlying
 #include <vector>                                       // vector
 #include <signal.h>                                     // NOLINT(modernize-deprecated-headers): POSIX declares sigaction and its SA_ flags here, <csignal> not
-#if __has_include(<sys/epoll.h>)
+#if defined(__GLIBC__) && __has_include(<sys/epoll.h>)
 #include <sys/epoll.h> // EPOLL_EVENTS, EPOLLERR, EPOLLET, EPOLLHUP, EPOLLIN, EPOLLONESHOT, EPOLLOUT, EPOLLPRI, EPOLLRDHUP
 #define XSTD_TEST_HAS_EPOLL 1
 #else
