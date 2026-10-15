@@ -21,7 +21,7 @@
 #include <algorithm>                                // copy, equal, is_sorted, ranges::count, ranges::is_sorted, ranges::sort, sort
 #include <concepts>                                 // same_as
 #include <cstddef>                                  // ptrdiff_t, size_t
-#include <cstdint>                                  // uint64_t, uint8_t
+#include <cstdint>                                  // int64_t, uint64_t, uint8_t
 #include <functional>                               // hash, ranges::greater
 #include <limits>                                   // numeric_limits
 #include <memory>                                   // allocator
@@ -277,18 +277,69 @@ BOOST_AUTO_TEST_CASE(AppendRangePacksAnyRangeOfBools)
         BOOST_CHECK(std::ranges::equal(v, pattern(20)));
 }
 
-// insert_range from a window into the sequence itself, which reads the old width while the new one is built.
+// insert_range from a window into the sequence itself, with room to spare or none: it rebuilds, reading the old width.
 BOOST_AUTO_TEST_CASE(InsertingAWindowOfItselfRebuildsAsAStdVectorDoes)
 {
+        for (auto const room : {0UZ, 200UZ}) {
+                for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 20UZ}) {
+                        auto v = T(std::from_range, pattern(20));
+                        v.reserve(room);
+                        auto m            = pattern(20);
+                        auto const middle = std::vector<bool>(m.begin() + 2, m.begin() + 11);
+                        auto const r      = v.insert_range(v.cbegin() + static_cast<std::ptrdiff_t>(pos), xstd::bit_span(v).subspan(2, 9));
+                        m.insert(m.cbegin() + static_cast<std::ptrdiff_t>(pos), middle.begin(), middle.end());
+                        BOOST_CHECK_EQUAL(r - v.begin(), static_cast<std::ptrdiff_t>(pos));
+                        BOOST_CHECK(std::ranges::equal(v, m));
+                }
+        }
+}
+
+// Within capacity every shape of insertion shifts the tail in place, so with each allocation refused, all complete.
+BOOST_AUTO_TEST_CASE(InsertingWithinCapacityAllocatesNothing)
+{
+        using X           = xstd::basic_bit_vector<std::uint8_t, test::container::propagating<std::uint8_t>>;
+        auto const blocks = T(std::from_range, pattern(13));
+        auto const bools  = pattern(11);
         for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 20UZ}) {
-                auto v            = T(std::from_range, pattern(20));
-                auto m            = pattern(20);
-                auto const middle = std::vector<bool>(m.begin() + 2, m.begin() + 11);
-                auto const r      = v.insert_range(v.cbegin() + static_cast<std::ptrdiff_t>(pos), xstd::bit_span(v).subspan(2, 9));
-                m.insert(m.cbegin() + static_cast<std::ptrdiff_t>(pos), middle.begin(), middle.end());
-                BOOST_CHECK_EQUAL(r - v.begin(), static_cast<std::ptrdiff_t>(pos));
+                auto book = test::container::ledger();
+                auto v    = X(std::from_range, pattern(20), test::container::ledger_allocator<X>(book));
+                v.reserve(100);
+                auto m        = pattern(20);
+                auto const at = static_cast<std::ptrdiff_t>(pos);
+                book.budget   = 0;
+                v.insert(v.cbegin() + at, true);
+                m.insert(m.cbegin() + at, true);
+                v.insert(v.cbegin() + at, 9UZ, false);
+                m.insert(m.cbegin() + at, 9UZ, false);
+                v.insert_range(v.cbegin() + at, bools);
+                m.insert(m.cbegin() + at, bools.begin(), bools.end());
+                v.insert_range(v.cbegin() + at, blocks);
+                m.insert(m.cbegin() + at, blocks.begin(), blocks.end());
+                v.emplace(v.cbegin() + at, true);
+                m.insert(m.cbegin() + at, true);
+                book.budget = -1;
+                BOOST_CHECK_EQUAL(book.refusals, 0);
                 BOOST_CHECK(std::ranges::equal(v, m));
         }
+}
+
+// Inserting at the end grows as push_back does, geometrically, so n insertions make O(log n) allocations.
+BOOST_AUTO_TEST_CASE(InsertingAtTheEndGrowsGeometrically)
+{
+        using X                = xstd::basic_bit_vector<std::uint8_t, test::container::propagating<std::uint8_t>>;
+        constexpr auto n       = 10'000UZ;
+        constexpr auto granted = std::int64_t{1'000'000};
+        auto book              = test::container::ledger();
+        auto v                 = X(test::container::ledger_allocator<X>(book));
+        book.budget            = granted;
+        for (auto const i : std::views::iota(0UZ, n)) {
+                v.insert(v.cend(), i % 3 == 0);
+        }
+        auto const allocations = granted - book.budget;
+        book.budget            = -1;
+        BOOST_CHECK_EQUAL(v.size(), n);
+        BOOST_CHECK_EQUAL(std::ranges::count(v, true), static_cast<std::ptrdiff_t>((n + 2UZ) / 3UZ));
+        BOOST_CHECK_LT(allocations, 32);
 }
 
 // Two proxies swap through their own swap, found by ADL; neither the owner nor a view has a static swap or a flip.
