@@ -603,11 +603,11 @@ Each relation gets one operation and one concept. Blocks that *are* bit storage 
 the tag constructor, `X(xstd::from_blocks, b)`, where the tag says the blocks are bits rather than keys or
 elements; `xstd::bit_constructible_from<X, B>` names it. Anything that *has* bit storage converts to anything else
 that does through `xstd::bit_convert<To>(from)`, which maps positions and may copy, shift or throw;
-`xstd::bit_convertible_to<From, To>` names it. Between two fixed widths the widths agree exactly, the blocks are
-copied through the byte currency, and a view is read from and never written into. So
-`bit_convert<xstd::bit_array<64>>(set)`, `bit_convert<std::bitset<64>>(set)` and `bit_convert<std::uint64_t>(set)`
-are one rule, and a `std::bitset` never goes through the tag, which would blur a type that has storage with one
-that is it.
+`xstd::bit_convertible_to<From, To>` names it. Between two fixed widths the target is at least as wide as the
+source, the blocks are copied through the byte currency with the positions past the source's width clear, and a
+view is read from and never written into. So `bit_convert<xstd::bit_array<64>>(set)`,
+`bit_convert<std::bitset<64>>(set)` and `bit_convert<std::uint64_t>(set)` are one rule, and a `std::bitset` never
+goes through the tag, which would blur a type that has storage with one that is it.
 
 #### the same job `flat_set` gives `extract` and `replace`
 
@@ -2954,17 +2954,36 @@ a left shift drops what it carries past the last key, as it does at a static wid
 value of the key type, as `std::set`'s do; the bounds of a value that is no key bisect the keys under `key_compare`,
 which puts `First - 1` before a range's first element where the wrapped distance alone would have put it after the
 last, and an unlisted value between two listed ones between them. A key type with no order of its own, a
-`std::bitset`, has no place between two keys to give, and its bounds keep `is_key` as their precondition. `basic_bit_fixed_set<E, Block, N>` with no mapping spelled keys it the same way; an enumeration that declares
-nothing has no default mapping, and so no set, unless its author specializes `bit_key_mapping<E>` directly, say as a
+`std::bitset`, has no place between two keys to give, and its bounds keep `is_key` as their precondition. `basic_bit_fixed_set<E, Block, N>` with no mapping spelled keys it the same way. An enumeration that lists nothing
+but ends in a sentinel, `enum class E { a, b, c, count };`, is keyed by that sentinel, below. One that declares
+neither has no default mapping, and so no set, unless its author specializes `bit_key_mapping<E>` directly, say as a
 `bit_range_mapping` from its first enumerator. The same `bit_find_mapping` keys sparse integers, such as identifiers
 drawn from a fixed table, to as many positions as there are identifiers.
 
-The count comes from the declaration because C++ has no portable way to count enumerators. A sentinel such as
-`E::MAX` makes the width a value of `E`, which every exhaustive `switch` must then handle and which cannot be added
-to an enumeration someone else owns. Counting by parsing compiler-generated function names, as `magic_enum` does,
-works only within a guessed value range and is no part of the language. `enum_traits<E>` leaves `E` as it is and
-can be declared by whoever needs it; C++26 reflection, `std::meta::enumerators_of(^^E)`, can generate `values`
-later without changing what `bit_key_mapping` reads.
+The count comes from the declaration because C++ has no portable way to count enumerators. Many enumerations
+already carry one: `enum class piece : std::uint8_t { pawn, knight, bishop, rook, queen, king, count };` says
+"from the first enumerator, `count` of them", and type_safe's `flag_set_traits` reads such a sentinel too. So
+`bit_key_mapping<E>` reads it where the author declared it. For an enumeration with an enumerator named `count` and
+no `enum_traits<E>::values`, it derives from `bit_range_mapping<E, E{}, N>`, `N` being `count`'s distance from
+`E{}`: `to_index` is a subtraction, `size` is `N`, and the sentinel, at position `N`, is never a key, so
+`bit_enum_set<piece>` is one byte holding six keys and `insert(piece::count)` throws `std::out_of_range` as any
+other non-key does. The name is exactly `count`, one spelling, since every further spelling (`size`, `COUNT`,
+`_size`) is another way for an unrelated enumerator to be read as a sentinel, and an inclusive alias such as
+Chromium's `kMaxValue = kLast` would be a second rule rather than a synonym. The range starts at `E{}`, the value
+`0`; an enumeration starting elsewhere lists its values or spells its `bit_range_mapping`. A `count` below zero is
+rejected by a `static_assert`, and a `count` of `0` is the empty universe, as `bit_range_mapping<E, E{}, 0>` is. The
+sentinel means that every value from `0` to `count - 1` is a key, and C++ cannot check that: an enumeration
+`{a = 0, b = 2, count = 3}` gets a three-key range in which the undeclared value `1` is a key. A list is the
+enumeration's own account of its keys and keeps priority, so an enumeration that lists its values keeps the list's
+mapping whether it ends in `count` or not, and the two specializations never compete.
+
+The sentinel is read, never required. Requiring one would make the width a value of `E`, which every exhaustive
+`switch` must then handle and which cannot be added to an enumeration someone else owns; an enumeration without one
+behaves as it would if the rule did not exist. Counting by parsing compiler-generated function names, as `magic_enum`
+does, works only within a guessed value range and is no part of the language. `enum_traits<E>` remains the general
+way: it leaves `E` as it is, takes gaps and any first value, and can be declared by whoever needs it; C++26
+reflection, `std::meta::enumerators_of(^^E)`, can generate `values` later without changing what `bit_key_mapping`
+reads.
 
 `bit_enum_set<Enum>` is `bit_least<basic_bit_fixed_set<Enum, std::size_t, N, bit_key_mapping<Enum>>>`, `N` being
 the mapping's `size`, for any enumeration whose `bit_key_mapping` models `sized_bit_index_mapping`. The block is
@@ -3113,8 +3132,7 @@ straddles two blocks, so every owner and view takes it. Any other width, C23's `
 take it for a width up to its own, in a single block, and the bounded, small and growing owners refuse it, since a
 second block would put a position across two of them. Clang on x86-64 stores such a block in the next standard
 integer size, so `_BitInt(23)` takes the four bytes of a `std::uint32_t` and nine padding bits the library never
-reads; what the block buys is the exact width in the type, not fewer bytes. A fourth transformation, `bit_precise<X>`,
-naming that block from the width, is planned separately.
+reads; what the block buys is the exact width in the type, not fewer bytes.
 
 Other libraries either pick the block themselves, from the width, or take it from the user as a template argument:
 
@@ -3173,11 +3191,47 @@ over two bytes, or in ascending order, has all of them.
 sixteen bits rather than the twelve permissions so that `std::filesystem::perms::unknown`, `0xFFFF`, survives the
 round trip; its four high bits are keys like the others.
 
-`Mask` is an enumeration, a built-in integer type or a `std::bitset` as wide as a block, one block for now, the
-three forms [bitmask.types]/1 allows. Its word is the enumeration's underlying type made unsigned, the integer type's
-unsigned counterpart, or the block a bitset of that width is, and every conversion between the mask and the block
-goes through that word: a cast for an enumeration or an integer, `xstd::bit_convert` for a bitset, position `i`
-staying position `i`. `bool` and the character types are integral but no integer type, and are not masks.
+`Mask` is an enumeration, a built-in integer type or a `std::bitset<M>` of any width `M`, the three forms
+[bitmask.types]/1 allows. Its word is the enumeration's underlying type made unsigned, the integer type's unsigned
+counterpart, or for a bitset the least block holding `M`, and past the widest block an array of them:
+`std::bitset<12>` is read as a `std::uint16_t`, and `std::bitset<147>` as a `std::array<std::uint64_t, 3>`. Every
+conversion between the mask and the set goes through that word, position `i` staying position `i`: a cast for an
+enumeration or an integer, and for a bitset the bytes `xstd::bit_convert` moves a bitset by, which reach a word wider
+than `M` with its high bits clear. `bit_mask_mapping` asks the word to be fixed bit blocks, one unsigned block or a
+fixed array of them, which is `xstd::bit_blocks`' own two cases with the width in the type, and never the signed type
+under an enumeration. Of the three shapes weighed for a mask wider than a block, this is the word array: the set's
+`from_blocks` already takes any fixed blocks at least `N` wide and drops what lies above, so the conversion, `&` and
+`-` need nothing new, and an enumeration or an integer keeps its one-cast path. Dropping the mapping's `to_block` and
+`from_block` for an equal-width `bit_convert` between set and mask would have cost that path and still needed a
+widening step below `M`, and a bit-precise word, `xstd::bit_uint<M>`, exists on Clang alone. A rank and its key are
+one bit counted across the blocks of the word, and `fits`, no bit at or above `N`, compares the word with the one
+that keeps only the bits below `N`, so `bit_flag_set<std::bitset<147>, 140>` refuses a mask with bit 145 set on the
+way in and truncates it under `&` and `-`. `bool` and the character types are integral but no integer type, and are
+not masks. The 128-bit integers are masks too: `bit_flag_set<xstd::uint128>` is 128 flags over two 64-bit blocks on
+GCC and Clang alike, in the GNU dialect the library builds in and under a strict `-std=c++23`, where they are no
+`std::integral` and `xstd::integer` admits them instead.
+
+An enumeration is a mask when `xstd::bit_mask` says so, its operators returning the enumeration, and also whenever
+its `|` compiles, whatever that returns. Qt's flag enumerations return a `QFlags<Enum>` from `|`, and a C enumeration
+with no operators of its own returns the `int` of the built-in one; both are bitmasks by intent, and writing
+`bit_flag_set<E>` already says so. A scoped enumeration with no `|`, such as `std::filesystem::file_type` or
+`std::regex_constants::error_type`, is an enumerated type and no bitmask, and is turned away: it is the likeliest
+accident. An unscoped enumeration that is no bitmask still has the built-in `|`, and is admitted; that is the rule's
+cost, paid only by someone who names it in `bit_flag_set`.
+
+**The width an enumeration defaults to depends on how it is declared.** With an unsigned underlying type, it is
+every bit of that type: Qt's `WindowType` and glibc's `EPOLL_EVENTS` put a flag on bit 31 that way. With a signed
+underlying type, it is the integer's width less the sign bit, below: 31 for an `int`-based enumeration such as
+`std::launch`, exactly as for `int` itself. With no fixed underlying type there is no default, and `bit_flag_set<E>`
+does not name a type: such an enumeration's values are only those of the smallest bit-field holding its enumerators
+([dcl.enum]/8), and a flag type over more bits than that forms a value outside the enumeration on `~` or on
+iterating its high keys, which is undefined behaviour and which UBSan reports. `E{0}` is well-formed exactly where the
+underlying type is fixed ([dcl.init.list]/3.8), and that is the test. The range itself cannot be computed: Clang
+rejects an out-of-range `static_cast<E>` in a constant expression and GCC accepts it, and C++ cannot list
+enumerators. So the user writes the width, as `bit_flag_set<Qt::AlignmentFlag, 9>` for an alignment whose
+enumerators reach bit 8. libc++'s `regex_constants::syntax_option_type` and `match_flag_type`, and libstdc++'s
+`ios_base::fmtflags`, `iostate` and `openmode`, are such enumerations. C++26 reflection lifts the restriction:
+`std::meta::enumerators_of(^^E)` gives the enumerators, and with them the range.
 
 **An integer mask keys its one-bit values, not its numbers.** `bit_flag_set<std::uint32_t>`'s keys are `1`, `2`,
 `4`, … `0x8000'0000`, exactly as an enumeration's are; it is `bit_flag_mapping`, not the key type, that decides,
@@ -3186,17 +3240,30 @@ set over the same `std::size_t`. `xstd::bit_mask` admits only the unsigned integ
 says "an integer type" without a sign, and an implementation picks one: the flag type also takes a signed `Mask`,
 and keeps its sign bit out of the universe. `N` is at most
 `std::numeric_limits<Mask>::digits`, which counts no sign bit, and defaults to it: 31 for `int`, 7 for
-`std::int8_t`, every bit for an unsigned type. So every value a signed flag type gives back is non-negative, and a
-value with the sign bit set is a value wider than `N`, below. The arithmetic is the unsigned counterpart's: a rank
-is its `countr_zero` and rank `i` is `1` shifted left `i` places in that word, cast back, which is why the sign
-bit, the one position a shift there would reach, is excluded rather than handled.
+`std::int8_t`, every bit for an unsigned type. An enumeration on a signed underlying type is counted the same way,
+so `int` and an `int`-based enumeration agree about bit 31. So every value a signed flag type gives back is
+non-negative, and a value with the sign bit set is a value wider than `N`, below: it narrows under brace
+initialization, `bit_flag_set<int>{0x8000'0000U}`, and fails the conversion's assertion in a constant expression and
+at run time. The arithmetic is the unsigned counterpart's: a rank is its `countr_zero` and rank `i` is `1` shifted
+left `i` places in that word, cast back, which is why the sign bit, the one position a shift there would reach, is
+excluded rather than handled.
+
+A bit set's order comes from bit positions, and a signed value order cannot match it once the sign bit is set:
+`std::greater<E>` ranks a flag on the sign bit lowest, where the walk from the highest position visits it first, so
+iteration, `lower_bound` and `<=>` would disagree with `std::set<E, std::greater<E>>`. Four ways to keep such a flag
+were weighed and rejected, each costing machinery or a comparator users cannot name: rotating the storage by one
+bit so that the sign flag ranks lowest, a cyclic walk starting at the sign bit, a signed index type for `to_index`,
+and a position comparator in place of `std::less` and `std::greater`. The one real case found, POSIX's `sa_flags`
+with glibc's `SA_RESETHAND` at `0x80000000`, is an `unsigned` constant stored in an `int` field: the word is `int`,
+the flags are `unsigned`, and `bit_flag_set<unsigned>` keys it, with a cast on each side of the field.
 
 The standard's own bitmask types are the case in point. [ios.base] declares `fmtflags`, `iostate` and `openmode`
-as bitmask types and leaves the rest to the implementation: libstdc++ makes each an enumeration over `int` with the
-operators overloaded, libc++ `unsigned int`, and MSVC `int`, its constants of an unscoped enumeration beside it.
-`bit_flag_set<std::ios_base::fmtflags>` is one spelling for all three, 32 bits wide on the first two and 31 on the
-third, every standard constant below that, and code written against the stream carries over with only the variable's
-type changed: `fmtflags f = os.flags(); f -= ios::basefield; f |= ios::hex; os.flags(f);`.
+as bitmask types and leaves the rest to the implementation: libstdc++ makes each an unscoped enumeration with no
+fixed underlying type and the operators overloaded, libc++ `unsigned int`, and MSVC `int`, its constants of an
+unscoped enumeration beside it. libstdc++'s enumerations take no default width, so the spelling for all three is
+`bit_flag_set<std::ios_base::fmtflags, 16>`, every standard constant of every implementation below bit 16, and code
+written against the stream carries over with only the variable's type changed:
+`fmtflags f = os.flags(); f -= ios::basefield; f |= ios::hex; os.flags(f);`.
 
 1. **Implicit conversions both ways.** Values from the standard's functions flow in,
    `xfs::perms p = fs::status(path).permissions();`, and ours flow out, `fs::permissions(path, p)`. The converting
@@ -3229,6 +3296,27 @@ Other libraries offer one of an enum set or a flag type, seldom both:
 
 Java's `EnumSet` keys by ordinal, which is `bit_enum_set`; Qt's `QFlags` keys by the mask's own values, which is
 `bit_flag_set`. Only Rust, through two crates, and this library offer both, and here both are the same set reading.
+
+WG21 has worked on bitsets and bitmasks in pieces. Each paper below is cited where its point matters; here they are
+together, with what each contributed and where this library takes it up:
+
+| Paper | Year | What it proposed | Where this library meets it |
+| :-- | :-- | :-- | :-- |
+| [N2050](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2050.pdf) | 2006 | A dynamically sizeable bitset for TR2, after `boost::dynamic_bitset`, with set queries such as `is_subset_of` beside `push_back` and `resize`; libstdc++ still ships it as `std::tr2::dynamic_bitset`. | `bit_set` and `bit_vector`. The paper joins a set and a sequence in one type; here they are two readings of one storage. |
+| [N3110](https://wg21.link/n3110) | 2010 | Problems with the library's bitmask types, `ios_base::fmtflags`, `iostate`, `openmode` and the `regex_constants` flags: operators declared as members, an `operator~` that was a no-op or recursed, an underlying type that should be fixed so that `~` stays in range, and the point that the standard must not require enumerations, since [bitmask.types] allows integers and `std::bitset` too. | Flag types over an enumeration, an integer or a `std::bitset`. `~` stays within `N` on the unsigned block, and an enumeration with no fixed underlying type spells its `N`. `bit_flag_set<std::ios_base::fmtflags, 16>` is one spelling across three standard libraries. |
+| [N4202](https://wg21.link/n4202) | 2014 | *Strongly Typed Bitset*: a storage parameter `T` for `std::bitset`, `small_bitset<N>` over the least `uint_least*_t` holding `N`, `fast_bitset<N>`, and `underlying()`. | The `Block` parameter, `bit_least`, `bit_fast`, `from_blocks` and `bit_convert`. N4202 leaves the bits at or above `N` implementation-defined; here they are always zero, so `==`, hashing and `bit_cast` are exact. |
+| [P0125R0](https://wg21.link/p0125r0) | 2015 | `std::bitset::is_subset_of` and `is_superset_of`, members that may short-circuit, the names N2050 used. | `xstd::bit_includes`, `bit_intersects` and `bit_disjoint`, free functions after `std::ranges::includes`. |
+| [P3103R0](https://wg21.link/P3103R0), [R2](https://wg21.link/P3103R2) | 2024 | *More bitset operations*: `rotl`, `rotr`, `reverse`, `countl_zero(pos)` and `countr_zero(pos)` and their `one` forms, and `one()`. | `xstd::bit_rotate` and `bit_reverse`, in `std::rotate`'s direction. Iteration, `lower_bound` and `upper_bound` cover the positional counts. |
+| [P4313R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p4313r1.html) | 2026 | *Bitmask operations for enums*: `\|`, `&`, `^`, `~` and their compound forms for an enumeration annotated `[[=std::bitmask_type]]`, as operator templates in the global namespace, each returning the enumeration. | Complementary: P4313 gives the enumeration its operators, and `bit_flag_set` gives it the set reading, `contains`, `size`, iteration and the containments, which the paper leaves out. Its global-namespace operators are what this library never declares for a user's type ([the-adl-firewall](#the-adl-firewall)). |
+
+An enumeration with P4313's operators is an `xstd::bit_mask`, and `bit_flag_set<E>` takes it unchanged, where lookup
+finds the operators. `xstd::bit_mask` is a concept in `namespace xstd`, so its `a | b` sees what unqualified lookup
+finds at the concept's definition and what argument-dependent lookup finds at the use. An enumeration in the global
+namespace brings the global operators in by ADL; one in a named namespace finds them only if they were declared
+before the concept, since ADL never searches the global namespace for it. P4313R1 puts the operators in the global
+namespace and says nothing about an enumeration declared in a named one, so including `<bitmask>` after the xstd
+headers would leave such an enumeration with operators its own callers find and no flag type. The tests emulate the
+annotation with a trait and pin all three cases: global, named with the operators first, and named with them last.
 
 **A value wider than `N` meets the flag type as the enumeration always has.** Its positions at or above `N` are
 truncated by `&`, `-` with the flag type on the left, their compound forms and `==`, which finds such a value
@@ -3975,8 +4063,15 @@ has its own header under `<xstd/bits/bit_concepts/>`.
 - **Positions.** Position `i` of the source is position `i` of the target, across the readings and across block
   widths. That is the whole contract, and the name says so: this is a conversion of positions, not a
   reinterpretation of an object.
-- **Two fixed widths** must be equal, or there is no conversion at all and the call does not compile. Nothing
-  truncates and nothing pads, so nothing can fail: the call is `noexcept` and the round trip is the identity.
+- **Two fixed widths** widen and never narrow. A source `M` positions wide converts into a target `N >= M` wide,
+  position `i` to position `i` and the positions `[M, N)` clear, so `bit_convert<std::uint8_t>(bit_array<5>)` is
+  what `to_ulong` gives for a `std::bitset<5>` of the same positions, and a `bit_fixed_set<100>` is an
+  `xstd::uint128` or a `std::array<std::uint64_t, 2>`. Into a narrower target there is no conversion at all and the
+  call does not compile: both types state their widths, so a truncation is a mistake to report where it is written,
+  and narrowing is a checked conversion only from a run-time width, below. Nothing truncates, so nothing can fail:
+  the call is `noexcept`, and the round trip, back through a run-time width or by `from_blocks` of the low
+  positions, is the identity. Widening means one thing in both readings, position `i` staying `i`: a set's fixed
+  width is a capacity, so it gains positions no key names yet, and a sequence gains `false` elements.
   `std::bitset<N>` crosses this way, read on `std::bit_cast`'s terms ([the-bytes-they-agree-on](#the-bytes-they-agree-on)):
   `bit_convert<xstd::bit_fixed_set<N>>(b)` is the set reading of a `std::bitset`, and `bit_convert<std::bitset<N>>(s)`
   hands one back. The set and sequence readings cross the same way, directly, with no bitset between them.

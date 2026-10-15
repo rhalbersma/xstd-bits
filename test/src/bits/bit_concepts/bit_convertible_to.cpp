@@ -23,7 +23,7 @@
 BOOST_AUTO_TEST_SUITE(BitConcepts)
 BOOST_AUTO_TEST_SUITE(BitConvertibleTo)
 
-// Every width converts: equal fixed widths, a run-time width into a fixed one, and anything into a run-time one.
+// Every width converts: fixed into at least as wide, run-time into fixed, and anything into a run-time width.
 BOOST_AUTO_TEST_CASE(BitConvertibleToNamesEveryWidthButAViewTarget)
 {
         static_assert(xstd::bit_convertible_to<xstd::bit_fixed_set<64>, std::uint64_t> and xstd::bit_convertible_to<std::bitset<20>, xstd::bit_array<20>>);
@@ -38,9 +38,11 @@ BOOST_AUTO_TEST_CASE(BitConvertibleToNamesEveryWidthButAViewTarget)
         // A reference or a const source is the same conversion as the type it names.
         static_assert(xstd::bit_convertible_to<xstd::bit_set const&, xstd::bit_vector> and xstd::bit_convertible_to<xstd::bit_set&&, xstd::bit_vector>);
 
-        // Two fixed widths that differ are no conversion at all, rather than a narrowing or a widening one.
+        // A fixed width widens into a wider one, and narrowing it would truncate, so that is no conversion at all.
+        static_assert(xstd::bit_convertible_to<xstd::bit_array<5>, std::uint8_t> and xstd::bit_convertible_to<xstd::bit_fixed_set<64>, xstd::bit_fixed_set<65>>);
+        static_assert(not xstd::bit_convertible_to<xstd::bit_array<9>, std::uint8_t> and not xstd::bit_convertible_to<xstd::bit_fixed_set<65>, std::uint64_t>);
         static_assert(not xstd::bit_convertible_to<std::uint32_t, xstd::bit_array<20>> and not xstd::bit_convertible_to<std::uint64_t, std::bitset<63>>);
-        static_assert(not xstd::bit_convertible_to<std::bitset<65>, xstd::bit_array<64>> and not xstd::bit_convertible_to<xstd::bit_fixed_set<64>, xstd::bit_fixed_set<65>>);
+        static_assert(not xstd::bit_convertible_to<std::bitset<65>, xstd::bit_array<64>>);
 
         // A window is read from its own first position, as a run-time width.
         static_assert(xstd::bit_convertible_to<xstd::bit_subspan<std::array<std::uint64_t, 2>, std::dynamic_extent, 100>, xstd::bit_vector>);

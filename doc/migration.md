@@ -4,11 +4,11 @@ Two migrations need no page. `std::vector<bool>` becomes `xstd::bit_vector` and 
 `xstd::bit_set` by changing the type: each answers its counterpart's synopsis line for line, `[vector.bool]`'s
 `flip()` and deprecated static `swap` aside, so the code around it stays as it is ([README](../README.md#which-one-do-i-want)).
 
-This page is for the sources whose interface differs: `std::bitset`, integer flag words, enumeration flags and Qt's
-`QFlags`, `boost::dynamic_bitset` and itsy_bitsy. Each section is a *Tony Table*, the before-and-after form WG21
-papers use: what the code says today on the left, what it says here on the right. Every right-hand column compiles
-and runs against the library with GCC 15 and Clang 22, and so does every left-hand one except itsy_bitsy's, whose
-last release no longer builds with either.
+This page is for the sources whose interface differs: `std::bitset`, integer flag words, enumeration flags, Qt's
+`QFlags`, POSIX's `sa_flags`, `boost::dynamic_bitset` and itsy_bitsy. Each section is a *Tony Table*, the
+before-and-after form WG21 papers use: what the code says today on the left, what it says here on the right. Every
+right-hand column compiles and runs against the library with GCC 15 and Clang 22, and so does every left-hand one
+except itsy_bitsy's, whose last release no longer builds with either.
 
 The first question is always which reading the old code meant. `std::bitset` and `boost::dynamic_bitset` offer
 both at once; here the type says which:
@@ -174,8 +174,8 @@ v >>= 1;  // or v = v.shift(1)
 ## `std::bitset<N>` as a word
 
 `to_ullong` and the `unsigned long long` constructor are the one-word case of `xstd::bit_convert` and the
-`from_blocks` tag. A fixed width converts only into an equal one, so `N` is the word's width; `bit_align<bit_least<X>>`
-rounds any `N` up to one.
+`from_blocks` tag. A fixed width converts into any at least as wide, zero-extended, so `N` need not be the word's
+width, and into a narrower one it does not compile.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>
@@ -193,6 +193,21 @@ auto w = b.to_ullong();  // 0xF0
 
 auto s = xstd::bit_fixed_set<64>(xstd::from_blocks, std::uint64_t{0xF0});
 auto w = xstd::bit_convert<std::uint64_t>(s);  // 0xF0
+```
+
+</td></tr>
+<tr><td>
+
+```cpp
+auto b = std::bitset<9>(0x1F0);
+auto w = b.to_ulong();  // 0x1F0
+```
+
+</td><td>
+
+```cpp
+auto s = xstd::bit_fixed_set<9>{4, 5, 6, 7, 8};
+auto w = xstd::bit_convert<unsigned long>(s);  // 0x1F0
 ```
 
 </td></tr>
@@ -293,8 +308,11 @@ fs::permissions(path, p);  // converts to fs::perms
 
 ## Qt's `QFlags`
 
-`QFlags<Enum>` wraps an enumeration of one-bit values; the set over the same enumeration replaces it, keyed on the
-flags themselves through `bit_flag_mapping`.
+`QFlags<Enum>` wraps an enumeration of one-bit values; `bit_flag_set` over the same enumeration replaces it, keyed on
+the flags themselves. It takes the enumeration although `Qt::AlignLeft | Qt::AlignTop` is a `QFlags` rather than an
+`Qt::AlignmentFlag`: a flag type accepts any enumeration whose `|` compiles, whatever it returns. `Qt::AlignmentFlag`
+has no fixed underlying type, so its values are only those of the nine-bit field its enumerators need, and the width
+is written out: with a wider one, `~a` would form a value the enumeration cannot hold.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>
@@ -309,16 +327,18 @@ a &= ~Qt::AlignTop;
 a.setFlag(Qt::AlignLeft, false);
 a.setFlag(Qt::AlignHCenter);
 a.testFlag(Qt::AlignHCenter);
+a.testFlags(Qt::AlignCenter);
+a.testAnyFlags(Qt::AlignVertical_Mask);
 a.toInt();
 ```
 
 </td><td>
 
 ```cpp
-#include <xstd/bits/bit_fixed_set.hpp>
-#include <xstd/bits/bit_flag_mapping.hpp>
+#include <xstd/bits/bit_algorithm.hpp>
+#include <xstd/bits/bit_flag_set.hpp>
 
-using Alignment = xstd::basic_bit_fixed_set<Qt::AlignmentFlag, std::uint16_t, 16, xstd::bit_flag_mapping<Qt::AlignmentFlag, 16>, std::greater<Qt::AlignmentFlag>>;
+using Alignment = xstd::bit_flag_set<Qt::AlignmentFlag, 9>;
 
 auto a = Alignment{Qt::AlignLeft, Qt::AlignTop};
 a |= Qt::AlignBottom;
@@ -326,11 +346,69 @@ a -= Qt::AlignTop;
 a.erase(Qt::AlignLeft);
 a.insert(Qt::AlignHCenter);
 a.contains(Qt::AlignHCenter);
-xstd::bit_convert<std::uint16_t>(a);
+xstd::bit_includes(a, Qt::AlignCenter);
+xstd::bit_intersects(a, Qt::AlignVertical_Mask);
+Qt::AlignmentFlag(a);
 ```
 
 </td></tr>
 </table>
+
+Member by member:
+
+| `QFlags` | Flag type |
+| :-- | :-- |
+| `testFlag(f)`, `f` one bit | `contains(f)` |
+| `testFlags(m)` | `xstd::bit_includes(a, m)`, except that `testFlags(0)` asks whether `a` is empty, and `bit_includes(a, 0)` is always true |
+| `testAnyFlags(m)` | `xstd::bit_intersects(a, m)` |
+| `setFlag(f, on)`, `f` one bit | `on ? a.insert(f) : a.erase(f)` |
+| `setFlag(m, on)`, `m` several bits | `on ? a \|= m : a -= m` |
+| `toInt()` | the conversion to the mask, `Qt::AlignmentFlag(a)`, or `xstd::bit_convert<unsigned>(a)` for the word |
+
+An unscoped enumeration converts to `bool`, so `if (a & Qt::AlignLeft)` still reads as any-of, through the
+conversion to the mask. A scoped enumeration does not, and its flag type then asks `xstd::bit_intersects` or
+`contains` instead.
+
+## A signed word of unsigned flags: POSIX `sa_flags`
+
+A flag type keeps a signed word's sign bit out of its universe, so a flag that sits there needs the word's unsigned
+type. glibc's `SA_RESETHAND` is `0x80000000`, an `unsigned` constant, stored in `struct sigaction`'s `int sa_flags`.
+The word is `int`, the flags are `unsigned`: key on `unsigned`, and cast once on each side of the field. Iteration
+is then `std::set<unsigned, std::greater<unsigned>>`'s, `SA_RESETHAND` first.
+
+<table>
+<tr><th>Before</th><th>After</th></tr>
+<tr><td>
+
+```cpp
+#include <signal.h>
+
+struct sigaction sa{};
+sa.sa_flags = SA_RESTART | SA_RESETHAND;
+sa.sa_flags |= SA_NODEFER;
+(sa.sa_flags & SA_RESETHAND) != 0;
+```
+
+</td><td>
+
+```cpp
+#include <xstd/bits/bit_flag_set.hpp>
+#include <signal.h>
+
+using sa_flags = xstd::bit_flag_set<unsigned>;
+
+auto f = sa_flags{SA_RESTART, SA_RESETHAND};
+f |= SA_NODEFER;
+f.contains(SA_RESETHAND);
+sa.sa_flags = static_cast<int>(unsigned(f));
+auto g = sa_flags(static_cast<unsigned>(sa.sa_flags));
+```
+
+</td></tr>
+</table>
+
+`xstd::bit_flag_set<int>{SA_RESETHAND}` does not compile on glibc: the constant narrows into `int`. A run-time value
+with the sign bit set fails the flag type's assertion on the way in.
 
 ## `boost::dynamic_bitset`
 

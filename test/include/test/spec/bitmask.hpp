@@ -7,13 +7,13 @@
 #define TEST_SPEC_BITMASK_HPP
 
 #include <test/spec/input.hpp>                          // context, edge
-#include <xstd/bits/bit/bit_convert.hpp>                // bit_convert
 #include <xstd/bits/bit_flag_set.hpp>                   // bit_flag_set
 #include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
 #include <array>                                        // array, to_array
+#include <bit>                                          // bit_width
 #include <bitset>                                       // bitset
 #include <charconv>                                     // chars_format
-#include <concepts>                                     // same_as
+#include <concepts>                                     // integral
 #include <cstddef>                                      // size_t
 #include <cstdint>                                      // uint64_t
 #include <filesystem>                                   // copy_options, directory_options, perm_options, perms
@@ -23,6 +23,7 @@
 #include <ranges>                                       // iota
 #include <regex>                                        // regex_constants
 #include <tuple>                                        // tuple, tuple_cat
+#include <type_traits>                                  // type_identity
 #include <utility>                                      // declval
 #include <vector>                                       // vector
 
@@ -130,6 +131,22 @@ struct chars_format
         static constexpr auto empties   = std::array<type, 0>();
 };
 
+// [bitmask.types]/1's third form, a bitset past one block: its one-bit values at the ends and each block boundary.
+struct bitset
+{
+        using type                     = std::bitset<147>;
+        static constexpr auto elements = [] -> std::array<type, 9> {
+                constexpr auto positions = std::array{0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 127UZ, 128UZ, 145UZ, 146UZ};
+                auto nrv                 = std::array<type, positions.size()>();
+                for (auto const i : std::views::iota(0UZ, positions.size())) {
+                        nrv[i].set(positions[i]);
+                }
+                return nrv;
+        }();
+        static constexpr auto constants = std::array<type, 0>();
+        static constexpr auto empties   = std::array<type, 0>();
+};
+
 // A type X checked against the bitmask type that Names describes: the standard's own, or the flag type over it.
 template<class X, class Names>
 struct candidate
@@ -141,29 +158,81 @@ struct candidate
 template<class Names>
 using standard = candidate<typename Names::type, Names>;
 
+// The narrowest width holding every named value, which no enumeration's range can fall short of.
 template<class Names>
-using flag_set = candidate<xstd::bit_flag_set<typename Names::type>, Names>;
+[[nodiscard]] consteval auto named_width()
+        -> std::size_t
+{
+        using block_type = xstd::underlying_block_t<typename Names::type>;
+        auto bits        = std::uint64_t{0};
+        auto const add   = [&](auto const& values) -> void {
+                for (auto const v : values) {
+                        bits |= static_cast<std::uint64_t>(static_cast<block_type>(v));
+                }
+        };
+        add(Names::elements);
+        add(Names::constants);
+        add(Names::empties);
+        return static_cast<std::size_t>(std::bit_width(bits));
+}
 
-using masks = std::tuple<standard<fmtflags>, standard<iostate>, standard<openmode>, standard<perms>, standard<perm_options>, standard<copy_options>, standard<directory_options>, standard<syntax_option_type>, standard<match_flag_type>, standard<launch>, standard<chars_format>>;
+// The flag type at its default width, or at the named values' where an enumeration without a fixed type takes none.
+template<class Names>
+struct flag_type : std::type_identity<xstd::bit_flag_set<typename Names::type, named_width<Names>()>>
+{};
 
-using flag_sets = std::tuple<flag_set<fmtflags>, flag_set<iostate>, flag_set<openmode>, flag_set<perms>, flag_set<perm_options>, flag_set<copy_options>, flag_set<directory_options>, flag_set<syntax_option_type>, flag_set<match_flag_type>, flag_set<launch>, flag_set<chars_format>>;
+template<class Names>
+        requires requires { typename xstd::bit_flag_set<typename Names::type>; } // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+struct flag_type<Names> : std::type_identity<xstd::bit_flag_set<typename Names::type>>
+{};
+
+template<class Names>
+using flag_set = candidate<typename flag_type<Names>::type, Names>;
+
+using masks = std::tuple<standard<fmtflags>, standard<iostate>, standard<openmode>, standard<perms>, standard<perm_options>, standard<copy_options>, standard<directory_options>, standard<syntax_option_type>, standard<match_flag_type>, standard<launch>, standard<chars_format>, standard<bitset>>;
+
+using flag_sets = std::tuple<flag_set<fmtflags>, flag_set<iostate>, flag_set<openmode>, flag_set<perms>, flag_set<perm_options>, flag_set<copy_options>, flag_set<directory_options>, flag_set<syntax_option_type>, flag_set<match_flag_type>, flag_set<launch>, flag_set<chars_format>, flag_set<bitset>>;
 
 // The standard's types first, then the flag type over each.
 using all = decltype(std::tuple_cat(std::declval<masks>(), std::declval<flag_sets>()));
 
-template<class C>
-using block_t = xstd::underlying_block_t<typename C::names::type>;
+// A mask's bits as a value: an enumeration's or an integer's unsigned block, a bitset as it is.
+template<class Mask>
+struct mask_bits : std::type_identity<xstd::underlying_block_t<Mask>>
+{};
 
-// A value's bits as the mask's block; a flag type's via a bitset, as its complement can leave an enumeration's range.
+template<std::size_t M>
+struct mask_bits<std::bitset<M>> : std::type_identity<std::bitset<M>>
+{};
+
+template<class C>
+using block_t = mask_bits<typename C::names::type>::type;
+
+// How many positions those bits hold.
+template<class C>
+inline constexpr auto block_width = static_cast<std::size_t>(std::numeric_limits<block_t<C>>::digits);
+
+template<class C>
+        requires requires { block_t<C>().size(); }
+inline constexpr auto block_width<C> = block_t<C>().size();
+
+// A block as it prints: a byte as a number rather than a character, a bitset as its digits.
+template<class Block>
+[[nodiscard]] auto printable(Block const& b)
+{
+        if constexpr (std::integral<Block>) {
+                return static_cast<std::uint64_t>(b);
+        } else {
+                return b;
+        }
+}
+
+// A value's bits as the mask's block, a flag type's through the mask it converts to, its width within the mask's range.
 template<class C>
 [[nodiscard]] auto block(typename C::type const& x)
         -> block_t<C>
 {
-        if constexpr (std::same_as<typename C::type, typename C::names::type>) {
-                return static_cast<block_t<C>>(x);
-        } else {
-                return static_cast<block_t<C>>(xstd::bit_convert<std::bitset<C::type::max_size()>>(x).to_ullong());
-        }
+        return static_cast<block_t<C>>(static_cast<C::names::type>(x));
 }
 
 // [bitmask.types]/3: the value 0, the empty bitmask, which an enumeration need not name as one of its enumerators.
@@ -240,11 +309,11 @@ template<class C>
 auto for_each_pair(std::vector<typename C::type> const& v, auto fun)
         -> void
 {
-        auto const from = test::spec::edge("named values", static_cast<std::size_t>(std::numeric_limits<block_t<C>>::digits));
+        auto const from = test::spec::edge("named values", block_width<C>);
         for (auto const& x : v) {
                 for (auto const& y : v) {
-                        auto const wx         = static_cast<std::uint64_t>(block<C>(x));
-                        auto const wy         = static_cast<std::uint64_t>(block<C>(y));
+                        auto const wx         = printable(block<C>(x));
+                        auto const wy         = printable(block<C>(y));
                         auto const on_failure = test::spec::context(from, wx, wy);
                         fun(x, y);
                 }

@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_CONCEPTS_BIT_MASK_MAPPING_HPP
 
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
-#include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
+#include <xstd/bits/detail/bit_layout.hpp>                    // fixed_bit_blocks
 #include <concepts>                                           // same_as
 
 namespace xstd {
@@ -16,8 +16,8 @@ namespace xstd {
 template<class Mapping, class Key>
 concept bit_mask_mapping =
         sized_bit_index_mapping<Mapping, Key> and
-        // Unsigned, never the signed type under an enumeration such as std::launch: a flag may sit on its sign bit.
-        xstd::unsigned_integer<typename Mapping::block_type> and
+        // Unsigned blocks, one or a fixed array, never the signed type under an enumeration such as std::launch.
+        bits::detail::fixed_bit_blocks<typename Mapping::block_type> and
         requires (Key mask, Mapping::block_type block) {
                 { Mapping::to_block(mask) } -> std::same_as<typename Mapping::block_type>; // every bit of mask, at its position
                 { Mapping::from_block(block) } -> std::same_as<Key>;                       // the mask with those bits

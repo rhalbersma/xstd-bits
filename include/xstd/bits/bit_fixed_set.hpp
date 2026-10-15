@@ -21,7 +21,6 @@
 #include <xstd/bits/detail/shift.hpp>                         // shr
 #include <xstd/bits/from_blocks.hpp>                          // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
-#include <xstd/ints/limits.hpp>                               // numeric_limits
 #include <xstd/misc/concepts/container_compatible_range.hpp>  // container_compatible_range
 #include <boost/container_hash/is_range.hpp>                  // is_range
 #include <boost/container_hash/is_tuple_like.hpp>             // is_tuple_like
@@ -242,10 +241,13 @@ private:
                 requires is_mask
         {
                 using mask_block = KeyMapping::block_type;
-                if constexpr (N < static_cast<std::size_t>(xstd::numeric_limits<mask_block>::digits)) {
+                if constexpr (N == xstd::bit_blocks_extent_v<mask_block>) {
+                        return true;
+                } else if constexpr (xstd::unsigned_integer<mask_block>) {
                         return bits::detail::shr(KeyMapping::to_block(mask), N) == mask_block{};
                 } else {
-                        return true;
+                        // An array of blocks: the mask is unchanged by dropping its bits at or above N.
+                        return KeyMapping::to_block(static_cast<key_type>(low_bits_of(mask))) == KeyMapping::to_block(mask);
                 }
         }
 

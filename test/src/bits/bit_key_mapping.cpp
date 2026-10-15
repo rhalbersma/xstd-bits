@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/block_types.hpp>                               // all_block_types
-#include <test/set/enums.hpp>                                 // day, letter, level, listed_enums, nine, perm, piece, sign, undeclared, wind
+#include <test/set/enums.hpp>                                 // chessman, counted_enums, day, gapped, letter, level, listed_enums, nine, nothing, perm, piece, sign, tone, undeclared, wind
 #include <test/set/lookup.hpp>                                // lookup_mismatches
 #include <test/set/order_isomorphism.hpp>                     // is_order_isomorphism, is_order_isomorphism_onto
 #include <test/set/strong_index.hpp>                          // offset_mapping, strong_index
@@ -312,6 +312,7 @@ BOOST_AUTO_TEST_CASE(AListedEnumerationRanksByItsList)
         static_assert(xstd::bit_key_mapping<test::set::perm>::from_index(2UZ) == test::set::perm::exec);
         static_assert(has_default_mapping<test::set::perm>);
         static_assert(not has_default_mapping<test::set::undeclared>);
+        static_assert(has_default_mapping<test::set::chessman>);
         static_assert(not has_default_mapping<int>);
 
         BOOST_CHECK(true);
@@ -405,6 +406,50 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AKeyIsAListedValueAndNoOther, E, test::set::listed
         BOOST_CHECK_EQUAL(mismatches, 0UZ);
 }
 
+// An enumeration closed by its own count is the range from E{} to the count, the count itself no key.
+BOOST_AUTO_TEST_CASE(ACountClosesTheRangeFromZero)
+{
+        using test::set::chessman;
+        using mapping = xstd::bit_key_mapping<chessman>;
+        static_assert(std::derived_from<mapping, xstd::bit_range_mapping<chessman, chessman{}, 6UZ>>);
+        static_assert(xstd::sized_bit_index_mapping<mapping, chessman> and mapping::size == 6UZ);
+        static_assert(mapping::to_index(chessman::pawn) == 0UZ and mapping::to_index(chessman::king) == 5UZ);
+        static_assert(mapping::from_index(5UZ) == chessman::king);
+        static_assert(not mapping::is_key(chessman::count));
+        static_assert(xstd::bit_key_mapping<test::set::nothing>::size == 0UZ);
+        static_assert(not xstd::bit_key_mapping<test::set::nothing>::is_key(test::set::nothing::count));
+
+        for (auto const i : std::views::iota(0UZ, mapping::size)) {
+                BOOST_CHECK(mapping::is_key(mapping::from_index(i)));
+                BOOST_CHECK_EQUAL(mapping::to_index(mapping::from_index(i)), i);
+        }
+        BOOST_CHECK(not mapping::is_key(std::bit_cast<chessman>(std::uint8_t{7})));
+}
+
+// A list outranks a count: the list's search, whose size counts the listed values rather than the count's span.
+BOOST_AUTO_TEST_CASE(AListOutranksACount)
+{
+        using test::set::tone;
+        static_assert(std::derived_from<xstd::bit_key_mapping<tone>, xstd::bit_find_mapping<tone, xstd::enum_traits<tone>::values>>);
+        static_assert(xstd::bit_key_mapping<tone>::size == 3UZ);
+        static_assert(xstd::bit_key_mapping<tone>::to_index(tone::high) == 2UZ);
+        static_assert(not xstd::bit_key_mapping<tone>::is_key(tone::count));
+
+        BOOST_CHECK(true);
+}
+
+// A count means its whole span is keys: one declared after a gap still makes the value in that gap a key.
+BOOST_AUTO_TEST_CASE(ACountAfterAGapStillSpansTheGap)
+{
+        using test::set::gapped;
+        using mapping = xstd::bit_key_mapping<gapped>;
+        static_assert(mapping::size == 3UZ);
+        static_assert(mapping::is_key(std::bit_cast<gapped>(std::uint8_t{1})));
+        static_assert(mapping::to_index(gapped::b) == 2UZ and not mapping::is_key(gapped::count));
+
+        BOOST_CHECK(true);
+}
+
 // Sparse integer identifiers, each at its rank in the sorted list, key a set of as many positions as there are ids.
 BOOST_AUTO_TEST_CASE(SparseIdentifiersKeyASetThroughASearch)
 {
@@ -457,6 +502,7 @@ BOOST_AUTO_TEST_CASE(EveryMappingIsAnOrderIsomorphismOntoItsPositions)
         static_assert(is_order_isomorphism<xstd::bit_find_mapping<int, ids>, int>());
         static_assert(is_order_isomorphism<test::set::offset_mapping<10UZ, 5UZ>, test::set::strong_index>());
         static_assert([]<class... Enum>(std::tuple<Enum...> const*) -> bool { return (... and is_order_isomorphism<xstd::bit_key_mapping<Enum>, Enum>()); }(static_cast<test::set::listed_enums const*>(nullptr)));
+        static_assert([]<class... Enum>(std::tuple<Enum...> const*) -> bool { return (... and is_order_isomorphism<xstd::bit_key_mapping<Enum>, Enum>()); }(static_cast<test::set::counted_enums const*>(nullptr)));
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
