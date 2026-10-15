@@ -1430,11 +1430,9 @@ BOOST_AUTO_TEST_CASE(ASignedEnumerationIsAsWideAsItsInteger)
         static_assert(not constant_evaluates<[] -> launches { return {std::bit_cast<std::launch>(std::numeric_limits<int>::min())}; }>);
         static_assert(not constant_evaluates<[] -> xstd::bit_flag_set<int> { return {std::numeric_limits<int>::min()}; }>);
 #endif
-#ifdef SA_RESETHAND
+#if defined(SA_RESETHAND) && SA_RESETHAND == 0x80000000U
         // glibc puts SA_RESETHAND on the sign bit of sa_flags, an int: the unsigned constant narrows into it.
-        if constexpr (SA_RESETHAND == 0x8000'0000U) {
-                static_assert(not brace_initializes<xstd::bit_flag_set<int>, SA_RESETHAND>);
-        }
+        static_assert(not brace_initializes<xstd::bit_flag_set<int>, SA_RESETHAND>);
 #endif
         auto const f = launches{std::launch::async, std::launch::deferred, std::bit_cast<std::launch>(0x4000'0000)};
         BOOST_CHECK(std::ranges::equal(f, std::array{std::bit_cast<std::launch>(0x4000'0000), std::launch::deferred, std::launch::async}));
