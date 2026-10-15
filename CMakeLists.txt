@@ -30,7 +30,7 @@ if(NOT xstd-ints_FOUND)
         xstd-ints
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-ints.git
         # Pinned to a commit on xstd-ints' main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG bc720fc52103b337e689f0a0f227d472e7bda647
+        GIT_TAG 790a41c78867c3116b07fa85c6b1b886d961eaf1
     )
     FetchContent_MakeAvailable(xstd-ints)
 endif()
@@ -72,6 +72,9 @@ target_sources(
         include/xstd/bits/detail/sequence_adaptor.hpp
         include/xstd/bits/detail/set_adaptor.hpp
         include/xstd/bits/detail/valarray_adaptor.hpp
+        include/xstd/bits/detail/valarray_proxy.hpp
+        include/xstd/bits/detail/gslice_index.hpp
+        include/xstd/bits/detail/block_compress_expand.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
@@ -153,6 +156,12 @@ target_sources(
         include/xstd/bits/bit_valarray.hpp
         include/xstd/bits/bit_fixed_valarray.hpp
         include/xstd/bits/bit_bounded_valarray.hpp
+        include/xstd/bits/bit_slice.hpp
+        include/xstd/bits/bit_gslice.hpp
+        include/xstd/bits/bit_slice_array.hpp
+        include/xstd/bits/bit_gslice_array.hpp
+        include/xstd/bits/bit_mask_array.hpp
+        include/xstd/bits/bit_indirect_array.hpp
         include/xstd/bits/detail/adapted_bits.hpp
         include/xstd/bits/bit_algorithm/detail/algorithm.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
@@ -170,6 +179,7 @@ target_sources(
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/bit_small_set.hpp
         include/xstd/bits/ext/boost/bit_small_vector.hpp
+        include/xstd/bits/ext/boost/bit_small_valarray.hpp
         include/xstd/bits/ext/boost/dynamic_bitset.hpp
         include/xstd/bits/ext/boost/detail/dynamic_bitset.hpp
         include/xstd/bits/detail/bit_layout.hpp

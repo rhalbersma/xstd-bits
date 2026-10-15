@@ -17,13 +17,16 @@
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
 #include <xstd/bits/bit_bounded_valarray.hpp>       // basic_bit_bounded_valarray
 #include <xstd/bits/bit_fixed_valarray.hpp>         // basic_bit_fixed_valarray
+#include <xstd/bits/bit_gslice.hpp>                 // bit_gslice
+#include <xstd/bits/bit_slice.hpp>                  // bit_slice
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_valarray.hpp>               // basic_bit_valarray
 #include <xstd/bits/bit_vector.hpp>                 // bit_vector
 #include <xstd/bits/from_blocks.hpp>                // from_blocks, from_blocks_t
 #include <xstd/ints/limits.hpp>                     // numeric_limits
-#include <boost/test/unit_test.hpp>                 // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_TEST_CONTEXT
-#include <algorithm>                                // count, equal, min, mismatch, reverse
+#include <boost/test/unit_test.hpp>                 // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_REQUIRE_EQUAL, BOOST_TEST_CONTEXT
+#include <algorithm>                                // adjacent_find, all_of, count, equal, min, mismatch, reverse, sort
+#include <array>                                    // array
 #include <bitset>                                   // bitset
 #include <climits>                                  // INT_MAX, INT_MIN
 #include <concepts>                                 // constructible_from, convertible_to, copyable, equality_comparable, same_as
@@ -32,13 +35,13 @@
 #include <format>                                   // format
 #include <functional>                               // hash
 #include <iterator>                                 // contiguous_iterator
-#include <ranges>                                   // begin, contiguous_range, end, iota, iterator_t, random_access_range, range_value_t, size, sized_range, ssize
+#include <ranges>                                   // begin, contiguous_range, end, iota, iterator_t, random_access_range, range_value_t, size, sized_range, ssize, to
 #include <span>                                     // dynamic_extent
 #include <type_traits>                              // is_default_constructible_v
-#include <utility>                                  // declval, move
+#include <utility>                                  // declval, move, to_underlying
 #include <vector>                                   // vector
 
-// Every member and operator of the three valarrays, each held to the same operation on a std::vector<bool>.
+// Every member and operator of the four valarrays, each held to the same operation on a std::vector<bool>.
 namespace test::valarray {
 
 using model = std::vector<bool>;
@@ -633,6 +636,467 @@ auto check_interop()
                         view[0] = not a[0];
                         BOOST_CHECK_EQUAL(static_cast<V const&>(v)[0], not a[0]);
                 }
+        });
+}
+
+// Fewer sizes than the operators run at, each across a block boundary of the narrow blocks, and the capacity.
+template<class V>
+[[nodiscard]] auto subscript_sizes()
+        -> std::vector<std::size_t>
+{
+        if constexpr (is_fixed<V>) {
+                return {fixed_size<V>};
+        } else {
+                auto result = std::vector<std::size_t>();
+                for (auto const n : {0UZ, 1UZ, 9UZ, 65UZ, 130UZ}) {
+                        if (n <= capacity<V>) {
+                                result.push_back(n);
+                        }
+                }
+                if (capacity<V> != std::dynamic_extent and result.back() != capacity<V>) {
+                        result.push_back(capacity<V>);
+                }
+                return result;
+        }
+}
+
+// The arrays a subscript reads and writes: alternating and scrambled, the other patterns being the masks' to vary.
+template<class V, class F>
+auto for_each_subscripted(F f)
+        -> void
+{
+        for (auto const n : subscript_sizes<V>()) {
+                auto const ps = patterns(n);
+                for (auto const& a : {ps[2], ps[4]}) {
+                        BOOST_TEST_CONTEXT("size " << n)
+                        {
+                                f(a);
+                        }
+                }
+        }
+}
+
+// The standard type as the reference column: what std::valarray<bool> does with the same elements, ours must do too.
+using reference_array = std::valarray<bool>;
+
+[[nodiscard]] inline auto reference_of(model const& m)
+        -> reference_array
+{
+        auto result = reference_array(m.size());
+        for (auto const i : std::views::iota(0UZ, m.size())) {
+                result[i] = m[i];
+        }
+        return result;
+}
+
+[[nodiscard]] inline auto model_of(reference_array const& r)
+        -> model
+{
+        return r | std::ranges::to<model>();
+}
+
+template<class V>
+using block_t = std::ranges::range_value_t<typename V::block_container_type>;
+
+// The array a proxy is handed: any owner of the same blocks, here the one on the heap, which takes any size.
+template<class V>
+using operand_t = xstd::basic_bit_valarray<block_t<V>>;
+
+// What a const subscript gathers into: an owner of run-time size its own type, the fixed one the bounded one.
+template<class V>
+struct gathered
+{
+        using type = V;
+};
+
+template<class Block, std::size_t N>
+struct gathered<xstd::basic_bit_fixed_valarray<Block, N>>
+{
+        using type = xstd::basic_bit_bounded_valarray<Block, N>;
+};
+
+template<class V>
+using gathered_t = gathered<V>::type;
+
+// How many elements a gather holds: the fixed size or the capacity, past which the bounded owner throws.
+template<class V>
+inline constexpr auto gather_capacity = is_fixed<V> ? fixed_size<V> : capacity<V>;
+
+enum class write : unsigned char
+{
+        assign,
+        and_assign,
+        or_assign,
+        xor_assign,
+};
+
+inline constexpr auto writes = std::array{write::assign, write::and_assign, write::or_assign, write::xor_assign};
+
+// One write through a proxy, ours or std::valarray<bool>'s, from an array or a scalar alike.
+template<class Proxy, class A>
+auto apply(write w, Proxy&& p, A const& a)
+        -> void
+{
+        if (w == write::assign) {
+                p = a;
+        } else if (w == write::and_assign) {
+                p &= a;
+        } else if (w == write::or_assign) {
+                p |= a;
+        } else {
+                p ^= a;
+        }
+}
+
+// The write itself, position by position and in order, which is what a position named twice takes.
+[[nodiscard]] inline auto written(write w, model a, std::vector<std::size_t> const& positions, model const& b)
+        -> model
+{
+        for (auto const j : std::views::iota(0UZ, positions.size())) {
+                auto const pos = positions[j];
+                if (w == write::assign) {
+                        a[pos] = b[j];
+                } else if (w == write::and_assign) {
+                        a[pos] = a[pos] and b[j];
+                } else if (w == write::or_assign) {
+                        a[pos] = a[pos] or b[j];
+                } else {
+                        a[pos] = a[pos] != b[j];
+                }
+        }
+        return a;
+}
+
+[[nodiscard]] inline auto distinct(std::vector<std::size_t> positions)
+        -> bool
+{
+        std::ranges::sort(positions);
+        return std::ranges::adjacent_find(positions) == positions.end();
+}
+
+// std::valarray<bool> answers at distinct positions, and not at a stride of zero, whose writes libstdc++ skips.
+enum class reference : bool
+{
+        defined,
+        undefined,
+};
+
+// Every write a proxy takes, from arrays, a proxy and scalars, against std::valarray<bool> where it answers.
+template<class V, class Select, class SelectReference>
+auto check_writes(model const& a, std::vector<std::size_t> const& positions, Select select, SelectReference select_reference, reference column = reference::defined)
+        -> void
+{
+        auto const count = positions.size();
+        auto const ps    = patterns(count);
+        for (auto const w : writes) {
+                BOOST_TEST_CONTEXT("write " << static_cast<int>(std::to_underlying(w)))
+                {
+                        for (auto const& b : {ps[4], model(count, true)}) {
+                                auto const expected = written(w, a, positions, b);
+                                if (column == reference::defined and distinct(positions)) {
+                                        auto reference = reference_of(a);
+                                        apply(w, select_reference(reference), reference_of(b));
+                                        BOOST_CHECK(model_of(reference) == expected);
+                                }
+
+                                auto x = make<V>(a);
+                                apply(w, select(x), make<operand_t<V>>(b));
+                                check_equal(x, expected);
+
+                                // From a proxy, which gathers what it selects before any position is written.
+                                x      = make<V>(a);
+                                auto y = make<operand_t<V>>(b);
+                                apply(w, select(x), y[std::slice(0UZ, count, 1UZ)]);
+                                check_equal(x, expected);
+                        }
+                        for (auto const t : {false, true}) {
+                                auto x = make<V>(a);
+                                apply(w, select(x), t);
+                                check_equal(x, written(w, a, positions, model(count, t)));
+                        }
+                }
+        }
+}
+
+// The const subscript's gather, the non-const one's proxy read into an owner by construction and by assignment.
+template<class V, class Selector, class ReferenceSelector = Selector>
+auto check_reads(model const& a, Selector const& selector, ReferenceSelector const& reference_selector)
+        -> void
+{
+        auto const reference = reference_of(a);
+        auto const expected  = model_of(reference[reference_selector]);
+        auto const v         = make<V>(a);
+        static_assert(std::same_as<decltype(v[selector]), gathered_t<V>>);
+        check_equal(v[selector], expected);
+        auto x = make<V>(a);
+        if (not is_fixed<V> or expected.size() == fixed_size<V>) {
+                auto const w = V(x[selector]);
+                check_equal(w, expected);
+                auto z = make<V>(a);
+                z      = x[selector];
+                check_equal(z, expected);
+                // Gathered before it is assigned, so the array may be read from itself.
+                x = x[selector];
+                check_equal(x, expected);
+        }
+        check_equal(gathered_t<V>(make<V>(a)[selector]), expected);
+}
+
+// Slices of every stride class at starts across block boundaries: the strides below a block, one, none, and past one.
+[[nodiscard]] inline auto slices(std::size_t n)
+        -> std::vector<std::slice>
+{
+        auto result = std::vector<std::slice>{std::slice(0UZ, 0UZ, 1UZ), std::slice(n, 0UZ, 3UZ)};
+        for (auto const start : {0UZ, 1UZ, 7UZ, 64UZ, 65UZ}) {
+                if (start >= n) {
+                        continue;
+                }
+                for (auto const stride : {0UZ, 1UZ, 2UZ, 3UZ, 8UZ, 64UZ, 65UZ, 129UZ}) {
+                        auto const most = stride == 0UZ ? std::ranges::min(3UZ, n) : ((n - 1UZ - start) / stride) + 1UZ;
+                        for (auto const size : {1UZ, most}) {
+                                result.emplace_back(start, size, stride);
+                        }
+                }
+        }
+        return result;
+}
+
+[[nodiscard]] inline auto slice_indices(std::slice const& s)
+        -> std::vector<std::size_t>
+{
+        auto result = std::vector<std::size_t>();
+        for (auto const j : std::views::iota(0UZ, s.size())) {
+                result.push_back(s.start() + (j * s.stride()));
+        }
+        return result;
+}
+
+[[nodiscard]] inline auto mask_indices(model const& m)
+        -> std::vector<std::size_t>
+{
+        auto result = std::vector<std::size_t>();
+        for (auto const i : std::views::iota(0UZ, m.size())) {
+                if (m[i]) {
+                        result.push_back(i);
+                }
+        }
+        return result;
+}
+
+template<class F>
+auto for_each_slice(std::size_t n, F f)
+        -> void
+{
+        for (auto const& s : slices(n)) {
+                BOOST_TEST_CONTEXT("slice(" << s.start() << ", " << s.size() << ", " << s.stride() << ")")
+                {
+                        f(s);
+                }
+        }
+}
+
+// [valarray.sub]/2-3 and [template.slice.array]: a slice's elements gathered, and written through its proxy.
+template<class V>
+auto check_slice()
+        -> void
+{
+        for_each_subscripted<V>([](model const& a) -> void {
+                for_each_slice(a.size(), [&](std::slice const& s) -> void {
+                        check_reads<V>(a, s, s);
+                        auto const bs = xstd::bit_slice(s);
+                        check_reads<V>(a, bs, s);
+                        auto const column = s.stride() == 0UZ ? reference::undefined : reference::defined;
+                        check_writes<V>(a, slice_indices(s), [&](V& x) -> auto { return x[bs]; }, [&](reference_array& r) -> auto { return r[s]; }, column);
+                });
+        });
+}
+
+// The positions a gslice selects, computed as [class.gslice] says, to tell which ones a width can hold.
+[[nodiscard]] inline auto gslice_indices(std::gslice const& g)
+        -> std::vector<std::size_t>
+{
+        auto const lengths = g.size();
+        auto const strides = g.stride();
+        auto result        = std::vector<std::size_t>();
+        BOOST_REQUIRE_EQUAL(strides.size(), lengths.size());
+        if (lengths.size() == 0UZ) {
+                return result;
+        }
+        auto counter = std::vector<std::size_t>(lengths.size());
+        auto count   = 1UZ;
+        for (auto const length : lengths) { // NOLINT(clang-analyzer-core.uninitialized.Assign): the analyzer cannot follow libstdc++'s valarray copy.
+                count *= length;
+        }
+        for ([[maybe_unused]] auto const t : std::views::iota(0UZ, count)) {
+                auto pos = g.start();
+                for (auto const d : std::views::iota(0UZ, lengths.size())) {
+                        pos += counter[d] * strides[d];
+                }
+                result.push_back(pos);
+                for (auto d = lengths.size() - 1UZ; d < lengths.size(); --d) {
+                        if (++counter[d] < lengths[d]) {
+                                break;
+                        }
+                        counter[d] = 0UZ;
+                }
+        }
+        return result;
+}
+
+[[nodiscard]] inline auto gslice_of(std::size_t start, std::vector<std::size_t> const& lengths, std::vector<std::size_t> const& strides)
+        -> std::gslice
+{
+        return {start, std::valarray<std::size_t>(lengths.data(), lengths.size()), std::valarray<std::size_t>(strides.data(), strides.size())};
+}
+
+// Ascending ones, which take the mask path, and ones that repeat or turn back, which take the index path; none at all.
+[[nodiscard]] inline auto gslices(std::size_t n)
+        -> std::vector<std::gslice>
+{
+        auto const candidates = std::vector<std::gslice>{
+                std::gslice(),
+                gslice_of(0UZ, {0UZ}, {1UZ}),
+                gslice_of(0UZ, {2UZ, 0UZ}, {1UZ, 1UZ}),
+                gslice_of(1UZ, {5UZ}, {3UZ}),
+                gslice_of(0UZ, {3UZ, 4UZ}, {9UZ, 2UZ}),
+                gslice_of(5UZ, {2UZ, 3UZ, 4UZ}, {64UZ, 17UZ, 3UZ}),
+                gslice_of(2UZ, {4UZ, 8UZ}, {32UZ, 1UZ}),
+                gslice_of(0UZ, {2UZ, 3UZ}, {1UZ, 2UZ}),
+                gslice_of(3UZ, {2UZ, 2UZ}, {0UZ, 1UZ}),
+                gslice_of(0UZ, {3UZ, 3UZ}, {1UZ, 1UZ}),
+                gslice_of(n / 2UZ, {n - (n / 2UZ)}, {1UZ}),
+                gslice_of(0UZ, {n}, {1UZ}),
+                gslice_of(n - 1UZ, {n}, {0UZ}),
+                gslice_of(0UZ, {(n + 7UZ) / 8UZ, 8UZ}, {8UZ, 1UZ}),
+        };
+        auto result = std::vector<std::gslice>();
+        for (auto const& g : candidates) {
+                auto const indices = gslice_indices(g);
+                if (std::ranges::all_of(indices, [&](std::size_t i) -> bool { return i < n; }) and indices.size() <= n) {
+                        result.push_back(g);
+                }
+        }
+        return result;
+}
+
+// [valarray.sub]/4-5 and [template.gslice.array]: a gslice's elements gathered, and written through its proxy.
+template<class V>
+auto check_gslice()
+        -> void
+{
+        for_each_subscripted<V>([](model const& a) -> void {
+                for (auto const& g : gslices(a.size())) {
+                        BOOST_TEST_CONTEXT("gslice from " << g.start() << " of " << gslice_indices(g).size())
+                        {
+                                check_reads<V>(a, g, g);
+                                auto const bg = xstd::bit_gslice(g);
+                                check_reads<V>(a, bg, g);
+                                check_writes<V>(a, gslice_indices(g), [&](V& x) -> auto { return x[bg]; }, [&](reference_array& r) -> auto { return r[g]; });
+                        }
+                }
+        });
+}
+
+// [valarray.sub]/6-7 and [template.mask.array]: a mask's elements gathered, and written through its proxy.
+template<class V, class Mask>
+auto check_mask_with()
+        -> void
+{
+        for_each_subscripted<V>([](model const& a) -> void {
+                auto const ps = patterns(a.size());
+                // Clear, full, odd positions, a sparse scramble and the last alone, some blocks selecting nothing.
+                for (auto const& m : {ps[0], ps[1], ps[3], ps[5], ps[6]}) {
+                        auto const mask      = make<Mask>(m);
+                        auto const reference = reference_of(m);
+                        auto const count     = static_cast<std::size_t>(std::ranges::count(m, true));
+                        auto const elements  = reference_of(a);
+                        auto const expected  = model_of(elements[reference]);
+                        auto const v         = make<V>(a);
+                        static_assert(std::same_as<decltype(v[mask]), gathered_t<V>>);
+                        check_equal(v[mask], expected);
+                        auto x = make<V>(a);
+                        if (not is_fixed<V> or count == fixed_size<V>) {
+                                check_equal(V(x[mask]), expected);
+                                x = x[mask];
+                                check_equal(x, expected);
+                        }
+                        check_equal(gathered_t<V>(make<V>(a)[mask]), expected);
+                        check_writes<V>(a, mask_indices(m), [&](V& y) -> auto { return y[mask]; }, [&](reference_array& r) -> auto { return r[reference]; });
+                }
+        });
+}
+
+template<class V>
+auto check_mask()
+        -> void
+{
+        check_mask_with<V, V>();
+        check_mask_with<V, operand_t<V>>();
+}
+
+// Index arrays ascending, descending, permuted and partial; and, for reading alone, repeated.
+[[nodiscard]] inline auto index_arrays(std::size_t n, bool repeats)
+        -> std::vector<std::valarray<std::size_t>>
+{
+        auto result = std::vector<std::valarray<std::size_t>>{std::valarray<std::size_t>()};
+        if (n == 0UZ) {
+                return result;
+        }
+        auto ascending  = std::valarray<std::size_t>(n);
+        auto descending = std::valarray<std::size_t>(n);
+        auto shuffled   = std::valarray<std::size_t>(n);
+        for (auto const i : std::views::iota(0UZ, n)) {
+                ascending[i]  = i;
+                descending[i] = n - 1UZ - i;
+                shuffled[i]   = (i * 7UZ) % n;
+        }
+        result.push_back(ascending);
+        result.push_back(descending);
+        result.push_back(std::valarray<std::size_t>{n - 1UZ});
+        result.emplace_back(descending[std::slice(0UZ, (n + 1UZ) / 2UZ, 2UZ)]);
+        if (n % 7UZ != 0UZ) {
+                result.push_back(shuffled);
+        }
+        if (repeats) {
+                result.push_back(std::valarray<std::size_t>{0UZ, n - 1UZ, 0UZ, n / 2UZ, n - 1UZ});
+        }
+        return result;
+}
+
+// [valarray.sub]/8-9 and [template.indirect.array]: the indexed elements gathered, and written through its proxy.
+template<class V>
+auto check_indirect()
+        -> void
+{
+        for_each_subscripted<V>([](model const& a) -> void {
+                for (auto const& indices : index_arrays(a.size(), true)) {
+                        BOOST_TEST_CONTEXT("indices " << indices.size())
+                        {
+                                if (indices.size() <= gather_capacity<V>) {
+                                        check_reads<V>(a, indices, indices);
+                                }
+                        }
+                }
+                for (auto const& indices : index_arrays(a.size(), false)) {
+                        BOOST_TEST_CONTEXT("indices " << indices.size())
+                        {
+                                check_writes<V>(a, std::vector<std::size_t>(std::begin(indices), std::end(indices)), [&](V& x) -> auto { return x[indices]; }, [&](reference_array& r) -> auto { return r[indices]; });
+                        }
+                }
+        });
+}
+
+// [valarray.cons]: n bools read from a pointer, where n is the type's own at a fixed size.
+template<class V>
+auto check_pointer()
+        -> void
+{
+        for_each_subscripted<V>([](model const& a) -> void {
+                auto const p = std::make_unique<bool[]>(a.size()); // NOLINT(modernize-avoid-c-arrays): what the pointer reads.
+                for (auto const i : std::views::iota(0UZ, a.size())) {
+                        p[i] = a[i];
+                }
+                check_equal(V(p.get(), a.size()), a);
         });
 }
 

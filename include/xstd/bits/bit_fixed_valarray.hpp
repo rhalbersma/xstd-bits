@@ -6,10 +6,11 @@
 #ifndef XSTD_BITS_BIT_FIXED_VALARRAY_HPP
 #define XSTD_BITS_BIT_FIXED_VALARRAY_HPP
 
+#include <xstd/bits/bit_bounded_valarray.hpp>       // basic_bit_bounded_valarray
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/num_blocks.hpp>          // holds_width, num_blocks_v
+#include <xstd/bits/detail/num_blocks.hpp>          // holds_width, num_blocks_v, tiling_block
 #include <xstd/bits/detail/rebind.hpp>              // rebind
-#include <xstd/bits/detail/valarray_adaptor.hpp>    // valarray_adaptor
+#include <xstd/bits/detail/valarray_adaptor.hpp>    // gathered, valarray_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
 #include <array>                                    // array
 #include <cstddef>                                  // size_t
@@ -42,6 +43,14 @@ struct bits::detail::rebind<basic_bit_fixed_valarray<Block, N>>
 
         template<std::size_t M>
         using with_width = basic_bit_fixed_valarray<Block, M>;
+};
+
+// A gather has a run-time size, which at most N bits within a capacity of N hold without the heap.
+template<class Block, std::size_t N>
+        requires bits::detail::tiling_block<Block>
+struct bits::detail::gathered<basic_bit_fixed_valarray<Block, N>>
+{
+        using type = basic_bit_bounded_valarray<Block, N>;
 };
 
 } // namespace xstd

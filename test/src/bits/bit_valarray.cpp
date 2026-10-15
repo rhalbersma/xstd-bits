@@ -3,8 +3,9 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>       // all_block_types
+#include <test/block_types.hpp>       // all_block_types, wide_block_types
 #include <test/valarray.hpp>          // check_*
+#include <xstd/bits/bit_slice.hpp>    // bit_slice
 #include <xstd/bits/bit_valarray.hpp> // basic_bit_valarray, bit_valarray
 #include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <concepts>                   // same_as
@@ -15,6 +16,7 @@
 #include <stdexcept>                  // length_error
 #include <tuple>                      // tuple
 #include <utility>                    // declval
+#include <valarray>                   // slice
 
 BOOST_AUTO_TEST_SUITE(BitValarray)
 
@@ -23,6 +25,9 @@ auto valarrays(std::tuple<Blocks...>) -> std::tuple<xstd::basic_bit_valarray<Blo
 
 // Every block the library takes, each over a heap.
 using Types = decltype(valarrays(std::declval<test::all_block_types>()));
+
+// The 128-bit blocks, whose tables of slice masks are the longest.
+using WideTypes = decltype(valarrays(std::declval<test::wide_block_types>()));
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheTypeIsShapedLikeAValarrayAndNotAContainer, V, Types)
 {
@@ -107,6 +112,42 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheLogicalOperatorsActElementwise, V, Types)
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheComparisonsAnswerAnArrayOfBools, V, Types)
 {
         test::valarray::check_comparison<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(APointerConstructsThatManyElements, V, Types)
+{
+        test::valarray::check_pointer<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(ASliceGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_slice<V>();
+}
+
+// A slice's masks repeat every few blocks, and at stride three a 128-bit block's table holds 126 of them.
+BOOST_AUTO_TEST_CASE_TEMPLATE(ASliceLongerThanItsTableOfMasksRunsTheTableWhole, V, WideTypes)
+{
+        auto const n = 130UZ * 128UZ;
+        auto const a = test::valarray::patterns(n)[4];
+        auto const s = std::slice(1UZ, (n - 2UZ) / 3UZ, 3UZ);
+        test::valarray::check_reads<V>(a, s, s);
+        auto const bs = xstd::bit_slice(s);
+        test::valarray::check_writes<V>(a, test::valarray::slice_indices(s), [&](V& x) -> auto { return x[bs]; }, [&](test::valarray::reference_array& r) -> auto { return r[s]; });
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(AGsliceGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_gslice<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(AMaskGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_mask<V>();
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(AnIndexArrayGathersAndItsProxyWritesThrough, V, Types)
+{
+        test::valarray::check_indirect<V>();
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(BeginAndEndMakeItARandomAccessRange, V, Types)
