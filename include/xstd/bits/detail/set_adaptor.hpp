@@ -20,6 +20,7 @@
 #include <xstd/bits/detail/comparisons.hpp>                   // numeric_three_way, set_equal, three_way
 #include <xstd/bits/detail/hash.hpp>                          // hash_append_keys
 #include <xstd/bits/detail/is_key.hpp>                        // is_key
+#include <xstd/bits/detail/nonvolatile.hpp>                   // nonvolatile
 #include <xstd/bits/detail/owner_members.hpp>                 // owner_members
 #include <xstd/bits/detail/ownership.hpp>                     // owned_bits_t, owned_storage, owner_of, owns, reads, set_reading_tag, storage, storage_access
 #include <xstd/bits/detail/storage_ptr.hpp>                   // storage_ptr_t, storage_ref_t
@@ -156,7 +157,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
         using members_type::m_bits;
 
         // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
-        [[nodiscard]] constexpr auto bits(this auto&& self) noexcept
+        [[nodiscard]] constexpr auto bits(this nonvolatile auto&& self) noexcept
                 -> auto&&
         {
                 if constexpr (is_owner) {
@@ -681,7 +682,7 @@ public:
 
         // modifiers; each writes through the storage, so each exists exactly where the storage lets this handle write.
         template<class... Args>
-        constexpr auto emplace(this auto&& self, Args&&... args)
+        constexpr auto emplace(this nonvolatile auto&& self, Args&&... args)
                 -> std::pair<iterator, bool>
                 requires (sizeof...(args) <= 1) and requires { self.bits().growing_insert(KeyMapping::to_index(value_type(std::forward<Args>(args)...))); }
         {
@@ -689,7 +690,7 @@ public:
         }
 
         template<class... Args>
-        constexpr auto emplace_hint(this auto&& self, const_iterator position, Args&&... args)
+        constexpr auto emplace_hint(this nonvolatile auto&& self, const_iterator position, Args&&... args)
                 -> iterator
                 requires (sizeof...(args) <= 1) and requires { self.bits().growing_insert(KeyMapping::to_index(value_type(std::forward<Args>(args)...))); }
         {
@@ -697,14 +698,14 @@ public:
         }
 
         // [set]'s two overloads by value: a key is kept only as its position, so there is nothing to move.
-        constexpr auto insert(this auto&& self, value_type x)
+        constexpr auto insert(this nonvolatile auto&& self, value_type x)
                 -> std::pair<iterator, bool>
                 requires requires { self.bits().growing_insert(KeyMapping::to_index(x)); }
         {
                 return self.do_insert(KeyMapping::to_index(x));
         }
 
-        constexpr auto insert(this auto&& self, const_iterator position, value_type x)
+        constexpr auto insert(this nonvolatile auto&& self, const_iterator position, value_type x)
                 -> iterator
                 requires requires { self.bits().growing_insert(KeyMapping::to_index(x)); }
         {
@@ -712,7 +713,7 @@ public:
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
-        constexpr auto insert(this auto&& self, I first, S last)
+        constexpr auto insert(this nonvolatile auto&& self, I first, S last)
                 -> void
                 requires std::constructible_from<value_type, std::iter_reference_t<I>> and requires { self.bits().growing_insert(KeyMapping::to_index(static_cast<value_type>(*first))); }
         {
@@ -725,7 +726,7 @@ public:
 
         // Ranged insertion has tiers, as the sequence reading's append_range does.
         template<std::ranges::input_range R>
-        constexpr auto insert_range(this auto&& self, R&& rg)
+        constexpr auto insert_range(this nonvolatile auto&& self, R&& rg)
                 -> void
                 requires std::constructible_from<value_type, std::ranges::range_reference_t<R>> and requires { self.bits().growing_insert(KeyMapping::to_index(static_cast<value_type>(*std::ranges::begin(rg)))); }
         {
@@ -748,7 +749,7 @@ public:
                 }
         }
 
-        constexpr auto insert(this auto&& self, std::initializer_list<value_type> ilist)
+        constexpr auto insert(this nonvolatile auto&& self, std::initializer_list<value_type> ilist)
                 -> void
                 requires requires { self.bits().growing_insert(KeyMapping::to_index(*ilist.begin())); }
         {
@@ -756,7 +757,7 @@ public:
         }
 
         // The successor first: exclusive_find_next never reads the position it steps from.
-        constexpr auto erase(this auto&& self, const_iterator position) noexcept
+        constexpr auto erase(this nonvolatile auto&& self, const_iterator position) noexcept
                 -> iterator
                 requires requires (std::size_t pos) { self.bits().assign(pos, false); }
         {
@@ -768,7 +769,7 @@ public:
         }
 
         // Total over key_type, as std::set's is: an absent key is the no-op returning zero.
-        constexpr auto erase(this auto&& self, key_type const& x) noexcept
+        constexpr auto erase(this nonvolatile auto&& self, key_type const& x) noexcept
                 -> size_type
                 requires requires { self.bits().assign(KeyMapping::to_index(x), false); }
         {
@@ -779,7 +780,7 @@ public:
                 return 1UZ;
         }
 
-        constexpr auto erase(this auto&& self, const_iterator first, const_iterator last) noexcept
+        constexpr auto erase(this nonvolatile auto&& self, const_iterator first, const_iterator last) noexcept
                 -> iterator
                 requires requires (std::size_t pos) { self.bits().assign(pos, false); }
         {
@@ -794,7 +795,7 @@ public:
         // The blocks a from_blocks constructor takes, and what an owner's replace and extract trade in.
         using block_container_type = Bits::block_container_type;
 
-        constexpr auto clear(this auto&& self) noexcept
+        constexpr auto clear(this nonvolatile auto&& self) noexcept
                 -> void
                 requires requires { self.bits().fill(false); }
         {
@@ -802,7 +803,7 @@ public:
         }
 
         // Bulk on the storage's spelling; union and symmetric difference grow, the other two do not.
-        constexpr auto operator&=(this auto&& self, set_adaptor const& other) noexcept
+        constexpr auto operator&=(this nonvolatile auto&& self, set_adaptor const& other) noexcept
                 -> auto&
                 requires requires { self.bits() &= other.bits(); }
         {
@@ -810,7 +811,7 @@ public:
                 return self;
         }
 
-        constexpr auto operator|=(this auto&& self, set_adaptor const& other) noexcept(has_static_width)
+        constexpr auto operator|=(this nonvolatile auto&& self, set_adaptor const& other) noexcept(has_static_width)
                 -> auto&
                 requires requires { self.bits().grow_to_admit(other.bits()); self.bits() |= other.bits(); }
         {
@@ -819,7 +820,7 @@ public:
                 return self;
         }
 
-        constexpr auto operator^=(this auto&& self, set_adaptor const& other) noexcept(has_static_width)
+        constexpr auto operator^=(this nonvolatile auto&& self, set_adaptor const& other) noexcept(has_static_width)
                 -> auto&
                 requires requires { self.bits().grow_to_admit(other.bits()); self.bits() ^= other.bits(); }
         {
@@ -828,7 +829,7 @@ public:
                 return self;
         }
 
-        constexpr auto operator-=(this auto&& self, set_adaptor const& other) noexcept
+        constexpr auto operator-=(this nonvolatile auto&& self, set_adaptor const& other) noexcept
                 -> auto&
                 requires requires { self.bits() -= other.bits(); }
         {
@@ -838,7 +839,7 @@ public:
 
         // A view of ours takes any other set over this storage and keys, owner or view, by the storage's spelling.
         template<class OtherBits, storage OtherStore, class OtherDerived>
-        constexpr auto operator&=(this auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept
+        constexpr auto operator&=(this nonvolatile auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept
                 -> auto&
                 requires (not is_owner) and std::same_as<std::remove_const_t<OtherBits>, std::remove_const_t<Bits>> and (not std::same_as<set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare>, set_adaptor>) and requires { self.bits() &= other.bits(); }
         {
@@ -847,7 +848,7 @@ public:
         }
 
         template<class OtherBits, storage OtherStore, class OtherDerived>
-        constexpr auto operator|=(this auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept(has_static_width)
+        constexpr auto operator|=(this nonvolatile auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept(has_static_width)
                 -> auto&
                 requires (not is_owner) and std::same_as<std::remove_const_t<OtherBits>, std::remove_const_t<Bits>> and (not std::same_as<set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare>, set_adaptor>) and requires { self.bits().grow_to_admit(other.bits()); self.bits() |= other.bits(); }
         {
@@ -857,7 +858,7 @@ public:
         }
 
         template<class OtherBits, storage OtherStore, class OtherDerived>
-        constexpr auto operator^=(this auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept(has_static_width)
+        constexpr auto operator^=(this nonvolatile auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept(has_static_width)
                 -> auto&
                 requires (not is_owner) and std::same_as<std::remove_const_t<OtherBits>, std::remove_const_t<Bits>> and (not std::same_as<set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare>, set_adaptor>) and requires { self.bits().grow_to_admit(other.bits()); self.bits() ^= other.bits(); }
         {
@@ -867,7 +868,7 @@ public:
         }
 
         template<class OtherBits, storage OtherStore, class OtherDerived>
-        constexpr auto operator-=(this auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept
+        constexpr auto operator-=(this nonvolatile auto&& self, set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare> const& other) noexcept
                 -> auto&
                 requires (not is_owner) and std::same_as<std::remove_const_t<OtherBits>, std::remove_const_t<Bits>> and (not std::same_as<set_adaptor<OtherBits, OtherStore, OtherDerived, Key, KeyMapping, Compare>, set_adaptor>) and requires { self.bits() -= other.bits(); }
         {
@@ -876,7 +877,7 @@ public:
         }
 
         // An enumerator is the one-element set holding it, so it meets a set without an operator on the enumeration.
-        constexpr auto operator&=(this auto&& self, key_type x) noexcept
+        constexpr auto operator&=(this nonvolatile auto&& self, key_type x) noexcept
                 -> auto&
                 requires enumerator_is_one_key and requires { self.clear(); self.bits().assign(KeyMapping::to_index(x), true); }
         {
@@ -889,7 +890,7 @@ public:
         }
 
         // Not noexcept: an enumerator outside the listed values throws here, as insert does.
-        constexpr auto operator|=(this auto&& self, key_type x)
+        constexpr auto operator|=(this nonvolatile auto&& self, key_type x)
                 -> auto&
                 requires enumerator_is_one_key and requires { self.insert(x); }
         {
@@ -897,7 +898,7 @@ public:
                 return self;
         }
 
-        constexpr auto operator^=(this auto&& self, key_type x)
+        constexpr auto operator^=(this nonvolatile auto&& self, key_type x)
                 -> auto&
                 requires enumerator_is_one_key and requires { self.complement(x); }
         {
@@ -905,7 +906,7 @@ public:
                 return self;
         }
 
-        constexpr auto operator-=(this auto&& self, key_type x) noexcept
+        constexpr auto operator-=(this nonvolatile auto&& self, key_type x) noexcept
                 -> auto&
                 requires enumerator_is_one_key and requires { self.erase(x); }
         {
@@ -983,7 +984,7 @@ public:
         }
 
         // The shifts translate the set and keep the keys below max_size(); a run-time width grows towards it first.
-        constexpr auto operator<<=(this auto&& self, std::size_t n) noexcept(has_static_width or bits_type::has_static_capacity)
+        constexpr auto operator<<=(this nonvolatile auto&& self, std::size_t n) noexcept(has_static_width or bits_type::has_static_capacity)
                 -> auto&
                 requires requires { self.bits() <<= n; } and (has_static_width or requires { self.bits().resize(n); })
         {
@@ -1007,7 +1008,7 @@ public:
                 return self;
         }
 
-        constexpr auto operator>>=(this auto&& self, std::size_t n) noexcept
+        constexpr auto operator>>=(this nonvolatile auto&& self, std::size_t n) noexcept
                 -> auto&
                 requires requires { self.bits() >>= n; }
         {
@@ -1168,7 +1169,7 @@ public:
         // [associative.reqmts.general]/122; a key_type is left to its own overload, which MSVC cannot rank above this.
         template<class K>
                 requires set::transparent<key_compare> and (not std::same_as<std::remove_cvref_t<K>, key_type>) and (not std::convertible_to<K &&, iterator>) and (not std::convertible_to<K &&, const_iterator>)
-                                                                                                                                                          constexpr auto erase(this auto&& self, K&& x) -> size_type
+                                                                                                                                                          constexpr auto erase(this nonvolatile auto&& self, K&& x) -> size_type
                                  requires requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, false); }
         {
                 auto const erased   = self.count(x);
@@ -1179,7 +1180,7 @@ public:
 
 private:
         // Toggling one key, growing where insert grows; not noexcept, since growing allocates.
-        constexpr auto complement(this auto&& self, value_type x)
+        constexpr auto complement(this nonvolatile auto&& self, value_type x)
                 -> void
                 requires requires { self.bits().assign(KeyMapping::to_index(x), true); }
         {
@@ -1196,7 +1197,7 @@ private:
         }
 
         // The whole-set complement, at a static width alone: complementing needs a universe, which N is.
-        constexpr auto complement(this auto&& self) noexcept
+        constexpr auto complement(this nonvolatile auto&& self) noexcept
                 -> void
                 requires has_static_width and requires { self.bits().flip(); }
         {
@@ -1284,7 +1285,7 @@ private:
         }
 
         // growing_insert reports whether the bit was new, so one walk answers where two did.
-        constexpr auto do_insert(this auto&& self, std::size_t x)
+        constexpr auto do_insert(this nonvolatile auto&& self, std::size_t x)
                 -> std::pair<iterator, bool>
         {
                 self.guard_key(x);
@@ -1292,7 +1293,7 @@ private:
                 return {{&self.bits(), x}, inserted};
         }
 
-        constexpr auto do_insert(this auto&& self, const_iterator, std::size_t x)
+        constexpr auto do_insert(this nonvolatile auto&& self, const_iterator, std::size_t x)
                 -> iterator
         {
                 self.guard_key(x);

@@ -288,6 +288,11 @@ are static or dynamic. Each name is a class with the constructors of the standar
 container it packs. These twelve owners, the three views and the algorithms over them are the public surface;
 the adaptor each reading is built on is internal, under `<xstd/bits/detail/>`.
 
+Every concept and type trait is cv-transparent, as xstd-ints' are: `T const` and `T volatile` answer as `T` does.
+Storage is the exception, refused when volatile, since a block algorithm merges the accesses a register keeps
+apart; a volatile register is converted by one read instead, `xstd::bit_convert<xstd::bit_array<32>>(status)`
+([cv-transparency](doc/design.md#cv-transparency)).
+
 | Header | Additions | Description | Reference |
 | :----- | :-------- | :---------- | :-------- |
 | `<xstd/bits/bit_concepts/bit_index_mapping.hpp>` <br> `<xstd/bits/bit_concepts/sized_bit_index_mapping.hpp>` <br> `<xstd/bits/bit_concepts/bit_mask_mapping.hpp>` | `bit_index_mapping` <br> `sized_bit_index_mapping` <br> `bit_mask_mapping` | What a set asks of a key's mapping: `bit_index_mapping<M, Key>` takes a key to a `std::size_t` position through `M::to_index` and back through `M::from_index`, preserving order, and `sized_bit_index_mapping<M, Key>` adds `M::size`, closing the universe at the positions `0` to `size - 1`, and `M::is_key(key)`, whether a value is one of those keys, which is what `to_index` asks of its argument, and `bit_mask_mapping<M, Key>` adds `M::to_block` and `M::from_block`, which read any value of `Key` as the block of its one-bit keys and back, so that a fixed set over `M` converts with `Key` as a mask; `bit_flag_mapping` alone models it | none |

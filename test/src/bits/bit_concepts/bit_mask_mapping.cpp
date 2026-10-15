@@ -40,5 +40,14 @@ BOOST_AUTO_TEST_CASE(NoOtherMappingReadsAValueAsAMask)
         BOOST_CHECK(true);
 }
 
+// cv-transparent as xstd-ints is: a cv-qualified mask reads as the bare one does.
+BOOST_AUTO_TEST_CASE(ACvMaskReadsAsTheBareOne)
+{
+        static_assert(xstd::bit_mask_mapping<xstd::bit_flag_mapping<std::byte>, std::byte const> and xstd::bit_mask_mapping<xstd::bit_flag_mapping<std::launch>, std::launch const volatile>);
+        static_assert(not xstd::bit_mask_mapping<xstd::bit_flag_mapping<std::byte>, std::uint8_t const>);
+
+        BOOST_CHECK(true);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

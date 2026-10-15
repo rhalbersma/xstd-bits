@@ -8,6 +8,7 @@
 
 #include <xstd/bits/bit/bit_convert.hpp> // bit_convert
 #include <concepts>                      // same_as
+#include <type_traits>                   // remove_cv_t
 #include <utility>                       // forward
 
 namespace xstd {
@@ -15,7 +16,7 @@ namespace xstd {
 // Whether bit_convert<To>(from) is valid: the positions map, though a run-time source may still throw.
 template<class From, class To>
 concept bit_convertible_to = requires (From&& from) {
-        { xstd::bit_convert<To>(std::forward<From>(from)) } -> std::same_as<To>;
+        { xstd::bit_convert<To>(std::forward<From>(from)) } -> std::same_as<std::remove_cv_t<To>>;
 };
 
 } // namespace xstd

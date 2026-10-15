@@ -576,4 +576,15 @@ BOOST_AUTO_TEST_CASE(ABoundedTargetTooSmallThrowsWhatItsGrowthThrows)
         BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_bounded_set<100>>(grown)) == (std::vector<std::size_t>{3}));
 }
 
+// A status register is read once, by value, and converts as its value would; a cv target converts into the bare type.
+BOOST_AUTO_TEST_CASE(AVolatileRegisterIsReadOnceAndConverted)
+{
+        std::uint32_t volatile status = 0b1010'0001U;
+        auto const flags              = xstd::bit_convert<xstd::bit_array<32>>(status);
+        static_assert(std::same_as<decltype(xstd::bit_convert<xstd::bit_array<32> const>(status)), xstd::bit_array<32>>);
+        static_assert(std::same_as<decltype(xstd::bit_convert<std::uint32_t const volatile>(flags)), std::uint32_t>);
+        BOOST_CHECK(flags == xstd::bit_convert<xstd::bit_array<32>>(std::uint32_t{0b1010'0001U}));
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint32_t const>(flags), 0b1010'0001U);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

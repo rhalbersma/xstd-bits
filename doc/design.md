@@ -44,15 +44,13 @@ blocks, `std::uint64_t[4]`, is bit storage and not owned bit storage: it is not 
 assignment nor an `==` over its blocks, so no owner holds one and no `bit_block_container` has it as `Blocks`. The tag
 constructors, `xstd::bit_convert` and the views read it as they read the `std::array` of the same blocks.
 
-**`bit_blocks` is two cases joined.** One block is an `xstd::unsigned_integer`, const or not, but never volatile:
-that concept is cv-transparent, for the reasons xstd-ints'
-[design notes](https://github.com/rhalbersma/xstd-ints/blob/main/doc/design.md#integer-types) give, and `bit_blocks`
-refuses `volatile` on top of it, since a block algorithm copies, merges and vectorizes the accesses a memory-mapped
-register must keep one by one. The exposition-only `bit_block_range` is a sized contiguous range of such blocks that
-subscripts, and reads the `volatile` off the range's reference type, since `range_value_t` drops it;
-`xstd::bit_blocks` is either, and is the one of the three a user names. Code that treats the scalar and
-the range differently branches on `xstd::unsigned_integer`, and `bit_block_container` asks `bit_block_range` of its
-`Blocks`, which is how a bare block is refused at the constraint while contiguity is named rather than implied.
+**`bit_blocks` is two cases joined.** One block is the exposition-only `bit_block`: an `xstd::unsigned_integer`,
+const or not, but never volatile ([cv-transparency](#cv-transparency)). The exposition-only `bit_block_range` is a
+sized contiguous range of such blocks that subscripts, asking `bit_block` of the range's reference type, since
+`range_value_t` drops the cv a `std::span<std::uint32_t volatile>` carries; `xstd::bit_blocks` is either, and is the
+one of the three a user names. Code that treats the scalar and the range differently branches on
+`xstd::unsigned_integer`, and `bit_block_container` asks `bit_block_range` of its `Blocks`, which is how a bare
+block is refused at the constraint while contiguity is named rather than implied.
 
 **It is exposition-only because no storage joins the library from outside.** The storage under every owner is
 a `bit_block_container` over `owned_bit_blocks Blocks`, while the views take any `bit_blocks`. The split is
@@ -172,6 +170,41 @@ line where [container.reqmts]/68 draws it, so the concept states its own five re
 The name says *block container*, not *storage*: what an adaptor sits on is a different question, asked by
 `bit_block_container_type` and answered by name rather than by members
 ([one-storage](#one-storage)).
+
+### cv-transparency
+
+Every public concept and type trait answers for `T const`, `T volatile` and `T const volatile` as it does for `T`,
+as xstd-ints' do ([integer types](https://github.com/rhalbersma/xstd-ints/blob/main/doc/design.md#integer-types)),
+with one exception, below, for storage a block algorithm reads or writes.
+
+- **Concepts.** `bit_index_mapping`, `sized_bit_index_mapping` and `bit_mask_mapping` ask `from_index` and
+  `from_block` for the cv-stripped key, so a `const` key maps as the bare one. `bit_convertible_to<From, To>` holds
+  for a cv `To` exactly when it does for `To`.
+- **Type transformations.** `bit_rebind`, `bit_resize`, `bit_least`, `bit_fast`, `bit_align` and `bit_underlying`
+  transform a cv owner as the bare one and qualify the result alike, as `xstd::make_unsigned_t<int const>` is
+  `unsigned const`. The block argument is held by value, so its cv is dropped: `bit_rebind<std::uint8_t const, O>`
+  is `bit_rebind<std::uint8_t, O>`.
+- **Values.** `bit_blocks_extent_v` names the bare storage's width, so a `std::span<std::uint32_t, 2> const` is 64
+  bits wide, as the span is.
+- **Functions.** `bit_convert<To>` returns `std::remove_cv_t<To>`, as a cast to `int const` yields an `int`
+  prvalue; a `const` class return would only stop the result from being moved.
+
+**Volatile is the exception, where the order of accesses is the point.** A volatile object promises that each read
+and write the source spells is one access in the program, in order. A memory-mapped status or control register
+needs exactly that, and every block algorithm here breaks it: they copy whole arrays, merge adjacent reads into one
+wider load, vectorize, and read a block twice where once would do. So:
+
+- `bit_blocks` admits a const block or range and never a volatile one: `std::uint32_t volatile`,
+  `std::span<std::uint32_t volatile>` and `std::uint32_t volatile[2]` are no bit storage, and no view deduces over
+  them.
+- An owner or view that is itself volatile is no owner or view. Every member taking an explicit object parameter
+  constrains it against volatile, so `std::ranges::range<xstd::bit_array<64> volatile&>` is false, as it is for a
+  volatile `std::vector`, rather than a hard error inside `begin`.
+- An owner's block is cv-unqualified, as a standard container's element type must be: `basic_bit_array<std::uint32_t
+  const, 32>` is refused at its own constraint, as `std::vector<int const>` is ill-formed.
+- A volatile *scalar* is one access, so it is a source: `xstd::bit_convert<xstd::bit_array<32>>(status)` reads the
+  register once and converts the value it held, and `status = xstd::bit_convert<std::uint32_t>(flags)` writes it
+  back in one store. A volatile array, owner or `std::bitset` would be read piece by piece, and is refused.
 
 ### the-const-reference
 

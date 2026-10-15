@@ -8,7 +8,7 @@
 
 #include <concepts>    // derived_from, same_as
 #include <cstddef>     // size_t
-#include <type_traits> // conditional_t, is_const_v, remove_const_t
+#include <type_traits> // conditional_t, is_const_v, is_volatile_v, remove_const_t
 
 namespace xstd::bits::detail {
 
@@ -53,13 +53,13 @@ template<class Owner>
 struct owned_storage<Owner> : owned_storage<typename Owner::adaptor_type>
 {};
 
-// One of our owners, of any reading and const or not: its storage is named by the owner protocol.
+// One of our owners, of any reading, const or not but never volatile: its storage is named by the owner protocol.
 template<class T>
-concept owner = requires { typename owned_storage<std::remove_const_t<T>>::bits_type; };
+concept owner = (not std::is_volatile_v<T>) and requires { typename owned_storage<std::remove_const_t<T>>::bits_type; };
 
-// One of our views, a window included: built on an adaptor, over storage it does not own.
+// One of our views, a window included and never volatile: built on an adaptor, over storage it does not own.
 template<class T>
-concept view = (not owner<T>) and requires { typename T::adapted_type; };
+concept view = (not std::is_volatile_v<T>) and (not owner<T>) and requires { typename T::adapted_type; };
 
 // The storage a view over an owner refers to, const where the owner is.
 template<class Owner>
