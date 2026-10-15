@@ -165,6 +165,7 @@ target_sources(
         include/xstd/bits/detail/adapted_bits.hpp
         include/xstd/bits/bit_algorithm/detail/algorithm.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
+        include/xstd/bits/detail/assert.hpp
         include/xstd/bits/detail/bounded_blocks.hpp
         include/xstd/bits/detail/bit_block_container.hpp
         include/xstd/bits/detail/block_intersects.hpp

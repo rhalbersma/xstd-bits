@@ -22,3 +22,11 @@ jobs:
   # The full ladder; the C++23 range adaptors libc++ lacks are no longer used, so all six legs pass.
   clang_libcxx:
     uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@170191bd9ab421d871b53fb67682376a2695d8a9 # v0.13.0
+
+  # A release against libc++ in its fast hardening mode, the one meant for production: XSTD_BITS_ASSERT follows it on.
+  hardened:
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@170191bd9ab421d871b53fb67682376a2695d8a9 # v0.13.0
+    with:
+      tiers: stable
+      build_types: Release
+      cxx_flags: -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST

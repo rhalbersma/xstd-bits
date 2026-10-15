@@ -10,6 +10,7 @@
 #include <xstd/bits/bit_hasher.hpp>                          // bit_hasher
 #include <xstd/bits/detail/adapted_bits.hpp>                 // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
+#include <xstd/bits/detail/assert.hpp>                       // XSTD_BITS_ASSERT
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                  // three_way
@@ -912,7 +913,7 @@ public:
                 requires can_grow
         {
                 // Dereferenceable, which cend() is not: [sequence.reqmts] asks that of the single-position erase.
-                assert(position != cend());
+                XSTD_BITS_ASSERT(position != cend());
                 return erase(position, position + 1);
         }
 
@@ -921,7 +922,7 @@ public:
                 requires can_grow
         {
                 // A range, not two positions: the order is what the tail's subtraction needs.
-                assert(first <= last);
+                XSTD_BITS_ASSERT(first <= last);
                 auto const pos = index_of(first);
                 close_gap(pos, index_of(last));
                 return begin() + static_cast<difference_type>(pos);
@@ -953,7 +954,7 @@ public:
                 -> subspan_type
                 requires (not is_owner)
         {
-                assert(count <= size());
+                XSTD_BITS_ASSERT(count <= size());
                 return {&bits(), offset(), count};
         }
 
@@ -961,7 +962,7 @@ public:
                 -> subspan_type
                 requires (not is_owner)
         {
-                assert(count <= size());
+                XSTD_BITS_ASSERT(count <= size());
                 return {&bits(), offset() + (size() - count), count};
         }
 
@@ -969,8 +970,8 @@ public:
                 -> subspan_type
                 requires (not is_owner)
         {
-                assert(off <= size());
-                assert(count == std::dynamic_extent or count <= size() - off);
+                XSTD_BITS_ASSERT(off <= size());
+                XSTD_BITS_ASSERT(count == std::dynamic_extent or count <= size() - off);
                 return {&bits(), offset() + off, count == std::dynamic_extent ? size() - off : count};
         }
 
@@ -983,7 +984,7 @@ public:
                 -> window_of_t<Derived, Bits, Count>
                 requires (not is_owner) and (Count != std::dynamic_extent) and (static_extent == std::dynamic_extent or Count <= static_extent)
         {
-                assert(Count <= size());
+                XSTD_BITS_ASSERT(Count <= size());
                 return {&bits(), offset(), Count};
         }
 
@@ -992,7 +993,7 @@ public:
                 -> window_of_t<Derived, Bits, Count>
                 requires (not is_owner) and (Count != std::dynamic_extent) and (static_extent == std::dynamic_extent or Count <= static_extent)
         {
-                assert(Count <= size());
+                XSTD_BITS_ASSERT(Count <= size());
                 return {&bits(), offset() + (size() - Count), Count};
         }
 
@@ -1001,8 +1002,8 @@ public:
                 -> window_of_t<Derived, Bits, Count != std::dynamic_extent ? Count : (static_extent != std::dynamic_extent ? static_extent - Offset : std::dynamic_extent)>
                 requires (not is_owner) and (static_extent == std::dynamic_extent or (Offset <= static_extent and (Count == std::dynamic_extent or Count <= static_extent - Offset)))
         {
-                assert(Offset <= size());
-                assert(Count == std::dynamic_extent or Count <= size() - Offset);
+                XSTD_BITS_ASSERT(Offset <= size());
+                XSTD_BITS_ASSERT(Count == std::dynamic_extent or Count <= size() - Offset);
                 return {&bits(), offset() + Offset, Count == std::dynamic_extent ? size() - Offset : Count};
         }
 
@@ -1201,7 +1202,7 @@ public:
         [[nodiscard]] constexpr auto operator[](this auto&& self, size_type n) noexcept
                 -> reference_t<decltype(self)>
         {
-                assert(n < self.size());
+                XSTD_BITS_ASSERT(n < self.size());
                 return {&self.bits(), self.offset() + n};
         }
 
@@ -1218,14 +1219,14 @@ public:
         [[nodiscard]] constexpr auto front(this auto&& self) noexcept
                 -> reference_t<decltype(self)>
         {
-                assert(not self.empty());
+                XSTD_BITS_ASSERT(not self.empty());
                 return {&self.bits(), self.offset()};
         }
 
         [[nodiscard]] constexpr auto back(this auto&& self) noexcept
                 -> reference_t<decltype(self)>
         {
-                assert(not self.empty());
+                XSTD_BITS_ASSERT(not self.empty());
                 return {&self.bits(), self.offset() + self.size() - 1UZ};
         }
 
@@ -1440,7 +1441,7 @@ private:
         [[nodiscard]] constexpr auto index_of(const_iterator position) const noexcept
                 -> size_type
         {
-                assert(cbegin() <= position and position <= cend());
+                XSTD_BITS_ASSERT(cbegin() <= position and position <= cend());
                 return static_cast<size_type>(position - cbegin());
         }
 
