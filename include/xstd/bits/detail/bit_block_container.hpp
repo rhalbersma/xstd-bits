@@ -8,6 +8,7 @@
 
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>   // bit_blocks_extent_v
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
+#include <xstd/bits/detail/assert.hpp>                       // XSTD_BITS_ASSERT
 #include <xstd/bits/detail/bit_block_range.hpp>              // bit_block_range
 #include <xstd/bits/detail/bit_blocks_capacity.hpp>          // bit_blocks_capacity_v
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, container_source, copy_bits, fixed_blocks_source
@@ -1084,7 +1085,7 @@ public:
                 -> void
                 requires has_stored_size
         {
-                assert(size() != 0UZ);
+                XSTD_BITS_ASSERT(size() != 0UZ);
                 resize_to(size() - 1UZ, false);
         }
 

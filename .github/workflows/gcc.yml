@@ -49,3 +49,12 @@ jobs:
       arch: x86
       tiers: stable
       build_types: Debug
+
+  # A release against libstdc++ with _GLIBCXX_ASSERTIONS, as several distributions build: NDEBUG turns assert off, and
+  # the hardened library turns XSTD_BITS_ASSERT back on, so std::vector<bool> and bit_vector trap on the same misuse.
+  hardened:
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@170191bd9ab421d871b53fb67682376a2695d8a9 # v0.13.0
+    with:
+      tiers: stable
+      build_types: Release
+      cxx_flags: -D_GLIBCXX_ASSERTIONS

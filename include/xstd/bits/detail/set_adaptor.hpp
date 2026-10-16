@@ -14,6 +14,7 @@
 #include <xstd/bits/bit_key_mapping.hpp>                      // bit_key_mapping
 #include <xstd/bits/detail/adapted_bits.hpp>                  // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>           // allocator_aware, allocator_base_type, allocator_param_t
+#include <xstd/bits/detail/assert.hpp>                        // XSTD_BITS_ASSERT
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container, bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                 // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                   // numeric_three_way, set_equal, three_way
@@ -759,7 +760,7 @@ public:
                 -> iterator
                 requires requires (std::size_t pos) { self.bits().assign(pos, false); }
         {
-                assert(position != self.end());
+                XSTD_BITS_ASSERT(position != self.end());
                 auto nrv = position;
                 ++nrv;
                 self.bits().assign(KeyMapping::to_index(*position), false);

@@ -14,6 +14,7 @@
 #include <xstd/bits/bit_slice.hpp>                   // bit_slice
 #include <xstd/bits/bit_slice_array.hpp>             // bit_slice_array
 #include <xstd/bits/detail/adapted_bits.hpp>         // adapted_bits
+#include <xstd/bits/detail/assert.hpp>               // XSTD_BITS_ASSERT
 #include <xstd/bits/detail/bit_block_container.hpp>  // bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>        // borrowed_bits
 #include <xstd/bits/detail/ownership.hpp>            // owned_storage, storage, storage_access, valarray_reading_tag, window
@@ -322,7 +323,7 @@ public:
         [[nodiscard]] constexpr auto operator[](size_type n) noexcept
                 -> reference
         {
-                assert(n < size());
+                XSTD_BITS_ASSERT(n < size());
                 // Named first: Clang 23's lifetime analysis crashes on a prvalue subscripted through deducing this.
                 auto view = elements();
                 return view[n];
@@ -331,7 +332,7 @@ public:
         [[nodiscard]] constexpr auto operator[](size_type n) const noexcept
                 -> value_type
         {
-                assert(n < size());
+                XSTD_BITS_ASSERT(n < size());
                 return m_bits.test(n);
         }
 

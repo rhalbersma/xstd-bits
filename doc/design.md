@@ -1490,9 +1490,10 @@ path that refuses it, it arrives with the whole body's branches and none of them
 ### an-assert-begins-its-line
 
 The gate excludes an assert from both counts, by `--exclude-lines-by-pattern` and
-`--exclude-branches-by-pattern` over `^\s*assert\(` -- anchored at the start of a line. An assert written
-anywhere else on its line is not excluded, and `assert(cond)` expands to a conditional whose false arm no test
-takes, so it is an uncovered branch per instantiation ([per-instantiation-slots](#per-instantiation-slots)).
+`--exclude-branches-by-pattern` over `^\s*(assert|[A-Z][A-Z0-9_]*_ASSERT)\(` -- anchored at the start of a line,
+and covering `XSTD_BITS_ASSERT` ([hardened-preconditions](#hardened-preconditions)) as it covers `assert`. An
+assert written anywhere else on its line is not excluded, and `assert(cond)` expands to a conditional whose false
+arm no test takes, so it is an uncovered branch per instantiation ([per-instantiation-slots](#per-instantiation-slots)).
 
 `front()` and `back()` on the sequence reading are four lines apiece for this, and no other reason. Their two
 preconditions, each written on the line of the call it guards, cost seven branches across the deducing-this
@@ -6308,6 +6309,34 @@ umbrella, so that a speed-up is a number; and xstd-ints and xstd-misc, which thi
 record the same direction, so the three would move together rather than one importing two that are still
 included. A consumer path that imports would be a fourth leg of `consumption.yml`, and the include-what-you-use
 comments, written about inclusion, do not map onto exported names mechanically.
+
+### hardened-preconditions
+
+A release build that links a hardened standard library -- libstdc++ with `_GLIBCXX_ASSERTIONS`, which several
+distributions build with, libc++ in any hardening mode but none, or the MSVC STL with `_MSVC_STL_HARDENING` -- traps
+on `std::vector<bool>::operator[]` past the end. `NDEBUG` would turn every `assert` here off in the same build, so
+moving to `bit_vector` would quietly trade a trap for undefined behaviour
+([#427](https://github.com/rhalbersma/xstd-bits/issues/427)). `detail/assert.hpp` closes that gap with one macro.
+`XSTD_BITS_ASSERT(cond)` is `assert(cond)` wherever `assert` is on, and where `NDEBUG` is defined but the standard
+library is hardened it is still checked, ending in `std::abort()` as libstdc++'s assertions do, without the
+message. `XSTD_BITS_HARDENED` is the switch, detected from the three libraries' own macros, and a definition of
+it on the command line wins in either direction.
+
+The macro guards only what the hardened libraries guard on their own containers, so that the move costs nothing
+and buys nothing beyond parity: `operator[]`, `front()`, `back()` and `pop_back()`; `erase` at `end()` and a
+reversed `erase` range; the iterator a caller passes to `insert` or `erase`, checked once in `index_of`; a view's
+`first`, `last` and `subspan`; a valarray's `operator[]`; and a set's `erase(end())`. A set's keys need nothing,
+being checked by an exception in every build. The rest stay `assert`: they are the storage's own invariants, which
+no caller can break through the public interface, and checking them in release would charge every bit operation
+for the library's bugs rather than the caller's.
+
+`test.hardened.precondition` builds one program as a hardened release, whatever the build type, and runs it once
+per guarded member, each run breaking that member's precondition. A `SIGABRT` handler turns the abort into the
+pass, through `std::_Exit`, because CTest's `WILL_FAIL` inverts an exit code but not a crash. Two CI legs build the
+whole suite as a release against a hardened library, libstdc++ with `_GLIBCXX_ASSERTIONS` and libc++ in its fast
+mode, so the macro is also exercised where the library, not the command line, turned it on. The mechanism is an
+interim one: under P2900 the same predicate is a `pre`, and hardening is the enforce semantic
+([preconditions-as-contracts](#preconditions-as-contracts)).
 
 ### preconditions-as-contracts
 
