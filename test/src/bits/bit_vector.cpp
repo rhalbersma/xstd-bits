@@ -343,7 +343,7 @@ BOOST_AUTO_TEST_CASE(InsertingAtTheEndGrowsGeometrically)
         BOOST_CHECK_LT(allocations, 32);
 }
 
-// A sized append grows through the storage's own resize, as push_back does: n small appends, O(log n) allocations.
+// A sized append grows through the storage's own resize, as push_back does: n nine-bool appends, O(log n) allocations.
 BOOST_AUTO_TEST_CASE(AppendingSmallRangesGrowsGeometrically)
 {
         using X                = xstd::basic_bit_vector<std::uint8_t, test::container::propagating<std::uint8_t>>;
@@ -355,7 +355,7 @@ BOOST_AUTO_TEST_CASE(AppendingSmallRangesGrowsGeometrically)
         auto blitted           = X(test::container::ledger_allocator<X>(book));
         book.budget            = granted;
         for (auto const i : std::views::iota(0UZ, n)) {
-                packed.append_range(std::array{i % 3 == 0});
+                packed.append_range(std::array{i % 3 == 0, false, false, false, false, false, false, false, false});
         }
         auto const packing = granted - book.budget;
         for ([[maybe_unused]] auto const i : std::views::iota(0UZ, n)) {
