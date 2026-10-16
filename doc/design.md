@@ -2202,14 +2202,20 @@ width, and on any exception resizes back to it before rethrowing -- the resize c
 shrink does. `assign_range` has no such remark in `[sequence.reqmts]`, so its clear-and-append keeps only the
 basic guarantee, and an overflowing source leaves what it appended.
 
-`insert_range`, `insert` in its four shapes and `emplace` rebuild rather than shift: the head
-through `first(pos)`, the middle, the tail through `subspan(pos)`, into a fresh sequence that is then moved
-in. Every step runs at the blit's tier, insertion into a packed sequence is linear however it is done, and
-the strong exception guarantee comes free, which is what `std::vector::insert_range` gives on reallocation.
-`subspan` pays for itself here, the head and the tail being exactly windows. Both `erase`s shift instead:
-the tail moves down a block at a time, ascending, each write landing below every read still to come, and the
-width shrinks behind it. A rebuild allocates, and `[vector.modifiers]`/5 lets an erase throw only what the
-element's copy, move or assignment throws, which for a `bool` is nothing.
+`insert_range`, `insert` in its four shapes and `emplace` shift wherever the count is known before the first
+element is read: a value, a count of them, a sized or forward range, or another sequence's blocks. Room is made
+first, and that is the one step that can throw: a heap grows geometrically, as `push_back`'s does, so
+`insert(end(), b)` is amortized constant as `std::vector<bool>`'s is, and an inline capacity too small for the
+growth throws `bad_alloc` before anything has moved, as `[inplace.vector.modifiers]`/3 asks. The tail then moves up
+a block at a time, descending, each write landing above every read still to come, and the middle is written into
+the gap; a source that throws part way has its gap erased again before the exception leaves. A single-pass source
+with no size, and a window of the sequence itself, which would move with its own tail, rebuild instead: the head
+through `first(pos)`, the middle, the tail through `subspan(pos)`, into a fresh sequence that is then moved in, at
+the blit's tier, with the strong exception guarantee that `std::vector::insert_range` gives on reallocation.
+`subspan` pays for itself here, the head and the tail being exactly windows. Both `erase`s shift: the tail moves
+down a block at a time, ascending, each write landing below every read still to come, and the width shrinks behind
+it. A rebuild allocates, and `[vector.modifiers]`/5 lets an erase throw only what the element's copy, move or
+assignment throws, which for a `bool` is nothing.
 
 `[vector.bool]`'s `flip()` and its static `swap(reference, reference)` are left out. Negating every element is a
 bulk operation, the valarray reading's `!` ([the-valarray-reading](#the-valarray-reading)), negating one is
