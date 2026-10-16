@@ -11,7 +11,7 @@
 
 // A hardened standard library checks these preconditions in a release build; a user's definition wins either way.
 #ifndef XSTD_BITS_HARDENED
-#if defined(_GLIBCXX_ASSERTIONS)
+#ifdef _GLIBCXX_ASSERTIONS
 #define XSTD_BITS_HARDENED 1
 #elif defined(_LIBCPP_HARDENING_MODE) and defined(_LIBCPP_HARDENING_MODE_NONE)
 #if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_NONE
