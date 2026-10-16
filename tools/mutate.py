@@ -92,6 +92,10 @@ OPERATORS = [
 # Lines that declare rather than compute: a mutant there changes what overload is chosen, not what it does.
 DECLARATIVE = re.compile(r"^\s*(#|template\s*<|concept\b|requires\b|using\b|static_assert\b|friend\s+(class|struct)\b|namespace\b|->|assert\()")
 
+# The countdown that unsigned wraparound ends: the index starts below the bound and wraps past it, so it never equals
+# it, and < and <= agree on every value it takes.
+COUNTDOWN = re.compile(r"for \(auto (?P<index>\w+) = [^;]*; (?P=index)(?: - \w+)? (?P<test><) \w+; --(?P=index)\)")
+
 # A diagnostic that a test wrote: the mutant was caught at compile time rather than stillborn.
 COMPILE_TIME_CHECK = re.compile(r"static assertion failed|static assertion expression is not an integral constant expression|static_assert failed|not a constant expression|must be initialized by a constant expression|constexpr variable .* must be initialized")
 
@@ -184,14 +188,22 @@ def sites(header, include_asserts=False):
         starts = [0]
         for line in lines:
                 starts.append(starts[-1] + len(line) + 1)
-        result = []
+        result, in_concept = [], False
         for number, (begin, end) in enumerate(zip(starts, starts[1:]), start=1):
                 stripped = code[begin:end]
                 declarative = DECLARATIVE.match(stripped)
-                if declarative and not (include_asserts and declarative.group(1) == "assert("):
+                # A concept's definition runs to its semicolon, however many lines its conjuncts take.
+                in_concept = in_concept or bool(re.match(r"^\s*concept\b", stripped))
+                skip = in_concept or (declarative and not (include_asserts and declarative.group(1) == "assert("))
+                if in_concept and stripped.rstrip().endswith(";"):
+                        in_concept = False
+                if skip:
                         continue
+                countdown = COUNTDOWN.search(stripped)
                 for name, pattern, replacement in OPERATORS:
                         for match in re.finditer(pattern, stripped):
+                                if countdown and match.start() == countdown.start("test") and replacement == "<=":
+                                        continue
                                 result.append(Mutant(header, number, match.start() + 1, name, match.group(0), replacement, lines[number - 1].strip()))
         return sorted(result, key=lambda m: (m.line, m.column))
 
@@ -308,11 +320,18 @@ def mirror(header):
         return "test." + stem.replace("/", ".")
 
 
+def family(header):
+        """The directory under xstd/bits/ a header belongs to, which names the tests of its kind: bit_algorithm for its detail/."""
+        parts = Path(header).parts
+        return parts[2] if len(parts) > 3 and parts[2] != "detail" else ""
+
+
 def order(header, targets, only):
-        """The targets depending on header, the mirrored test first, then the ones that include the fewest headers."""
+        """The targets depending on header: the mirrored test, then those of its family, then those including the fewest headers."""
         dependents = [t for t in targets.values() if header in t.headers and (only is None or re.search(only, t.name))]
         own = mirror(header)
-        return sorted(dependents, key=lambda t: (t.name != own, len(t.headers), t.name))
+        kin = family(header)
+        return sorted(dependents, key=lambda t: (t.name != own, not (kin and f".{kin}." in t.name), len(t.headers), t.name))
 
 
 class Worker:
