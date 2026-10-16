@@ -382,12 +382,13 @@ class Worker:
                 (self.include / mutant.header).write_text(apply(mutant))
                 start = time.monotonic()
                 try:
-                        mutant.status = "survived"
+                        verdict = ("survived", "", "")
                         for target in chain:
                                 status, detail = self.attempt(mutant, target, timeout, link_timeout)
                                 if status != "survived":
-                                        mutant.status, mutant.target, mutant.detail = status, target.name, detail
+                                        verdict = (status, target.name, detail)
                                         break
+                        mutant.status, mutant.target, mutant.detail = verdict
                 finally:
                         (self.include / mutant.header).write_text(original)
                         mutant.seconds = round(time.monotonic() - start, 1)
@@ -407,6 +408,8 @@ def main():
         parser.add_argument("--list", action="store_true", help="list the mutants and exit")
         parser.add_argument("--output", type=Path, help="write the results as JSON here")
         parser.add_argument("--equivalents", type=Path, default=EQUIVALENTS, help="the classified survivors, by default doc/mutation.md")
+        parser.add_argument("--resume", type=Path, help="take the mutants a previous --output already decided from it, and run the rest")
+        parser.add_argument("--limit", type=int, default=0, help="decide at most this many mutants in this run, leaving the rest pending (0: all)")
         args = parser.parse_args()
 
         mutants = [m for header in args.headers for m in sites(header, args.include_asserts)]
@@ -420,6 +423,20 @@ def main():
                         first, _, last = part.partition("-")
                         keep.update(range(int(first), int(last or first) + 1))
                 mutants = [m for m in mutants if m.line in keep]
+        if args.resume and args.resume.exists():
+                decided = {}
+                for record in json.loads(args.resume.read_text()):
+                        # A mutant still running when its run stopped has no time recorded, and is decided again.
+                        if record["status"] in ("killed", "survived", "stillborn") and record["seconds"] > 0:
+                                decided[(record["header"], record["line"], record["column"], record["original"], record["replacement"])] = record
+                for m in mutants:
+                        record = decided.get((m.header, m.line, m.column, m.original, m.replacement))
+                        if record:
+                                m.status, m.target, m.detail, m.seconds = record["status"], record["target"], record["detail"], record["seconds"]
+                                if m.status == "stillborn" and COMPILE_TIME_CHECK.search(m.detail):
+                                        m.status = "killed"
+                print(f"resumed {sum(m.status != 'pending' for m in mutants)} decided mutants from {args.resume}", file=sys.stderr)
+
         if args.list:
                 for m in mutants:
                         print(f"{m.header}:{m.line}:{m.column}: {m.operator} {m.original!r} -> {m.replacement!r}    {m.source_line}")
@@ -464,13 +481,19 @@ def main():
                         free.append(worker)
 
         counts = {"killed": 0, "survived": 0, "stillborn": 0}
+        for m in mutants:
+                if m.status != "pending":
+                        counts[m.status] += 1
+        todo = [m for m in mutants if m.status == "pending"]
+        if args.limit:
+                todo = todo[:args.limit]
         try:
                 with ThreadPoolExecutor(max_workers=args.jobs) as pool:
-                        for done, mutant in enumerate(pool.map(task, mutants), start=1):
+                        for done, mutant in enumerate(pool.map(task, todo), start=1):
                                 counts[mutant.status] += 1
                                 mark = {"killed": ".", "survived": "S", "stillborn": "x"}[mutant.status]
                                 where = f" [{mutant.target}: {mutant.detail}]" if mutant.status != "survived" and mutant.detail else ""
-                                print(f"{mark} {done}/{len(mutants)} {mutant.header}:{mutant.line}:{mutant.column} {mutant.original!r}->{mutant.replacement!r} {mutant.seconds}s{where}", flush=True)
+                                print(f"{mark} {done}/{len(todo)} {mutant.header}:{mutant.line}:{mutant.column} {mutant.original!r}->{mutant.replacement!r} {mutant.seconds}s{where}", flush=True)
                                 if args.output:
                                         args.output.write_text(json.dumps([asdict(m) for m in mutants], indent=1))
         finally:
@@ -494,14 +517,15 @@ def main():
 
         valid = counts["killed"] + counts["survived"] + counts.get("equivalent", 0)
         score = 100.0 * (counts["killed"] + counts.get("equivalent", 0)) / valid if valid else 100.0
-        print(f"killed {counts['killed']}, equivalent {counts.get('equivalent', 0)}, survived {counts['survived']}, stillborn {counts['stillborn']}: score {score:.1f}%")
+        pending = sum(m.status == "pending" for m in mutants)
+        print(f"killed {counts['killed']}, equivalent {counts.get('equivalent', 0)}, survived {counts['survived']}, stillborn {counts['stillborn']}, pending {pending}: score {score:.1f}%")
         for m in mutants:
                 if m.status == "survived":
                         print(f"SURVIVED {m.header}:{m.line}:{m.column}: {m.original!r} -> {m.replacement!r}    {m.source_line}")
                         print(f"  | `{m.header}` | `{m.source_line.replace('|', chr(92) + '|')}` | {m.offset} | `{m.original.replace('|', chr(92) + '|')}` → `{m.replacement.replace('|', chr(92) + '|')}` | |")
         for line in stale:
                 print(f"STALE {line}")
-        return 1 if counts["survived"] or stale else 0
+        return 1 if counts["survived"] or stale or pending else 0
 
 
 if __name__ == "__main__":
