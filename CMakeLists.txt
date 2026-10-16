@@ -279,6 +279,10 @@ if(PROJECT_IS_TOP_LEVEL)
         if(${project_option_prefix}_BUILD_BENCHMARKS)
             add_subdirectory(benchmark)
         endif()
+
+        # On by default, and the coverage job alone turns it off. The hardened test builds the library with NDEBUG, so its instantiations differ from every Debug one by the asserts compiled out, and gcovr keys their branches apart from the Debug run's: one such translation unit put 31 branches in the denominator and covered none. What it checks, an abort where a precondition breaks, sits on the assert lines that job excludes anyway.
+        option(${project_option_prefix}_BUILD_HARDENED_TESTS "Build the test that breaks each precondition a hardened release checks" ON)
+
         add_subdirectory(test)
     endif()
 

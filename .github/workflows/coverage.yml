@@ -28,7 +28,8 @@ jobs:
     uses: rhalbersma/cpp-ci/.github/workflows/coverage.yml@e3eb6677e832a978e2603004101796173ab06a93 # main after v0.13.0, for the XSTD_BITS_ASSERT exclusion
     with:
       # Not built here at all, which the exclude alone could not achieve: gcovr drops benchmark/ as a SOURCE path, but a benchmark TU instantiates the library's templates and those instantiations are counted in include/. This job configures Debug, where benchmark/CMakeLists.txt registers no test, so they would compile and never run -- every branch of an instantiation no test also makes, uncovered by construction.
-      cmake_args: -DXSTD_BITS_BUILD_BENCHMARKS=OFF
+      # The hardened test is left out for the same reason: built with NDEBUG, its instantiations are counted apart from the Debug ones, and every branch they add is uncovered by construction.
+      cmake_args: -DXSTD_BITS_BUILD_BENCHMARKS=OFF -DXSTD_BITS_BUILD_HARDENED_TESTS=OFF
       # Kept even so: correct if the option is ever turned back on here, and free when it is not.
       exclude: "test/.* benchmark/.* build/.*"
       # Enforced, not reported: code arriving without a test fails this job, and commenting the untested part out is how to land it.
