@@ -1002,9 +1002,10 @@ public:
                 -> window_of_t<Derived, Bits, Count != std::dynamic_extent ? Count : (static_extent != std::dynamic_extent ? static_extent - Offset : std::dynamic_extent)>
                 requires (not is_owner) and (static_extent == std::dynamic_extent or (Offset <= static_extent and (Count == std::dynamic_extent or Count <= static_extent - Offset)))
         {
-                XSTD_BITS_ASSERT(Offset <= size());
-                XSTD_BITS_ASSERT(Count == std::dynamic_extent or Count <= size() - Offset);
-                return {&bits(), offset() + Offset, Count == std::dynamic_extent ? size() - Offset : Count};
+                auto const n = size();
+                XSTD_BITS_ASSERT(Offset <= n);
+                XSTD_BITS_ASSERT(Count == std::dynamic_extent or Count <= n - Offset);
+                return {&bits(), offset() + Offset, Count == std::dynamic_extent ? n - Offset : Count};
         }
 
         // span's rule between extents: to a dynamic one implicitly, to a static one explicitly and at the same size.
