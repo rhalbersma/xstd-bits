@@ -22,6 +22,9 @@ namespace {
 using four_blocks        = std::uint64_t[4];       // NOLINT(modernize-avoid-c-arrays): the storage under test
 using three_const_blocks = std::uint16_t const[3]; // NOLINT(modernize-avoid-c-arrays): the storage under test
 
+template<class Bits>
+concept names_an_extent = requires { xstd::bit_blocks_extent_v<Bits>; };
+
 } // namespace
 
 // The width storage names by its type, which the views default to: fixed blocks have one, the rest do not.
@@ -35,6 +38,16 @@ BOOST_AUTO_TEST_CASE(TheExtentIsTheWidthTheTypeNames)
         static_assert(xstd::bit_blocks_extent_v<std::span<std::uint32_t>> == std::dynamic_extent);
         static_assert(xstd::bit_blocks_extent_v<std::vector<std::size_t>> == std::dynamic_extent);
         static_assert(std::is_same_v<xstd::bit_set_view<std::span<std::uint32_t>>, xstd::bit_set_view<std::span<std::uint32_t>, std::dynamic_extent>>);
+        BOOST_CHECK(true);
+}
+
+// cv-transparent as xstd-ints is: a const storage names the bare one's width, and volatile blocks are no storage.
+BOOST_AUTO_TEST_CASE(AConstStorageNamesTheWidthOfTheBareOne)
+{
+        static_assert(xstd::bit_blocks_extent_v<std::span<std::uint32_t, 2> const> == 64 and xstd::bit_blocks_extent_v<std::span<std::uint32_t const, 2> const> == 64);
+        static_assert(xstd::bit_blocks_extent_v<std::vector<std::size_t> const> == std::dynamic_extent);
+        static_assert(names_an_extent<std::uint64_t const> and not names_an_extent<std::uint64_t volatile> and not names_an_extent<std::uint64_t const volatile>);
+        static_assert(not names_an_extent<std::span<std::uint32_t volatile, 2>> and not names_an_extent<std::array<std::uint32_t volatile, 2>>);
         BOOST_CHECK(true);
 }
 

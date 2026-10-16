@@ -54,5 +54,15 @@ BOOST_AUTO_TEST_CASE(OnlyAnOwnerWithAWidthInItsTypeIsResized)
         BOOST_CHECK(true);
 }
 
+// cv-transparent as make_unsigned is: a cv owner resizes as the bare one and keeps its cv.
+BOOST_AUTO_TEST_CASE(ACvOwnerResizesAsTheBareOneAndKeepsItsCv)
+{
+        using bare = xstd::bit_resize<7, xstd::basic_bit_array<std::uint8_t, 9>>;
+        static_assert(std::is_same_v<xstd::bit_resize<7, xstd::basic_bit_array<std::uint8_t, 9> const>, bare const>);
+        static_assert(std::is_same_v<xstd::bit_resize<7, xstd::basic_bit_array<std::uint8_t, 9> const volatile>, bare const volatile>);
+        static_assert(not resizes<7, xstd::bit_set const> and not resizes<7, xstd::bit_vector volatile>);
+        BOOST_CHECK(true);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

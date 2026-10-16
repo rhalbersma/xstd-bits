@@ -23,6 +23,13 @@
 BOOST_AUTO_TEST_SUITE(BitConcepts)
 BOOST_AUTO_TEST_SUITE(BitConvertibleTo)
 
+namespace {
+
+// A register array, whose every access must stay one volatile access.
+using two_volatile_blocks = std::uint32_t volatile[2]; // NOLINT(modernize-avoid-c-arrays): the storage under test
+
+} // namespace
+
 // Every width converts: fixed into at least as wide, run-time into fixed, and anything into a run-time width.
 BOOST_AUTO_TEST_CASE(BitConvertibleToNamesEveryWidthButAViewTarget)
 {
@@ -56,6 +63,21 @@ BOOST_AUTO_TEST_CASE(BitConvertibleToNamesEveryWidthButAViewTarget)
         // What has no bit storage converts to nothing.
         static_assert(not xstd::bit_convertible_to<int, xstd::bit_vector> and not xstd::bit_convertible_to<std::vector<bool>, xstd::bit_vector>);
         static_assert(not xstd::bit_convertible_to<xstd::bit_vector, int> and not xstd::bit_convertible_to<xstd::bit_vector, std::vector<std::uint64_t>>);
+        BOOST_CHECK(true);
+}
+
+// cv-transparent: a cv target converts as the bare one, into the bare type; a volatile source is read as a scalar only.
+BOOST_AUTO_TEST_CASE(ACvTargetIsTheBareOneAndAVolatileSourceIsOneRead)
+{
+        static_assert(xstd::bit_convertible_to<xstd::bit_array<64>, std::uint64_t const> and xstd::bit_convertible_to<xstd::bit_array<64>, std::bitset<64> volatile>);
+        static_assert(xstd::bit_convertible_to<xstd::bit_vector, xstd::bit_set const> and not xstd::bit_convertible_to<xstd::bit_array<9>, std::uint8_t const>);
+
+        // A register is one volatile load, after which its value converts as any block does.
+        static_assert(xstd::bit_convertible_to<std::uint32_t volatile&, xstd::bit_array<32>> and xstd::bit_convertible_to<std::uint64_t const volatile&, xstd::bit_set>);
+
+        // Volatile storage of several reads, or an object only read through members, is no source.
+        static_assert(not xstd::bit_convertible_to<xstd::bit_array<64> volatile&, xstd::bit_array<64>> and not xstd::bit_convertible_to<std::bitset<64> volatile&, xstd::bit_array<64>>);
+        static_assert(not xstd::bit_convertible_to<two_volatile_blocks&, xstd::bit_array<64>> and not xstd::bit_convertible_to<std::array<std::uint32_t, 2> volatile&, xstd::bit_array<64>>);
         BOOST_CHECK(true);
 }
 

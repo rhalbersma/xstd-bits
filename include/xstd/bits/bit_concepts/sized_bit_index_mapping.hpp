@@ -9,12 +9,13 @@
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp> // bit_index_mapping
 #include <concepts>                                     // convertible_to, same_as
 #include <cstddef>                                      // size_t
+#include <type_traits>                                  // remove_cv_t
 
 namespace xstd {
 
 // A mapping that closes its universe: exactly size keys, at positions 0 through size - 1, and is_key says which.
 template<class Mapping, class Key>
-concept sized_bit_index_mapping = bit_index_mapping<Mapping, Key> and requires (Key key) {
+concept sized_bit_index_mapping = bit_index_mapping<Mapping, Key> and requires (std::remove_cv_t<Key> key) {
         { Mapping::size } -> std::convertible_to<std::size_t>;
         // A size does not make every value in range a key: a list of keys with gaps leaves values between them.
         { Mapping::is_key(key) } -> std::same_as<bool>;

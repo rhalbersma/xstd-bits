@@ -195,6 +195,8 @@ target_sources(
         include/xstd/bits/detail/storage_ptr.hpp
         include/xstd/bits/detail/views.hpp
         include/xstd/bits/detail/blocks.hpp
+        include/xstd/bits/detail/blocks_extent.hpp
+        include/xstd/bits/detail/non_volatile.hpp
         include/xstd/bits/detail/num_blocks.hpp
         include/xstd/bits/detail/owner_members.hpp
         include/xstd/bits/detail/ownership.hpp

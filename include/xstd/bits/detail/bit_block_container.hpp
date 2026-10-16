@@ -15,6 +15,7 @@
 #include <xstd/bits/detail/block_intersects.hpp>             // block_intersects
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
 #include <xstd/bits/detail/intrinsic.hpp>                    // countl_zero, countr_zero, popcount
+#include <xstd/bits/detail/non_volatile.hpp>                 // non_volatile
 #include <xstd/bits/detail/num_blocks.hpp>                   // holds_width, num_blocks_v, whole_blocks_width_v
 #include <xstd/bits/detail/owned_bit_blocks.hpp>             // owned_bit_blocks
 #include <xstd/bits/detail/resizable_bit_blocks.hpp>         // resizable_bit_blocks
@@ -576,7 +577,7 @@ public:
         }
 
         // A block, as the wrapped blocks subscript, not a bit; a writer then restores the invariant with erase_unused.
-        [[nodiscard]] constexpr auto operator[](this auto&& self, std::size_t n) noexcept
+        [[nodiscard]] constexpr auto operator[](this non_volatile auto&& self, std::size_t n) noexcept
                 -> block_reference_t<decltype(self)>
         {
                 assert(n < self.num_blocks());
@@ -584,7 +585,7 @@ public:
         }
 
         // The subscript as a range, so a caller writing every block writes them in one call.
-        [[nodiscard]] constexpr auto blocks(this auto&& self) noexcept
+        [[nodiscard]] constexpr auto blocks(this non_volatile auto&& self) noexcept
                 -> std::span<std::remove_reference_t<block_reference_t<decltype(self)>>>
         {
                 return {std::ranges::data(self.m_blocks), self.num_blocks()};
@@ -1689,7 +1690,7 @@ private:
                 }
         }
 
-        [[nodiscard]] constexpr auto block_mask(this auto&& self, std::size_t n) noexcept
+        [[nodiscard]] constexpr auto block_mask(this non_volatile auto&& self, std::size_t n) noexcept
                 -> std::pair<block_reference_t<decltype(self)>, block_type>
         {
                 auto const [index, offset] = index_offset(n);

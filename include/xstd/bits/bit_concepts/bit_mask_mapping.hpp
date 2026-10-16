@@ -9,6 +9,7 @@
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
 #include <xstd/bits/detail/bit_layout.hpp>                    // fixed_bit_blocks
 #include <concepts>                                           // same_as
+#include <type_traits>                                        // remove_cv_t
 
 namespace xstd {
 
@@ -18,9 +19,9 @@ concept bit_mask_mapping =
         sized_bit_index_mapping<Mapping, Key> and
         // Unsigned blocks, one or a fixed array, never the signed type under an enumeration such as std::launch.
         bits::detail::fixed_bit_blocks<typename Mapping::block_type> and
-        requires (Key mask, Mapping::block_type block) {
+        requires (std::remove_cv_t<Key> mask, Mapping::block_type block) {
                 { Mapping::to_block(mask) } -> std::same_as<typename Mapping::block_type>; // every bit of mask, at its position
-                { Mapping::from_block(block) } -> std::same_as<Key>;                       // the mask with those bits
+                { Mapping::from_block(block) } -> std::same_as<std::remove_cv_t<Key>>;     // the mask with those bits
         };
 
 } // namespace xstd
