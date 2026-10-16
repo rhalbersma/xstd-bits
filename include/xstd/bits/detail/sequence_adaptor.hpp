@@ -246,6 +246,9 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
         // The middle column: growth inside a capacity the type carries, whose counterparts disagree on name shape.
         static constexpr bool has_static_capacity = can_grow and bits_type::has_static_capacity;
 
+        // Room for an insertion is made in place: inside a capacity the type carries, or one that reserve can raise.
+        static constexpr bool shifts_in_place = can_grow and requires (bits_type const& b) { b.capacity(); } and (has_static_capacity or requires (bits_type& b, std::size_t k) { b.reserve(k); });
+
         using window_ptr = sequence::window_ptr<Bits, has_static_window>;
 
         using members_type = sequence::sizes_t<Bits, Store, W, Derived, E>;
@@ -835,28 +838,28 @@ public:
                 -> iterator
         {
                 auto const pos = index_of(position);
-                if constexpr (blittable<std::remove_cvref_t<R>>) {
-                        // A window of this storage would move with its own tail, so it takes the rebuild instead.
-                        if (not is_storage_of(rg.bits()) and open_gap(pos, rg.size())) {
-                                blit_at(pos, rg.bits(), rg.offset(), rg.size());
-                                return begin() + static_cast<difference_type>(pos);
+                if constexpr (shifts_in_place and not blittable<std::remove_cvref_t<R>> and (std::ranges::forward_range<R> or std::ranges::sized_range<R>)) {
+                        auto const n = static_cast<size_type>(std::ranges::distance(rg));
+                        open_gap(pos, n);
+                        // Reading the range is all that can throw here, and closing the gap again cannot.
+                        try {
+                                write_at(pos, rg);
+                        } catch (...) {
+                                close_gap(pos, pos + n);
+                                throw;
                         }
-                } else if constexpr (std::ranges::forward_range<R> or std::ranges::sized_range<R>) {
-                        if (auto const n = static_cast<size_type>(std::ranges::distance(rg)); open_gap(pos, n)) {
-                                // Reading the range is all that can throw here, and closing the gap again cannot.
-                                try {
-                                        auto i = pos;
-                                        for (auto&& x : rg) {
-                                                m_bits.assign(i++, value_type(std::forward<decltype(x)>(x)));
-                                        }
-                                } catch (...) {
-                                        erase(cbegin() + static_cast<difference_type>(pos), cbegin() + static_cast<difference_type>(pos + n));
-                                        throw;
+                        return begin() + static_cast<difference_type>(pos);
+                } else {
+                        if constexpr (shifts_in_place and blittable<std::remove_cvref_t<R>>) {
+                                // A window of this storage would move with its own tail, so it takes the rebuild.
+                                if (not is_storage_of(rg.bits())) {
+                                        open_gap(pos, rg.size());
+                                        blit_at(pos, rg.bits(), rg.offset(), rg.size());
+                                        return begin() + static_cast<difference_type>(pos);
                                 }
-                                return begin() + static_cast<difference_type>(pos);
                         }
+                        return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.append_range(std::forward<R>(rg)); });
                 }
-                return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.append_range(std::forward<R>(rg)); });
         }
 
         constexpr auto insert(const_iterator position, value_type const& value)
@@ -871,12 +874,14 @@ public:
                 requires can_grow
         {
                 auto const pos = index_of(position);
-                if (open_gap(pos, n)) {
+                if constexpr (shifts_in_place) {
+                        open_gap(pos, n);
                         m_bits.set(pos, n, value);
                         return begin() + static_cast<difference_type>(pos);
+                } else {
+                        // Through the saturating sum: a wrapped total would answer with a shorter sequence.
+                        return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.m_bits.resize(bits_type::check_addressable_width(bits_type::width_sum(tmp.size(), n)), value); });
                 }
-                // Through the saturating sum: a wrapped total would answer an insertion with a shorter sequence.
-                return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.m_bits.resize(bits_type::check_addressable_width(bits_type::width_sum(tmp.size(), n)), value); });
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
@@ -917,20 +922,8 @@ public:
         {
                 // A range, not two positions: the order is what the tail's subtraction needs.
                 assert(first <= last);
-                auto const pos        = index_of(first);
-                auto const tail       = index_of(last);
-                auto const width      = size();
-                using block_type      = bits_type::block_type;
-                constexpr auto digits = bits_type::bits_per_block;
-                // A capacity of nought has no tail to shift, rather than through a loop that cannot go round.
-                if constexpr (not bits_type::has_zero_capacity) {
-                        // In place and ascending, each write below every read still to come, so nothing is allocated.
-                        for (auto k = 0UZ; k < width - tail; k += digits) {
-                                auto const count = std::ranges::min(digits, width - tail - k);
-                                m_bits.block_at(pos + k, m_bits.block_at(tail + k), partial_block_mask<block_type>(count));
-                        }
-                }
-                m_bits.resize(width - (tail - pos));
+                auto const pos = index_of(first);
+                close_gap(pos, index_of(last));
                 return begin() + static_cast<difference_type>(pos);
         }
 
@@ -1348,33 +1341,51 @@ private:
         }
 
         // The tail moved up by n, after any growth: geometric, as push_back's is, and the one step that can throw.
-        constexpr auto open_gap(size_type pos [[maybe_unused]], size_type n [[maybe_unused]])
-                -> bool
+        constexpr auto open_gap(size_type pos, size_type n)
+                -> void
+                requires shifts_in_place
         {
-                if constexpr (requires (bits_type const& b) { b.capacity(); }) {
-                        auto const width = size();
-                        if (n > m_bits.capacity() - width) {
-                                if constexpr (has_static_capacity or not requires (bits_type& b, std::size_t k) { b.reserve(k); }) {
-                                        return false;
-                                } else {
-                                        auto const total = bits_type::check_addressable_width(bits_type::width_sum(width, n));
-                                        m_bits.reserve(std::ranges::max(total, std::ranges::min(2UZ * m_bits.capacity(), bits_type::max_addressable_width)));
-                                }
+                auto const width = size();
+                if (n > m_bits.capacity() - width) {
+                        if constexpr (has_static_capacity) {
+                                throw std::bad_alloc(); // [inplace.vector.modifiers]/3
+                        } else {
+                                auto const total = bits_type::check_addressable_width(bits_type::width_sum(width, n));
+                                m_bits.reserve(std::ranges::max(total, std::ranges::min(2UZ * m_bits.capacity(), bits_type::max_addressable_width)));
                         }
+                }
+                m_bits.resize(width + n);
+                // A capacity of nought has no tail to shift, rather than through a loop that cannot go round.
+                if constexpr (not bits_type::has_zero_capacity) {
                         using block_type      = bits_type::block_type;
                         constexpr auto digits = bits_type::bits_per_block;
                         auto const tail       = width - pos;
-                        m_bits.resize(width + n);
                         // Top block first, so that each write lands above every read still to come.
                         for (auto k = 0UZ; k < tail; k += digits) {
                                 auto const count = std::ranges::min(digits, tail - k);
                                 auto const from  = pos + tail - k - count;
                                 m_bits.block_at(from + n, m_bits.block_at(from), partial_block_mask<block_type>(count));
                         }
-                        return true;
-                } else {
-                        return false;
                 }
+        }
+
+        // The tail from last moved down onto pos, and the width shrunk behind it, as erase and a failed insertion need.
+        constexpr auto close_gap(size_type pos, size_type last)
+                -> void
+                requires can_grow
+        {
+                auto const width = size();
+                // A capacity of nought has no tail to shift, rather than through a loop that cannot go round.
+                if constexpr (not bits_type::has_zero_capacity) {
+                        using block_type      = bits_type::block_type;
+                        constexpr auto digits = bits_type::bits_per_block;
+                        // In place and ascending, each write below every read still to come, so nothing is allocated.
+                        for (auto k = 0UZ; k < width - last; k += digits) {
+                                auto const count = std::ranges::min(digits, width - last - k);
+                                m_bits.block_at(pos + k, m_bits.block_at(last + k), partial_block_mask<block_type>(count));
+                        }
+                }
+                m_bits.resize(width - (last - pos));
         }
 
         // The same storage object, which a view over this owner refers through.
@@ -1386,6 +1397,16 @@ private:
                         return std::addressof(src) == std::addressof(m_bits);
                 } else {
                         return false;
+                }
+        }
+
+        // The range's elements written from pos on, one at a time, into a gap already opened for them.
+        template<class R>
+        constexpr auto write_at(size_type pos, R& rg)
+                -> void
+        {
+                for (auto&& x : rg) {
+                        m_bits.assign(pos++, value_type(std::forward<decltype(x)>(x)));
                 }
         }
 

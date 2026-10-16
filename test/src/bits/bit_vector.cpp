@@ -26,8 +26,8 @@
 #include <limits>                                   // numeric_limits
 #include <memory>                                   // allocator
 #include <new>                                      // IWYU pragma: keep; bad_alloc, named only without TEST_HAS_ADDRESS_SANITIZER
-#include <ranges>                                   // equal, from_range, iota, transform
-#include <stdexcept>                                // length_error
+#include <ranges>                                   // equal, from_range, iota, to, transform
+#include <stdexcept>                                // length_error, runtime_error
 #include <type_traits>                              // is_default_constructible_v
 #include <utility>                                  // declval, move
 #include <vector>                                   // vector
@@ -340,6 +340,32 @@ BOOST_AUTO_TEST_CASE(InsertingAtTheEndGrowsGeometrically)
         BOOST_CHECK_EQUAL(v.size(), n);
         BOOST_CHECK_EQUAL(std::ranges::count(v, true), static_cast<std::ptrdiff_t>((n + 2UZ) / 3UZ));
         BOOST_CHECK_LT(allocations, 32);
+}
+
+// A range that throws while it is read leaves the sequence as it was, the gap opened for it closed again.
+BOOST_AUTO_TEST_CASE(InsertingARangeThatThrowsLeavesTheSequenceAsItWas)
+{
+        // One range type, read whole below the limit and failing part way at it.
+        auto const unreadable_at = [](std::size_t limit) -> auto {
+                return std::views::iota(0UZ, 11UZ) | std::views::transform([limit](std::size_t i) -> bool {
+                               if (i == limit) {
+                                       throw std::runtime_error("unreadable");
+                               }
+                               return i % 2UZ == 0UZ;
+                       });
+        };
+        auto const more = unreadable_at(11UZ) | std::ranges::to<std::vector>();
+        for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 20UZ}) {
+                auto v        = T(std::from_range, pattern(20));
+                auto m        = pattern(20);
+                auto const at = static_cast<std::ptrdiff_t>(pos);
+                v.insert_range(v.cbegin() + at, unreadable_at(11UZ));
+                m.insert(m.cbegin() + at, more.begin(), more.end());
+                BOOST_CHECK(std::ranges::equal(v, m));
+                auto const before = v;
+                BOOST_CHECK_THROW(v.insert_range(v.cbegin() + at, unreadable_at(5UZ)), std::runtime_error);
+                BOOST_CHECK(v == before);
+        }
 }
 
 // Two proxies swap through their own swap, found by ADL; neither the owner nor a view has a static swap or a flip.
