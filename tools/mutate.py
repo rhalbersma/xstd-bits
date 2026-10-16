@@ -93,7 +93,7 @@ OPERATORS = [
 DECLARATIVE = re.compile(r"^\s*(#|template\s*<|concept\b|requires\b|using\b|static_assert\b|friend\s+(class|struct)\b|namespace\b|->|assert\()")
 
 # A diagnostic that a test wrote: the mutant was caught at compile time rather than stillborn.
-COMPILE_TIME_CHECK = re.compile(r"static assertion failed|static_assert failed|not a constant expression|must be initialized by a constant expression|constexpr variable .* must be initialized")
+COMPILE_TIME_CHECK = re.compile(r"static assertion failed|static assertion expression is not an integral constant expression|static_assert failed|not a constant expression|must be initialized by a constant expression|constexpr variable .* must be initialized")
 
 
 @dataclass
@@ -160,10 +160,26 @@ def blank(text):
         return "".join(out)
 
 
+UNEVALUATED = re.compile(r"\b(noexcept|decltype|sizeof|alignof)\s*\(")
+
+
+def blank_unevaluated(code):
+        """code with the operands of noexcept, decltype, sizeof and alignof blanked: they state a type, not a computation."""
+        out = list(code)
+        for match in UNEVALUATED.finditer(code):
+                depth, i = 1, match.end()
+                while i < len(code) and depth:
+                        depth += {"(": 1, ")": -1}.get(code[i], 0)
+                        if depth and code[i] != "\n":
+                                out[i] = " "
+                        i += 1
+        return "".join(out)
+
+
 def sites(header, include_asserts=False):
         """Every mutant of header, in the order its sites appear."""
         text = (INCLUDE / header).read_text()
-        code = blank(text)
+        code = blank_unevaluated(blank(text))
         lines = text.splitlines()
         starts = [0]
         for line in lines:
