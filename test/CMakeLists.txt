@@ -255,4 +255,8 @@ target_compile_options(
 
 foreach(violation subscript front back pop_back erase_end erase_reversed insert_past_end first last subspan valarray_subscript set_erase_end)
     add_test(NAME test.hardened.precondition.${violation} COMMAND test.hardened.precondition ${violation})
+    # Emscripten's abort traps the module rather than raising SIGABRT, so there the pass is the trap's own message.
+    if(EMSCRIPTEN)
+        set_tests_properties(test.hardened.precondition.${violation} PROPERTIES PASS_REGULAR_EXPRESSION "native code called abort\\(\\)")
+    endif()
 endforeach()
