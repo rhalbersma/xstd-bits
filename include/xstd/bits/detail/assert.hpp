@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_ASSERT_HPP
 
 #include <cassert> // assert
-#include <cstdlib> // abort
+#include <cstdlib> // IWYU pragma: keep; abort, named only in a hardened release build
 
 // A hardened standard library checks these preconditions in a release build; a user's definition wins either way.
 #ifndef XSTD_BITS_HARDENED
