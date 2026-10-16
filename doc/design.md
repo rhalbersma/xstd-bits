@@ -1513,8 +1513,8 @@ block the walk is discarded, and a cursor declared outside would never be writte
 
 **A test that only makes a call fail instantiates the path it never runs**, and the same rule scores it. Three
 cases here each handed `append_range` a `views::iota | views::transform` whose sum saturates, to check that the
-reserve refuses it. Each wrote its own lambda, so each was a distinct closure type and a distinct instantiation
-of the packing tier — three of them, and in all three the reserve threw before the loop was entered, so every
+growth ahead of the loop refuses it. Each wrote its own lambda, so each was a distinct closure type and a distinct
+instantiation of the packing tier — three of them, and in all three that growth threw before the loop was entered, so every
 branch in that tier was one no test took: five short of the gate, on the two lines that shape the loop. One
 functor at namespace scope makes the three views one type, and a length the sequence can hold runs that
 instantiation's loop for real. The general form: when a range or a storage enters a template only through the
@@ -2230,17 +2230,22 @@ clearing whatever the last block carried past it. Everything else, a `std::vecto
 reads positions below the old width alone, and no append writes one.
 
 Under a static capacity `[inplace.vector.modifiers]/3` asks more of `append_range`: past the capacity, no
-effects. A sized source gets that for free, the width it needs being reserved, and refused, before a block is
-written. A source with no size finds the capacity only by overrunning it, so the bounded owner remembers its
+effects. A sized source gets that for free: room for the width it needs is made before a block is written, and
+refused there. A source with no size finds the capacity only by overrunning it, so the bounded owner remembers its
 width, and on any exception resizes back to it before rethrowing -- the resize clearing the tail as every
 shrink does. `assign_range` has no such remark in `[sequence.reqmts]`, so its clear-and-append keeps only the
 basic guarantee, and an overflowing source leaves what it appended.
 
 `insert_range`, `insert` in its four shapes and `emplace` shift wherever the count is known before the first
 element is read: a value, a count of them, a sized or forward range, or another sequence's blocks. Room is made
-first, and that is the one step that can throw: a heap grows geometrically, as `push_back`'s does, so
-`insert(end(), b)` is amortized constant as `std::vector<bool>`'s is, and an inline capacity too small for the
-growth throws `bad_alloc` before anything has moved, as `[inplace.vector.modifiers]`/3 asks. The tail then moves up
+first, and that is the one step that can throw: the block container's own `resize`, so the storage's growth
+policy picks the capacity and this library adds no factor of its own. `std::vector`'s `resize` grows geometrically
+on every standard library here, so `insert(end(), b)` is amortized constant as `std::vector<bool>`'s is, and an
+inline capacity too small for the growth throws `bad_alloc` before anything has moved, as
+`[inplace.vector.modifiers]`/3 asks. A sized append makes its room the same way, a `resize` to the new width and
+back, so the blocks that follow are appended without reallocating and many small appends grow as `push_back` does:
+an exact `reserve` of each new width instead reallocated on every call that needed a block, 157 allocations for
+ten thousand one-bit appends against `std::vector`'s 15. The tail then moves up
 a block at a time, descending, each write landing above every read still to come, and the middle is written into
 the gap; a source that throws part way has its gap erased again before the exception leaves. A single-pass source
 with no size, and a window of the sequence itself, which would move with its own tail, rebuild instead: the head
@@ -3670,7 +3675,7 @@ width it asks for by **addition** over a `size_t` the caller names, and every on
 | `set_adaptor::insert_range`, consecutive tier | `lo + len - 1`, the range's last position |
 | `sequence_adaptor::insert(position, n, value)` | `size() + n` |
 | `sequence_adaptor::blit` | `size() + count`, the source's own width |
-| `sequence_adaptor::pack` | `size() + ranges::size(rg)`, reserved ahead of the packing loop |
+| `sequence_adaptor::pack` | `size() + ranges::size(rg)`, made room for ahead of the packing loop |
 
 Not every wrapping sum is a growth. `exclusive_find_next(n)` steps to `n + 1` to scan from the position after
 `n`, and at the top of `size_t` that step is zero, so a scan from there would restart at the beginning and answer
@@ -3755,10 +3760,10 @@ multiplies the blocks' by it; both overflow only once the blocks already hold so
 allocation fails long before, so a branch there is one no test can reach and the coverage gate would be right to
 say so.
 
-`sequence_adaptor::pack` reserves ahead and is **not** left alone, because of what its count is bounded by.
+`sequence_adaptor::pack` makes room ahead and is **not** left alone, because of what its count is bounded by.
 `pack` is handed a range of `bool`, and a sized range answers `size()` for elements it never materializes: `d.append_range(views::iota(0UZ, SIZE_MAX))`
-is one call, and `size() + SIZE_MAX` wraps for every `d` that is not empty. Wrapped, the reserve asks for
-nothing and returns, and the packing loop then walks a range of `2^64` elements a block at a time -- so the
+is one call, and `size() + SIZE_MAX` wraps for every `d` that is not empty. Wrapped, the room asked for is
+none, and the packing loop then walks a range of `2^64` elements a block at a time -- so the
 `length_error` the same call answers **immediately** on an empty sequence becomes, one element in, a call that
 ends when the allocator gives out rather than when the range does. Saturated it is that `length_error` at
 both.
