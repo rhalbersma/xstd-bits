@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_vector.hpp>   // bit_vector
 #include <array>                      // array
 #include <csignal>                    // SIGABRT, signal
-#include <cstdlib>                    // _Exit, EXIT_FAILURE, EXIT_SUCCESS
+#include <cstdlib>                    // _Exit, _set_abort_behavior, EXIT_FAILURE, EXIT_SUCCESS
 #include <string_view>                // string_view
 #include <utility>                    // pair
 
@@ -49,6 +49,10 @@ auto main(int argc, char* argv[]) -> int
         if (argc != 2) {
                 return EXIT_FAILURE;
         }
+#ifdef _MSC_VER
+        // The debug CRT shows a dialog on abort before raising SIGABRT, which an unattended run waits on forever.
+        static_cast<void>(_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT));
+#endif
         auto const name = std::string_view(argv[1]); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         for (auto const& [key, run] : violations) {
                 if (key == name) {
