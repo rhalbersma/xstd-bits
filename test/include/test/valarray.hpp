@@ -15,9 +15,9 @@
 #include <xstd/bits/bit_algorithm/bit_reverse.hpp>         // bit_reverse
 #include <xstd/bits/bit_algorithm/bit_rotate.hpp>          // bit_rotate
 #include <xstd/bits/bit_span.hpp>                          // bit_span
-#include <xstd/bits/bit_valarray/bit_bounded_valarray.hpp> // basic_bit_bounded_valarray
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // basic_bit_fixed_valarray
 #include <xstd/bits/bit_valarray/bit_gslice.hpp>           // bit_gslice
+#include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp> // basic_bit_inplace_valarray
 #include <xstd/bits/bit_valarray/bit_slice.hpp>            // bit_slice
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>         // basic_bit_valarray
 #include <xstd/bits/bit_vector.hpp>                        // bit_vector
@@ -56,7 +56,7 @@ template<class V>
 inline constexpr auto capacity = std::dynamic_extent;
 
 template<class Block, std::size_t N>
-inline constexpr auto capacity<xstd::basic_bit_bounded_valarray<Block, N>> = N;
+inline constexpr auto capacity<xstd::basic_bit_inplace_valarray<Block, N>> = N;
 
 template<class V>
 inline constexpr bool is_fixed = fixed_size<V> != std::dynamic_extent;
@@ -701,7 +701,7 @@ using block_t = std::ranges::range_value_t<typename V::block_container_type>;
 template<class V>
 using operand_t = xstd::basic_bit_valarray<block_t<V>>;
 
-// What a const subscript gathers into: an owner of run-time size its own type, the fixed one the bounded one.
+// What a const subscript gathers into: an owner of run-time size its own type, the fixed one the inplace one.
 template<class V>
 struct gathered
 {
@@ -711,13 +711,13 @@ struct gathered
 template<class Block, std::size_t N>
 struct gathered<xstd::basic_bit_fixed_valarray<Block, N>>
 {
-        using type = xstd::basic_bit_bounded_valarray<Block, N>;
+        using type = xstd::basic_bit_inplace_valarray<Block, N>;
 };
 
 template<class V>
 using gathered_t = gathered<V>::type;
 
-// How many elements a gather holds: the fixed size or the capacity, past which the bounded owner throws.
+// How many elements a gather holds: the fixed size or the capacity, past which the inplace owner throws.
 template<class V>
 inline constexpr auto gather_capacity = is_fixed<V> ? fixed_size<V> : capacity<V>;
 

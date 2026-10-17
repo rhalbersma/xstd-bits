@@ -5,8 +5,8 @@
 
 #include <xstd/bits/bit_array.hpp>                       // bit_array
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp> // bit_convertible_to
-#include <xstd/bits/bit_set/bit_bounded_set.hpp>         // bit_bounded_set
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>           // bit_fixed_set
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>         // bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>                 // bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>            // bit_set_view
 #include <xstd/bits/bit_span.hpp>                        // bit_span
@@ -37,9 +37,9 @@ BOOST_AUTO_TEST_CASE(BitConvertibleToNamesEveryWidthButAViewTarget)
         static_assert(xstd::bit_convertible_to<std::array<std::uint8_t, 3>, xstd::bit_fixed_set<24>> and xstd::bit_convertible_to<xstd::bit_array<64>, std::bitset<64>>);
         static_assert(xstd::bit_convertible_to<xstd::bit_set_view<std::uint64_t>, std::uint64_t> and xstd::bit_convertible_to<xstd::bit_span<std::array<std::uint8_t, 3>>, xstd::bit_vector>);
         static_assert(xstd::bit_convertible_to<xstd::bit_set, std::uint64_t> and xstd::bit_convertible_to<xstd::bit_vector, std::bitset<70>>);
-        static_assert(xstd::bit_convertible_to<xstd::bit_vector, xstd::bit_array<64>> and xstd::bit_convertible_to<xstd::bit_bounded_set<64>, xstd::bit_fixed_set<10>>);
+        static_assert(xstd::bit_convertible_to<xstd::bit_vector, xstd::bit_array<64>> and xstd::bit_convertible_to<xstd::bit_inplace_set<64>, xstd::bit_fixed_set<10>>);
         static_assert(xstd::bit_convertible_to<xstd::bit_array<64>, xstd::bit_vector> and xstd::bit_convertible_to<std::bitset<70>, xstd::bit_small_vector<64>>);
-        static_assert(xstd::bit_convertible_to<xstd::bit_vector, xstd::bit_bounded_set<64>> and xstd::bit_convertible_to<std::uint64_t, xstd::bit_set>);
+        static_assert(xstd::bit_convertible_to<xstd::bit_vector, xstd::bit_inplace_set<64>> and xstd::bit_convertible_to<std::uint64_t, xstd::bit_set>);
         static_assert(xstd::bit_convertible_to<xstd::bit_span<std::vector<std::uint64_t>>, xstd::bit_vector> and xstd::bit_convertible_to<xstd::bit_set_view<std::vector<std::uint64_t> const>, xstd::bit_array<64>>);
 
         // A reference or a const source is the same conversion as the type it names.

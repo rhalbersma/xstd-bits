@@ -5,18 +5,18 @@
 
 #include <test/block_types.hpp>                            // all_block_types
 #include <xstd/bits/bit_array.hpp>                         // basic_bit_array
-#include <xstd/bits/bit_bounded_vector.hpp>                // basic_bit_bounded_vector
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp>   // bit_convertible_to
 #include <xstd/bits/bit_functional/bit_hasher.hpp>         // bit_hasher
-#include <xstd/bits/bit_set/bit_bounded_set.hpp>           // basic_bit_bounded_set
+#include <xstd/bits/bit_inplace_vector.hpp>                // basic_bit_inplace_vector
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>             // basic_bit_fixed_set
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>           // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>                   // basic_bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>              // bit_set_view
 #include <xstd/bits/bit_span.hpp>                          // bit_span
 #include <xstd/bits/bit_type_traits/bit_rebind.hpp>        // bit_rebind
 #include <xstd/bits/bit_type_traits/bit_resize.hpp>        // bit_resize
-#include <xstd/bits/bit_valarray/bit_bounded_valarray.hpp> // basic_bit_bounded_valarray
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // basic_bit_fixed_valarray
+#include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp> // basic_bit_inplace_valarray
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>         // basic_bit_valarray
 #include <xstd/bits/bit_vector.hpp>                        // basic_bit_vector
 #include <xstd/bits/ext/boost/bit_small_set.hpp>           // basic_bit_small_set
@@ -138,17 +138,17 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EveryTypeAnswersItsRow, Block, matrix_block_types)
 
         // Owners: a sequence takes bools and a set keys, each compares with its own type alone, and a set combines too.
         check_row<Block, array>("bit_array", "11.11111....1111111");
-        check_row<Block, xstd::basic_bit_bounded_vector<Block, N>>("bit_bounded_vector", "111111111...1111111");
+        check_row<Block, xstd::basic_bit_inplace_vector<Block, N>>("bit_inplace_vector", "111111111...1111111");
         check_row<Block, xstd::basic_bit_small_vector<Block, N>>("bit_small_vector", "111111111...1111111");
         check_row<Block, vector>("bit_vector", "1111111.1...1111111");
         check_row<Block, fixed_set>("bit_fixed_set", "11111111.11.11111.1");
-        check_row<Block, xstd::basic_bit_bounded_set<std::size_t, Block, N>>("bit_bounded_set", "11111111.11.11111.1");
+        check_row<Block, xstd::basic_bit_inplace_set<std::size_t, Block, N>>("bit_inplace_set", "11111111.11.11111.1");
         check_row<Block, xstd::basic_bit_small_set<std::size_t, Block, N>>("bit_small_set", "11111111.11.11111.1");
         check_row<Block, set>("bit_set", "1111111..11111111.1");
 
         // Valarrays: elementwise operators with their own type alone, and comparisons answering arrays, so not regular.
         check_row<Block, xstd::basic_bit_fixed_valarray<Block, N>>("bit_fixed_valarray", "11.11111..1.....111");
-        check_row<Block, xstd::basic_bit_bounded_valarray<Block, N>>("bit_bounded_valarray", "11.11111..1.....111");
+        check_row<Block, xstd::basic_bit_inplace_valarray<Block, N>>("bit_inplace_valarray", "11.11111..1.....111");
         check_row<Block, xstd::basic_bit_small_valarray<Block, N>>("bit_small_valarray", "11.11111..1.....111");
         check_row<Block, xstd::basic_bit_valarray<Block>>("bit_valarray", "11.1111...1.....111");
 

@@ -4,8 +4,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/valarray.hpp>                               // check_*
-#include <xstd/bits/bit_valarray/bit_bounded_valarray.hpp> // basic_bit_bounded_valarray, bit_bounded_valarray
-#include <xstd/bits/detail/bounded_blocks.hpp>             // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+#include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp> // basic_bit_inplace_valarray, bit_inplace_valarray
+#include <xstd/bits/detail/inplace_blocks.hpp>             // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_INPLACE
 #include <boost/test/unit_test.hpp>                        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <concepts>                                        // same_as
 #include <cstddef>                                         // size_t
@@ -13,16 +13,16 @@
 #include <new>                                             // bad_alloc
 #include <tuple>                                           // tuple
 
-BOOST_AUTO_TEST_SUITE(BitBoundedValarray)
+BOOST_AUTO_TEST_SUITE(BitInplaceValarray)
 
 // No capacity, a capacity inside a block and across several, one short of a whole block, and whole blocks.
 using Types = std::tuple<
-        xstd::basic_bit_bounded_valarray<std::uint8_t, 0>,
-        xstd::basic_bit_bounded_valarray<std::uint8_t, 5>,
-        xstd::basic_bit_bounded_valarray<std::uint8_t, 17>,
-        xstd::basic_bit_bounded_valarray<std::uint64_t, 63>,
-        xstd::basic_bit_bounded_valarray<std::uint64_t, 128>,
-        xstd::bit_bounded_valarray<130>>;
+        xstd::basic_bit_inplace_valarray<std::uint8_t, 0>,
+        xstd::basic_bit_inplace_valarray<std::uint8_t, 5>,
+        xstd::basic_bit_inplace_valarray<std::uint8_t, 17>,
+        xstd::basic_bit_inplace_valarray<std::uint64_t, 63>,
+        xstd::basic_bit_inplace_valarray<std::uint64_t, 128>,
+        xstd::bit_inplace_valarray<130>>;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheTypeIsShapedLikeAValarrayAndNotAContainer, V, Types)
 {
@@ -151,29 +151,29 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BitConvertKeepsPositionsAndASpanViewsIt, V, Types)
 
 BOOST_AUTO_TEST_CASE(TheDefaultBlockIsSizeT)
 {
-        static_assert(std::same_as<xstd::bit_bounded_valarray<3>, xstd::basic_bit_bounded_valarray<std::size_t, 3>>);
+        static_assert(std::same_as<xstd::bit_inplace_valarray<3>, xstd::basic_bit_inplace_valarray<std::size_t, 3>>);
 }
 
 // Past the capacity is std::inplace_vector's std::bad_alloc, and a refused resize leaves the array as it was.
 BOOST_AUTO_TEST_CASE(PastTheCapacityThrowsBadAlloc)
 {
-        using V = xstd::basic_bit_bounded_valarray<std::uint8_t, 17>;
+        using V = xstd::basic_bit_inplace_valarray<std::uint8_t, 17>;
         BOOST_CHECK_THROW(static_cast<void>(V(18UZ)), std::bad_alloc);
         BOOST_CHECK_THROW(static_cast<void>(V(true, 18UZ)), std::bad_alloc);
-        BOOST_CHECK_THROW(static_cast<void>(xstd::basic_bit_bounded_valarray<std::uint8_t, 2>({true, false, true})), std::bad_alloc);
+        BOOST_CHECK_THROW(static_cast<void>(xstd::basic_bit_inplace_valarray<std::uint8_t, 2>({true, false, true})), std::bad_alloc);
         auto v = V(true, 3UZ);
         BOOST_CHECK_THROW(v.resize(18UZ), std::bad_alloc);
         BOOST_CHECK_EQUAL(v.size(), 3UZ);
         BOOST_CHECK(v.min());
 }
 
-#ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+#ifdef XSTD_BITS_HAS_CONSTEXPR_INPLACE
 
 // Over std::inplace_vector the blocks are the object, so constant evaluation needs no allocation.
 BOOST_AUTO_TEST_CASE(ItIsUsableInConstantExpressions)
 {
         static_assert([] -> bool {
-                auto v = xstd::bit_bounded_valarray<70>{true, false, true};
+                auto v = xstd::bit_inplace_valarray<70>{true, false, true};
                 v.resize(68UZ, true);
                 return (v >> 67UZ)[0] and not(v << 68UZ).max();
         }());
@@ -183,7 +183,7 @@ BOOST_AUTO_TEST_CASE(ItIsUsableInConstantExpressions)
 BOOST_AUTO_TEST_CASE(TheMaskSubscriptIsUsableInConstantExpressions)
 {
         static_assert([] -> bool {
-                using V   = xstd::bit_bounded_valarray<70>;
+                using V   = xstd::bit_inplace_valarray<70>;
                 auto mask = V(false, 68UZ);
                 mask[1]   = true;
                 mask[65]  = true;

@@ -15,7 +15,7 @@
 
 #include <test/sequence/factory.hpp>             // stripes
 #include <test/set/exhaustive.hpp>               // limit_v, static_width
-#include <test/spec/set.hpp>                     // bounded, dynamic, fixed, small, user_storage
+#include <test/spec/set.hpp>                     // dynamic, fixed, inplace, small, user_storage
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>   // basic_bit_fixed_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp> // bit_key_mapping
 #include <xstd/bits/bit_set/bit_set.hpp>         // basic_bit_set
@@ -37,7 +37,7 @@ namespace test::algorithm {
 using descending_sets = std::tuple<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_mapping<std::size_t>, std::greater<>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::greater<>>>;
 
 // Every column of ours the set clauses sweep, their standard models left out, and the descending ones besides.
-using sets = decltype(std::tuple_cat(std::declval<test::spec::set::fixed>(), std::declval<test::spec::set::dynamic>(), std::declval<test::spec::set::bounded>(), std::declval<test::spec::set::small>(), std::declval<test::spec::set::user_storage>(), std::declval<descending_sets>()));
+using sets = decltype(std::tuple_cat(std::declval<test::spec::set::fixed>(), std::declval<test::spec::set::dynamic>(), std::declval<test::spec::set::inplace>(), std::declval<test::spec::set::small>(), std::declval<test::spec::set::user_storage>(), std::declval<descending_sets>()));
 
 // The widest run-time width an input takes, past two blocks of the widest builtin Block.
 inline constexpr auto set_limit = 130UZ;

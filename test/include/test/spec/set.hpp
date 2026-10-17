@@ -14,8 +14,8 @@
 #include <test/spec/random.hpp>                     // block_digits_v, key_samples, keyed_samples, pair_samples, triple_samples, width
 #include <test/spec/view.hpp>                       // input_t, owner_t, view_traits, view_type, viewed
 #include <test/uint128.hpp>                         // TEST_HAS_UINT128, uint128
-#include <xstd/bits/bit_set/bit_bounded_set.hpp>    // basic_bit_bounded_set
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
 #include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
@@ -58,7 +58,7 @@ using fixed = std::tuple<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 0>
 
 using dynamic = std::tuple<xstd::basic_bit_set<std::size_t, std::uint8_t>, xstd::basic_bit_set<std::size_t, std::uint64_t>>;
 
-using bounded = std::tuple<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 0>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 9>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 17>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 24>, xstd::basic_bit_bounded_set<std::size_t, std::uint64_t, 24>, xstd::basic_bit_bounded_set<std::size_t, std::uint64_t, 65>, xstd::basic_bit_bounded_set<std::size_t, std::uint64_t, 4097>>;
+using inplace = std::tuple<xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 0>, xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 9>, xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 17>, xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 24>, xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 24>, xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 65>, xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 4097>>;
 
 // Inline blocks that a sweep to its limit spills from, that a sweep fits in, and that hold half of what a sample spans.
 using small = std::tuple<xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 1024>>;
@@ -67,10 +67,10 @@ using small = std::tuple<xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9>
 using user_storage = std::tuple<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<test::minimal_blocks<std::uint8_t>>>>;
 
 // The columns once more under std::greater, std::set's model first: an empty width, across blocks, and growing.
-using descending = std::tuple<std::set<std::size_t, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 0, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<test::minimal_blocks<std::uint8_t>>, xstd::bits::detail::storage::owned, void, std::size_t, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>>; // NOLINT(modernize-use-transparent-functors): std::set<std::size_t, std::greater<std::size_t>>'s comparator, as written
+using descending = std::tuple<std::set<std::size_t, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 0, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<test::minimal_blocks<std::uint8_t>>, xstd::bits::detail::storage::owned, void, std::size_t, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>>; // NOLINT(modernize-use-transparent-functors): std::set<std::size_t, std::greater<std::size_t>>'s comparator, as written
 
 // Everything that owns the keys it holds, which is what [container.requirements] and a constructor ask for.
-using owners = decltype(std::tuple_cat(std::declval<models>(), std::declval<fixed>(), std::declval<dynamic>(), std::declval<bounded>(), std::declval<small>(), std::declval<user_storage>(), std::declval<descending>()));
+using owners = decltype(std::tuple_cat(std::declval<models>(), std::declval<fixed>(), std::declval<dynamic>(), std::declval<inplace>(), std::declval<small>(), std::declval<user_storage>(), std::declval<descending>()));
 
 // Keys another object owns, with no std model: [set] less what owning implies; a clause they lack takes owners.
 using views = std::tuple<xstd::bit_set_view<std::array<std::uint8_t, 3>, 17>, xstd::bit_set_view<std::vector<std::uint64_t>>>;

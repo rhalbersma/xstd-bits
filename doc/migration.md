@@ -14,11 +14,11 @@ The first question is always which reading the old code meant. `std::bitset` and
 both at once; here the type says which:
 
 - **a set of positions**: membership, flags, iterating over what is set. That is `bit_fixed_set<N>`,
-  `bit_bounded_set<N>`, `bit_set`, or `bit_flag_set<Mask, N>` for a bitmask type.
+  `bit_inplace_set<N>`, `bit_set`, or `bit_flag_set<Mask, N>` for a bitmask type.
 - **a sequence of `bool`**: a value at each index, rotating, a row of cells. That is `bit_array<N>`,
-  `bit_bounded_vector<N>` or `bit_vector`.
+  `bit_inplace_vector<N>` or `bit_vector`.
 - **a row combined whole**: `&`, `|`, `^`, `~` and shifts over every element at once. That is `std::valarray<bool>`'s
-  reading, `bit_fixed_valarray<N>`, `bit_bounded_valarray<N>` or `bit_valarray`.
+  reading, `bit_fixed_valarray<N>`, `bit_inplace_valarray<N>` or `bit_valarray`.
 
 ## `std::bitset<N>` as a set of positions
 

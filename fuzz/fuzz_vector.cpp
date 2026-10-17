@@ -6,7 +6,7 @@
 #include <fuzz/decoder.hpp>                         // checker, decoder, run, throws
 #include <xstd/bits/bit_algorithm.hpp>              // bit_all_of, bit_any_of, bit_count, bit_fill, bit_mismatch, bit_none_of
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector, bit_bounded_vector
+#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector, bit_inplace_vector
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
 #include <algorithm>                                // count, equal, fill, mismatch
@@ -34,8 +34,8 @@ using owners = std::tuple<
         xstd::basic_bit_array<std::uint8_t, 17>,
         xstd::bit_array<65>,
         xstd::bit_array<200>,
-        xstd::basic_bit_bounded_vector<std::uint8_t, 17>,
-        xstd::bit_bounded_vector<130>,
+        xstd::basic_bit_inplace_vector<std::uint8_t, 17>,
+        xstd::bit_inplace_vector<130>,
         xstd::basic_bit_small_vector<std::uint64_t, 64>>;
 
 using model = std::vector<bool>;

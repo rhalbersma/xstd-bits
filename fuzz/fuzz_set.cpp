@@ -7,8 +7,8 @@
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>   // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>   // bit_includes
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp> // bit_intersects
-#include <xstd/bits/bit_set/bit_bounded_set.hpp>      // basic_bit_bounded_set, bit_bounded_set
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>        // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>      // basic_bit_inplace_set, bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>              // basic_bit_set, bit_set
 #include <xstd/bits/ext/boost/bit_small_set.hpp>      // basic_bit_small_set
 #include <algorithm>                                  // includes, set_difference, set_intersection, set_symmetric_difference, set_union
@@ -30,7 +30,7 @@
 
 namespace {
 
-// The set reading's owners at each kind of width: dynamic, small, fixed across block boundaries, and bounded.
+// The set reading's owners at each kind of width: dynamic, small, fixed across block boundaries, and inplace.
 using owners = std::tuple<
         xstd::bit_set,
         xstd::basic_bit_set<std::size_t, std::uint8_t>,
@@ -40,8 +40,8 @@ using owners = std::tuple<
         xstd::bit_fixed_set<64>,
         xstd::bit_fixed_set<65>,
         xstd::bit_fixed_set<200>,
-        xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 17>,
-        xstd::bit_bounded_set<130>>;
+        xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 17>,
+        xstd::bit_inplace_set<130>>;
 
 using model = std::set<std::size_t>;
 
@@ -67,7 +67,7 @@ template<class X>
 
 // A ceiling the fuzzer can reach: a width or a capacity in the type, rather than the address space.
 template<class X>
-[[nodiscard]] auto bounded()
+[[nodiscard]] auto inplace()
         -> bool
 {
         return X().max_size() <= dynamic_keys;
@@ -111,7 +111,7 @@ template<class X>
 [[nodiscard]] auto affordable(model const& m, std::size_t n, std::size_t top)
         -> bool
 {
-        return bounded<X>() or m.empty() or n >= top - *m.begin() or (*m.rbegin() < dynamic_limit and n < dynamic_limit - *m.rbegin());
+        return inplace<X>() or m.empty() or n >= top - *m.begin() or (*m.rbegin() < dynamic_limit and n < dynamic_limit - *m.rbegin());
 }
 
 [[nodiscard]] auto shifted_right(model const& m, std::size_t n)
@@ -437,7 +437,7 @@ auto fuzz_one(fuzz::decoder& in)
                                 if constexpr (static_width<X>) {
                                         auto const k = top + in.below(70UZ);
                                         check.expect(fuzz::throws<std::out_of_range>([&] -> void { x.insert(k); }), "out_of_range past the width");
-                                } else if (bounded<X>()) {
+                                } else if (inplace<X>()) {
                                         auto const k = top + in.below(70UZ);
                                         check.expect(fuzz::throws<std::bad_alloc>([&] -> void { x.insert(k); }), "bad_alloc past the capacity");
                                 } else {

@@ -4,9 +4,9 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/valarray.hpp>                               // check_equal, make, model_of, patterns, reference_array, reference_of, writes
-#include <xstd/bits/bit_valarray/bit_bounded_valarray.hpp> // bit_bounded_valarray
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // bit_fixed_valarray
 #include <xstd/bits/bit_valarray/bit_gslice_array.hpp>     // bit_gslice_array
+#include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp> // bit_inplace_valarray
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>         // bit_valarray
 #include <boost/test/unit_test.hpp>                        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <concepts>                                        // same_as
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(EveryOwnerOverTheSameBlocksReadsAnotherOwnersProxy)
         auto const r = test::valarray::reference_of(a);
         auto const g = std::gslice(3UZ, std::valarray<std::size_t>{2UZ, 4UZ}, std::valarray<std::size_t>{65UZ, 2UZ});
         test::valarray::check_equal(xstd::bit_fixed_valarray<8>(x[g]), test::valarray::model_of(r[g]));
-        test::valarray::check_equal(xstd::bit_bounded_valarray<64>(x[g]), test::valarray::model_of(r[g]));
+        test::valarray::check_equal(xstd::bit_inplace_valarray<64>(x[g]), test::valarray::model_of(r[g]));
 }
 
 // The paths agree: an ascending gslice takes the mask path, an index array of its positions the index path.

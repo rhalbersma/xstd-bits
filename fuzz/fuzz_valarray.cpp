@@ -6,8 +6,8 @@
 #include <fuzz/decoder.hpp>                                // checker, decoder, run
 #include <xstd/bits/bit/bit_convert.hpp>                   // bit_convert
 #include <xstd/bits/bit_algorithm.hpp>                     // bit_all_of, bit_any_of, bit_count, bit_none_of
-#include <xstd/bits/bit_valarray/bit_bounded_valarray.hpp> // basic_bit_bounded_valarray, bit_bounded_valarray
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // basic_bit_fixed_valarray, bit_fixed_valarray
+#include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp> // basic_bit_inplace_valarray, bit_inplace_valarray
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>         // basic_bit_valarray, bit_valarray
 #include <xstd/bits/bit_vector.hpp>                        // bit_vector
 #include <xstd/bits/ext/boost/bit_small_valarray.hpp>      // basic_bit_small_valarray
@@ -33,8 +33,8 @@ using owners = std::tuple<
         xstd::basic_bit_fixed_valarray<std::uint8_t, 17>,
         xstd::bit_fixed_valarray<65>,
         xstd::bit_fixed_valarray<200>,
-        xstd::basic_bit_bounded_valarray<std::uint8_t, 17>,
-        xstd::bit_bounded_valarray<130>,
+        xstd::basic_bit_inplace_valarray<std::uint8_t, 17>,
+        xstd::bit_inplace_valarray<130>,
         xstd::basic_bit_small_valarray<std::uint8_t, 17>>;
 
 using model = std::vector<bool>;
@@ -50,7 +50,7 @@ template<class X>
 inline constexpr auto capacity = dynamic_bits;
 
 template<class Block, std::size_t N>
-inline constexpr auto capacity<xstd::basic_bit_bounded_valarray<Block, N>> = N < dynamic_bits ? N : dynamic_bits;
+inline constexpr auto capacity<xstd::basic_bit_inplace_valarray<Block, N>> = N < dynamic_bits ? N : dynamic_bits;
 
 // Equal elements, and a count over whole blocks that would see a bit set in the padding.
 template<class X>

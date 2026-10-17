@@ -4,10 +4,10 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit_array.hpp>                           // bit_array
-#include <xstd/bits/bit_bounded_vector.hpp>                  // bit_bounded_vector
 #include <xstd/bits/bit_concepts/bit_constructible_from.hpp> // bit_constructible_from
-#include <xstd/bits/bit_set/bit_bounded_set.hpp>             // bit_bounded_set
+#include <xstd/bits/bit_inplace_vector.hpp>                  // bit_inplace_vector
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>               // bit_fixed_set
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>             // bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>                     // bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>                // bit_set_view
 #include <xstd/bits/bit_vector.hpp>                          // bit_vector
@@ -26,13 +26,13 @@ BOOST_AUTO_TEST_CASE(BitConstructibleFromNamesBlocksTakenAsTheyAre)
 {
         static_assert(xstd::bit_constructible_from<xstd::bit_vector, std::vector<std::size_t>> and xstd::bit_constructible_from<xstd::bit_set, std::vector<std::size_t>>);
         static_assert(xstd::bit_constructible_from<xstd::bit_fixed_set<64>, std::array<std::uint64_t, 1>> and xstd::bit_constructible_from<xstd::bit_array<20>, std::array<std::uint8_t, 3>>);
-        static_assert(xstd::bit_constructible_from<xstd::bit_bounded_set<100>, xstd::bit_bounded_set<100>::block_container_type>);
+        static_assert(xstd::bit_constructible_from<xstd::bit_inplace_set<100>, xstd::bit_inplace_set<100>::block_container_type>);
 
-        // Another block type, a field too narrow, and a container a bounded owner does not hold are none of those.
+        // Another block type, a field too narrow, and a container an inplace owner does not hold are none of those.
         static_assert(not xstd::bit_constructible_from<xstd::bit_vector, std::vector<std::uint8_t>>);
         static_assert(not xstd::bit_constructible_from<xstd::bit_fixed_set<256>, std::array<std::uint64_t, 3>>);
-        static_assert(not xstd::bit_constructible_from<xstd::bit_bounded_set<100>, std::array<std::uint64_t, 2>>);
-        static_assert(not xstd::bit_constructible_from<xstd::bit_bounded_vector<100>, std::vector<std::size_t>>);
+        static_assert(not xstd::bit_constructible_from<xstd::bit_inplace_set<100>, std::array<std::uint64_t, 2>>);
+        static_assert(not xstd::bit_constructible_from<xstd::bit_inplace_vector<100>, std::vector<std::size_t>>);
 
         // What has bit storage without being it, and a view, which owns nothing to take blocks into.
         static_assert(not xstd::bit_constructible_from<xstd::bit_fixed_set<64>, std::bitset<64>>);

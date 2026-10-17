@@ -149,7 +149,7 @@ struct fixed_sizes : Members
 
 // A run-time width under a capacity the type carries: the width a function, the capacity a constant.
 template<class Members, std::size_t Capacity>
-struct bounded_sizes : Members
+struct inplace_sizes : Members
 {
         using Members::Members;
 
@@ -169,7 +169,7 @@ struct bounded_sizes : Members
         static constexpr std::integral_constant<std::size_t, Capacity> max_size = {};
         static constexpr std::integral_constant<std::size_t, Capacity> capacity = {};
 
-        [[nodiscard]] friend auto operator==(bounded_sizes const&, bounded_sizes const&) -> bool = default;
+        [[nodiscard]] friend auto operator==(inplace_sizes const&, inplace_sizes const&) -> bool = default;
 };
 
 // A width read at run time, from the storage or from a window's count, and so as functions.
@@ -225,7 +225,7 @@ using sizes_t = std::conditional_t<
         fixed_sizes<members_t<Bits, Store, W, Derived, E>, static_size<Bits, Store, W, E>()>,
         std::conditional_t<
                 can_grow<Bits, Store>() and std::remove_const_t<Bits>::has_static_capacity,
-                bounded_sizes<members_t<Bits, Store, W, Derived, E>, std::remove_const_t<Bits>::static_capacity()>,
+                inplace_sizes<members_t<Bits, Store, W, Derived, E>, std::remove_const_t<Bits>::static_capacity()>,
                 run_time_sizes<members_t<Bits, Store, W, Derived, E>, Bits, Store, W>>>;
 
 } // namespace sequence

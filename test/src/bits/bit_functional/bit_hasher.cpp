@@ -6,10 +6,10 @@
 #include <test/block_types.hpp>                     // all_block_types
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <xstd/bits/bit_array.hpp>                  // bit_array
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
 #include <xstd/bits/bit_functional/bit_hasher.hpp>  // bit_hash_append, bit_hasher
-#include <xstd/bits/bit_set/bit_bounded_set.hpp>    // basic_bit_bounded_set
+#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
@@ -292,8 +292,8 @@ BOOST_AUTO_TEST_CASE(ARunTimeSetHashesEqualAtEveryWidth)
         BOOST_CHECK(record(narrow).message == record(wide).message);
 
         auto const hasher = xstd::bit_hasher<boost::hash2::xxhash_64>();
-        BOOST_CHECK_EQUAL(hasher(xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 17>({1, 3})), hasher(narrow));
-        BOOST_CHECK_EQUAL(hasher(xstd::basic_bit_bounded_set<std::size_t, std::uint64_t, 4'097>({1, 3})), hasher(narrow));
+        BOOST_CHECK_EQUAL(hasher(xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 17>({1, 3})), hasher(narrow));
+        BOOST_CHECK_EQUAL(hasher(xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 4'097>({1, 3})), hasher(narrow));
         BOOST_CHECK_EQUAL(hasher(xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9>({1, 3})), hasher(narrow));
         BOOST_CHECK_EQUAL(hasher(xstd::bit_set_view(wide)), hasher(narrow));
 }
@@ -489,7 +489,7 @@ BOOST_AUTO_TEST_CASE(TheHasherIsSeededAndTransparent)
         BOOST_CHECK_EQUAL(unseeded(xstd::bit_set_view(value)), unseeded(value));
         BOOST_CHECK_EQUAL(unseeded(xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 100>({1, 3, 99})), unseeded(value));
         BOOST_CHECK_EQUAL(unseeded(alternating(xstd::basic_bit_small_vector<std::uint8_t, 9>(130))), unseeded(alternating(xstd::bit_vector(130))));
-        BOOST_CHECK_EQUAL(unseeded(alternating(xstd::basic_bit_bounded_vector<std::uint64_t, 256>(130))), unseeded(alternating(xstd::bit_vector(130))));
+        BOOST_CHECK_EQUAL(unseeded(alternating(xstd::basic_bit_inplace_vector<std::uint64_t, 256>(130))), unseeded(alternating(xstd::bit_vector(130))));
 
         // xxHash by default, as std::hash runs it.
         BOOST_CHECK_EQUAL(xstd::bit_hasher()(value), xstd::bit_hasher<boost::hash2::xxhash_64>()(value));

@@ -14,7 +14,7 @@
 #include <test/spec/random.hpp>                     // block_digits_v, key_samples, keyed_samples, pair_samples, sequence_width
 #include <test/uint128.hpp>                         // TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
+#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
 #include <algorithm>                                // min
@@ -64,7 +64,7 @@ using dynamic = std::tuple<xstd::basic_bit_vector<std::uint8_t>, xstd::basic_bit
 // Inline blocks that a sweep to its limit spills from, that a sweep fits in, and that hold half of what a sample spans.
 using small = std::tuple<xstd::basic_bit_small_vector<std::uint8_t, 9>, xstd::basic_bit_small_vector<std::uint64_t, 64>, xstd::basic_bit_small_vector<std::uint64_t, 1024>>;
 
-using bounded = std::tuple<xstd::basic_bit_bounded_vector<std::uint8_t, 0>, xstd::basic_bit_bounded_vector<std::uint8_t, 9>, xstd::basic_bit_bounded_vector<std::uint8_t, 17>, xstd::basic_bit_bounded_vector<std::uint8_t, 24>, xstd::basic_bit_bounded_vector<std::uint64_t, 24>, xstd::basic_bit_bounded_vector<std::uint64_t, 65>, xstd::basic_bit_bounded_vector<std::uint64_t, 4097>>;
+using inplace = std::tuple<xstd::basic_bit_inplace_vector<std::uint8_t, 0>, xstd::basic_bit_inplace_vector<std::uint8_t, 9>, xstd::basic_bit_inplace_vector<std::uint8_t, 17>, xstd::basic_bit_inplace_vector<std::uint8_t, 24>, xstd::basic_bit_inplace_vector<std::uint64_t, 24>, xstd::basic_bit_inplace_vector<std::uint64_t, 65>, xstd::basic_bit_inplace_vector<std::uint64_t, 4097>>;
 
 // [array]'s column: std::array<bool, N> and the fixed sequences.
 using array_all = decltype(std::tuple_cat(std::declval<array_models>(), std::declval<fixed>()));
@@ -72,8 +72,8 @@ using array_all = decltype(std::tuple_cat(std::declval<array_models>(), std::dec
 // [vector.bool]'s column: std::vector<bool>, the dynamic sequences and the small ones.
 using vector_all = decltype(std::tuple_cat(std::declval<vector_model>(), std::declval<dynamic>(), std::declval<small>()));
 
-// [inplace.vector]'s column: std::inplace_vector<bool, N> where the library has it, and the bounded sequences.
-using inplace_vector_all = decltype(std::tuple_cat(std::declval<inplace_models<0, 9, 17, 24, 65, 4097>>(), std::declval<bounded>()));
+// [inplace.vector]'s column: std::inplace_vector<bool, N> where the library has it, and the inplace sequences.
+using inplace_vector_all = decltype(std::tuple_cat(std::declval<inplace_models<0, 9, 17, 24, 65, 4097>>(), std::declval<inplace>()));
 
 // The two columns that grow, for [sequence.reqmts]'s modifiers.
 using growable_all = decltype(std::tuple_cat(std::declval<vector_all>(), std::declval<inplace_vector_all>()));

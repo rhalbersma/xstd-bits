@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_VALARRAY_BIT_FIXED_VALARRAY_HPP
 #define XSTD_BITS_BIT_VALARRAY_BIT_FIXED_VALARRAY_HPP
 
-#include <xstd/bits/bit_valarray/bit_bounded_valarray.hpp>    // basic_bit_bounded_valarray
+#include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp>    // basic_bit_inplace_valarray
 #include <xstd/bits/bit_valarray/detail/valarray_adaptor.hpp> // gathered, valarray_adaptor
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container
 #include <xstd/bits/detail/num_blocks.hpp>                    // holds_width, num_blocks_v, tiling_block
@@ -50,7 +50,7 @@ template<class Block, std::size_t N>
         requires bits::detail::tiling_block<Block>
 struct bits::detail::gathered<basic_bit_fixed_valarray<Block, N>>
 {
-        using type = basic_bit_bounded_valarray<Block, N>;
+        using type = basic_bit_inplace_valarray<Block, N>;
 };
 
 } // namespace xstd

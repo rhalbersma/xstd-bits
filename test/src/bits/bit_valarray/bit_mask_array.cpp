@@ -4,8 +4,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/valarray.hpp>                               // check_equal, make, model, model_of, patterns, reference_array, reference_of, writes
-#include <xstd/bits/bit_valarray/bit_bounded_valarray.hpp> // bit_bounded_valarray
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // bit_fixed_valarray
+#include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp> // bit_inplace_valarray
 #include <xstd/bits/bit_valarray/bit_mask_array.hpp>       // bit_mask_array
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>         // bit_valarray
 #include <boost/test/unit_test.hpp>                        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
@@ -94,9 +94,9 @@ BOOST_AUTO_TEST_CASE(EveryOwnerOverTheSameBlocksReadsAnotherOwnersProxy)
         for (auto const i : {1UZ, 9UZ, 17UZ, 64UZ, 65UZ, 100UZ, 128UZ, 129UZ}) {
                 m[i] = true;
         }
-        auto const mask = xstd::bit_bounded_valarray<130>(test::valarray::make<xstd::bit_valarray>(m)[std::slice(0UZ, 130UZ, 1UZ)]);
+        auto const mask = xstd::bit_inplace_valarray<130>(test::valarray::make<xstd::bit_valarray>(m)[std::slice(0UZ, 130UZ, 1UZ)]);
         test::valarray::check_equal(xstd::bit_fixed_valarray<8>(x[mask]), test::valarray::model_of(r[test::valarray::reference_of(m)]));
-        test::valarray::check_equal(xstd::bit_bounded_valarray<64>(x[mask]), test::valarray::model_of(r[test::valarray::reference_of(m)]));
+        test::valarray::check_equal(xstd::bit_inplace_valarray<64>(x[mask]), test::valarray::model_of(r[test::valarray::reference_of(m)]));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

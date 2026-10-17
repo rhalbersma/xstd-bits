@@ -10,10 +10,10 @@
 #include <xstd/bits/bit/detail/bit_width.hpp>            // bit_width_v
 #include <xstd/bits/bit_algorithm/bit_count.hpp>         // bit_count
 #include <xstd/bits/bit_array.hpp>                       // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_vector.hpp>              // basic_bit_bounded_vector, bit_bounded_vector
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp> // bit_convertible_to
-#include <xstd/bits/bit_set/bit_bounded_set.hpp>         // basic_bit_bounded_set, bit_bounded_set
+#include <xstd/bits/bit_inplace_vector.hpp>              // basic_bit_inplace_vector, bit_inplace_vector
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>           // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>         // basic_bit_inplace_set, bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>                 // basic_bit_set, bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>            // bit_set_view
 #include <xstd/bits/bit_span.hpp>                        // bit_span
@@ -111,8 +111,8 @@ using sources_of = std::tuple<
         xstd::basic_bit_array<Block, 100>,
         xstd::basic_bit_set<std::size_t, Block>,
         xstd::basic_bit_vector<Block>,
-        xstd::basic_bit_bounded_set<std::size_t, Block, 128>,
-        xstd::basic_bit_bounded_vector<Block, 128>,
+        xstd::basic_bit_inplace_set<std::size_t, Block, 128>,
+        xstd::basic_bit_inplace_vector<Block, 128>,
         xstd::basic_bit_small_set<std::size_t, Block, 128>,
         xstd::basic_bit_small_vector<Block, 128>>;
 
@@ -124,8 +124,8 @@ template<class Block>
 using targets_of = std::tuple<
         xstd::basic_bit_set<std::size_t, Block>,
         xstd::basic_bit_vector<Block>,
-        xstd::basic_bit_bounded_set<std::size_t, Block, 128>,
-        xstd::basic_bit_bounded_vector<Block, 128>,
+        xstd::basic_bit_inplace_set<std::size_t, Block, 128>,
+        xstd::basic_bit_inplace_vector<Block, 128>,
         xstd::basic_bit_small_set<std::size_t, Block, 128>,
         xstd::basic_bit_small_vector<Block, 128>>;
 
@@ -380,9 +380,9 @@ BOOST_AUTO_TEST_CASE(ASetSourceGivesASequenceItsWholeBlocks)
         BOOST_CHECK_EQUAL(v.size(), test::whole_blocks(130UZ));
         BOOST_CHECK(positions(v) == (std::vector<std::size_t>{3, 64, 129}));
 
-        // Never past what the set can hold: a fixed or bounded set of 100 is a sequence of 100.
+        // Never past what the set can hold: a fixed or inplace set of 100 is a sequence of 100.
         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_fixed_set<100>{99}).size(), 100UZ);
-        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_bounded_set<100>{99}).size(), 100UZ);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_inplace_set<100>{99}).size(), 100UZ);
 }
 
 // A set target covers the source's width in whole blocks of its own: 70 bits come back as 72, or whole size_t blocks.
@@ -477,12 +477,12 @@ BOOST_AUTO_TEST_CASE(OnlyTheSameBlockContainerIsAdopted)
         static_assert(not adopts_from<xstd::bit_vector, xstd::basic_bit_set<std::size_t, std::uint8_t>>);
         static_assert(not adopts_from<xstd::bit_vector, xstd::bit_array<64>>);
 
-        // A bounded capacity short of its blocks' last bit could not hold all of what it adopts.
-        static_assert(adopts_from<xstd::bit_bounded_vector<128>, xstd::bit_bounded_set<100>>);
-        static_assert(not adopts_from<xstd::bit_bounded_vector<100>, xstd::bit_bounded_set<128>>);
+        // An inplace capacity short of its blocks' last bit could not hold all of what it adopts.
+        static_assert(adopts_from<xstd::bit_inplace_vector<128>, xstd::bit_inplace_set<100>>);
+        static_assert(not adopts_from<xstd::bit_inplace_vector<100>, xstd::bit_inplace_set<128>>);
 
-        auto s       = xstd::bit_bounded_set<100>{5, 99};
-        auto const v = xstd::bit_convert<xstd::bit_bounded_vector<128>>(std::move(s));
+        auto s       = xstd::bit_inplace_set<100>{5, 99};
+        auto const v = xstd::bit_convert<xstd::bit_inplace_vector<128>>(std::move(s));
         BOOST_CHECK_EQUAL(v.size(), 100UZ);
         BOOST_CHECK(positions(v) == (std::vector<std::size_t>{5, 99}));
 
@@ -524,8 +524,8 @@ BOOST_AUTO_TEST_CASE(TheConversionIsAConstantExpression)
                 auto const v = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(std::bitset<70>(0b1011));
                 return s.contains(69UZ) and s.size() == 2UZ and v.size() == 70UZ and xstd::bit_count(v) == 3;
         }());
-#ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
-        static_assert(xstd::bit_count(xstd::bit_convert<xstd::bit_bounded_vector<100>>(xstd::bit_fixed_set<100>{7, 99})) == 2);
+#ifdef XSTD_BITS_HAS_CONSTEXPR_INPLACE
+        static_assert(xstd::bit_count(xstd::bit_convert<xstd::bit_inplace_vector<100>>(xstd::bit_fixed_set<100>{7, 99})) == 2);
 #endif
         BOOST_CHECK(true);
 }
@@ -546,7 +546,7 @@ BOOST_AUTO_TEST_CASE(AStdBitsetIsASequenceOfItsWidth)
                 BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::uint8_t>>(b)) == keys);
                 BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::uint16_t>>(b)) == keys);
                 BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_small_set<128>>(b)) == keys);
-                BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_bounded_vector<128>>(b)) == keys);
+                BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_inplace_vector<128>>(b)) == keys);
         };
         check.operator()<0>();
         check.operator()<8>();
@@ -555,25 +555,25 @@ BOOST_AUTO_TEST_CASE(AStdBitsetIsASequenceOfItsWidth)
         check.operator()<128>();
 }
 
-// A bounded target that cannot hold the source throws what its own growth throws, std::bad_alloc.
-BOOST_AUTO_TEST_CASE(ABoundedTargetTooSmallThrowsWhatItsGrowthThrows)
+// An inplace target that cannot hold the source throws what its own growth throws, std::bad_alloc.
+BOOST_AUTO_TEST_CASE(AInplaceTargetTooSmallThrowsWhatItsGrowthThrows)
 {
         // A sequence target takes the source's width, which must fit.
-        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_bounded_vector<100>>(xstd::bit_vector(101))), std::bad_alloc);
-        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_bounded_vector<100>>(xstd::bit_vector(100)).size(), 100UZ);
-        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_bounded_vector<100>>(xstd::bit_set{3, 100})), std::bad_alloc);
-        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_bounded_vector<100>>(std::bitset<128>())), std::bad_alloc);
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_inplace_vector<100>>(xstd::bit_vector(101))), std::bad_alloc);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_inplace_vector<100>>(xstd::bit_vector(100)).size(), 100UZ);
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_inplace_vector<100>>(xstd::bit_set{3, 100})), std::bad_alloc);
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_inplace_vector<100>>(std::bitset<128>())), std::bad_alloc);
 
         // A set target is capped at its capacity, and throws only for a key beyond it.
-        BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_bounded_set<100>>(xstd::bit_set{3, 64})) == (std::vector<std::size_t>{3, 64}));
-        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_bounded_set<100>>(xstd::bit_set{3, 150})), std::bad_alloc);
-        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 100>>(std::bitset<128>(1ULL << 63U) << 64U)), std::bad_alloc);
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_inplace_set<100>>(xstd::bit_set{3, 64})) == (std::vector<std::size_t>{3, 64}));
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_inplace_set<100>>(xstd::bit_set{3, 150})), std::bad_alloc);
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 100>>(std::bitset<128>(1ULL << 63U) << 64U)), std::bad_alloc);
 
         // A wide universe with no key past the capacity fits.
         auto grown = xstd::bit_set{3, 255};
         grown.erase(255);
         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(grown).size(), 256UZ);
-        BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_bounded_set<100>>(grown)) == (std::vector<std::size_t>{3}));
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_inplace_set<100>>(grown)) == (std::vector<std::size_t>{3}));
 }
 
 // A status register is read once, by value, and converts as its value would; a cv target converts into the bare type.

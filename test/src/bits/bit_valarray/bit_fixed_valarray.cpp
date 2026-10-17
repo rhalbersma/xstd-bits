@@ -8,7 +8,7 @@
 #include <test/valarray.hpp>                             // check_*
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp> // basic_bit_fixed_valarray, bit_fixed_valarray
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>       // bit_valarray
-#include <xstd/bits/detail/bounded_blocks.hpp>           // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+#include <xstd/bits/detail/inplace_blocks.hpp>           // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_INPLACE
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <concepts>                                      // constructible_from, convertible_to, same_as
 #include <cstddef>                                       // size_t
@@ -129,9 +129,9 @@ BOOST_AUTO_TEST_CASE(TheMaskProxyIsUsableInConstantExpressions)
         }());
 }
 
-#ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED
+#ifdef XSTD_BITS_HAS_CONSTEXPR_INPLACE
 
-// The const subscript gathers into the bounded array, which a constant expression holds where its blocks are inline.
+// The const subscript gathers into the inplace array, which a constant expression holds where its blocks are inline.
 BOOST_AUTO_TEST_CASE(TheMaskGatherIsUsableInConstantExpressions)
 {
         static_assert([] -> bool {

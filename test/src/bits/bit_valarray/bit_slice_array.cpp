@@ -4,8 +4,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/valarray.hpp>                               // check_equal, make, model_of, patterns, reference_array, reference_of, write, writes
-#include <xstd/bits/bit_valarray/bit_bounded_valarray.hpp> // bit_bounded_valarray
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // bit_fixed_valarray
+#include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp> // bit_inplace_valarray
 #include <xstd/bits/bit_valarray/bit_slice_array.hpp>      // bit_slice_array
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>         // bit_valarray
 #include <boost/test/unit_test.hpp>                        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_TEST_CONTEXT
@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(EveryOwnerOverTheSameBlocksReadsAnotherOwnersProxy)
         auto x       = v;
         auto const r = test::valarray::reference_of(a);
         test::valarray::check_equal(xstd::bit_fixed_valarray<8>(x[std::slice(3UZ, 8UZ, 9UZ)]), test::valarray::model_of(r[std::slice(3UZ, 8UZ, 9UZ)]));
-        test::valarray::check_equal(xstd::bit_bounded_valarray<64>(x[std::slice(5UZ, 40UZ, 3UZ)]), test::valarray::model_of(r[std::slice(5UZ, 40UZ, 3UZ)]));
+        test::valarray::check_equal(xstd::bit_inplace_valarray<64>(x[std::slice(5UZ, 40UZ, 3UZ)]), test::valarray::model_of(r[std::slice(5UZ, 40UZ, 3UZ)]));
 }
 
 // A slice of any stride class takes any owner over the same blocks as its array, the fixed one included.

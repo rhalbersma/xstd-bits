@@ -9,7 +9,7 @@
 #include <test/set/exhaustive.hpp>               // static_width
 #include <test/spec/set.hpp>                     // all
 #include <test/spec/view.hpp>                    // owner_t, view_type
-#include <xstd/bits/bit_set/bit_bounded_set.hpp> // IWYU pragma: keep; basic_bit_bounded_set
+#include <xstd/bits/bit_set/bit_inplace_set.hpp> // IWYU pragma: keep; basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp> // bit_key_mapping
 #include <xstd/bits/bit_set/bit_set.hpp>         // basic_bit_set
 #include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
@@ -36,9 +36,9 @@ inline constexpr bool constant_evaluable = test::set::static_width<X>;
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-// The bounded sets hold their blocks in std::inplace_vector where there is one, and in a static_vector otherwise.
+// The inplace sets hold their blocks in std::inplace_vector where there is one, and in a static_vector otherwise.
 template<class Block, std::size_t N, class Compare>
-inline constexpr bool constant_evaluable<xstd::basic_bit_bounded_set<std::size_t, Block, N, xstd::bit_key_mapping<std::size_t>, Compare>> = true;
+inline constexpr bool constant_evaluable<xstd::basic_bit_inplace_set<std::size_t, Block, N, xstd::bit_key_mapping<std::size_t>, Compare>> = true;
 
 #endif
 

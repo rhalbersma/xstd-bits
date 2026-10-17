@@ -640,7 +640,7 @@ BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthTakesAnAllocator)
 // [container.alloc.reqmts]/1: every container is allocator-aware but array and inplace_vector, and a view is not one
 BOOST_AUTO_TEST_CASE(OnlyAnAllocatorAwareCandidateTakesAnAllocator)
 {
-        // The fixed and bounded columns of every reading take no allocator argument, and no view does.
+        // The fixed and inplace columns of every reading take no allocator argument, and no view does.
         test::for_each_type<test::spec::set::all>([]<class T> -> void { check_allocator_members<T>(); });
         test::for_each_type<test::spec::set::const_views>([]<class T> -> void { check_allocator_members<T>(); });
         test::for_each_type<test::spec::sequence::all>([]<class T> -> void { check_allocator_members<T>(); });

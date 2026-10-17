@@ -51,7 +51,7 @@ endif()
 # Boost.Hash2 is a public dependency of this library's headers, not just of the tests, so it is declared explicitly.
 find_package(boost_hash2 CONFIG REQUIRED)
 
-# Boost.Container likewise: the ext/ column's small_vector, opt-in to include, and the bounded column's blocks where the standard library has no std::inplace_vector.
+# Boost.Container likewise: the ext/ column's small_vector, opt-in to include, and the inplace column's blocks where the standard library has no std::inplace_vector.
 find_package(boost_container CONFIG REQUIRED)
 
 add_library(
@@ -131,12 +131,12 @@ target_sources(
         include/xstd/bits/bit_concepts/bit_index_mapping.hpp
         include/xstd/bits/bit_concepts/bit_mask_mapping.hpp
         include/xstd/bits/bit_concepts/sized_bit_index_mapping.hpp
-        include/xstd/bits/bit_bounded_vector.hpp
+        include/xstd/bits/bit_inplace_vector.hpp
         include/xstd/bits/bit_functional.hpp
         include/xstd/bits/bit_functional/bit_equal_to.hpp
         include/xstd/bits/bit_functional/bit_hasher.hpp
         include/xstd/bits/bit_set.hpp
-        include/xstd/bits/bit_set/bit_bounded_set.hpp
+        include/xstd/bits/bit_set/bit_inplace_set.hpp
         include/xstd/bits/bit_set/bit_enum_set.hpp
         include/xstd/bits/bit_set/bit_flag_set.hpp
         include/xstd/bits/bit_set/bit_flag_mapping.hpp
@@ -157,7 +157,7 @@ target_sources(
         include/xstd/bits/bit_valarray.hpp
         include/xstd/bits/bit_valarray/bit_valarray.hpp
         include/xstd/bits/bit_valarray/bit_fixed_valarray.hpp
-        include/xstd/bits/bit_valarray/bit_bounded_valarray.hpp
+        include/xstd/bits/bit_valarray/bit_inplace_valarray.hpp
         include/xstd/bits/bit_valarray/bit_slice.hpp
         include/xstd/bits/bit_valarray/bit_gslice.hpp
         include/xstd/bits/bit_valarray/bit_slice_array.hpp
@@ -169,7 +169,7 @@ target_sources(
         include/xstd/bits/bit_algorithm/detail/algorithm.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
         include/xstd/bits/detail/assert.hpp
-        include/xstd/bits/detail/bounded_blocks.hpp
+        include/xstd/bits/detail/inplace_blocks.hpp
         include/xstd/bits/detail/bit_block_container.hpp
         include/xstd/bits/detail/block_intersects.hpp
         include/xstd/bits/detail/comparisons.hpp
@@ -248,8 +248,8 @@ target_compile_features(
 if(PROJECT_IS_TOP_LEVEL)
     include(CTest)
     if(BUILD_TESTING)
-        # The library requires C++23 and says so above, in the INTERFACE a consumer inherits. The bounded column is held in std::inplace_vector only behind __cpp_lib_inplace_vector, which is C++26, and in boost::container::static_vector below it, so at the minimum that storage and the constant evaluation of the three bounded cells are never tested. Raising the standard here rather than in the INTERFACE keeps the requirement a consumer sees at 23 while letting a leg of the matrix test both storages.
-        set(${project_option_prefix}_CXX_STANDARD 23 CACHE STRING "C++ standard for the tests and benchmarks: 23, or 26 to hold the bounded column in std::inplace_vector")
+        # The library requires C++23 and says so above, in the INTERFACE a consumer inherits. The inplace column is held in std::inplace_vector only behind __cpp_lib_inplace_vector, which is C++26, and in boost::container::static_vector below it, so at the minimum that storage and the constant evaluation of the three inplace cells are never tested. Raising the standard here rather than in the INTERFACE keeps the requirement a consumer sees at 23 while letting a leg of the matrix test both storages.
+        set(${project_option_prefix}_CXX_STANDARD 23 CACHE STRING "C++ standard for the tests and benchmarks: 23, or 26 to hold the inplace column in std::inplace_vector")
         set_property(CACHE ${project_option_prefix}_CXX_STANDARD PROPERTY STRINGS 23 26)
 
         # Asking for a standard CMake cannot spell for this compiler fails deep inside a try_compile, with a message blaming the compiler. CMAKE_CXX_COMPILE_FEATURES is what CMake actually knows, so ask it.
@@ -258,7 +258,7 @@ if(PROJECT_IS_TOP_LEVEL)
                 "${project_option_prefix}_CXX_STANDARD=${${project_option_prefix}_CXX_STANDARD} is not something CMake ${CMAKE_VERSION} can ask "
                 "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} for. CMake 3.30 is the first that knows C++26 "
                 "for GCC and Clang, and this project requires it; a front end CMake has not been taught still answers "
-                "no. The bounded column's std::inplace_vector storage needs that answer, nothing else does."
+                "no. The inplace column's std::inplace_vector storage needs that answer, nothing else does."
             )
         endif()
 

@@ -8,7 +8,7 @@
 #include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
 #include <xstd/bits/bit_algorithm.hpp>              // bit_all_of, bit_any_of, bit_count, bit_fill, bit_for_each, bit_mismatch, bit_none_of
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
+#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
 #include <xstd/bits/bit_set/bit_set.hpp>            // bit_set
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_subspan.hpp>                // bit_subspan
@@ -234,7 +234,7 @@ BOOST_AUTO_TEST_CASE(ABlitSourceIsASequenceOfTheSameBlockType)
         using xstd::bits::detail::blit_source;
         using bytes = xstd::basic_bit_vector<std::uint8_t>;
         static_assert(blit_source<bytes, std::uint8_t> and blit_source<xstd::basic_bit_array<std::uint8_t, 9>, std::uint8_t>);
-        static_assert(blit_source<xstd::basic_bit_bounded_vector<std::uint8_t, 9>, std::uint8_t>);
+        static_assert(blit_source<xstd::basic_bit_inplace_vector<std::uint8_t, 9>, std::uint8_t>);
         static_assert(blit_source<xstd::bit_span<std::array<std::uint8_t, 2>>, std::uint8_t>);
         static_assert(not blit_source<bytes, std::uint64_t>);
         static_assert(not blit_source<xstd::bit_set, std::size_t> and not blit_source<std::vector<bool>, std::size_t>);

@@ -8,11 +8,11 @@
 #include <test/sequence/rotation.hpp>               // permutation_sweep
 #include <xstd/bits/bit_algorithm/bit_reverse.hpp>  // bit_reverse
 #include <xstd/bits/bit_algorithm/bit_rotate.hpp>   // bit_rotate
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector, bit_bounded_vector
+#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector, bit_inplace_vector
 #include <xstd/bits/bit_type_traits/bit_align.hpp>  // bit_align
 #include <xstd/bits/bit_type_traits/bit_least.hpp>  // bit_least
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/bounded_blocks.hpp>      // bounded_blocks
+#include <xstd/bits/detail/inplace_blocks.hpp>      // inplace_blocks
 #include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, storage
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
@@ -32,20 +32,20 @@
 
 #endif
 
-BOOST_AUTO_TEST_SUITE(BitBoundedVector)
+BOOST_AUTO_TEST_SUITE(BitInplaceVector)
 
 // A capacity of three whole blocks, so the width can straddle a boundary and still stop short of the capacity.
-using T = xstd::basic_bit_bounded_vector<std::uint8_t, 24>;
+using T = xstd::basic_bit_inplace_vector<std::uint8_t, 24>;
 
 // Dependent, so an absent typedef is a false rather than a hard error.
 template<class X>
 constexpr bool has_allocator = requires { typename X::allocator_type; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with typename.
 
 // The sequence reading over a run-time width under a compile-time capacity, built on the sequence adaptor.
-BOOST_AUTO_TEST_CASE(TheBoundedSequenceIsTheSequenceAdaptorOverInlineBlocks)
+BOOST_AUTO_TEST_CASE(TheInplaceSequenceIsTheSequenceAdaptorOverInlineBlocks)
 {
-        static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_block_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
-        static_assert(std::same_as<xstd::bit_bounded_vector<24>, xstd::basic_bit_bounded_vector<std::size_t, 24>>);
+        static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_block_container<xstd::bits::detail::inplace_blocks<std::uint8_t, 3>, 24>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
+        static_assert(std::same_as<xstd::bit_inplace_vector<24>, xstd::basic_bit_inplace_vector<std::size_t, 24>>);
 }
 
 // [inplace.vector.overview]/5 makes inplace_vector<T, 0> empty, and the packed one is too, over either storage.
@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(ACapacityOfNoughtIsAnEmptyType)
 {
 #ifndef _MSC_VER
         // The MSVC ABI gives a class whose members are all empty a byte of its own.
-        static_assert(std::is_empty_v<xstd::bit_bounded_vector<0>> and std::is_empty_v<xstd::basic_bit_bounded_vector<std::uint8_t, 0>>);
+        static_assert(std::is_empty_v<xstd::bit_inplace_vector<0>> and std::is_empty_v<xstd::basic_bit_inplace_vector<std::uint8_t, 0>>);
 #endif
 }
 
@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsAConstantOfTheTypeAndTheWidthAFunction)
 {
         static_assert(std::same_as<decltype(T::capacity), std::integral_constant<std::size_t, 24> const>);
         static_assert(std::same_as<decltype(T::max_size), std::integral_constant<std::size_t, 24> const>);
-        static_assert(std::same_as<decltype(xstd::bit_bounded_vector<0>::capacity), std::integral_constant<std::size_t, 0> const>);
+        static_assert(std::same_as<decltype(xstd::bit_inplace_vector<0>::capacity), std::integral_constant<std::size_t, 0> const>);
         // NOLINTBEGIN(readability-static-accessed-through-instance): the call through an object is what is checked.
         static_assert(std::same_as<decltype(T::capacity()), T::size_type>);
         static_assert(std::same_as<decltype(T::max_size()), T::size_type>);
@@ -107,10 +107,10 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsAConstantOfTheTypeAndTheWidthAFunction)
 // N is the capacity exactly, as std::inplace_vector<bool, N>'s is, and the width moves under it.
 BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 {
-        static_assert(xstd::basic_bit_bounded_vector<std::uint8_t, 9>::capacity() == 9UZ);
+        static_assert(xstd::basic_bit_inplace_vector<std::uint8_t, 9>::capacity() == 9UZ);
 #ifdef TEST_HAS_INPLACE_VECTOR
 
-        static_assert(xstd::basic_bit_bounded_vector<std::uint8_t, 9>::capacity() == std::inplace_vector<bool, 9>::capacity());
+        static_assert(xstd::basic_bit_inplace_vector<std::uint8_t, 9>::capacity() == std::inplace_vector<bool, 9>::capacity());
 
 #endif
 
@@ -134,13 +134,13 @@ BOOST_AUTO_TEST_CASE(TheCapacityIsTheRequestedOneExactly)
 // Distinct capacities are distinct types, and bit_align rounds one up to whole blocks as it does a fixed width.
 BOOST_AUTO_TEST_CASE(TheCapacityIsPartOfTheType)
 {
-        static_assert(not std::same_as<xstd::basic_bit_bounded_vector<std::uint8_t, 9>, xstd::basic_bit_bounded_vector<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::bit_align<xstd::basic_bit_bounded_vector<std::uint8_t, 9>>, xstd::basic_bit_bounded_vector<std::uint8_t, 16>>);
-        static_assert(std::same_as<xstd::bit_align<xstd::bit_bounded_vector<9>>, xstd::bit_bounded_vector<std::numeric_limits<std::size_t>::digits>>);
-        static_assert(std::same_as<xstd::bit_least<xstd::bit_bounded_vector<9>>, xstd::basic_bit_bounded_vector<std::uint16_t, 9>>);
+        static_assert(not std::same_as<xstd::basic_bit_inplace_vector<std::uint8_t, 9>, xstd::basic_bit_inplace_vector<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::bit_align<xstd::basic_bit_inplace_vector<std::uint8_t, 9>>, xstd::basic_bit_inplace_vector<std::uint8_t, 16>>);
+        static_assert(std::same_as<xstd::bit_align<xstd::bit_inplace_vector<9>>, xstd::bit_inplace_vector<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::bit_least<xstd::bit_inplace_vector<9>>, xstd::basic_bit_inplace_vector<std::uint16_t, 9>>);
 
         // Named by its storage alone, the container holds every bit of it: one storage, however it is spelled.
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_bounded_vector<std::uint8_t, 16>>, xstd::bits::detail::bit_block_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 2>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_inplace_vector<std::uint8_t, 16>>, xstd::bits::detail::bit_block_container<xstd::bits::detail::inplace_blocks<std::uint8_t, 2>>>);
 }
 
 // Every position, densely, agreeing with the subscript -- and not a contiguous range, which no proxy sequence can be.
@@ -158,11 +158,11 @@ BOOST_AUTO_TEST_CASE(ItYieldsEveryPosition)
 // A capacity of nought takes nothing: an empty source leaves it empty, and any other throws std::bad_alloc.
 BOOST_AUTO_TEST_CASE(ACapacityOfNoughtTakesOnlyAnEmptySource)
 {
-        using Z              = xstd::basic_bit_bounded_vector<std::uint8_t, 0>;
+        using Z              = xstd::basic_bit_inplace_vector<std::uint8_t, 0>;
         auto const none      = std::vector<bool>();
         auto const some      = std::vector<bool>({true});
-        auto const no_bits   = xstd::basic_bit_bounded_vector<std::uint8_t, 9>();
-        auto const some_bits = xstd::basic_bit_bounded_vector<std::uint8_t, 9>({true});
+        auto const no_bits   = xstd::basic_bit_inplace_vector<std::uint8_t, 9>();
+        auto const some_bits = xstd::basic_bit_inplace_vector<std::uint8_t, 9>({true});
         BOOST_CHECK(Z(none.begin(), none.end()).empty());
         BOOST_CHECK_THROW(static_cast<void>(Z(some.begin(), some.end())), std::bad_alloc);
 
@@ -179,7 +179,7 @@ BOOST_AUTO_TEST_CASE(ACapacityOfNoughtTakesOnlyAnEmptySource)
 // rotate and reverse at every width through three blocks, and at whole and partial ones up to the capacity.
 BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDo)
 {
-        using V            = xstd::basic_bit_bounded_vector<std::uint8_t, 130>;
+        using V            = xstd::basic_bit_inplace_vector<std::uint8_t, 130>;
         auto disagreements = 0;
         for (auto const n : std::views::iota(0UZ, 18UZ)) {
                 disagreements += test::sequence::permutation_sweep(V(n));
@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDo)
         BOOST_CHECK_EQUAL(disagreements, 0);
 
         // A capacity of nought has nothing to move.
-        auto z = xstd::basic_bit_bounded_vector<std::uint8_t, 0>();
+        auto z = xstd::basic_bit_inplace_vector<std::uint8_t, 0>();
         xstd::bit_rotate(z, z.begin());
         xstd::bit_reverse(z);
         BOOST_CHECK(z.empty());

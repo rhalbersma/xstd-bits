@@ -14,9 +14,9 @@
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>    // bit_includes
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp>  // bit_intersects
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp> // bit_mask_mapping
-#include <xstd/bits/bit_set/bit_bounded_set.hpp>       // basic_bit_bounded_set
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>         // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_flag_mapping.hpp>      // bit_flag_mapping
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>       // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>       // bit_key_mapping, enum_traits
 #include <xstd/bits/bit_set/bit_set.hpp>               // basic_bit_set, bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>          // bit_set_view
@@ -482,7 +482,7 @@ enum class flag : std::uint8_t
 
 // Every owning column over one closed mapping, as wide as its keys: a width, the heap, a capacity and inline blocks.
 template<class Key, std::size_t N, class KeyMapping = xstd::bit_key_mapping<Key>>
-using closed_columns = std::tuple<xstd::basic_bit_fixed_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::uint8_t, KeyMapping>, xstd::basic_bit_bounded_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_small_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::uint8_t, KeyMapping, std::greater<>>>;
+using closed_columns = std::tuple<xstd::basic_bit_fixed_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::uint8_t, KeyMapping>, xstd::basic_bit_inplace_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_small_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::uint8_t, KeyMapping, std::greater<>>>;
 
 // A range from zero with padding, one from a negative value, a list with gaps, a list across zero, and one-bit values.
 using closed_owners = decltype(std::tuple_cat(std::declval<closed_columns<test::set::day, 5UZ>>(), std::declval<closed_columns<test::set::level, 3UZ>>(), std::declval<closed_columns<test::set::piece, 6UZ>>(), std::declval<closed_columns<test::set::sign, 3UZ>>(), std::declval<closed_columns<flag, 6UZ, xstd::bit_flag_mapping<flag, 6UZ>>>()));
@@ -930,7 +930,7 @@ template<class Compare>
 constexpr bool fixed_takes = requires { typename xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 8, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
 
 template<class Compare>
-constexpr bool bounded_takes = requires { typename xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 8, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+constexpr bool inplace_takes = requires { typename xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 8, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
 
 template<class Compare>
 constexpr bool small_takes = requires { typename xstd::basic_bit_small_set<std::size_t, std::uint8_t, 8, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
@@ -939,10 +939,10 @@ template<class Compare>
 constexpr bool dynamic_takes = requires { typename xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
 
 template<class Compare>
-constexpr bool every_owner_takes = fixed_takes<Compare> and bounded_takes<Compare> and small_takes<Compare> and dynamic_takes<Compare>;
+constexpr bool every_owner_takes = fixed_takes<Compare> and inplace_takes<Compare> and small_takes<Compare> and dynamic_takes<Compare>;
 
 template<class Compare>
-constexpr bool no_owner_takes = not fixed_takes<Compare> and not bounded_takes<Compare> and not small_takes<Compare> and not dynamic_takes<Compare>;
+constexpr bool no_owner_takes = not fixed_takes<Compare> and not inplace_takes<Compare> and not small_takes<Compare> and not dynamic_takes<Compare>;
 
 // A set's mask as 64-bit blocks, lowest first, whatever its own block.
 template<class Set>
@@ -1199,7 +1199,7 @@ BOOST_AUTO_TEST_CASE(DisjointIsNotIntersectsAndTheSupersetIsTheSubsetReadTheOthe
         for (auto const width : std::views::iota(0UZ, 7UZ)) {
                 BOOST_CHECK_EQUAL(query_mismatches_over_pairs<xstd::bit_fixed_set<6>>(width), 0UZ);
                 BOOST_CHECK_EQUAL(query_mismatches_over_pairs<small_descending_fixed>(width), 0UZ);
-                BOOST_CHECK_EQUAL(query_mismatches_over_pairs<xstd::bit_bounded_set<6>>(width), 0UZ);
+                BOOST_CHECK_EQUAL(query_mismatches_over_pairs<xstd::bit_inplace_set<6>>(width), 0UZ);
                 BOOST_CHECK_EQUAL(query_mismatches_over_pairs<xstd::bit_set>(width), 0UZ);
                 BOOST_CHECK_EQUAL(query_mismatches_over_pairs<small_descending_set>(width), 0UZ);
                 BOOST_CHECK_EQUAL(query_mismatches_over_pairs<xstd::bit_small_set<6>>(width), 0UZ);

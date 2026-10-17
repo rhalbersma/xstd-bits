@@ -9,7 +9,7 @@
 #include <test/for_each_type.hpp>                // for_each_type
 #include <xstd/bits/bit_algorithm/bit_equal.hpp> // bit_equal
 #include <xstd/bits/bit_array.hpp>               // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_vector.hpp>      // basic_bit_bounded_vector
+#include <xstd/bits/bit_inplace_vector.hpp>      // basic_bit_inplace_vector
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>   // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp> // bit_key_mapping
 #include <xstd/bits/bit_set/bit_set.hpp>         // bit_set
@@ -108,7 +108,7 @@ BOOST_AUTO_TEST_CASE(WindowsAndViewsCompareTheirOwnElements)
 // A capacity of nought against a run-time width that holds bools: the sizes still decide.
 BOOST_AUTO_TEST_CASE(ZeroCapacityAgainstARunTimeWidth)
 {
-        auto const none = xstd::basic_bit_bounded_vector<std::uint8_t, 0>();
+        auto const none = xstd::basic_bit_inplace_vector<std::uint8_t, 0>();
         BOOST_CHECK(agrees(none, xstd::bit_vector()) and agrees(none, xstd::bit_vector(1UZ)));
 }
 
