@@ -21,6 +21,6 @@ on:
 jobs:
   # All three rungs. C2976 went when the views became class templates with their own deduction guides, and the two workarounds the rung had paid for -- decay_copy in place of auto(x), one typename on a constrained parameter -- are back, so MSVC 17 builds this again.
   msvc:
-    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@170191bd9ab421d871b53fb67682376a2695d8a9 # v0.13.0
+    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@0e9948a4bd9f844797ce5b1c9b4c915a94cd665a # main after rhalbersma/cpp-ci#68, whose install-gcc fails its step when the PPA did not serve the compiler
     with:
       tiers: stable,qualification,development

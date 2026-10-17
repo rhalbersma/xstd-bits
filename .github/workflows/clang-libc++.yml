@@ -21,11 +21,11 @@ on:
 jobs:
   # The full ladder; the C++23 range adaptors libc++ lacks are no longer used, so all six legs pass.
   clang_libcxx:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@170191bd9ab421d871b53fb67682376a2695d8a9 # v0.13.0
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@0e9948a4bd9f844797ce5b1c9b4c915a94cd665a # main after rhalbersma/cpp-ci#68, whose install-gcc fails its step when the PPA did not serve the compiler
 
   # A release against libc++ in its fast hardening mode, the one meant for production: XSTD_BITS_ASSERT follows it on.
   hardened:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@170191bd9ab421d871b53fb67682376a2695d8a9 # v0.13.0
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@0e9948a4bd9f844797ce5b1c9b4c915a94cd665a # main after rhalbersma/cpp-ci#68, whose install-gcc fails its step when the PPA did not serve the compiler
     with:
       tiers: stable
       build_types: Release
