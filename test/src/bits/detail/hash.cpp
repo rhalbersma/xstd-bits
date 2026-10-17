@@ -15,7 +15,7 @@
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
 #include <xstd/bits/from_blocks.hpp>                // from_blocks
-#include <xstd/misc/ext/boost/hash2.hpp>            // hasher
+#include <xstd/misc/functional/hash.hpp>            // hash
 #include <boost/hash2/flavor.hpp>                   // big_endian_flavor, default_flavor, little_endian_flavor
 #include <boost/hash2/fnv1a.hpp>                    // fnv1a_64
 #include <boost/hash2/get_integral_result.hpp>      // get_integral_result
@@ -102,7 +102,7 @@ template<class Hash, class T, class... Seed>
 [[nodiscard]] auto xstd_digest(T const& v, Seed... seeds)
         -> std::size_t
 {
-        auto const hasher = xstd::hasher<Hash>(seeds...);
+        auto const hasher = xstd::hash<T, Hash>(seeds...);
         return hasher(v);
 }
 
@@ -182,8 +182,8 @@ BOOST_AUTO_TEST_CASE(EqualValuesHashEqualUnderAChosenAlgorithm)
         BOOST_CHECK(xstd_digest<boost::hash2::xxhash_64>(lhs) != xstd_digest<boost::hash2::xxhash_64>(other));
 }
 
-// Every owner and view hashes through xstd::hasher as Hash2 hashes it, under the algorithm and the seed it holds.
-BOOST_AUTO_TEST_CASE(XstdHasherRunsTheAlgorithmItIsGiven)
+// Every owner and view hashes through xstd::hash as Hash2 hashes it, under the algorithm and the seed it holds.
+BOOST_AUTO_TEST_CASE(XstdHashRunsTheAlgorithmItIsGiven)
 {
         auto const check = []<class T>(T const& v) -> void {
                 BOOST_CHECK_EQUAL(xstd_digest<boost::hash2::siphash_64>(v), algorithm_digest(boost::hash2::siphash_64(), v));
@@ -213,8 +213,8 @@ BOOST_AUTO_TEST_CASE(ASeededSipHashKeysAnUnorderedContainer)
                 }
         };
         auto const fill_all = [&]<class T>(std::initializer_list<T> values) -> void {
-                fill.template operator()<T, xstd::hasher<boost::hash2::siphash_64>, std::unordered_set>(values);
-                fill.template operator()<T, xstd::hasher<boost::hash2::siphash_64>, boost::unordered_flat_set>(values);
+                fill.template operator()<T, xstd::hash<T, boost::hash2::siphash_64>, std::unordered_set>(values);
+                fill.template operator()<T, xstd::hash<T, boost::hash2::siphash_64>, boost::unordered_flat_set>(values);
                 fill.template operator()<T, xstd::bit_hash<T, boost::hash2::siphash_64>, std::unordered_set>(values);
                 fill.template operator()<T, xstd::bit_hash<T, boost::hash2::siphash_64>, boost::unordered_flat_set>(values);
         };
