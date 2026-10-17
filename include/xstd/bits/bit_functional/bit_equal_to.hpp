@@ -8,7 +8,7 @@
 
 #include <xstd/bits/bit_algorithm/bit_equal.hpp> // bit_equal
 
-// The equality bit_hasher hashes for: equal bits whatever blocks or storage hold them, so lookups cross containers.
+// The equality bit_hash hashes for: equal bits whatever blocks or storage hold them, so lookups cross containers.
 namespace xstd {
 
 // std::equal_to<> through xstd::bit_equal, constrained on the call itself so the two cannot drift: transparent.

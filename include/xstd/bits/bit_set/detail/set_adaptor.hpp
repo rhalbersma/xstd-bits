@@ -10,7 +10,7 @@
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>       // bit_index_mapping
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp>        // bit_mask_mapping
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
-#include <xstd/bits/bit_functional/bit_hasher.hpp>            // bit_hasher
+#include <xstd/bits/bit_functional/bit_hash.hpp>              // bit_hash
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>              // bit_key_mapping
 #include <xstd/bits/bit_set/detail/is_key.hpp>                // is_key
 #include <xstd/bits/detail/adapted_bits.hpp>                  // adapted_bits
@@ -1431,14 +1431,14 @@ struct formatter<R, CharT> : formatter<typename R::value_type, CharT>
         }
 };
 
-// Owned or viewed, as std::string_view hashes and std::set does not: the bits, by bit_hasher.
+// Owned or viewed, as std::string_view hashes and std::set does not: the bits, by bit_hash.
 template<class Bits, xstd::bits::detail::storage Store, class Derived, class Key, class KeyMapping, class Compare>
 struct hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>>
 {
         [[nodiscard]] constexpr auto operator()(xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& v) const noexcept
                 -> std::size_t
         {
-                return xstd::bit_hasher<boost::hash2::xxhash_64>()(v);
+                return xstd::bit_hash<boost::hash2::xxhash_64>()(v);
         }
 };
 

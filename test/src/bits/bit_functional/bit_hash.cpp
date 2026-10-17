@@ -6,7 +6,7 @@
 #include <test/block_types.hpp>                     // all_block_types
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <xstd/bits/bit_array.hpp>                  // bit_array
-#include <xstd/bits/bit_functional/bit_hasher.hpp>  // bit_hash_append, bit_hasher
+#include <xstd/bits/bit_functional/bit_hash.hpp>    // bit_hash, bit_hash_append
 #include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
@@ -22,6 +22,7 @@
 #include <boost/hash2/get_integral_result.hpp>      // get_integral_result
 #include <boost/hash2/hash_append.hpp>              // hash_append, hash_append_size
 #include <boost/hash2/hash_append_fwd.hpp>          // hash_append_tag
+#include <boost/hash2/sha2.hpp>                     // sha2_256
 #include <boost/hash2/siphash.hpp>                  // siphash_64
 #include <boost/hash2/xxhash.hpp>                   // xxhash_64
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
@@ -38,7 +39,7 @@
 #include <vector>                                   // vector
 
 // The bits as bytes: one string whatever blocks hold it, one update wherever the storage is that string.
-BOOST_AUTO_TEST_SUITE(BitHasher)
+BOOST_AUTO_TEST_SUITE(BitHash)
 
 namespace {
 
@@ -156,7 +157,7 @@ template<class T>
         return x;
 }
 
-// Fixed so that a failure reruns, and named as bit_hasher names its parameter, so MSVC checks it for C4459.
+// Fixed so that a failure reruns, and named as bit_hash names its parameter, so MSVC checks it for C4459.
 constexpr auto seed = std::uint64_t{0x9E37'79B9'7F4A'7C15};
 
 // The positions a long set holds: past the first block, across 256 bytes and up to its last position.
@@ -291,7 +292,7 @@ BOOST_AUTO_TEST_CASE(ARunTimeSetHashesEqualAtEveryWidth)
         BOOST_CHECK(narrow == wide);
         BOOST_CHECK(record(narrow).message == record(wide).message);
 
-        auto const hasher = xstd::bit_hasher<boost::hash2::xxhash_64>();
+        auto const hasher = xstd::bit_hash<boost::hash2::xxhash_64>();
         BOOST_CHECK_EQUAL(hasher(xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 17>({1, 3})), hasher(narrow));
         BOOST_CHECK_EQUAL(hasher(xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 4'097>({1, 3})), hasher(narrow));
         BOOST_CHECK_EQUAL(hasher(xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9>({1, 3})), hasher(narrow));
@@ -465,16 +466,16 @@ BOOST_AUTO_TEST_CASE(PlanesHashAlikeInAConstantExpression)
 }
 
 // bit_hash_append into H, as xstd::hasher is hash_append into it: seeded as H is, and transparent.
-BOOST_AUTO_TEST_CASE(TheHasherIsSeededAndTransparent)
+BOOST_AUTO_TEST_CASE(TheHashIsSeededAndTransparent)
 {
-        static_assert(std::same_as<xstd::bit_hasher<>::is_transparent, void>);
-        static_assert(std::is_nothrow_default_constructible_v<xstd::bit_hasher<boost::hash2::siphash_64>>);
+        static_assert(std::same_as<xstd::bit_hash<>::is_transparent, void>);
+        static_assert(std::is_nothrow_default_constructible_v<xstd::bit_hash<boost::hash2::siphash_64>>);
 
         auto const value      = xstd::bit_fixed_set<100>({1, 3, 99});
         auto const seed_bytes = std::array<unsigned char, 4>{1, 2, 3, 4};
-        auto const unseeded   = xstd::bit_hasher<boost::hash2::siphash_64>();
-        auto const seeded     = xstd::bit_hasher<boost::hash2::siphash_64>(seed);
-        auto const keyed      = xstd::bit_hasher<boost::hash2::siphash_64>(seed_bytes.data(), seed_bytes.size());
+        auto const unseeded   = xstd::bit_hash<boost::hash2::siphash_64>();
+        auto const seeded     = xstd::bit_hash<boost::hash2::siphash_64>(seed);
+        auto const keyed      = xstd::bit_hash<boost::hash2::siphash_64>(seed_bytes.data(), seed_bytes.size());
         BOOST_CHECK(unseeded(value) != seeded(value));
         BOOST_CHECK(seeded(value) != keyed(value));
 
@@ -492,15 +493,30 @@ BOOST_AUTO_TEST_CASE(TheHasherIsSeededAndTransparent)
         BOOST_CHECK_EQUAL(unseeded(alternating(xstd::basic_bit_inplace_vector<std::uint64_t, 256>(130))), unseeded(alternating(xstd::bit_vector(130))));
 
         // xxHash by default, as std::hash runs it.
-        BOOST_CHECK_EQUAL(xstd::bit_hasher()(value), xstd::bit_hasher<boost::hash2::xxhash_64>()(value));
-        BOOST_CHECK_EQUAL(xstd::bit_hasher()(value), std::hash<xstd::bit_fixed_set<100>>()(value));
+        BOOST_CHECK_EQUAL(xstd::bit_hash()(value), xstd::bit_hash<boost::hash2::xxhash_64>()(value));
+        BOOST_CHECK_EQUAL(xstd::bit_hash()(value), std::hash<xstd::bit_fixed_set<100>>()(value));
 
         // The seeds reach the algorithm, here one that keeps the message and returns its length.
         auto expected = recorder();
         xstd::bit_hash_append(expected, boost::hash2::default_flavor(), value);
         BOOST_CHECK_EQUAL(expected.result(), 13UZ);
-        BOOST_CHECK_EQUAL(xstd::bit_hasher<recorder>(seed)(value), boost::hash2::get_integral_result<std::size_t>(expected));
-        BOOST_CHECK_EQUAL(xstd::bit_hasher<recorder>(seed_bytes.data(), seed_bytes.size())(value), boost::hash2::get_integral_result<std::size_t>(expected));
+        BOOST_CHECK_EQUAL(xstd::bit_hash<recorder>(seed)(value), boost::hash2::get_integral_result<std::size_t>(expected));
+        BOOST_CHECK_EQUAL(xstd::bit_hash<recorder>(seed_bytes.data(), seed_bytes.size())(value), boost::hash2::get_integral_result<std::size_t>(expected));
+}
+
+// digest is the algorithm's whole result over the bits, of which the call operator keeps a std::size_t's worth.
+BOOST_AUTO_TEST_CASE(TheDigestIsTheWholeResultTheCallOperatorFolds)
+{
+        auto const value = xstd::bit_fixed_set<100>({1, 3, 99});
+        auto h           = boost::hash2::sha2_256();
+        xstd::bit_hash_append(h, boost::hash2::default_flavor(), value);
+        auto folded = h;
+        BOOST_CHECK(xstd::bit_hash<boost::hash2::sha2_256>().digest(value) == h.result());
+        BOOST_CHECK_EQUAL(xstd::bit_hash<boost::hash2::sha2_256>()(value), boost::hash2::get_integral_result<std::size_t>(folded));
+
+        // Equal bits, equal digests, whatever blocks hold them.
+        BOOST_CHECK(xstd::bit_hash<boost::hash2::sha2_256>().digest(xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 100>({1, 3, 99})) == xstd::bit_hash<boost::hash2::sha2_256>().digest(value));
+        static_assert(std::same_as<decltype(xstd::bit_hash<boost::hash2::sha2_256>().digest(value)), boost::hash2::sha2_256::result_type>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

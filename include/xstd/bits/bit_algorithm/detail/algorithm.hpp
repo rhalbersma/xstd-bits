@@ -67,7 +67,7 @@ template<class R>
         }
 }
 
-// Two of ours of one reading that bit_hasher keeps apart only where their values differ: one width kind, one width.
+// Two of ours of one reading that bit_hash keeps apart only where their values differ: one width kind, one width.
 template<class R1, class R2>
 concept comparable_readings = ((reads_bools<R1> and reads_bools<R2>) or same_keys<R1, R2>) and static_width<R1>() == static_width<R2>();
 

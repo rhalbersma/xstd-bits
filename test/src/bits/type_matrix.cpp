@@ -6,7 +6,7 @@
 #include <test/block_types.hpp>                            // all_block_types
 #include <xstd/bits/bit_array.hpp>                         // basic_bit_array
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp>   // bit_convertible_to
-#include <xstd/bits/bit_functional/bit_hasher.hpp>         // bit_hasher
+#include <xstd/bits/bit_functional/bit_hash.hpp>           // bit_hash
 #include <xstd/bits/bit_inplace_vector.hpp>                // basic_bit_inplace_vector
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>             // basic_bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>           // basic_bit_inplace_set
@@ -78,7 +78,7 @@ constexpr auto column_names = std::array<std::string_view, 19>{
         "equality_comparable",
         "three_way_comparable",
         "std::hash",
-        "bit_hasher",
+        "bit_hash",
         "formattable",
         "random_access_range",
         "bidirectional_range",
@@ -106,7 +106,7 @@ template<class Block, class T>
                 std::equality_comparable<T>,
                 std::three_way_comparable<T>,
                 requires (T const& t) { std::hash<U>{}(t); },
-                requires (T const& t) { xstd::bit_hasher<>{}(t); },
+                requires (T const& t) { xstd::bit_hash<>{}(t); },
                 std::formattable<U, char>,
                 std::ranges::random_access_range<T>,
                 std::ranges::bidirectional_range<T>,

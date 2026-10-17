@@ -134,7 +134,7 @@ target_sources(
         include/xstd/bits/bit_inplace_vector.hpp
         include/xstd/bits/bit_functional.hpp
         include/xstd/bits/bit_functional/bit_equal_to.hpp
-        include/xstd/bits/bit_functional/bit_hasher.hpp
+        include/xstd/bits/bit_functional/bit_hash.hpp
         include/xstd/bits/bit_set.hpp
         include/xstd/bits/bit_set/bit_inplace_set.hpp
         include/xstd/bits/bit_set/bit_enum_set.hpp

@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(ZeroCapacityAgainstARunTimeWidth)
         BOOST_CHECK(agrees(none, xstd::bit_vector()) and agrees(none, xstd::bit_vector(1UZ)));
 }
 
-// In a constant expression, and over two of one reading and one width kind alone, as bit_hasher keeps them apart.
+// In a constant expression, and over two of one reading and one width kind alone, as bit_hash keeps them apart.
 BOOST_AUTO_TEST_CASE(ComparesOneReadingAndOneWidthKindAlone)
 {
         static_assert(agrees(test::algorithm::patterned(xstd::bit_array<70>()), test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 70>())));

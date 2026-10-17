@@ -13,7 +13,7 @@
 #include <xstd/bits/bit_type_traits.hpp> // IWYU pragma: export; bit_align, bit_blocks_extent_v, bit_fast, bit_least, bit_rebind, bit_resize, bit_underlying, fast_block_t, least_block_t, underlying_block_t
 #include <xstd/bits/from_blocks.hpp>     // IWYU pragma: export; from_blocks, from_blocks_t
 #include <xstd/bits/bit.hpp>             // IWYU pragma: export; bit_convert
-#include <xstd/bits/bit_functional.hpp>  // IWYU pragma: export; bit_equal_to, bit_hash_append, bit_hasher
+#include <xstd/bits/bit_functional.hpp>  // IWYU pragma: export; bit_equal_to, bit_hash_append, bit_hash
 #include <xstd/bits/bit_algorithm.hpp>   // IWYU pragma: export; bit_advance, bit_all_of, bit_any_of, bit_copy, bit_copy_backward, bit_count, bit_disjoint, bit_distance, bit_equal, bit_fill, bit_find, bit_find_last, bit_for_each, bit_includes, bit_intersects, bit_is_partitioned, bit_is_sorted, bit_lexicographical_compare_three_way, bit_mismatch, bit_move, bit_next, bit_none_of, bit_partition, bit_partition_point, bit_prev, bit_reverse, bit_reverse_copy, bit_rotate, bit_rotate_copy, bit_set_difference, bit_set_intersection, bit_set_symmetric_difference, bit_set_union, bit_shift_left, bit_shift_right, bit_sort, bit_swap_ranges, bit_transform
 
 // The sequence reading.

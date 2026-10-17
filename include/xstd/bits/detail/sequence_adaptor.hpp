@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>             // bit_blocks
-#include <xstd/bits/bit_functional/bit_hasher.hpp>           // bit_hasher
+#include <xstd/bits/bit_functional/bit_hash.hpp>             // bit_hash
 #include <xstd/bits/detail/adapted_bits.hpp>                 // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/assert.hpp>                       // XSTD_BITS_ASSERT
@@ -1568,14 +1568,14 @@ struct formatter<R, CharT> : formatter<bool, CharT>
         }
 };
 
-// The owner's bits, by bit_hasher, where std::vector<bool> has a hash; a view no more than std::span has.
+// The owner's bits, by bit_hash, where std::vector<bool> has a hash; a view no more than std::span has.
 template<class Bits, xstd::bits::detail::window W, class Derived>
 struct hash<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived>>
 {
         [[nodiscard]] constexpr auto operator()(xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived> const& v) const noexcept
                 -> std::size_t
         {
-                return xstd::bit_hasher<boost::hash2::xxhash_64>()(v);
+                return xstd::bit_hash<boost::hash2::xxhash_64>()(v);
         }
 };
 

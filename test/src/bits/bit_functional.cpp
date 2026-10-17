@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_functional.hpp>        // bit_equal_to, bit_hash_append, bit_hasher
+#include <xstd/bits/bit_functional.hpp>        // bit_equal_to, bit_hash_append, bit_hash
 #include <xstd/bits/bit_set/bit_fixed_set.hpp> // basic_bit_fixed_set, bit_fixed_set
 #include <boost/hash2/flavor.hpp>              // default_flavor
 #include <boost/hash2/xxhash.hpp>              // xxhash_64
@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesTheEqualityAndTheHash)
         auto const x = xstd::bit_fixed_set<70>{1UZ, 65UZ};
         auto const y = xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 70>{1UZ, 65UZ};
         BOOST_CHECK(xstd::bit_equal_to()(x, y));
-        auto const hash = xstd::bit_hasher<>();
+        auto const hash = xstd::bit_hash<>();
         BOOST_CHECK_EQUAL(hash(x), hash(y));
         auto hx = boost::hash2::xxhash_64();
         auto hy = boost::hash2::xxhash_64();

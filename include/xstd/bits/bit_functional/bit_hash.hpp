@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_FUNCTIONAL_BIT_HASHER_HPP
-#define XSTD_BITS_BIT_FUNCTIONAL_BIT_HASHER_HPP
+#ifndef XSTD_BITS_BIT_FUNCTIONAL_BIT_HASH_HPP
+#define XSTD_BITS_BIT_FUNCTIONAL_BIT_HASH_HPP
 
 #include <xstd/bits/detail/hash.hpp>           // bit_hashable, bit_hashable_range, hash_append_bit_planes, hash_append_bit_string
 #include <xstd/misc/ext/boost/hash2.hpp>       // hash_algorithm
@@ -37,7 +37,7 @@ constexpr auto bit_hash_append(Hash& h, Flavor const& f, R const& r)
 
 // bit_hash_append into a copy of the algorithm H; xxHash by default, FNV-1a not carrying a last byte's high bits down.
 template<xstd::hash_algorithm H = boost::hash2::xxhash_64>
-class bit_hasher
+class bit_hash
 {
         H m_prototype{};
 
@@ -45,21 +45,21 @@ public:
         // Equal bits hash equal whatever blocks or storage hold them, so a lookup may cross containers of one reading.
         using is_transparent = void;
 
-        [[nodiscard]] bit_hasher() = default;
+        [[nodiscard]] bit_hash() = default;
 
         // MSVC checks C4459 as it instantiates the template, so any namespace-scope seed a consumer declares trips it.
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4459)
 #endif
-        [[nodiscard]] constexpr explicit bit_hasher(std::uint64_t seed)
+        [[nodiscard]] constexpr explicit bit_hash(std::uint64_t seed)
                 : m_prototype(seed)
         {}
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 
-        [[nodiscard]] constexpr bit_hasher(unsigned char const* p, std::size_t n)
+        [[nodiscard]] constexpr bit_hash(unsigned char const* p, std::size_t n)
                 : m_prototype(p, n)
         {}
 
@@ -68,12 +68,30 @@ public:
         [[nodiscard]] constexpr auto operator()(T const& v) const
                 -> std::size_t
         {
+                auto h = appended(v);
+                return boost::hash2::get_integral_result<std::size_t>(h);
+        }
+
+        // The algorithm's whole result, of which the call operator keeps a std::size_t's worth.
+        template<class T>
+                requires bits::detail::bit_hashable<T> or bits::detail::bit_hashable_range<T>
+        [[nodiscard]] constexpr auto digest(T const& v) const
+                -> typename H::result_type
+        {
+                return appended(v).result();
+        }
+
+private:
+        template<class T>
+        [[nodiscard]] constexpr auto appended(T const& v) const
+                -> H
+        {
                 auto h = m_prototype;
                 xstd::bit_hash_append(h, boost::hash2::default_flavor(), v);
-                return boost::hash2::get_integral_result<std::size_t>(h);
+                return h;
         }
 };
 
 } // namespace xstd
 
-#endif // XSTD_BITS_BIT_FUNCTIONAL_BIT_HASHER_HPP
+#endif // XSTD_BITS_BIT_FUNCTIONAL_BIT_HASH_HPP

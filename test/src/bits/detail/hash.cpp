@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_functional/bit_hasher.hpp>  // bit_hasher
+#include <xstd/bits/bit_functional/bit_hash.hpp>    // bit_hash
 #include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
@@ -90,7 +90,7 @@ template<class Hash, class T>
 [[nodiscard]] auto bit_digest(T const& v)
         -> std::size_t
 {
-        auto const hasher = xstd::bit_hasher<Hash>();
+        auto const hasher = xstd::bit_hash<Hash>();
         return hasher(v);
 }
 
@@ -138,7 +138,7 @@ template<class T>
 } // namespace
 
 // std::hash is the packed hasher at xxHash, whatever the length: FNV-1a would leave a last byte's high bits out.
-BOOST_AUTO_TEST_CASE(TheDefaultIsTheBitHasherAtXxhash)
+BOOST_AUTO_TEST_CASE(TheDefaultIsTheBitHashAtXxhash)
 {
         auto const fixed   = xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 200>({1, 64, 199});
         auto const growing = dynamic_set({1, 3, 63});
@@ -215,8 +215,8 @@ BOOST_AUTO_TEST_CASE(ASeededSipHashKeysAnUnorderedContainer)
         auto const fill_all = [&]<class T>(std::initializer_list<T> values) -> void {
                 fill.template operator()<T, xstd::hasher<boost::hash2::siphash_64>, std::unordered_set>(values);
                 fill.template operator()<T, xstd::hasher<boost::hash2::siphash_64>, boost::unordered_flat_set>(values);
-                fill.template operator()<T, xstd::bit_hasher<boost::hash2::siphash_64>, std::unordered_set>(values);
-                fill.template operator()<T, xstd::bit_hasher<boost::hash2::siphash_64>, boost::unordered_flat_set>(values);
+                fill.template operator()<T, xstd::bit_hash<boost::hash2::siphash_64>, std::unordered_set>(values);
+                fill.template operator()<T, xstd::bit_hash<boost::hash2::siphash_64>, boost::unordered_flat_set>(values);
         };
 
         // Three values, two of them equal, so each table holds two.
