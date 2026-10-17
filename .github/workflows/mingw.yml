@@ -21,13 +21,13 @@ on:
 jobs:
   # No inputs: every rung. The WinLibs release lookup lives in cpp-ci's install-winlibs action now.
   mingw:
-    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@170191bd9ab421d871b53fb67682376a2695d8a9 # v0.13.0
+    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@0e9948a4bd9f844797ce5b1c9b4c915a94cd665a # main after rhalbersma/cpp-ci#68, whose install-gcc fails its step when the PPA did not serve the compiler
 
   # The same C++26 leg as gcc.yml's, over the other libstdc++ toolchain: no leg at C++23 holds the bounded column
   # in std::inplace_vector. The qualification rung is MinGW 16, this ladder having no development rung -- WinLibs
   # publishes no snapshot.
   mingw_cxx26:
-    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@170191bd9ab421d871b53fb67682376a2695d8a9 # v0.13.0
+    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@0e9948a4bd9f844797ce5b1c9b4c915a94cd665a # main after rhalbersma/cpp-ci#68, whose install-gcc fails its step when the PPA did not serve the compiler
     with:
       tiers: qualification
       cmake_args: -DXSTD_BITS_CXX_STANDARD=26

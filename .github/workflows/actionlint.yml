@@ -20,4 +20,4 @@ on:
 jobs:
   # New here; with almost every workflow a "uses" stub, a typo in an input name is most of what can go wrong.
   actionlint:
-    uses: rhalbersma/cpp-ci/.github/workflows/actionlint.yml@170191bd9ab421d871b53fb67682376a2695d8a9 # v0.13.0
+    uses: rhalbersma/cpp-ci/.github/workflows/actionlint.yml@0e9948a4bd9f844797ce5b1c9b4c915a94cd665a # main after rhalbersma/cpp-ci#68, whose install-gcc fails its step when the PPA did not serve the compiler
