@@ -20,7 +20,7 @@ on:
 jobs:
   # The last stub to arrive: the shared workflow could not express this library before cpp-ci v0.4.1.
   consumption:
-    uses: rhalbersma/cpp-ci/.github/workflows/consumption.yml@0e9948a4bd9f844797ce5b1c9b4c915a94cd665a # main after rhalbersma/cpp-ci#68, whose install-gcc fails its step when the PPA did not serve the compiler
+    uses: rhalbersma/cpp-ci/.github/workflows/consumption.yml@2ff8eb9caeedc95fea2329a73ee45ba33a2666a7 # main after rhalbersma/cpp-ci#69, whose dependency installs see the caller's vcpkg ports
     with:
       # CMakeLists.txt find_package()s boost_hash2 and boost_container unconditionally, so every configure here needs vcpkg.
       vcpkg: true
