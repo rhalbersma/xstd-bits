@@ -133,8 +133,13 @@ target_sources(
         include/xstd/bits/bit_concepts/sized_bit_index_mapping.hpp
         include/xstd/bits/bit_inplace_vector.hpp
         include/xstd/bits/bit_functional.hpp
+        include/xstd/bits/bit_functional/bit_compare_three_way.hpp
         include/xstd/bits/bit_functional/bit_equal_to.hpp
+        include/xstd/bits/bit_functional/bit_greater.hpp
+        include/xstd/bits/bit_functional/bit_greater_equal.hpp
         include/xstd/bits/bit_functional/bit_hash.hpp
+        include/xstd/bits/bit_functional/bit_less.hpp
+        include/xstd/bits/bit_functional/bit_less_equal.hpp
         include/xstd/bits/bit_functional/bit_not_equal_to.hpp
         include/xstd/bits/bit_set.hpp
         include/xstd/bits/bit_set/bit_inplace_set.hpp

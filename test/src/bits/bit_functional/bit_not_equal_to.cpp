@@ -47,7 +47,7 @@ template<class X>
 
 } // namespace
 
-// Over every pair of inputs of every set column of ours and its kind over the other Block: the negation of bit_equal_to.
+// Every pair of inputs of every set column of ours and its kind over the other Block: the negation of bit_equal_to.
 BOOST_AUTO_TEST_CASE(ItAnswersTheOppositeOfBitEqualTo)
 {
         test::for_each_type<test::algorithm::sets>([]<class X> -> void { BOOST_CHECK_EQUAL(violations(inputs<X>(), inputs<test::algorithm::partner_t<X>>()), 0); });
