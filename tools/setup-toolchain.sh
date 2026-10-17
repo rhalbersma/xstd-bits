@@ -148,7 +148,7 @@ fi
 "clang++-${CLANG_VERSION}" --version | head -1 || true
 "${HOME:-/root}/.local/bin/clang-format" --version || true
 "${CMAKE}" --version | head -1 || true
-"${HOME:-/root}/.local/bin/gcovr" --version | head -1 || true
+PATH="${HOME:-/root}/.local/bin:${PATH}" gcovr --version | head -1 || true
 echo "Boost ${BOOST_VERSION} in ${BOOST_PREFIX}"
 for compiler in "g++-${GCC_QUALIFICATION_VERSION}" "g++-${GCC_TRUNK_VERSION}" "clang++-${CLANG_QUALIFICATION_VERSION}" "clang++-${CLANG_TRUNK_VERSION}"; do
         "${compiler}" --version | head -1 || true
