@@ -11,6 +11,7 @@ This repository enforces its quality bar through CI rather than through review d
 - **No sanitizer failures.** The [Sanitizers workflow](.github/workflows/sanitizers.yml) runs ASan+LSan, UBSan and the implicit-conversion sanitizer, against both libstdc++ and libc++. Leak detection is on.
 - **The public headers stay self-sufficient.** Each header is compiled as its own translation unit (see `test/CMakeLists.txt`); don't rely on include order from another header.
 - **Every cited paragraph is inventoried, and every inventoried one is accounted for.** The [Audit workflow](.github/workflows/audit.yml) runs `python3 tools/audit.py`, which checks the paragraph inventories under [`doc/audit/`](doc/audit) against the citations under `test/`: an answered row needs a citation, a cited paragraph needs a row, and a paragraph not answered needs a note saying why.
+- **Every name an include's comment lists is used.** The same job runs `python3 tools/include_comments.py`, which fails on a name in an include's trailing comment that the file's code does not use, over `include/`, `test/`, `benchmark/`, `fuzz/` and `examples/`. `misc-include-cleaner` checks the include itself, and only over the public headers. An `IWYU pragma: export` or `IWYU pragma: keep` line lists what the include provides rather than what the file spells, and is exempt.
 - **Workflow files pass `actionlint`.** The [Actionlint workflow](.github/workflows/actionlint.yml) validates GitHub Actions syntax and expressions.
 - **The documented consumption methods work.** The [Consumption workflow](.github/workflows/consumption.yml) builds a consumer using `find_package`, `add_subdirectory`, and `FetchContent`.
 - **CodeQL analysis is clean.** The [CodeQL workflow](.github/workflows/codeql.yml) runs the C/C++ `security-extended` query suite.
@@ -162,7 +163,7 @@ The names to tick under branch protection, exactly as GitHub reports them:
 | :--- | :--- |
 | `actionlint / actionlint` | workflow syntax |
 | `apple_clang / all` | Xcode 16.4 and 26.6, Debug and Release |
-| `audit` | `tools/audit.py` over `doc/audit/` |
+| `audit` | `tools/audit.py` over `doc/audit/`, and `tools/include_comments.py` over the sources |
 | `clang / all` | Clang 22, 23, 24-SVN with libstdc++ |
 | `clang_cl / all` | clang-cl on VS 2022, 2026, 2026-Preview |
 | `clang_format / clang-format` | `clang-format --dry-run --Werror` against [`.clang-format`](.clang-format) |

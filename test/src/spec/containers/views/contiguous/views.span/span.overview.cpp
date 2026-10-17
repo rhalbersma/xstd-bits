@@ -11,7 +11,7 @@
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <concepts>                 // convertible_to, same_as
 #include <cstddef>                  // ptrdiff_t, size_t
-#include <iterator>                 // bidirectional_iterator, indirectly_writable, iter_reference_t, iter_value_t, random_access_iterator, reverse_iterator
+#include <iterator>                 // indirectly_writable, iter_reference_t, iter_value_t, random_access_iterator, reverse_iterator
 #include <ranges>                   // borrowed_range, contiguous_range, random_access_range, view
 #include <span>                     // dynamic_extent
 #include <type_traits>              // is_assignable_v, is_const_v, is_pointer_v, is_trivially_copyable_v, remove_const_t

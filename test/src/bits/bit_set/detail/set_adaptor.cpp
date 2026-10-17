@@ -29,7 +29,7 @@
 #include <array>                                       // array
 #include <bitset>                                      // bitset
 #include <compare>                                     // strong_ordering
-#include <concepts>                                    // copyable, equality_comparable, invocable, regular, same_as, totally_ordered
+#include <concepts>                                    // copyable, invocable, regular, same_as, totally_ordered
 #include <cstddef>                                     // ptrdiff_t, size_t
 #include <cstdint>                                     // uint8_t, uint32_t, uint64_t
 #include <functional>                                  // greater, greater_equal, less, less_equal, ranges::less

@@ -13,7 +13,7 @@
 #include <boost/test/unit_test.hpp>                    // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                   // equal, shift_right
 #include <concepts>                                    // same_as
-#include <cstddef>                                     // ptrdiff_t, size_t
+#include <cstddef>                                     // ptrdiff_t
 #include <ranges>                                      // begin, dangling, end, subrange
 #include <utility>                                     // declval, forward
 #include <vector>                                      // vector

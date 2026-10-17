@@ -19,6 +19,8 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesEveryTransformation)
         static_assert(xstd::bit_blocks_extent_v<std::array<std::uint64_t, 2>> == 128 and xstd::bit_blocks_extent_v<std::uint64_t> == 64);
         static_assert(std::is_same_v<xstd::least_block_t<9>, std::uint16_t> and std::is_same_v<xstd::fast_block_t<9>, std::uint_fast16_t>);
         static_assert(std::is_same_v<xstd::underlying_block_t<std::int16_t>, std::uint16_t>);
+        static_assert(std::is_same_v<xstd::bit_rebind<std::uint8_t, xstd::basic_bit_array<std::uint64_t, 9>>, xstd::basic_bit_array<std::uint8_t, 9>>);
+        static_assert(std::is_same_v<xstd::bit_resize<16, xstd::basic_bit_array<std::uint8_t, 9>>, xstd::basic_bit_array<std::uint8_t, 16>>);
         static_assert(std::is_same_v<xstd::bit_least<xstd::basic_bit_array<std::uint64_t, 9>>, xstd::basic_bit_array<std::uint16_t, 9>>);
         static_assert(std::is_same_v<xstd::bit_fast<xstd::basic_bit_array<std::uint64_t, 9>>, xstd::basic_bit_array<std::uint_fast16_t, 9>>);
         static_assert(std::is_same_v<xstd::bit_align<xstd::basic_bit_array<std::uint8_t, 9>>, xstd::basic_bit_array<std::uint8_t, 16>>);

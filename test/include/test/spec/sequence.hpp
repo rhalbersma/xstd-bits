@@ -10,7 +10,7 @@
 #include <test/dynamic.hpp>                         // dynamic
 #include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <test/sequence/factory.hpp>                // make_sequence, static_capacity, static_width, stripes
-#include <test/spec/input.hpp>                      // edge, exhaustive, key_vector, keyed, keyed_pair, memo, one, origin, rebuilt, two
+#include <test/spec/input.hpp>                      // edge, exhaustive, key_vector, keyed, keyed_pair, memo, one, rebuilt, two
 #include <test/spec/random.hpp>                     // block_digits_v, key_samples, keyed_samples, pair_samples, sequence_width
 #include <test/uint128.hpp>                         // TEST_HAS_UINT128, uint128
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array

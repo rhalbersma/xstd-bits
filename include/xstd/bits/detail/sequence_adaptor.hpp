@@ -11,13 +11,13 @@
 #include <xstd/bits/detail/adapted_bits.hpp>                 // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/assert.hpp>                       // XSTD_BITS_ASSERT
-#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, bit_block_container_type
+#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                  // three_way
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
 #include <xstd/bits/detail/non_volatile.hpp>                 // non_volatile
 #include <xstd/bits/detail/owner_members.hpp>                // owner_members
-#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
+#include <xstd/bits/detail/ownership.hpp>                    // owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ptr_t, storage_ref_t
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks_t
@@ -45,7 +45,7 @@
 #include <stdexcept>                                         // out_of_range
 #include <tuple>                                             // tuple_element, tuple_size
 #include <type_traits>                                       // bool_constant, conditional_t, false_type, integral_constant, is_const_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, remove_const_t, remove_cvref_t, remove_reference_t
-#include <utility>                                           // as_const, declval, forward, in_place, move, pair
+#include <utility>                                           // as_const, declval, forward, in_place, move
 
 // The sequence reading, [array] over a bit_block_container, owning it or referring to it.
 namespace xstd::bits::detail {

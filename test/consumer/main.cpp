@@ -5,7 +5,7 @@
 
 // The gate on the interface line.
 
-#include <xstd/bits.hpp>           // bit_array, bit_bounded_set, bit_bounded_valarray, bit_bounded_vector, bit_convert, bit_count, bit_fixed_set, bit_fixed_valarray, bit_set, bit_set_view, bit_span, bit_subspan, bit_valarray, bit_vector
+#include <xstd/bits.hpp>           // bit_array, bit_bounded_set, bit_bounded_valarray, bit_bounded_vector, bit_convert, bit_count, bit_fixed_set, bit_fixed_valarray, bit_set, bit_set_view, bit_span, bit_valarray, bit_vector
 #include <xstd/bits/ext/boost.hpp> // bit_small_set, bit_small_vector
 #include <array>                   // array
 #include <concepts>                // copyable, default_initializable, equality_comparable, regular, same_as, totally_ordered

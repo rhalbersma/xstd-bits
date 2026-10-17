@@ -12,7 +12,7 @@
 #include <concepts>                                      // copyable
 #include <cstddef>                                       // size_t
 #include <cstdint>                                       // uint8_t
-#include <valarray>                                      // gslice, valarray
+#include <valarray>                                      // valarray
 
 BOOST_AUTO_TEST_SUITE(BitGslice)
 

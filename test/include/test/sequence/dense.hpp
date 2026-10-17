@@ -7,7 +7,6 @@
 #define TEST_SEQUENCE_DENSE_HPP
 
 #include <boost/test/unit_test.hpp> // BOOST_CHECK_EQUAL
-#include <cstddef>                  // size_t
 #include <ranges>                   // contiguous_range
 
 // Its own header: the sequence ordering sweeps reach for bit_span and make_viewed, and this needs neither.

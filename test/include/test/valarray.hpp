@@ -14,7 +14,6 @@
 #include <xstd/bits/bit_algorithm/bit_none_of.hpp>         // bit_none_of
 #include <xstd/bits/bit_algorithm/bit_reverse.hpp>         // bit_reverse
 #include <xstd/bits/bit_algorithm/bit_rotate.hpp>          // bit_rotate
-#include <xstd/bits/bit_array.hpp>                         // basic_bit_array
 #include <xstd/bits/bit_span.hpp>                          // bit_span
 #include <xstd/bits/bit_valarray/bit_bounded_valarray.hpp> // basic_bit_bounded_valarray
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // basic_bit_fixed_valarray

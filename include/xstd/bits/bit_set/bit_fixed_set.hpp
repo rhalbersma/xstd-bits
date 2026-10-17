@@ -10,7 +10,7 @@
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp>        // bit_mask_mapping
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>              // bit_key_mapping
-#include <xstd/bits/bit_set/detail/set_adaptor.hpp>           // admits_width, disjoint, intersects, key_direction, set_adaptor
+#include <xstd/bits/bit_set/detail/set_adaptor.hpp>           // admits_width, key_direction, set_adaptor
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>    // bit_blocks_extent_v
 #include <xstd/bits/bit_type_traits/bit_least.hpp>            // least_block_t
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container

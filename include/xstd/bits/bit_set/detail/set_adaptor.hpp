@@ -16,13 +16,13 @@
 #include <xstd/bits/detail/adapted_bits.hpp>                  // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>           // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/assert.hpp>                        // XSTD_BITS_ASSERT
-#include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container, bit_block_container_type
+#include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                 // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                   // numeric_three_way, set_equal, three_way
 #include <xstd/bits/detail/hash.hpp>                          // hash_append_keys
 #include <xstd/bits/detail/non_volatile.hpp>                  // non_volatile
 #include <xstd/bits/detail/owner_members.hpp>                 // owner_members
-#include <xstd/bits/detail/ownership.hpp>                     // owned_bits_t, owned_storage, owner_of, owns, reads, set_reading_tag, storage, storage_access
+#include <xstd/bits/detail/ownership.hpp>                     // owned_storage, owner_of, owns, reads, set_reading_tag, storage, storage_access
 #include <xstd/bits/detail/storage_ptr.hpp>                   // storage_ptr_t, storage_ref_t
 #include <xstd/bits/from_blocks.hpp>                          // from_blocks_t
 #include <xstd/misc/concepts/specialization_of.hpp>           // specialization_of
@@ -30,7 +30,7 @@
 #include <boost/container_hash/is_range.hpp>                  // is_range
 #include <boost/hash2/hash_append_fwd.hpp>                    // hash_append_tag
 #include <boost/hash2/xxhash.hpp>                             // xxhash_64
-#include <algorithm>                                          // all_of, find_if, max, min, partition_point
+#include <algorithm>                                          // min, partition_point
 #include <cassert>                                            // assert
 #include <compare>                                            // strong_ordering
 #include <concepts>                                           // constructible_from, convertible_to, equality_comparable, same_as, totally_ordered
@@ -39,12 +39,12 @@
 #include <functional>                                         // greater, hash, less
 #include <initializer_list>                                   // initializer_list
 #include <iterator>                                           // bidirectional_iterator_tag, input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
-#include <ranges>                                             // begin, enable_borrowed_range, enable_view, end, input_range, iota, iota_view, range_reference_t, from_range_t, subrange, swap, transform
+#include <ranges>                                             // begin, enable_borrowed_range, enable_view, end, input_range, iota, iota_view, range_reference_t, from_range_t, subrange
 #include <source_location>                                    // source_location
 #include <span>                                               // dynamic_extent
 #include <stdexcept>                                          // out_of_range
-#include <type_traits>                                        // conditional_t, false_type, integral_constant, is_enum_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, remove_const_t, remove_cvref_t, remove_reference_t
-#include <utility>                                            // declval, forward, in_place, move, pair
+#include <type_traits>                                        // conditional_t, false_type, integral_constant, is_enum_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, remove_const_t, remove_cvref_t
+#include <utility>                                            // forward, in_place, move, pair
 
 // The set reading, [set] over a bit_block_container, owning it or referring to it.
 namespace xstd::bits::detail {

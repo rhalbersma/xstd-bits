@@ -7,7 +7,6 @@
 #include <xstd/bits/bit_set.hpp>    // bit_bounded_set, bit_enum_set, bit_find_mapping, bit_fixed_set, bit_flag_mapping, bit_flag_set, bit_key_mapping, bit_range_mapping, bit_set, bit_set_view, enum_traits
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <bitset>                   // bitset
-#include <cstddef>                  // size_t
 #include <ranges>                   // bidirectional_range
 #include <type_traits>              // is_base_of_v
 

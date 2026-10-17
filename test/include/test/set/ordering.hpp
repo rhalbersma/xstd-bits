@@ -10,7 +10,7 @@
 #include <xstd/bits/bit_set/bit_set_view.hpp> // bit_set_view
 #include <boost/test/unit_test.hpp>           // BOOST_CHECK_EQUAL
 #include <algorithm>                          // lexicographical_compare
-#include <compare>                            // is_gt, is_lt, strong_ordering
+#include <compare>                            // is_gt, is_lt
 #include <cstddef>                            // size_t
 #include <cstdint>                            // uint64_t
 #include <ranges>                             // iota

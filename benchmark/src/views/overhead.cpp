@@ -11,7 +11,7 @@
 #include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <benchmark/benchmark.h>                    // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
+#include <benchmark/benchmark.h>                    // DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
 #include <array>                                    // array
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint64_t

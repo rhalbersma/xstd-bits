@@ -27,7 +27,7 @@
 #include <cstdint>                                  // uint64_t, uint8_t
 #include <functional>                               // greater
 #include <format>                                   // formattable
-#include <iterator>                                 // iter_reference_t, iter_value_t, next, prev
+#include <iterator>                                 // iter_reference_t, iter_value_t, next
 #include <optional>                                 // optional
 #include <ranges>                                   // iota
 #include <set>                                      // set

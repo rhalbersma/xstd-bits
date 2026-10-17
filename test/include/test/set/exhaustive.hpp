@@ -11,7 +11,6 @@
 #include <array>                          // array
 #include <cassert>                        // assert
 #include <cstddef>                        // size_t
-#include <initializer_list>               // initializer_list
 #include <ranges>                         // iota, to
 #include <span>                           // dynamic_extent
 

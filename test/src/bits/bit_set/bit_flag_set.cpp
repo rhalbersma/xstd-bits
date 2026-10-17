@@ -28,7 +28,7 @@
 #include <array>                                        // array, to_array
 #include <bit>                                          // bit_cast, bit_floor, countr_zero, has_single_bit, popcount
 #include <bitset>                                       // bitset
-#include <compare>                                      // is_gt, is_lt, strong_ordering
+#include <compare>                                      // is_lt, strong_ordering
 #include <concepts>                                     // convertible_to, same_as
 #include <cstddef>                                      // size_t
 #include <cstdint>                                      // int64_t, int8_t, uint16_t, uint32_t, uint64_t, uint8_t

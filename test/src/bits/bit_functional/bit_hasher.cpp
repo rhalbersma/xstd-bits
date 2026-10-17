@@ -30,7 +30,7 @@
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint64_t, uint8_t
 #include <functional>                               // hash
-#include <initializer_list>                         // initializer_list
+#include <initializer_list>                         // IWYU pragma: keep; initializer_list
 #include <ranges>                                   // iota
 #include <span>                                     // span
 #include <tuple>                                    // tuple

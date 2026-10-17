@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit_valarray.hpp> // basic_bit_bounded_valarray, basic_bit_fixed_valarray, basic_bit_valarray, bit_bounded_valarray, bit_fixed_valarray, bit_gslice, bit_gslice_array, bit_indirect_array, bit_mask_array, bit_slice, bit_slice_array, bit_valarray
-#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK_EQUAL
 #include <concepts>                   // same_as
 #include <cstddef>                    // size_t
 #include <utility>                    // declval

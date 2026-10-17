@@ -6,7 +6,7 @@
 #include <test/algorithm/sequences.hpp>                // bools_of, for_each_sequence, offsets, patterned, sequences, striped_vector
 #include <test/for_each_type.hpp>                      // for_each_type
 #include <xstd/bits/bit_algorithm/bit_swap_ranges.hpp> // bit_swap_ranges
-#include <xstd/bits/bit_array.hpp>                     // basic_bit_array, bit_array
+#include <xstd/bits/bit_array.hpp>                     // bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>         // bit_fixed_set
 #include <xstd/bits/bit_span.hpp>                      // bit_span
 #include <xstd/bits/bit_vector.hpp>                    // bit_vector

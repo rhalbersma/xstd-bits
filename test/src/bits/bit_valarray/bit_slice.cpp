@@ -7,7 +7,7 @@
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp> // bit_fixed_valarray
 #include <xstd/bits/bit_valarray/bit_slice.hpp>          // bit_slice
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>       // bit_valarray
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <concepts>                                      // regular
 #include <type_traits>                                   // is_trivially_copyable_v
 #include <valarray>                                      // slice

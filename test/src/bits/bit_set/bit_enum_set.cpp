@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/enums.hpp>                       // chessman, day, listed_enums, nine, perm, piece, undeclared, wind
+#include <test/set/enums.hpp>                       // chessman, listed_enums, nine, perm, piece, undeclared, wind
 #include <test/set/lookup.hpp>                      // lookup_mismatches
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp> // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp> // bit_includes

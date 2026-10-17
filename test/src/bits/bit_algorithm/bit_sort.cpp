@@ -13,7 +13,7 @@
 #include <algorithm>                            // sort
 #include <concepts>                             // same_as
 #include <cstdint>                              // uint8_t
-#include <ranges>                               // begin, dangling, end
+#include <ranges>                               // dangling, end
 #include <utility>                              // declval, forward
 #include <vector>                               // vector
 

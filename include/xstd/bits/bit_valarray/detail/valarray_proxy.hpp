@@ -23,7 +23,7 @@
 #include <span>                                                    // span
 #include <type_traits>                                             // remove_cvref_t
 #include <utility>                                                 // forward
-#include <valarray>                                                // gslice, slice, valarray
+#include <valarray>                                                // valarray
 #include <vector>                                                  // vector
 
 // The positions [valarray.sub]'s four subscripts select, and the proxy that writes through them to its owner's blocks.

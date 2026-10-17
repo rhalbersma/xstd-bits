@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/sequence/ordering.hpp>               // ordering_agrees_with_vector_bool
-#include <test/sequence/rotation.hpp>               // permutation_sweep, permutes_ten_bits
+#include <test/sequence/rotation.hpp>               // permutation_sweep
 #include <xstd/bits/bit_algorithm/bit_reverse.hpp>  // bit_reverse
 #include <xstd/bits/bit_algorithm/bit_rotate.hpp>   // bit_rotate
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array

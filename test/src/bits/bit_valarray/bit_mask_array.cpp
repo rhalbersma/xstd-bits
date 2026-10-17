@@ -3,12 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/valarray.hpp>                               // check_equal, make, model, model_of, patterns, reference_array, reference_of, write, writes
+#include <test/valarray.hpp>                               // check_equal, make, model, model_of, patterns, reference_array, reference_of, writes
 #include <xstd/bits/bit_valarray/bit_bounded_valarray.hpp> // bit_bounded_valarray
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // bit_fixed_valarray
 #include <xstd/bits/bit_valarray/bit_mask_array.hpp>       // bit_mask_array
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>         // bit_valarray
-#include <boost/test/unit_test.hpp>                        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK_EQUAL, BOOST_TEST_CONTEXT
+#include <boost/test/unit_test.hpp>                        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <concepts>                                        // same_as
 #include <cstddef>                                         // size_t
 #include <ranges>                                          // iota
