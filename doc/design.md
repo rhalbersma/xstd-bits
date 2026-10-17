@@ -5799,6 +5799,28 @@ Notes:
 
 The **middle column** is what allocates nothing and yet carries a run-time width. Its blocks are a `std::inplace_vector` where the standard library provides one (`__cpp_lib_inplace_vector`) and a `boost::container::static_vector` elsewhere, so those two names exist everywhere; only over `std::inplace_vector` are they usable in a constant expression, which `XSTD_BITS_HAS_CONSTEXPR_INPLACE` says.
 
+**Every cell is cheap; the cells come in four tiers.** One `bit_block_container` over three storages is what
+makes the fixed and inplace cells nearly free here: each is the same adaptor over `std::array` or
+`std::inplace_vector` blocks, a header and its tests rather than a design of its own. That is a reason to provide
+them, not to standardize them all at once, should the committee prefer to add the cells in steps:
+
+- **Tier 1, a bit equivalent for each existing standard header:** `bit_array`, `bit_inplace_vector` and
+  `bit_vector` beside `std::array`, `std::inplace_vector` and `std::vector<bool>`, `bit_set` beside `std::set`,
+  and `bit_valarray` beside `std::valarray`.
+- **Tier 2, where `std::bitset<N>` code migrates:** `bit_fixed_set` takes a bitset used as a set of positions
+  ([migration.md](migration.md#stdbitsetn-as-a-set-of-positions)), and `bit_fixed_valarray` the bitwise operators
+  of one combined whole ([migration.md](migration.md#stdbitsetn-as-a-row-of-bool)).
+- **Tier 3, enumerations and flags:** `bit_enum_set` and `bit_flag_set` over `bit_key_mapping` and
+  `bit_flag_mapping`, the fixed set keyed by an enumeration or a bitmask type ([flag-types](#flag-types)).
+- **Tier 4, the remaining storages:** `bit_inplace_set` and `bit_inplace_valarray`, and the small-buffer columns
+  in `ext/boost/`, which have neither a standard counterpart nor bitset code to receive. Or, in their place, the
+  storage made pluggable ([#434](https://github.com/rhalbersma/xstd-bits/issues/434)): a `Blocks` parameter on
+  each `basic_` form under a public concept, as `std::flat_set` takes a `KeyContainer`, with every column one
+  default of it. Then a Tier 4 name is an alias over a standard `basic_` form, so the committee may decline to
+  name it and lose nothing: a user writes the alias.
+
+No tier depends on a later one, and each later cell is one more storage under the same adaptor.
+
 Ownership is deliberately **not** a fourth **column**. A view is not a fourth storage: it takes the shape of whatever it views, which is why the third row spans the same three columns as the two above it rather than standing beside them. `xstd::bit_subspan` is the one that stays out of the table, because it narrows a sequence to a window rather than choosing a reading. All of them are described under [retrofitting](#choosing-a-reading-over-blocks) below.
 
 ## Requirements for `set`-like behaviour
