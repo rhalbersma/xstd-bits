@@ -6,7 +6,7 @@
 
 # Runs the GitHub Actions ladders' Linux legs on what setup-toolchain.sh installs, so a change is green here before it
 # waits on CI's runners. Each leg does what its job does: configure, build and test the suite on one compiler, or run
-# clang-tidy, the format gate or the audits. Each leg works under build/ci-local/<leg>, logs to
+# clang-tidy, the coverage gate, the format gate or the audits. Each leg works under build/ci-local/<leg>, logs to
 # build/ci-local/<leg>.log, and the run ends in one line per leg.
 #
 #   tools/ci-local.sh                     every leg, one after another, each on every core
@@ -18,7 +18,7 @@
 # way.
 #
 # Not here, having no Linux equivalent: MSVC, clang-cl, MinGW, Apple Clang and Emscripten. Nor the sanitizer,
-# coverage, CodeQL, consumption, fuzzing and mutation jobs, whose own commands CONTRIBUTING.md gives.
+# CodeQL, consumption, fuzzing and mutation jobs, whose own commands CONTRIBUTING.md gives.
 
 set -uo pipefail
 
@@ -34,7 +34,7 @@ cmake="${HOME:-/root}/.local/bin/cmake"
 readonly cmake
 
 readonly all_legs=(gcc-15 gcc-16 gcc-17 cxx26-16 cxx26-17 clang-22 clang-23 clang-24 libcxx-22 i686
-                   hardened-gcc hardened-libcxx tidy-22 tidy-23 tidy-24 format audit)
+                   hardened-gcc hardened-libcxx tidy-22 tidy-23 tidy-24 coverage format audit)
 
 # Each clang uses the libstdc++ of its own rung, as on the runners, rather than the newest GCC installed.
 gcc_for_clang() {
@@ -82,6 +82,29 @@ tidy() {
         return "${status}"
 }
 
+# The coverage job: the stable rung's GCC with --coverage, the stub's arguments and excludes, and the workflow's gcovr
+# filters, failing below 100% of lines or branches. gcovr reads only this leg's tree, not the other legs' beside it.
+coverage() {
+        local dir="${out}/coverage"
+        local gcovr="${HOME:-/root}/.local/bin/gcovr"
+        [ -x "${gcovr}" ] || gcovr="gcovr"
+        "${cmake}" -S "${root}" -B "${dir}" -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-15 \
+                -DCMAKE_CXX_FLAGS="--coverage -O0" -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_CXX_FLAGS_DEBUG=-g1 \
+                -DCMAKE_CXX_SCAN_FOR_MODULES=OFF -DXSTD_BITS_BUILD_BENCHMARKS=OFF -DXSTD_BITS_BUILD_HARDENED_TESTS=OFF \
+                && "${cmake}" --build "${dir}" --parallel "${jobs}" \
+                && ctest --test-dir "${dir}" --output-on-failure --parallel "${jobs}" \
+                && "${gcovr}" --root "${root}" "${dir}" --gcov-executable gcov-15 --merge-lines \
+                        --exclude 'test/.*' --exclude 'benchmark/.*' --exclude 'build/.*' \
+                        --exclude-lines-by-pattern '^\s*(assert|[A-Z][A-Z0-9_]*_ASSERT)\(' \
+                        --exclude-lines-by-pattern '=\s*default;' \
+                        --exclude-lines-by-pattern '\s*\}\s*$' \
+                        --exclude-branches-by-pattern '^\s*(assert|[A-Z][A-Z0-9_]*_ASSERT)\(' \
+                        --exclude-branches-by-pattern '^\s*.*=\s*default;' \
+                        --exclude-throw-branches --exclude-unreachable-branches \
+                        --print-summary --fail-under-line 100 --fail-under-branch 100 --txt "${out}/coverage.txt" \
+                && { [ "${keep}" = 1 ] || rm -rf "${dir}"; }
+}
+
 # The format gate: the stable rung's clang-format over the paths its job names, reporting rather than rewriting.
 format() {
         find "${root}/examples" "${root}/include" "${root}/test" "${root}/benchmark" -regex '.*\.\(hpp\|cpp\)' -print0 \
@@ -125,6 +148,7 @@ run_leg() {
                         suite "$1" clang++-22 "-stdlib=libc++ -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST" Release \
                                 -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++ "${boost_test}" ;;
                 tidy-2[234]) tidy "${1#tidy-}" ;;
+                coverage) coverage ;;
                 format) format ;;
                 audit) audit ;;
                 *) echo "no leg named $1; tools/ci-local.sh --list names them" >&2; return 2 ;;

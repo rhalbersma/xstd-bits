@@ -37,9 +37,10 @@ Ubuntu box gets, every rung of [README.md](README.md)'s matrix and the Boost CI 
 - GCC 15 and 16 from the Ubuntu toolchain PPA, and the GCC trunk snapshot the development rung uses, as `g++-17`;
 - clang 22, 23 and trunk, as `clang++-24`, each with its clang-tidy, and clang-format 22 and libc++ 22, from apt.llvm.org;
 - GCC 15's 32-bit multilib, for the i686 leg, and range-v3 and Google Benchmark, from apt;
-- the same clang-format 22 as an unversioned `clang-format`, and CMake, from PyPI, pinned by hash in
-  [`tools/clang-format-requirements.txt`](tools/clang-format-requirements.txt) and
-  [`tools/cmake-requirements.txt`](tools/cmake-requirements.txt);
+- the same clang-format 22 as an unversioned `clang-format`, CMake, and the coverage job's gcovr, from PyPI, pinned by
+  hash in [`tools/clang-format-requirements.txt`](tools/clang-format-requirements.txt),
+  [`tools/cmake-requirements.txt`](tools/cmake-requirements.txt) and
+  [`tools/gcovr-requirements.txt`](tools/gcovr-requirements.txt), the last a copy of the one the job installs;
 - Boost 1.92's Container, Dynamic Bitset, Hash2, Test and Unordered, the libraries [`vcpkg.json`](vcpkg.json) names,
   built by GCC 15 from Boost's CMake release tarball, checked against the SHA-256 Boost publishes, into `/usr/local`.
 
@@ -71,6 +72,7 @@ Before a push, [`tools/ci-local.sh`](tools/ci-local.sh) runs the GitHub Actions 
 - the C++26 legs on GCC 16 and 17-SVN, the libc++ 22 leg, the i686 leg, and the two hardened legs, libstdc++'s
   assertions and libc++'s fast mode;
 - clang-tidy 22, 23 and 24-SVN, with the clang-tidy job's passes;
+- the coverage gate, on GCC 15 with the job's arguments and gcovr filters, failing below 100% of lines or branches;
 - the format gate, and the Audit job's two checks.
 
 It takes a list of legs, or runs them all, one after another, with every core each; `--list` names them. Each leg logs
@@ -84,7 +86,7 @@ tools/ci-local.sh gcc-17 tidy-24   # the ones a change is likeliest to break
 ```
 
 MSVC, clang-cl, MinGW, Apple Clang and Emscripten have no Linux equivalent, and libc++ 23 and 24-SVN would each need
-the libc++ swap above. The sanitizer, coverage, CodeQL, consumption, fuzzing and mutation jobs are not in it either;
+the libc++ swap above. The sanitizer, CodeQL, consumption, fuzzing and mutation jobs are not in it either;
 their own commands are in the sections below, and actionlint is a separate binary that setup does not install.
 
 In a [Claude Code cloud](https://code.claude.com/docs/en/claude-code-on-the-web) environment, the environment's
