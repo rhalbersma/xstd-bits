@@ -16,8 +16,8 @@
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>         // basic_bit_inplace_set, bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>                 // basic_bit_set, bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>            // bit_set_view
-#include <xstd/bits/bit_span.hpp>                        // bit_span
-#include <xstd/bits/bit_subspan.hpp>                     // bit_subspan
+#include <xstd/bits/bit_span/bit_span.hpp>               // bit_span
+#include <xstd/bits/bit_span/bit_subspan.hpp>            // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector, bit_vector
 #include <xstd/bits/detail/ownership.hpp>                // owner, view
 #include <xstd/bits/ext/boost/bit_small_set.hpp>         // basic_bit_small_set, bit_small_set

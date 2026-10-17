@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit_set/bit_set.hpp>           // bit_set
-#include <xstd/bits/bit_span.hpp>                  // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>         // bit_span
 #include <xstd/bits/bit_valarray/bit_valarray.hpp> // bit_valarray
 #include <xstd/bits/bit_vector.hpp>                // bit_vector
 #include <array>                                   // array

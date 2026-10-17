@@ -7,7 +7,7 @@
 #include <test/for_each_type.hpp>                      // for_each_type
 #include <xstd/bits/bit_algorithm/bit_rotate_copy.hpp> // bit_rotate_copy
 #include <xstd/bits/bit_array.hpp>                     // basic_bit_array, bit_array
-#include <xstd/bits/bit_span.hpp>                      // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>             // bit_span
 #include <xstd/bits/bit_vector.hpp>                    // bit_vector
 #include <boost/test/unit_test.hpp>                    // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                   // rotate_copy, rotate_copy_result

@@ -153,7 +153,8 @@ target_sources(
         include/xstd/bits/bit_set/bit_set_view.hpp
         include/xstd/bits/bit_set/bit_fixed_set.hpp
         include/xstd/bits/bit_span.hpp
-        include/xstd/bits/bit_subspan.hpp
+        include/xstd/bits/bit_span/bit_span.hpp
+        include/xstd/bits/bit_span/bit_subspan.hpp
         include/xstd/bits/bit_type_traits.hpp
         include/xstd/bits/bit_type_traits/bit_align.hpp
         include/xstd/bits/bit_type_traits/bit_blocks_extent.hpp

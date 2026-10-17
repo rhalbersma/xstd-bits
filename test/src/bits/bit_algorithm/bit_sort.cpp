@@ -8,7 +8,7 @@
 #include <xstd/bits/bit_algorithm/bit_sort.hpp> // bit_sort
 #include <xstd/bits/bit_array.hpp>              // bit_array, basic_bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>  // bit_fixed_set
-#include <xstd/bits/bit_span.hpp>               // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>      // bit_span
 #include <boost/test/unit_test.hpp>             // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                            // sort
 #include <concepts>                             // same_as

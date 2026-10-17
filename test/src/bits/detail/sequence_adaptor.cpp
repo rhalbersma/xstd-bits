@@ -10,8 +10,8 @@
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
 #include <xstd/bits/bit_set/bit_set.hpp>            // bit_set
-#include <xstd/bits/bit_span.hpp>                   // bit_span
-#include <xstd/bits/bit_subspan.hpp>                // bit_subspan
+#include <xstd/bits/bit_span/bit_span.hpp>          // bit_span
+#include <xstd/bits/bit_span/bit_subspan.hpp>       // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, reads, sequence_reading_tag, set_reading_tag, storage

@@ -20,8 +20,7 @@
 #include <xstd/bits/bit_array.hpp>          // IWYU pragma: export; bit_array
 #include <xstd/bits/bit_inplace_vector.hpp> // IWYU pragma: export; bit_inplace_vector
 #include <xstd/bits/bit_vector.hpp>         // IWYU pragma: export; bit_vector
-#include <xstd/bits/bit_span.hpp>           // IWYU pragma: export; bit_span
-#include <xstd/bits/bit_subspan.hpp>        // IWYU pragma: export; bit_subspan
+#include <xstd/bits/bit_span.hpp>           // IWYU pragma: export; bit_span, bit_subspan
 
 // The valarray reading.
 #include <xstd/bits/bit_valarray.hpp> // IWYU pragma: export; bit_fixed_valarray, bit_gslice, bit_gslice_array, bit_indirect_array, bit_inplace_valarray, bit_mask_array, bit_slice, bit_slice_array, bit_valarray
