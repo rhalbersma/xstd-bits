@@ -1428,7 +1428,7 @@ does not change a Hash2 digest, so the expansion's grain is free. A set walks it
 costs, and appends each as `Key`, so its message follows the platform's `std::size_t` as the model's does.
 `bit_block_container`, which is no reading, keeps its own hook over its blocks.
 
-**`xstd::bit_hash<H>` hashes the bits**, the representation rather than the model's value. Its message is
+**`xstd::bit_hash<T, H, Flavor>` hashes the bits**, the representation rather than the model's value. Its message is
 the canonical byte string of the bits: ceil(N / 8) bytes, bit `i` at bit `i % 8` of byte `i / 8`, unused high
 bits zero. A static width appends nothing after it, as `std::array` appends no size: the suffix would carry
 nothing, and equality never crosses types. A run-time width appends `hash_append_size` of the width in bits
@@ -1454,7 +1454,7 @@ side in one `update` of 48 bytes, and `planes[2][6]` in one of 96. A `bit_fixed_
 seven-byte string, goes in a plane at a time, to the same digest. The containers are not made trivially
 equality comparable to get this: that would have Hash2 hash their objects and bypass the model hooks.
 
-`std::hash` is `bit_hash<boost::hash2::xxhash_64>`, which is also `bit_hash`'s default, and it is a
+`std::hash<T>` is `bit_hash<T, boost::hash2::xxhash_64>`, which is also `bit_hash`'s default, and it is a
 **default rather than a fact**. It is xxHash at every length, with no switch to FNV-1a for a short string,
 because FNV-1a does not avalanche: each byte is xored into the low bits and multiplied up, so the high bits of
 the last byte never reach the low bits of the result, and the low bits are what a hash table indexes by. Two
@@ -1463,17 +1463,18 @@ every output bit at the end, at a cost a short string barely notices. It is spel
 on every target, `std::size_t` taking Hash2's fold of its result where it is narrower.
 
 `std::hash` cannot take another algorithm: its `operator()` has one argument and its type no parameter for
-one. The door to another algorithm is `bit_hash<H>` for the bits and `xstd::hasher<H>` for the value, each
+one. The door to another algorithm is `bit_hash<T, H>` for the bits and `xstd::hasher<H>` for the value, each
 seeded where `H` takes a seed. `std::hash<T>` is `bit_hash` at the default, so the two agree digit for digit.
 At any other algorithm the digits differ and the invariant still holds, since it rests on what is appended and
 not on who hashes it.
 
-**A digest beside the hash.** The call operator answers a `std::size_t`, Hash2's fold of the algorithm's result,
-which is what a table indexes by. `bit_hash<H>::digest(x)` answers the result itself, `H::result_type`, of which
-the call operator keeps a `std::size_t`'s worth: 32 bytes under `boost::hash2::sha2_256`, for a digest stored,
-compared or sent where a table's index would collide. Both run the same message, so equal bits have equal digests
-across storages and block types as they have equal hashes. The name follows xstd-misc's value-level hash, whose
-digest is a member of the same object rather than a second type beside it.
+**A digest beside the hash.** The hash answers a `std::size_t`, Hash2's fold of the algorithm's result, which is
+what a table indexes by. `bit_digest<T, H, Flavor>` answers the result itself, `H::result_type`, over the same
+message, for a digest that stands in for its key: stored, compared or sent where a table's index would collide. Its
+defaults differ for that reason. `bit_hash` runs xxHash-64 over native bytes, as `std::hash` does; `bit_digest`
+runs XXH3-128 over little-endian bytes, so two keys stay apart and a digest is the same on every target. Both share
+one seeded prototype as a private base, and equal bits digest equal across storages and block types as they hash
+equal. The shape follows xstd-misc's value-level `xstd::hash` and `xstd::digest`.
 
 So a caller chooses as follows. The default, through `std::hash`, is for keys the program makes: it is
 unseeded, and fast at every length. A caller who knows the keys better names another Hash2 algorithm.
@@ -1489,7 +1490,7 @@ keyed function built to make that infeasible without the seed, at a speed a hash
 #include <cstdint>
 #include <unordered_set>
 
-using hash = xstd::bit_hash<boost::hash2::siphash_64>;
+using hash = xstd::bit_hash<xstd::bit_set, boost::hash2::siphash_64>;
 
 auto const seed = std::uint64_t{/* drawn at random, per container */};
 auto table      = std::unordered_set<xstd::bit_set, hash>(0, hash(seed));
@@ -2459,7 +2460,7 @@ operands must be of one reading, a set's of one key, mapping and comparator, and
 fixed in the type and equal, or two run-time widths. The width kind is what `bit_hash` hashes differently
 ([the-hashing-invariant](#the-hashing-invariant)), so whatever compares equal hashes equal, and
 `xstd::bit_equal_to`, the transparent equality over `bit_equal`, pairs with the transparent `bit_hash` for a
-lookup across block types and storages: `std::unordered_set<K, xstd::bit_hash<>, xstd::bit_equal_to>::find` takes a
+lookup across block types and storages: `std::unordered_set<K, xstd::bit_hash<K>, xstd::bit_equal_to>::find` takes a
 view, or the same value over narrower blocks.
 
 **The iterator operations are rank and select.** `std::ranges::advance`, `next`, `prev` and `distance` over a set's

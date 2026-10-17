@@ -106,7 +106,7 @@ template<class Block, class T>
                 std::equality_comparable<T>,
                 std::three_way_comparable<T>,
                 requires (T const& t) { std::hash<U>{}(t); },
-                requires (T const& t) { xstd::bit_hash<>{}(t); },
+                requires (T const& t) { xstd::bit_hash<U>{}(t); },
                 std::formattable<U, char>,
                 std::ranges::random_access_range<T>,
                 std::ranges::bidirectional_range<T>,

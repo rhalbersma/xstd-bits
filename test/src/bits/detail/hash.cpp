@@ -87,10 +87,10 @@ template<class T>
 
 // The packed hasher at an algorithm, which std::hash runs at the one the length picks.
 template<class Hash, class T>
-[[nodiscard]] auto bit_digest(T const& v)
+[[nodiscard]] auto bit_hashed(T const& v)
         -> std::size_t
 {
-        auto const hasher = xstd::bit_hash<Hash>();
+        auto const hasher = xstd::bit_hash<T, Hash>();
         return hasher(v);
 }
 
@@ -143,9 +143,9 @@ BOOST_AUTO_TEST_CASE(TheDefaultIsTheBitHashAtXxhash)
         auto const fixed   = xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 200>({1, 64, 199});
         auto const growing = dynamic_set({1, 3, 63});
         auto const bools   = alternating(sequence(130));
-        BOOST_CHECK_EQUAL(default_digest(fixed), bit_digest<boost::hash2::xxhash_64>(fixed));
-        BOOST_CHECK_EQUAL(default_digest(growing), bit_digest<boost::hash2::xxhash_64>(growing));
-        BOOST_CHECK_EQUAL(default_digest(bools), bit_digest<boost::hash2::xxhash_64>(bools));
+        BOOST_CHECK_EQUAL(default_digest(fixed), bit_hashed<boost::hash2::xxhash_64>(fixed));
+        BOOST_CHECK_EQUAL(default_digest(growing), bit_hashed<boost::hash2::xxhash_64>(growing));
+        BOOST_CHECK_EQUAL(default_digest(bools), bit_hashed<boost::hash2::xxhash_64>(bools));
         BOOST_CHECK_EQUAL(default_digest(xstd::bit_set_view(growing)), default_digest(growing));
 
         // A static width appends no size, so its digest is one on every flavor, folded to std::size_t's width.
@@ -215,8 +215,8 @@ BOOST_AUTO_TEST_CASE(ASeededSipHashKeysAnUnorderedContainer)
         auto const fill_all = [&]<class T>(std::initializer_list<T> values) -> void {
                 fill.template operator()<T, xstd::hasher<boost::hash2::siphash_64>, std::unordered_set>(values);
                 fill.template operator()<T, xstd::hasher<boost::hash2::siphash_64>, boost::unordered_flat_set>(values);
-                fill.template operator()<T, xstd::bit_hash<boost::hash2::siphash_64>, std::unordered_set>(values);
-                fill.template operator()<T, xstd::bit_hash<boost::hash2::siphash_64>, boost::unordered_flat_set>(values);
+                fill.template operator()<T, xstd::bit_hash<T, boost::hash2::siphash_64>, std::unordered_set>(values);
+                fill.template operator()<T, xstd::bit_hash<T, boost::hash2::siphash_64>, boost::unordered_flat_set>(values);
         };
 
         // Three values, two of them equal, so each table holds two.

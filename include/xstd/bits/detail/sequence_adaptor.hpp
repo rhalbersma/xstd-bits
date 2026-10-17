@@ -1575,7 +1575,7 @@ struct hash<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::stora
         [[nodiscard]] constexpr auto operator()(xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived> const& v) const noexcept
                 -> std::size_t
         {
-                return xstd::bit_hash<boost::hash2::xxhash_64>()(v);
+                return xstd::bit_hash<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived>, boost::hash2::xxhash_64>()(v);
         }
 };
 

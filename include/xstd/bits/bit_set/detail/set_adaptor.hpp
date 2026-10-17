@@ -1438,7 +1438,7 @@ struct hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMappin
         [[nodiscard]] constexpr auto operator()(xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& v) const noexcept
                 -> std::size_t
         {
-                return xstd::bit_hash<boost::hash2::xxhash_64>()(v);
+                return xstd::bit_hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>, boost::hash2::xxhash_64>()(v);
         }
 };
 

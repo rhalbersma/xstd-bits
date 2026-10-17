@@ -6,8 +6,9 @@
 #ifndef XSTD_BITS_BIT_FUNCTIONAL_HPP
 #define XSTD_BITS_BIT_FUNCTIONAL_HPP
 
-// The comparisons and the hash of the bits whatever holds them, which lookups across containers need.
+// The comparisons, the hash and the digest of the bits whatever holds them, which lookups across containers need.
 #include <xstd/bits/bit_functional/bit_compare_three_way.hpp> // IWYU pragma: export; bit_compare_three_way
+#include <xstd/bits/bit_functional/bit_digest.hpp>            // IWYU pragma: export; bit_digest
 #include <xstd/bits/bit_functional/bit_equal_to.hpp>          // IWYU pragma: export; bit_equal_to
 #include <xstd/bits/bit_functional/bit_greater.hpp>           // IWYU pragma: export; bit_greater
 #include <xstd/bits/bit_functional/bit_greater_equal.hpp>     // IWYU pragma: export; bit_greater_equal

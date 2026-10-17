@@ -31,7 +31,7 @@ template<class X, class Y>
         -> bool
 {
         auto const equal = xstd::bit_equal_to()(x, y);
-        return equal == std::ranges::equal(x, y) and (not equal or xstd::bit_hash<>()(x) == xstd::bit_hash<>()(y));
+        return equal == std::ranges::equal(x, y) and (not equal or xstd::bit_hash<X>()(x) == xstd::bit_hash<X>()(y));
 }
 
 // Every input of X against every input of Y.
@@ -68,17 +68,17 @@ BOOST_AUTO_TEST_CASE(WhatItCallsEqualBitHashHashesAlike)
 // A lookup crosses block types and storages, a set found through a view and through narrower blocks.
 BOOST_AUTO_TEST_CASE(ALookupCrossesBlockTypesAndStorages)
 {
-        auto const sets = std::unordered_set<xstd::bit_fixed_set<100>, xstd::bit_hash<>, xstd::bit_equal_to>({{1UZ, 64UZ}, {99UZ}});
+        auto const sets = std::unordered_set<xstd::bit_fixed_set<100>, xstd::bit_hash<xstd::bit_fixed_set<100>>, xstd::bit_equal_to>({{1UZ, 64UZ}, {99UZ}});
         auto owner      = xstd::bit_fixed_set<100>{99UZ};
         BOOST_CHECK(sets.contains(xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 100>{1UZ, 64UZ}));
         BOOST_CHECK(sets.contains(xstd::bit_set_view(owner)));
         BOOST_CHECK(not sets.contains(xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 100>{1UZ}));
 
-        auto const vectors = std::unordered_set<xstd::bit_vector, xstd::bit_hash<>, xstd::bit_equal_to>({xstd::bit_vector(9UZ, true), xstd::bit_vector(70UZ)});
+        auto const vectors = std::unordered_set<xstd::bit_vector, xstd::bit_hash<xstd::bit_vector>, xstd::bit_equal_to>({xstd::bit_vector(9UZ, true), xstd::bit_vector(70UZ)});
         BOOST_CHECK(vectors.contains(xstd::basic_bit_vector<std::uint8_t>(9UZ, true)));
         BOOST_CHECK(not vectors.contains(xstd::basic_bit_vector<std::uint8_t>(10UZ, true)));
 
-        auto const dynamic = std::unordered_set<xstd::bit_set, xstd::bit_hash<>, xstd::bit_equal_to>({{3UZ, 300UZ}});
+        auto const dynamic = std::unordered_set<xstd::bit_set, xstd::bit_hash<xstd::bit_set>, xstd::bit_equal_to>({{3UZ, 300UZ}});
         BOOST_CHECK(dynamic.contains(xstd::basic_bit_set<std::size_t, std::uint8_t>{3UZ, 300UZ}));
 }
 

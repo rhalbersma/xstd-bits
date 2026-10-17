@@ -22,8 +22,9 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesTheComparisonsAndTheHash)
         BOOST_CHECK(xstd::bit_equal_to()(x, y) and not xstd::bit_not_equal_to()(x, y));
         BOOST_CHECK(xstd::bit_compare_three_way()(x, y) == std::strong_ordering::equal);
         BOOST_CHECK(not xstd::bit_less()(x, y) and not xstd::bit_greater()(x, y) and xstd::bit_less_equal()(x, y) and xstd::bit_greater_equal()(x, y));
-        auto const hash = xstd::bit_hash<>();
+        auto const hash = xstd::bit_hash<xstd::bit_fixed_set<70>>();
         BOOST_CHECK_EQUAL(hash(x), hash(y));
+        BOOST_CHECK(xstd::bit_digest<xstd::bit_fixed_set<70>>()(x) == xstd::bit_digest<xstd::bit_fixed_set<70>>()(xstd::bit_fixed_set<70>{1UZ, 65UZ}));
         auto hx = boost::hash2::xxhash_64();
         auto hy = boost::hash2::xxhash_64();
         xstd::bit_hash_append(hx, boost::hash2::default_flavor(), x);
