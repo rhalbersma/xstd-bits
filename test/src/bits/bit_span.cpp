@@ -8,8 +8,8 @@
 #include <xstd/bits/bit_algorithm/bit_reverse.hpp>  // bit_reverse
 #include <xstd/bits/bit_algorithm/bit_rotate.hpp>   // bit_rotate
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
-#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>      // bit_fixed_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // storage

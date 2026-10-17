@@ -3,16 +3,16 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_concepts.hpp>     // bit_blocks, bit_constructible_from, bit_convertible_to, bit_index_mapping, bit_mask_mapping, sized_bit_index_mapping
-#include <xstd/bits/bit_fixed_set.hpp>    // bit_fixed_set
-#include <xstd/bits/bit_flag_mapping.hpp> // bit_flag_mapping
-#include <xstd/bits/bit_key_mapping.hpp>  // bit_key_mapping
-#include <boost/test/unit_test.hpp>       // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <array>                          // array
-#include <bitset>                         // bitset
-#include <cstddef>                        // size_t
-#include <cstdint>                        // uint16_t, uint64_t
-#include <vector>                         // vector
+#include <xstd/bits/bit_concepts.hpp>             // bit_blocks, bit_constructible_from, bit_convertible_to, bit_index_mapping, bit_mask_mapping, sized_bit_index_mapping
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>    // bit_fixed_set
+#include <xstd/bits/bit_set/bit_flag_mapping.hpp> // bit_flag_mapping
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>  // bit_key_mapping
+#include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <array>                                  // array
+#include <bitset>                                 // bitset
+#include <cstddef>                                // size_t
+#include <cstdint>                                // uint16_t, uint64_t
+#include <vector>                                 // vector
 
 BOOST_AUTO_TEST_SUITE(BitConcepts)
 

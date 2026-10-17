@@ -6,15 +6,15 @@
 #ifndef TEST_SET_ORDERING_HPP
 #define TEST_SET_ORDERING_HPP
 
-#include <test/viewed.hpp>            // make_viewed
-#include <xstd/bits/bit_set_view.hpp> // bit_set_view
-#include <boost/test/unit_test.hpp>   // BOOST_CHECK_EQUAL
-#include <algorithm>                  // lexicographical_compare
-#include <compare>                    // is_gt, is_lt, strong_ordering
-#include <cstddef>                    // size_t
-#include <cstdint>                    // uint64_t
-#include <ranges>                     // iota
-#include <set>                        // set
+#include <test/viewed.hpp>                    // make_viewed
+#include <xstd/bits/bit_set/bit_set_view.hpp> // bit_set_view
+#include <boost/test/unit_test.hpp>           // BOOST_CHECK_EQUAL
+#include <algorithm>                          // lexicographical_compare
+#include <compare>                            // is_gt, is_lt, strong_ordering
+#include <cstddef>                            // size_t
+#include <cstdint>                            // uint64_t
+#include <ranges>                             // iota
+#include <set>                                // set
 
 namespace test::set {
 

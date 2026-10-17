@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_algorithm.hpp>              // bit_all_of, bit_any_of, bit_count, bit_fill, bit_for_each, bit_mismatch, bit_none_of
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
-#include <xstd/bits/bit_set.hpp>                    // bit_set
+#include <xstd/bits/bit_set/bit_set.hpp>            // bit_set
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_subspan.hpp>                // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector

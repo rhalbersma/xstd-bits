@@ -6,8 +6,8 @@
 #include <test/block_types.hpp>                         // all_block_types
 #include <test/set/strong_index.hpp>                    // strong_index
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp> // bit_index_mapping
-#include <xstd/bits/bit_flag_mapping.hpp>               // bit_flag_mapping
-#include <xstd/bits/bit_key_mapping.hpp>                // bit_find_mapping, bit_key_mapping, bit_range_mapping
+#include <xstd/bits/bit_set/bit_flag_mapping.hpp>       // bit_flag_mapping
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>        // bit_find_mapping, bit_key_mapping, bit_range_mapping
 #include <boost/test/unit_test.hpp>                     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                                        // array
 #include <cstddef>                                      // byte, size_t

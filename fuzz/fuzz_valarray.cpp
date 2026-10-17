@@ -3,25 +3,25 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <fuzz/decoder.hpp>                           // checker, decoder, run
-#include <xstd/bits/bit/bit_convert.hpp>              // bit_convert
-#include <xstd/bits/bit_algorithm.hpp>                // bit_all_of, bit_any_of, bit_count, bit_none_of
-#include <xstd/bits/bit_bounded_valarray.hpp>         // basic_bit_bounded_valarray, bit_bounded_valarray
-#include <xstd/bits/bit_fixed_valarray.hpp>           // basic_bit_fixed_valarray, bit_fixed_valarray
-#include <xstd/bits/bit_valarray.hpp>                 // basic_bit_valarray, bit_valarray
-#include <xstd/bits/bit_vector.hpp>                   // bit_vector
-#include <xstd/bits/ext/boost/bit_small_valarray.hpp> // basic_bit_small_valarray
-#include <algorithm>                                  // count, equal, fill, min
-#include <array>                                      // array
-#include <climits>                                    // INT_MIN
-#include <cstddef>                                    // size_t
-#include <cstdint>                                    // uint8_t
-#include <ranges>                                     // iota, range_value_t, ssize
-#include <tuple>                                      // tuple
-#include <type_traits>                                // type_identity
-#include <utility>                                    // as_const, move, swap
-#include <valarray>                                   // slice
-#include <vector>                                     // vector
+#include <fuzz/decoder.hpp>                                // checker, decoder, run
+#include <xstd/bits/bit/bit_convert.hpp>                   // bit_convert
+#include <xstd/bits/bit_algorithm.hpp>                     // bit_all_of, bit_any_of, bit_count, bit_none_of
+#include <xstd/bits/bit_valarray/bit_bounded_valarray.hpp> // basic_bit_bounded_valarray, bit_bounded_valarray
+#include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // basic_bit_fixed_valarray, bit_fixed_valarray
+#include <xstd/bits/bit_valarray/bit_valarray.hpp>         // basic_bit_valarray, bit_valarray
+#include <xstd/bits/bit_vector.hpp>                        // bit_vector
+#include <xstd/bits/ext/boost/bit_small_valarray.hpp>      // basic_bit_small_valarray
+#include <algorithm>                                       // count, equal, fill, min
+#include <array>                                           // array
+#include <climits>                                         // INT_MIN
+#include <cstddef>                                         // size_t
+#include <cstdint>                                         // uint8_t
+#include <ranges>                                          // iota, range_value_t, ssize
+#include <tuple>                                           // tuple
+#include <type_traits>                                     // type_identity
+#include <utility>                                         // as_const, move, swap
+#include <valarray>                                        // slice
+#include <vector>                                          // vector
 
 namespace {
 

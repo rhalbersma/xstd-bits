@@ -3,24 +3,24 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/constexpr_check.hpp>      // XSTD_CONSTEXPR_CHECK
-#include <test/for_each_type.hpp>        // for_each_type
-#include <test/inplace_vector.hpp>       // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/set/exhaustive.hpp>       // static_width
-#include <test/spec/set.hpp>             // all
-#include <test/spec/view.hpp>            // owner_t, view_type
-#include <xstd/bits/bit_bounded_set.hpp> // IWYU pragma: keep; basic_bit_bounded_set
-#include <xstd/bits/bit_key_mapping.hpp> // bit_key_mapping
-#include <xstd/bits/bit_set.hpp>         // basic_bit_set
-#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <algorithm>                     // min
-#include <concepts>                      // same_as
-#include <cstddef>                       // IWYU pragma: keep; size_t
-#include <iterator>                      // bidirectional_iterator, distance
-#include <ranges>                        // bidirectional_range, iota
-#include <set>                           // IWYU pragma: keep; set
-#include <utility>                       // cmp_equal, pair
-#include <version>                       // IWYU pragma: keep; __cpp_lib_constexpr_set
+#include <test/constexpr_check.hpp>              // XSTD_CONSTEXPR_CHECK
+#include <test/for_each_type.hpp>                // for_each_type
+#include <test/inplace_vector.hpp>               // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/set/exhaustive.hpp>               // static_width
+#include <test/spec/set.hpp>                     // all
+#include <test/spec/view.hpp>                    // owner_t, view_type
+#include <xstd/bits/bit_set/bit_bounded_set.hpp> // IWYU pragma: keep; basic_bit_bounded_set
+#include <xstd/bits/bit_set/bit_key_mapping.hpp> // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>         // basic_bit_set
+#include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <algorithm>                             // min
+#include <concepts>                              // same_as
+#include <cstddef>                               // IWYU pragma: keep; size_t
+#include <iterator>                              // bidirectional_iterator, distance
+#include <ranges>                                // bidirectional_range, iota
+#include <set>                                   // IWYU pragma: keep; set
+#include <utility>                               // cmp_equal, pair
+#include <version>                               // IWYU pragma: keep; __cpp_lib_constexpr_set
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)

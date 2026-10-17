@@ -5,10 +5,10 @@
 
 #include <test/whole_blocks.hpp>                         // whole_blocks
 #include <xstd/bits/bit_array.hpp>                       // bit_array
-#include <xstd/bits/bit_bounded_set.hpp>                 // basic_bit_bounded_set, bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>              // bit_bounded_vector
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp> // bit_convertible_to
-#include <xstd/bits/bit_set.hpp>                         // basic_bit_set, bit_set
+#include <xstd/bits/bit_set/bit_bounded_set.hpp>         // basic_bit_bounded_set, bit_bounded_set
+#include <xstd/bits/bit_set/bit_set.hpp>                 // basic_bit_set, bit_set
 #include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector, bit_vector
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp>        // bit_convert
 #include <boost/container/small_vector.hpp>              // small_vector

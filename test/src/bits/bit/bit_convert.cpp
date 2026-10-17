@@ -3,17 +3,19 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/for_each_type.hpp>                        // for_each_type
+#include <test/whole_blocks.hpp>                         // block_bits, whole_blocks
 #include <xstd/bits/bit/bit_convert.hpp>                 // bit_convert
 #include <xstd/bits/bit/detail/bit_convertible.hpp>      // adopts_from, bit_source, fixed_target, fixed_width, same_block_owners
 #include <xstd/bits/bit/detail/bit_width.hpp>            // bit_width_v
 #include <xstd/bits/bit_algorithm/bit_count.hpp>         // bit_count
 #include <xstd/bits/bit_array.hpp>                       // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_set.hpp>                 // basic_bit_bounded_set, bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>              // basic_bit_bounded_vector, bit_bounded_vector
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp> // bit_convertible_to
-#include <xstd/bits/bit_fixed_set.hpp>                   // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_set.hpp>                         // basic_bit_set, bit_set
-#include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
+#include <xstd/bits/bit_set/bit_bounded_set.hpp>         // basic_bit_bounded_set, bit_bounded_set
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>           // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_set/bit_set.hpp>                 // basic_bit_set, bit_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>            // bit_set_view
 #include <xstd/bits/bit_span.hpp>                        // bit_span
 #include <xstd/bits/bit_subspan.hpp>                     // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector, bit_vector
@@ -24,8 +26,6 @@
 #include <xstd/ints/cstdint/bit_int.hpp>                 // bit_uint
 #include <xstd/ints/cstdint/int128.hpp>                  // uint128
 #include <xstd/ints/memory.hpp>                          // align_up
-#include <test/for_each_type.hpp>                        // for_each_type
-#include <test/whole_blocks.hpp>                         // block_bits, whole_blocks
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <array>                                         // array
 #include <bit>                                           // bit_cast

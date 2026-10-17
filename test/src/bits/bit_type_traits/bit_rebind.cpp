@@ -4,12 +4,12 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
-#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
-#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
-#include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
-#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_set/bit_bounded_set.hpp>    // basic_bit_bounded_set
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
 #include <xstd/bits/bit_type_traits/bit_rebind.hpp> // bit_rebind
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set

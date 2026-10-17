@@ -3,13 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_array.hpp>       // basic_bit_array
-#include <xstd/bits/bit_flag_set.hpp>    // bit_flag_set
-#include <xstd/bits/bit_type_traits.hpp> // bit_align, bit_blocks_extent_v, bit_fast, bit_least, bit_rebind, bit_resize, bit_underlying, fast_block_t, least_block_t, underlying_block_t
-#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <array>                         // array
-#include <cstdint>                       // int16_t, uint16_t, uint64_t, uint8_t, uint_fast16_t
-#include <type_traits>                   // is_same_v
+#include <xstd/bits/bit_array.hpp>            // basic_bit_array
+#include <xstd/bits/bit_set/bit_flag_set.hpp> // bit_flag_set
+#include <xstd/bits/bit_type_traits.hpp>      // bit_align, bit_blocks_extent_v, bit_fast, bit_least, bit_rebind, bit_resize, bit_underlying, fast_block_t, least_block_t, underlying_block_t
+#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <array>                              // array
+#include <cstdint>                            // int16_t, uint16_t, uint64_t, uint8_t, uint_fast16_t
+#include <type_traits>                        // is_same_v
 
 BOOST_AUTO_TEST_SUITE(BitTypeTraits)
 

@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>             // bit_blocks
-#include <xstd/bits/bit_hasher.hpp>                          // bit_hasher
+#include <xstd/bits/bit_functional/bit_hasher.hpp>           // bit_hasher
 #include <xstd/bits/detail/adapted_bits.hpp>                 // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/assert.hpp>                       // XSTD_BITS_ASSERT

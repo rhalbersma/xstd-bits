@@ -13,22 +13,22 @@
 
 #endif
 
-#include <test/sequence/factory.hpp>     // stripes
-#include <test/set/exhaustive.hpp>       // limit_v, static_width
-#include <test/spec/set.hpp>             // bounded, dynamic, fixed, small, user_storage
-#include <xstd/bits/bit_fixed_set.hpp>   // basic_bit_fixed_set
-#include <xstd/bits/bit_key_mapping.hpp> // bit_key_mapping
-#include <xstd/bits/bit_set.hpp>         // basic_bit_set
-#include <algorithm>                     // min
-#include <array>                         // array
-#include <cstddef>                       // size_t
-#include <cstdint>                       // uint64_t, uint8_t
-#include <functional>                    // greater
-#include <ranges>                        // iota
-#include <set>                           // set
-#include <tuple>                         // tuple, tuple_cat
-#include <utility>                       // declval
-#include <vector>                        // vector
+#include <test/sequence/factory.hpp>             // stripes
+#include <test/set/exhaustive.hpp>               // limit_v, static_width
+#include <test/spec/set.hpp>                     // bounded, dynamic, fixed, small, user_storage
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>   // basic_bit_fixed_set
+#include <xstd/bits/bit_set/bit_key_mapping.hpp> // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>         // basic_bit_set
+#include <algorithm>                             // min
+#include <array>                                 // array
+#include <cstddef>                               // size_t
+#include <cstdint>                               // uint64_t, uint8_t
+#include <functional>                            // greater
+#include <ranges>                                // iota
+#include <set>                                   // set
+#include <tuple>                                 // tuple, tuple_cat
+#include <utility>                               // declval
+#include <vector>                                // vector
 
 // Sets of every column, keyed by patterns, for the algorithms to be checked against std::set over the same keys.
 namespace test::algorithm {

@@ -10,14 +10,14 @@
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/value_reference.hpp>                 // value_reference
-#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
-#include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
-#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_set
-#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_set/bit_bounded_set.hpp>    // basic_bit_bounded_set
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
+#include <xstd/bits/bit_set/detail/set_adaptor.hpp> // set_adaptor, set_reference
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // storage
-#include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor, set_reference
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                    // array

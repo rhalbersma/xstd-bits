@@ -70,11 +70,11 @@ target_sources(
     FILES
         include/xstd/bits.hpp
         include/xstd/bits/detail/sequence_adaptor.hpp
-        include/xstd/bits/detail/set_adaptor.hpp
-        include/xstd/bits/detail/valarray_adaptor.hpp
-        include/xstd/bits/detail/valarray_proxy.hpp
-        include/xstd/bits/detail/gslice_index.hpp
-        include/xstd/bits/detail/block_compress_expand.hpp
+        include/xstd/bits/bit_set/detail/set_adaptor.hpp
+        include/xstd/bits/bit_valarray/detail/valarray_adaptor.hpp
+        include/xstd/bits/bit_valarray/detail/valarray_proxy.hpp
+        include/xstd/bits/bit_valarray/detail/gslice_index.hpp
+        include/xstd/bits/bit_valarray/detail/block_compress_expand.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
@@ -131,18 +131,20 @@ target_sources(
         include/xstd/bits/bit_concepts/bit_index_mapping.hpp
         include/xstd/bits/bit_concepts/bit_mask_mapping.hpp
         include/xstd/bits/bit_concepts/sized_bit_index_mapping.hpp
-        include/xstd/bits/bit_bounded_set.hpp
         include/xstd/bits/bit_bounded_vector.hpp
-        include/xstd/bits/bit_enum_set.hpp
-        include/xstd/bits/bit_flag_set.hpp
-        include/xstd/bits/bit_flag_mapping.hpp
-        include/xstd/bits/bit_key_mapping.hpp
+        include/xstd/bits/bit_functional.hpp
+        include/xstd/bits/bit_functional/bit_equal_to.hpp
+        include/xstd/bits/bit_functional/bit_hasher.hpp
         include/xstd/bits/bit_set.hpp
-        include/xstd/bits/bit_set_view.hpp
+        include/xstd/bits/bit_set/bit_bounded_set.hpp
+        include/xstd/bits/bit_set/bit_enum_set.hpp
+        include/xstd/bits/bit_set/bit_flag_set.hpp
+        include/xstd/bits/bit_set/bit_flag_mapping.hpp
+        include/xstd/bits/bit_set/bit_key_mapping.hpp
+        include/xstd/bits/bit_set/bit_set.hpp
+        include/xstd/bits/bit_set/bit_set_view.hpp
+        include/xstd/bits/bit_set/bit_fixed_set.hpp
         include/xstd/bits/bit_span.hpp
-        include/xstd/bits/bit_fixed_set.hpp
-        include/xstd/bits/bit_equal_to.hpp
-        include/xstd/bits/bit_hasher.hpp
         include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_type_traits.hpp
         include/xstd/bits/bit_type_traits/bit_align.hpp
@@ -152,16 +154,17 @@ target_sources(
         include/xstd/bits/bit_type_traits/bit_rebind.hpp
         include/xstd/bits/bit_type_traits/bit_resize.hpp
         include/xstd/bits/bit_type_traits/bit_underlying.hpp
-        include/xstd/bits/bit_vector.hpp
         include/xstd/bits/bit_valarray.hpp
-        include/xstd/bits/bit_fixed_valarray.hpp
-        include/xstd/bits/bit_bounded_valarray.hpp
-        include/xstd/bits/bit_slice.hpp
-        include/xstd/bits/bit_gslice.hpp
-        include/xstd/bits/bit_slice_array.hpp
-        include/xstd/bits/bit_gslice_array.hpp
-        include/xstd/bits/bit_mask_array.hpp
-        include/xstd/bits/bit_indirect_array.hpp
+        include/xstd/bits/bit_valarray/bit_valarray.hpp
+        include/xstd/bits/bit_valarray/bit_fixed_valarray.hpp
+        include/xstd/bits/bit_valarray/bit_bounded_valarray.hpp
+        include/xstd/bits/bit_valarray/bit_slice.hpp
+        include/xstd/bits/bit_valarray/bit_gslice.hpp
+        include/xstd/bits/bit_valarray/bit_slice_array.hpp
+        include/xstd/bits/bit_valarray/bit_gslice_array.hpp
+        include/xstd/bits/bit_valarray/bit_mask_array.hpp
+        include/xstd/bits/bit_valarray/bit_indirect_array.hpp
+        include/xstd/bits/bit_vector.hpp
         include/xstd/bits/detail/adapted_bits.hpp
         include/xstd/bits/bit_algorithm/detail/algorithm.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
@@ -173,9 +176,9 @@ target_sources(
         include/xstd/bits/detail/borrowed_block_span.hpp
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrinsic.hpp
-        include/xstd/bits/detail/flag_block.hpp
+        include/xstd/bits/bit_set/detail/flag_block.hpp
         include/xstd/bits/detail/ordinal.hpp
-        include/xstd/bits/detail/is_key.hpp
+        include/xstd/bits/bit_set/detail/is_key.hpp
         include/xstd/bits/from_blocks.hpp
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/bit_small_set.hpp
@@ -195,7 +198,7 @@ target_sources(
         include/xstd/bits/detail/storage_ptr.hpp
         include/xstd/bits/detail/views.hpp
         include/xstd/bits/detail/blocks.hpp
-        include/xstd/bits/detail/blocks_extent.hpp
+        include/xstd/bits/bit_type_traits/detail/blocks_extent.hpp
         include/xstd/bits/detail/non_volatile.hpp
         include/xstd/bits/detail/num_blocks.hpp
         include/xstd/bits/detail/owner_members.hpp

@@ -12,8 +12,8 @@
 #include <test/spec/set.hpp>                        // all, const_views
 #include <test/spec/span.hpp>                       // all
 #include <xstd/bits/bit_array.hpp>                  // bit_array
-#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector

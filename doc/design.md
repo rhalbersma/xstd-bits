@@ -1476,8 +1476,8 @@ algorithm lets an attacker who knows it build a table's worth of colliding keys 
 keyed function built to make that infeasible without the seed, at a speed a hash table can afford.
 
 ```cpp
-#include <xstd/bits/bit_hasher.hpp> // xstd::bit_hasher
-#include <xstd/bits/bit_set.hpp>
+#include <xstd/bits/bit_functional/bit_hasher.hpp> // xstd::bit_hasher
+#include <xstd/bits/bit_set/bit_set.hpp>
 #include <boost/hash2/siphash.hpp>  // siphash_64
 #include <cstdint>
 #include <unordered_set>
@@ -6391,7 +6391,7 @@ questions are to be decided before any syntax: whether a partial migration, two 
 is worse than none, and so whether a mechanism that degrades to `assert` is wanted; the C++23 floor, since the
 library compiles as C++23 and contracts in the interface move it; and what the checked build is for, legibility
 alone if contracts are only ever ignored in release and enforced in tests. The pilot is the smallest file,
-`detail/valarray_adaptor.hpp` with four, reviewed for whether it reads better, and the coverage gate needs an
+`bit_valarray/detail/valarray_adaptor.hpp` with four, reviewed for whether it reads better, and the coverage gate needs an
 exclusion for a contract annotation as it has one for an assert at the start of a line
 ([an-assert-begins-its-line](#an-assert-begins-its-line)).
 

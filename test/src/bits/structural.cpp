@@ -6,9 +6,9 @@
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <test/structural.hpp>                      // structural, value_parameter
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_set.hpp>            // bit_bounded_set
 #include <xstd/bits/bit_bounded_vector.hpp>         // bit_bounded_vector
-#include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
+#include <xstd/bits/bit_set/bit_bounded_set.hpp>    // bit_bounded_set
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>      // bit_fixed_set
 #include <xstd/bits/bit_type_traits/bit_align.hpp>  // bit_align
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/from_blocks.hpp>                // from_blocks

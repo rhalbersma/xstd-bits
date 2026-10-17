@@ -1,0 +1,1539 @@
+//          Copyright Rein Halbersma 2014-2026.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE_1_0.txt or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
+
+#include <test/flag/qflags.hpp>                         // align_*, alignment_flag, flags
+#include <test/for_each_type.hpp>                       // for_each_type
+#include <test/set/enums.hpp>                           // perm
+#include <test/set/lookup.hpp>                          // lookup_mismatches
+#include <test/uint128.hpp>                             // TEST_HAS_UINT128
+#include <xstd/bits/bit/bit_convert.hpp>                // bit_convert
+#include <xstd/bits/bit_algorithm/bit_disjoint.hpp>     // bit_disjoint
+#include <xstd/bits/bit_algorithm/bit_includes.hpp>     // bit_includes
+#include <xstd/bits/bit_algorithm/bit_intersects.hpp>   // bit_intersects
+#include <xstd/bits/bit_set/bit_enum_set.hpp>           // bit_enum_set
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>          // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_set/bit_flag_mapping.hpp>       // bit_flag_mapping
+#include <xstd/bits/bit_set/bit_flag_set.hpp>           // bit_flag_set
+#include <xstd/bits/bit_type_traits/bit_fast.hpp>       // bit_fast
+#include <xstd/bits/bit_type_traits/bit_least.hpp>      // bit_least
+#include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
+#include <xstd/bits/from_blocks.hpp>                    // from_blocks
+#include <xstd/filesystem.hpp>                          // perms
+#include <xstd/ints/concepts/bit_mask.hpp>              // bit_mask
+#include <xstd/ints/cstdint.hpp>                        // int128, uint128
+#include <boost/test/unit_test.hpp>                     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                    // ranges::equal, ranges::includes, ranges::reverse, ranges::set_difference, ranges::set_intersection, ranges::set_symmetric_difference, ranges::set_union
+#include <array>                                        // array, to_array
+#include <bit>                                          // bit_cast, bit_floor, countr_zero, has_single_bit, popcount
+#include <bitset>                                       // bitset
+#include <compare>                                      // is_gt, is_lt, strong_ordering
+#include <concepts>                                     // convertible_to, same_as
+#include <cstddef>                                      // size_t
+#include <cstdint>                                      // int64_t, int8_t, uint16_t, uint32_t, uint64_t, uint8_t
+#include <filesystem>                                   // exists, path, perm_options, permissions, perms, remove, status, temp_directory_path
+#include <format>                                       // format, format_to, formatter
+#include <fstream>                                      // ofstream
+#include <functional>                                   // greater, hash, ranges::greater
+#include <future>                                       // launch
+#include <initializer_list>                             // initializer_list
+#include <ios>                                          // ios_base
+#include <iterator>                                     // bidirectional_iterator, inserter, iter_reference_t, ranges::distance
+#include <limits>                                       // numeric_limits
+#include <random>                                       // random_device
+#include <regex>                                        // regex_constants
+#include <ranges>                                       // bidirectional_range, iota, ranges::swap, sized_range, views::reverse
+#include <set>                                          // set
+#include <sstream>                                      // istringstream, ostringstream
+#include <stdexcept>                                    // out_of_range
+#include <string_view>                                  // string_view
+#include <tuple>                                        // tuple
+#include <type_traits>                                  // bool_constant, underlying_type_t
+#include <utility>                                      // pair, to_underlying
+#include <vector>                                       // vector
+#include <signal.h>                                     // NOLINT(modernize-deprecated-headers): POSIX declares sigaction and its SA_ flags here, <csignal> not
+#if defined(__GLIBC__) && __has_include(<sys/epoll.h>)
+#include <sys/epoll.h> // EPOLL_EVENTS, EPOLLERR, EPOLLET, EPOLLHUP, EPOLLIN, EPOLLONESHOT, EPOLLOUT, EPOLLPRI, EPOLLRDHUP
+#define XSTD_TEST_HAS_EPOLL 1
+#else
+#define XSTD_TEST_HAS_EPOLL 0
+#endif
+
+namespace {
+
+namespace fs  = std::filesystem;
+namespace xfs = xstd::filesystem;
+
+// A program-defined bitmask enumeration with the operators [bitmask.types] asks for, three flags in eight bits.
+enum class mode : std::uint8_t
+{
+        read  = 0x01,
+        write = 0x02,
+        exec  = 0x04,
+};
+
+[[nodiscard]] constexpr auto operator~(mode m) noexcept
+        -> mode
+{
+        return std::bit_cast<mode>(static_cast<std::uint8_t>(~std::to_underlying(m)));
+}
+
+[[nodiscard]] constexpr auto operator&(mode a, mode b) noexcept
+        -> mode
+{
+        return std::bit_cast<mode>(static_cast<std::uint8_t>(std::to_underlying(a) & std::to_underlying(b)));
+}
+
+[[nodiscard]] constexpr auto operator|(mode a, mode b) noexcept
+        -> mode
+{
+        return std::bit_cast<mode>(static_cast<std::uint8_t>(std::to_underlying(a) | std::to_underlying(b)));
+}
+
+[[nodiscard]] constexpr auto operator^(mode a, mode b) noexcept
+        -> mode
+{
+        return std::bit_cast<mode>(static_cast<std::uint8_t>(std::to_underlying(a) ^ std::to_underlying(b)));
+}
+
+constexpr auto operator&=(mode& a, mode b) noexcept
+        -> mode&
+{
+        return a = a & b;
+}
+
+constexpr auto operator|=(mode& a, mode b) noexcept
+        -> mode&
+{
+        return a = a | b;
+}
+
+constexpr auto operator^=(mode& a, mode b) noexcept
+        -> mode&
+{
+        return a = a ^ b;
+}
+
+} // namespace
+
+// A mode prints its name, so a set of them prints as the names of its flags.
+template<>
+struct std::formatter<mode> : std::formatter<std::string_view>
+{
+        // Pointers rather than string_view, whose conversion from a literal here crashes GCC 17 trunk.
+        static constexpr std::array<char const*, 3> names = {"read", "write", "exec"};
+
+        // A one-bit value, which a set of modes yields.
+        template<class Context>
+        [[nodiscard]] auto format(mode m, Context& ctx) const
+        {
+                return std::format_to(ctx.out(), "{}", names[static_cast<std::size_t>(std::countr_zero(std::to_underlying(m)))]);
+        }
+};
+
+namespace {
+
+// The three flags of mode, and every bit of its byte.
+using modes      = xstd::bit_flag_set<mode, 3>;
+using full_modes = xstd::bit_flag_set<mode>;
+
+// Twelve bits wide, so a value coming in from the standard's type has no bit above set_uid.
+using narrow_perms = xstd::bit_flag_set<fs::perms, 12>;
+
+// A bitset mask, sixteen bits wide and twelve of sixteen.
+using bitset_flags        = xstd::bit_flag_set<std::bitset<16>>;
+using narrow_bitset_flags = xstd::bit_flag_set<std::bitset<16>, 12>;
+
+// A user's own class over the flag type, which adds a name and inherits the rest, its operators returning the base.
+class user_perms : public xfs::perms
+{
+public:
+        using xfs::perms::perms;
+
+        [[nodiscard]] constexpr auto is_private() const noexcept
+                -> bool
+        {
+                return (*this & (fs::perms::group_all | fs::perms::others_all)) == fs::perms::none;
+        }
+};
+
+// Every name [fs.enum.perms] lists, with its value.
+constexpr auto names = std::to_array<std::pair<std::string_view, fs::perms>>({
+        {"none", fs::perms::none},
+        {"owner_read", fs::perms::owner_read},
+        {"owner_write", fs::perms::owner_write},
+        {"owner_exec", fs::perms::owner_exec},
+        {"owner_all", fs::perms::owner_all},
+        {"group_read", fs::perms::group_read},
+        {"group_write", fs::perms::group_write},
+        {"group_exec", fs::perms::group_exec},
+        {"group_all", fs::perms::group_all},
+        {"others_read", fs::perms::others_read},
+        {"others_write", fs::perms::others_write},
+        {"others_exec", fs::perms::others_exec},
+        {"others_all", fs::perms::others_all},
+        {"all", fs::perms::all},
+        {"set_uid", fs::perms::set_uid},
+        {"set_gid", fs::perms::set_gid},
+        {"sticky_bit", fs::perms::sticky_bit},
+        {"mask", fs::perms::mask},
+        {"unknown", fs::perms::unknown},
+});
+
+// The value with bit i alone, past the named ones included, through bit_cast as no enumerator need name it.
+[[nodiscard]] constexpr auto bit_at(std::size_t i) noexcept
+        -> fs::perms
+{
+        return std::bit_cast<fs::perms>(static_cast<std::underlying_type_t<fs::perms>>(1U << i));
+}
+
+// The twelve permission bits, each a one-bit value of the standard's type.
+constexpr auto ranks = [] noexcept -> std::array<fs::perms, 12> {
+        auto nrv = std::array<fs::perms, 12>();
+        for (auto const i : std::views::iota(0UZ, nrv.size())) {
+                nrv[i] = bit_at(i);
+        }
+        return nrv;
+}();
+
+// The model orders its keys as the flag type does, the highest flag first.
+using model_type = std::set<fs::perms, std::greater<>>;
+
+// The flags a twelve-bit mask picks, as the flag type and as the model.
+auto subset(std::size_t mask)
+        -> std::pair<xfs::perms, model_type>
+{
+        auto nrv = std::pair<xfs::perms, model_type>();
+        for (auto const k : ranks) {
+                if ((mask & static_cast<std::size_t>(std::to_underlying(k))) != 0UZ) {
+                        nrv.first |= k;
+                        nrv.second.insert(k);
+                }
+        }
+        return nrv;
+}
+
+auto with(model_type m, fs::perms k)
+        -> model_type
+{
+        m.insert(k);
+        return m;
+}
+
+auto without(model_type m, fs::perms k)
+        -> model_type
+{
+        m.erase(k);
+        return m;
+}
+
+// The model's set algorithms, which the four operators are checked against.
+template<class Algorithm>
+auto combined(model_type const& a, model_type const& b, Algorithm algorithm)
+        -> model_type
+{
+        auto nrv = model_type();
+        algorithm(a, b, std::inserter(nrv, nrv.end()), std::ranges::greater());
+        return nrv;
+}
+
+// One operator pair against the standard's type on either side, each answering as the standard's own operator.
+auto meets_the_standards_type(xfs::perms a, fs::perms b)
+        -> void
+{
+        auto const mine = fs::perms(a);
+        BOOST_CHECK((a | b) == (mine | b));
+        BOOST_CHECK((b | a) == (b | mine));
+        BOOST_CHECK((a & b) == (mine & b));
+        BOOST_CHECK((b & a) == (b & mine));
+        BOOST_CHECK((a ^ b) == (mine ^ b));
+        BOOST_CHECK((b ^ a) == (b ^ mine));
+        BOOST_CHECK((a - b) == (mine & ~b));
+        BOOST_CHECK((b - a) == (b & ~mine));
+        BOOST_CHECK((a == b) == (mine == b));
+        BOOST_CHECK((b == a) == (b == mine));
+}
+
+// One key of a subset, probed by contains and bounded, then inserted and erased, against the model.
+auto agrees_at_key(xfs::perms const& p, model_type const& model, fs::perms k)
+        -> void
+{
+        BOOST_CHECK_EQUAL(p.contains(k), model.contains(k));
+        BOOST_CHECK_EQUAL(xstd::bit_includes(p, xfs::perms(k)), model.contains(k));
+        BOOST_CHECK_EQUAL(std::ranges::distance(p.begin(), p.lower_bound(k)), std::ranges::distance(model.begin(), model.lower_bound(k)));
+        BOOST_CHECK_EQUAL(std::ranges::distance(p.begin(), p.upper_bound(k)), std::ranges::distance(model.begin(), model.upper_bound(k)));
+        BOOST_CHECK_EQUAL((~p).contains(k), not model.contains(k));
+
+        auto x = p;
+        BOOST_CHECK_EQUAL(x.insert(k).second, not model.contains(k));
+        BOOST_CHECK(std::ranges::equal(x, with(model, k)));
+        BOOST_CHECK_EQUAL(x.erase(k), 1UZ);
+        BOOST_CHECK(std::ranges::equal(x, without(model, k)));
+}
+
+// Values of the standard's type that are no key: none, several bits, and every bit.
+constexpr auto non_keys = std::to_array<fs::perms>({fs::perms::none, fs::perms::owner_all, fs::perms::group_all, fs::perms::others_all, fs::perms::all, fs::perms::mask, fs::perms::unknown, fs::perms::owner_read | fs::perms::others_exec});
+
+// One subset, walked both ways, counted and complemented, then each key and each value that is none against the model.
+auto agrees_on_subset(std::size_t mask)
+        -> void
+{
+        auto const [p, model] = subset(mask);
+        BOOST_CHECK(std::ranges::equal(p, model));
+        BOOST_CHECK(std::ranges::equal(std::views::reverse(p), std::views::reverse(model)));
+        BOOST_CHECK_EQUAL(p.size(), model.size());
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(p), mask);
+
+        // The complement is within the sixteen bits, the twelve permissions less these and the four bits above.
+        auto const complement = ~p;
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(complement), static_cast<std::uint16_t>(~mask));
+        BOOST_CHECK_EQUAL(complement.size(), 16UZ - model.size());
+        for (auto const k : ranks) {
+                agrees_at_key(p, model, k);
+        }
+        auto mismatches = 0UZ;
+        for (auto const v : non_keys) {
+                mismatches += test::set::lookup_mismatches(p, model, v);
+        }
+        BOOST_CHECK_EQUAL(mismatches, 0UZ);
+}
+
+// Two subsets, queried by each predicate against std::set's algorithms, with the standard's value on either side.
+auto queries_agree_on_pair(xfs::perms const& a, model_type const& ma, xfs::perms const& b, model_type const& mb)
+        -> void
+{
+        BOOST_CHECK_EQUAL(xstd::bit_includes(a, b), std::ranges::includes(ma, mb, std::ranges::greater()));
+        BOOST_CHECK_EQUAL(xstd::bit_includes(b, a), std::ranges::includes(mb, ma, std::ranges::greater()));
+        BOOST_CHECK_EQUAL(xstd::bit_disjoint(a, b), combined(ma, mb, std::ranges::set_intersection).empty());
+        BOOST_CHECK_EQUAL((xstd::bit_includes(a, b) and not xstd::bit_includes(b, a)), xstd::bit_includes(a, b) and ma != mb);
+
+        // The standard's value converts as the second set of either.
+        BOOST_CHECK_EQUAL(xstd::bit_includes(a, fs::perms(b)), xstd::bit_includes(a, b));
+        BOOST_CHECK_EQUAL(xstd::bit_includes(b, fs::perms(a)), xstd::bit_includes(b, a));
+        BOOST_CHECK_EQUAL(xstd::bit_disjoint(a, fs::perms(b)), xstd::bit_disjoint(a, b));
+}
+
+// Two subsets, queried and combined by each operator and its compound form, against std::set's algorithms.
+auto agrees_on_pair(std::size_t lhs, std::size_t rhs)
+        -> void
+{
+        auto const [a, ma] = subset(lhs);
+        auto const [b, mb] = subset(rhs);
+        queries_agree_on_pair(a, ma, b, mb);
+        BOOST_CHECK(std::ranges::equal(a | b, combined(ma, mb, std::ranges::set_union)));
+        BOOST_CHECK(std::ranges::equal(a & b, combined(ma, mb, std::ranges::set_intersection)));
+        BOOST_CHECK(std::ranges::equal(a ^ b, combined(ma, mb, std::ranges::set_symmetric_difference)));
+        BOOST_CHECK(std::ranges::equal(a - b, combined(ma, mb, std::ranges::set_difference)));
+        BOOST_CHECK_EQUAL(a == b, ma == mb);
+
+        auto x = a;
+        BOOST_CHECK(&(x |= b) == &x and x == (a | b));
+        x = a;
+        BOOST_CHECK(&(x &= b) == &x and x == (a & b));
+        x = a;
+        BOOST_CHECK(&(x ^= b) == &x and x == (a ^ b));
+        x = a;
+        BOOST_CHECK(&(x -= b) == &x and x == (a - b));
+}
+
+// The blocks each 16-bit value is ordered against: the ends, single bits and runs, inside and above the twelve flags.
+constexpr auto order_probes = std::to_array<std::uint16_t>({0x0000, 0x0001, 0x0007, 0x0100, 0x01FF, 0x0800, 0x0FFF, 0x1000, 0xF000, 0xFFFF});
+
+// How many probes the block orders against otherwise than the enumeration: <=> both ways, and the mixed <.
+auto order_mismatches(std::uint16_t block)
+        -> std::size_t
+{
+        auto mismatches = 0UZ;
+        auto const p    = xfs::perms(xstd::from_blocks, block);
+        for (auto const other : order_probes) {
+                auto const q        = xfs::perms(xstd::from_blocks, other);
+                auto const expected = std::to_underlying(fs::perms(p)) <=> std::to_underlying(fs::perms(q));
+                auto const mirrored = std::to_underlying(fs::perms(q)) <=> std::to_underlying(fs::perms(p));
+                if ((p <=> q) != expected or (q <=> p) != mirrored or (p < fs::perms(q)) != std::is_lt(expected)) {
+                        ++mismatches;
+                }
+        }
+        return mismatches;
+}
+
+// How many probes a bitset flag value orders against otherwise than the numbers its bits spell.
+auto bitset_order_mismatches(std::uint16_t block)
+        -> std::size_t
+{
+        auto mismatches = 0UZ;
+        auto const p    = bitset_flags(xstd::from_blocks, block);
+        for (auto const other : order_probes) {
+                auto const q = bitset_flags(xstd::from_blocks, other);
+                if ((p <=> q) != (std::bitset<16>(p).to_ulong() <=> std::bitset<16>(q).to_ulong())) {
+                        ++mismatches;
+                }
+        }
+        return mismatches;
+}
+
+#ifdef __clang__
+
+// Every standard name has a case; any other value, or an implementation's own enumerator, falls through to "".
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch"
+#pragma clang diagnostic ignored "-Wswitch-default"
+
+#endif
+
+// The [fs.enum.perms] name of a value: a switch on the standard's type, or on the flag type through its conversion.
+template<class Perms>
+auto name_of(Perms p)
+        -> std::string_view
+{
+        switch (p) {
+                case fs::perms::none:
+                        return "none";
+                case fs::perms::owner_read:
+                        return "owner_read";
+                case fs::perms::owner_write:
+                        return "owner_write";
+                case fs::perms::owner_exec:
+                        return "owner_exec";
+                case fs::perms::owner_all:
+                        return "owner_all";
+                case fs::perms::group_read:
+                        return "group_read";
+                case fs::perms::group_write:
+                        return "group_write";
+                case fs::perms::group_exec:
+                        return "group_exec";
+                case fs::perms::group_all:
+                        return "group_all";
+                case fs::perms::others_read:
+                        return "others_read";
+                case fs::perms::others_write:
+                        return "others_write";
+                case fs::perms::others_exec:
+                        return "others_exec";
+                case fs::perms::others_all:
+                        return "others_all";
+                case fs::perms::all:
+                        return "all";
+                case fs::perms::set_uid:
+                        return "set_uid";
+                case fs::perms::set_gid:
+                        return "set_gid";
+                case fs::perms::sticky_bit:
+                        return "sticky_bit";
+                case fs::perms::mask:
+                        return "mask";
+                case fs::perms::unknown:
+                        return "unknown";
+        }
+        return "";
+}
+
+#ifdef __clang__
+
+#pragma clang diagnostic pop
+
+#endif
+
+// How many 16-bit values a set over the flag mapping converts, compares or combines otherwise than the standard's type.
+template<class X>
+auto conversion_mismatches()
+        -> std::size_t
+{
+        constexpr auto used = static_cast<unsigned>((1UZ << X::max_size()) - 1UZ);
+        auto mismatches     = 0UZ;
+        for (auto const block : std::views::iota(0U, 0x10000U)) {
+                auto const theirs = static_cast<fs::perms>(block);
+                auto const low    = static_cast<fs::perms>(block & used);
+                X const ours      = low;
+                if (fs::perms(ours) != low or ours != low or (ours == theirs) != (low == theirs) or fs::perms(ours & theirs) != low or fs::perms(ours - theirs) != fs::perms::none or fs::perms(ours | low) != low or fs::perms(ours ^ low) != fs::perms::none) {
+                        ++mismatches;
+                }
+        }
+        return mismatches;
+}
+
+// Code written against std::filesystem::perms, run on a fresh file with only the variable's type spelled Perms.
+template<class Perms>
+auto adjust_permissions(fs::path const& path)
+        -> std::vector<fs::perms>
+{
+        std::ofstream(path).put('x');
+        auto trace = std::vector<fs::perms>();
+
+        Perms p = fs::status(path).permissions();
+        trace.push_back(p);
+        p &= ~(fs::perms::group_write | fs::perms::others_write);
+        if ((p & fs::perms::owner_read) == fs::perms::none) {
+                p |= fs::perms::owner_read;
+        }
+        trace.push_back(p);
+        fs::permissions(path, p);
+        trace.push_back(fs::status(path).permissions());
+        fs::permissions(path, fs::perms::owner_exec, fs::perm_options::add);
+        trace.push_back(fs::status(path).permissions());
+        fs::permissions(path, fs::perms::owner_all | fs::perms::group_read, fs::perm_options::replace);
+        trace.push_back(fs::status(path).permissions());
+        fs::permissions(path, fs::perms::owner_write, fs::perm_options::remove);
+        trace.push_back(fs::status(path).permissions());
+
+        // Writable again, since Windows will not remove a read-only file.
+        fs::permissions(path, fs::perms::owner_all, fs::perm_options::add);
+        fs::remove(path);
+        return trace;
+}
+
+// The keys a flag type walks, highest first, as values.
+template<class X>
+auto keys_of(X const& x)
+        -> std::vector<typename X::key_type>
+{
+        return {x.begin(), x.end()};
+}
+
+// Masks of a bitset of width M: none, the ends, either side of each block boundary, two stripes, and every bit.
+template<std::size_t M>
+auto wide_masks()
+        -> std::vector<std::bitset<M>>
+{
+        auto nrv = std::vector<std::bitset<M>>{std::bitset<M>(), std::bitset<M>().set(0UZ), std::bitset<M>().set(M - 1UZ), std::bitset<M>().set(0UZ).set(M - 1UZ), std::bitset<M>().set()};
+        for (auto k = 63UZ; k + 1UZ < M; k += 64UZ) {
+                nrv.push_back(std::bitset<M>().set(k).set(k + 1UZ));
+        }
+        auto every_third = std::bitset<M>();
+        for (auto k = 0UZ; k < M; k += 3UZ) {
+                every_third.set(k);
+        }
+        nrv.push_back(every_third);
+        nrv.push_back(~every_third);
+        return nrv;
+}
+
+// The bitsets' numeric order: the highest bit at which the two differ decides, as the flag type's <=> does.
+template<std::size_t M>
+auto numeric_order(std::bitset<M> const& a, std::bitset<M> const& b)
+        -> std::strong_ordering
+{
+        auto order = std::strong_ordering::equal;
+        for (auto const i : std::views::iota(0UZ, M)) {
+                if (a.test(i) != b.test(i)) {
+                        order = a.test(i) ? std::strong_ordering::greater : std::strong_ordering::less;
+                }
+        }
+        return order;
+}
+
+// How often a flag type over std::bitset<M> answers otherwise than std::bitset's own operators, over pairs of masks.
+template<std::size_t M>
+auto wide_bitset_mismatches()
+        -> std::size_t
+{
+        using mask      = std::bitset<M>;
+        using X         = xstd::bit_flag_set<mask>;
+        auto mismatches = 0UZ;
+        for (auto const& a : wide_masks<M>()) {
+                X const x = a;
+                mismatches += static_cast<std::size_t>(mask(x) != a or x != a or x.size() != a.count());
+                auto const keys = std::vector<mask>(x.begin(), x.end());
+                auto model      = std::vector<mask>();
+                for (auto const i : std::views::iota(0UZ, M)) {
+                        if (a.test(i)) {
+                                model.push_back(mask().set(i));
+                        }
+                }
+                std::ranges::reverse(model);
+                mismatches += static_cast<std::size_t>(keys != model);
+                for (auto const& b : wide_masks<M>()) {
+                        mismatches += static_cast<std::size_t>(mask(x | b) != (a | b) or mask(b | x) != (b | a));
+                        mismatches += static_cast<std::size_t>(mask(x & b) != (a & b) or mask(b & x) != (b & a));
+                        mismatches += static_cast<std::size_t>(mask(x ^ b) != (a ^ b) or mask(b ^ x) != (b ^ a));
+                        mismatches += static_cast<std::size_t>(mask(x - b) != (a & ~b) or mask(b - x) != (b & ~a));
+                        auto y = x;
+                        y |= b;
+                        auto z = x;
+                        z &= b;
+                        auto w = x;
+                        w ^= b;
+                        auto v = x;
+                        v -= b;
+                        mismatches += static_cast<std::size_t>(mask(y) != (a | b) or mask(z) != (a & b) or mask(w) != (a ^ b) or mask(v) != (a & ~b));
+                        mismatches += static_cast<std::size_t>((x <=> X(b)) != numeric_order(a, b));
+                        mismatches += static_cast<std::size_t>(xstd::bit_includes(x, b) != ((a & b) == b));
+                        mismatches += static_cast<std::size_t>(xstd::bit_intersects(x, b) != (a & b).any() or xstd::bit_disjoint(x, b) != (a & b).none());
+                }
+        }
+        return mismatches;
+}
+
+// Whether Mask keys a flag type at its default width.
+template<class Mask>
+concept names_a_flag_type = requires { typename xstd::bit_flag_set<Mask>; };
+
+// Whether Mask keys a flag type at a width spelled out.
+template<class Mask, std::size_t N>
+concept names_a_narrow_flag_type = requires { typename xstd::bit_flag_set<Mask, N>; };
+
+// Whether a braced value initializes X: false for a constant that narrows into the mask.
+template<class X, auto Value>
+constexpr bool brace_initializes = requires { X{Value}; };
+
+#ifndef NDEBUG
+
+// Whether making a flag type is a constant expression, which an assertion failing on the way in is not.
+template<auto Make>
+constexpr bool constant_evaluates = requires { typename std::bool_constant<(Make(), true)>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+
+#endif
+
+// Whether the flag type over Mask converts to bool through Mask, as an if statement's condition does.
+template<class Mask, std::size_t N>
+constexpr bool tests_in_an_if = requires (xstd::bit_flag_set<Mask, N> x, Mask m) { (x & m) ? 1 : 0; }; // NOLINT(bugprone-non-zero-enum-to-bool-conversion,readability-implicit-bool-conversion): the conversion under test
+
+// A flag type's walk against std::set<Mask, std::greater<Mask>> built from the same flags, over every subset of them.
+template<class X>
+auto order_mismatches_over_subsets(std::vector<typename X::key_type> const& flags)
+        -> std::size_t
+{
+        using key_type  = X::key_type;
+        auto mismatches = 0UZ;
+        for (auto const mask : std::views::iota(0UZ, 1UZ << flags.size())) {
+                auto x     = X();
+                auto model = std::set<key_type, std::greater<key_type>>(); // NOLINT(modernize-use-transparent-functors): the comparator the flag type names
+                for (auto const i : std::views::iota(0UZ, flags.size())) {
+                        if (((mask >> i) & 1UZ) != 0UZ) {
+                                x.insert(flags[i]);
+                                model.insert(flags[i]);
+                        }
+                }
+                mismatches += static_cast<std::size_t>(not std::ranges::equal(x, model));
+        }
+        return mismatches;
+}
+
+// The Qt alignment type at the nine bits of its range, and its one-bit flags.
+using alignment = xstd::bit_flag_set<test::qt::alignment_flag, 9>;
+
+constexpr auto alignment_flags = std::to_array({test::qt::align_left, test::qt::align_right, test::qt::align_hcenter, test::qt::align_justify, test::qt::align_absolute, test::qt::align_top, test::qt::align_bottom, test::qt::align_vcenter, test::qt::align_baseline});
+
+// How often a translation of QFlags' members answers otherwise than QFlags, over pairs of subsets and composites.
+auto qflags_mismatches()
+        -> std::size_t
+{
+        using test::qt::alignment_flag;
+        using qflags    = test::qt::flags<alignment_flag>;
+        auto values     = std::vector<alignment_flag>(alignment_flags.begin(), alignment_flags.end());
+        auto const more = {test::qt::align_horizontal, test::qt::align_vertical, test::qt::align_center};
+        values.insert(values.end(), more.begin(), more.end());
+        auto mismatches = 0UZ;
+        for (auto const mask : std::views::iota(0U, 1U << 9U)) {
+                auto const q = qflags(static_cast<alignment_flag>(mask));
+                auto const a = alignment(static_cast<alignment_flag>(mask));
+                mismatches += static_cast<std::size_t>(static_cast<unsigned>(a) != static_cast<unsigned>(q.toInt()));
+                for (auto const f : values) {
+                        auto const one_bit = std::has_single_bit(static_cast<unsigned>(f));
+                        mismatches += static_cast<std::size_t>(one_bit and a.contains(f) != q.testFlag(f));
+                        mismatches += static_cast<std::size_t>(xstd::bit_includes(a, f) != q.testFlags(f));
+                        mismatches += static_cast<std::size_t>(xstd::bit_intersects(a, f) != q.testAnyFlags(f));
+                        auto on  = q;
+                        auto off = q;
+                        on.setFlag(f);
+                        off.setFlag(f, false);
+                        mismatches += static_cast<std::size_t>(static_cast<unsigned>(a | f) != static_cast<unsigned>(on.toInt()));
+                        mismatches += static_cast<std::size_t>(static_cast<unsigned>(a - f) != static_cast<unsigned>(off.toInt()));
+                        if (one_bit) {
+                                auto x = a;
+                                static_cast<void>(x.insert(f));
+                                auto y = a;
+                                static_cast<void>(y.erase(f));
+                                mismatches += static_cast<std::size_t>(x != (a | f) or y != (a - f));
+                        }
+                }
+        }
+        return mismatches;
+}
+
+// Integer masks: each unsigned width, int and std::int8_t below their sign bits, and twelve of sixteen bits.
+using integer_flags = std::tuple<xstd::bit_flag_set<std::uint8_t>, xstd::bit_flag_set<std::uint16_t>, xstd::bit_flag_set<std::uint32_t>, xstd::bit_flag_set<std::uint64_t>, xstd::bit_flag_set<int>, xstd::bit_flag_set<std::int8_t>, xstd::bit_flag_set<std::uint16_t, 12>>;
+
+// The unsigned block an integer flag type's mask is read as.
+template<class X>
+using block_t = xstd::underlying_block_t<typename X::key_type>;
+
+// The block with every bit below the flag type's width set.
+template<class X>
+[[nodiscard]] constexpr auto low_bits() noexcept
+        -> block_t<X>
+{
+        using block_type = block_t<X>;
+        return static_cast<block_type>(std::numeric_limits<block_type>::max() >> (static_cast<std::size_t>(std::numeric_limits<block_type>::digits) - X::max_size()));
+}
+
+// Blocks below the width: every one up to sixteen bits, else none, all, two stripes, and each single and adjacent pair.
+template<class X>
+auto probe_blocks()
+        -> std::vector<block_t<X>>
+{
+        using block_type = block_t<X>;
+        constexpr auto N = X::max_size();
+        auto nrv         = std::vector<block_type>();
+        if constexpr (N <= 16UZ) {
+                for (auto const w : std::views::iota(0UZ, 1UZ << N)) {
+                        nrv.push_back(static_cast<block_type>(w));
+                }
+        } else {
+                constexpr auto low    = low_bits<X>();
+                constexpr auto stripe = static_cast<block_type>(low / 3U);
+                nrv.insert(nrv.end(), {block_type{}, low, stripe, static_cast<block_type>(low ^ stripe)});
+                for (auto const i : std::views::iota(0UZ, N)) {
+                        nrv.push_back(static_cast<block_type>(block_type{1} << i));
+                }
+                for (auto const i : std::views::iota(1UZ, N)) {
+                        nrv.push_back(static_cast<block_type>(block_type{3} << (i - 1UZ)));
+                }
+        }
+        return nrv;
+}
+
+// How many checks one block of an integer flag type fails: the conversions, the walk from the top flag, the lookups.
+template<class X>
+auto block_mismatches(block_t<X> w)
+        -> std::size_t
+{
+        using mask_type  = X::key_type;
+        using block_type = block_t<X>;
+        auto const m     = static_cast<mask_type>(w);
+        X const x        = m;
+        auto mismatches  = 0UZ;
+        if (mask_type(x) != m or x != m or X(xstd::from_blocks, w) != m or x.size() != static_cast<std::size_t>(std::popcount(w))) {
+                ++mismatches;
+        }
+
+        // From the highest flag down, each one bit of the block, which together spell it.
+        auto rest = w;
+        for (auto const k : x) {
+                auto const bit = static_cast<block_type>(mask_type(k));
+                if (not std::has_single_bit(bit) or bit != std::bit_floor(rest) or not x.contains(k)) {
+                        ++mismatches;
+                }
+                rest = static_cast<block_type>(rest ^ bit);
+        }
+
+        // A value of several bits, or of none, is no key even where each of its bits is an element.
+        if (x.contains(m) != std::has_single_bit(w) or x.count(m) != (std::has_single_bit(w) ? 1UZ : 0UZ) or rest != block_type{}) {
+                ++mismatches;
+        }
+        return mismatches;
+}
+
+// How many operators an integer flag type and its mask, on either side, answer otherwise than the mask itself does.
+template<class X>
+auto operator_mismatches(block_t<X> w, typename X::key_type b)
+        -> std::size_t
+{
+        using mask_type  = X::key_type;
+        using block_type = block_t<X>;
+        auto const m     = static_cast<mask_type>(w);
+        auto const v     = static_cast<block_type>(b);
+        X const x        = m;
+        auto mismatches  = 0UZ;
+        // The mask's own answers, worked in its unsigned block so that a signed mask's bits are read as bits.
+        auto const both   = static_cast<mask_type>(static_cast<block_type>(w | v));
+        auto const common = static_cast<mask_type>(static_cast<block_type>(w & v));
+        auto const either = static_cast<mask_type>(static_cast<block_type>(w ^ v));
+        auto const m_only = static_cast<mask_type>(static_cast<block_type>(w & static_cast<block_type>(~v)));
+        auto const b_only = static_cast<mask_type>(static_cast<block_type>(v & static_cast<block_type>(~w)));
+        mismatches += static_cast<std::size_t>(mask_type(x | b) != both or mask_type(b | x) != both);
+        mismatches += static_cast<std::size_t>(mask_type(x & b) != common or mask_type(b & x) != common);
+        mismatches += static_cast<std::size_t>(mask_type(x ^ b) != either or mask_type(b ^ x) != either);
+        mismatches += static_cast<std::size_t>(mask_type(x - b) != m_only or mask_type(b - x) != b_only);
+        mismatches += static_cast<std::size_t>((x == b) != (m == b) or (x <=> X(b)) != (m <=> b));
+        mismatches += static_cast<std::size_t>(xstd::bit_includes(x, b) != ((w & v) == v) or xstd::bit_intersects(x, b) != ((w & v) != block_type{}));
+        mismatches += static_cast<std::size_t>(xstd::bit_includes(X(b), x) != ((w & v) == w) or (xstd::bit_includes(X(b), x) and not xstd::bit_includes(x, b)) != ((w & v) == w and w != v));
+        mismatches += static_cast<std::size_t>((xstd::bit_includes(x, b) and not xstd::bit_includes(X(b), x)) != ((w & v) == v and w != v));
+        return mismatches;
+}
+
+// How many checks an integer flag type fails over its probe blocks, against none, every bit, a stripe and either end.
+template<class X>
+auto integer_mismatches()
+        -> std::size_t
+{
+        using mask_type   = X::key_type;
+        using block_type  = block_t<X>;
+        auto const low    = low_bits<X>();
+        auto const others = std::to_array<mask_type>({mask_type{}, static_cast<mask_type>(low), static_cast<mask_type>(low / 3U), mask_type{1}, static_cast<mask_type>(block_type{1} << (X::max_size() - 1UZ))});
+        auto mismatches   = 0UZ;
+        for (auto const w : probe_blocks<X>()) {
+                mismatches += block_mismatches<X>(w);
+                for (auto const b : others) {
+                        mismatches += operator_mismatches<X>(w, b);
+                }
+        }
+        return mismatches;
+}
+
+// Sixteen bits, which every library's constants fit, spelled as libstdc++'s enumerations have no fixed type.
+template<class Mask>
+using ios_flags = xstd::bit_flag_set<Mask, 16>;
+
+// How many of a stream type's constants a flag type of it converts, counts or looks up otherwise than the mask does.
+template<class Mask>
+auto ios_mismatches(std::initializer_list<Mask> constants)
+        -> std::size_t
+{
+        using X          = ios_flags<Mask>;
+        using block_type = xstd::underlying_block_t<Mask>;
+        auto mismatches  = 0UZ;
+        for (auto const c : constants) {
+                X const x    = c;
+                auto const w = static_cast<block_type>(c);
+                if (Mask(x) != c or x != c or x.size() != static_cast<std::size_t>(std::popcount(w)) or x.contains(c) != std::has_single_bit(w) or not xstd::bit_includes(x, c)) {
+                        ++mismatches;
+                }
+                for (auto const k : x) {
+                        auto const bit = static_cast<block_type>(Mask(k));
+                        if (not std::has_single_bit(bit) or (bit & w) == block_type{}) {
+                                ++mismatches;
+                        }
+                }
+        }
+        return mismatches;
+}
+
+} // namespace
+
+BOOST_AUTO_TEST_SUITE(BitFlagSet)
+
+// The standard's type and every flag type meet [bitmask.types].
+BOOST_AUTO_TEST_CASE(EveryFlagTypeIsABitmaskType)
+{
+        static_assert(xstd::bit_mask<fs::perms> and xstd::bit_mask<mode> and xstd::bit_mask<std::bitset<16>>);
+        static_assert(xstd::bit_mask<xfs::perms> and xstd::bit_mask<narrow_perms>);
+        static_assert(xstd::bit_mask<modes> and xstd::bit_mask<full_modes>);
+        static_assert(xstd::bit_mask<bitset_flags> and xstd::bit_mask<narrow_bitset_flags>);
+        static_assert(xstd::bit_convert<std::uint16_t>(xfs::perms{}) == 0U and xstd::bit_convert<std::uint16_t>(xfs::perms(fs::perms::none)) == 0U);
+
+        BOOST_CHECK(true);
+}
+
+// The flag type is the fixed set of the mask's one-bit values over the flag mapping, in the least block holding N.
+BOOST_AUTO_TEST_CASE(TheFlagTypeIsTheFixedSetOverTheFlagMapping)
+{
+        static_assert(std::same_as<xfs::perms, xstd::basic_bit_fixed_set<fs::perms, std::uint16_t, 16, xstd::bit_flag_mapping<fs::perms, 16>, std::greater<fs::perms>>>);                 // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(std::same_as<modes, xstd::basic_bit_fixed_set<mode, std::uint8_t, 3, xstd::bit_flag_mapping<mode, 3>, std::greater<mode>>>);                                        // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(std::same_as<bitset_flags, xstd::basic_bit_fixed_set<std::bitset<16>, std::uint16_t, 16, xstd::bit_flag_mapping<std::bitset<16>>, std::greater<std::bitset<16>>>>); // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+
+        BOOST_CHECK(true);
+}
+
+// Only a set over a mask mapping converts with its key: a set of positions or of listed enumerators does not.
+BOOST_AUTO_TEST_CASE(OnlyAMaskMappingMakesASetConvertWithItsKey)
+{
+        static_assert(std::convertible_to<fs::perms, xfs::perms> and std::convertible_to<xfs::perms, fs::perms>);
+        static_assert(not std::convertible_to<std::size_t, xstd::bit_fixed_set<8>> and not std::convertible_to<xstd::bit_fixed_set<8>, std::size_t>);
+        static_assert(not std::convertible_to<test::set::perm, xstd::bit_enum_set<test::set::perm>>);
+        static_assert(not std::convertible_to<xstd::bit_enum_set<test::set::perm>, test::set::perm>);
+
+        // A listed enumerator is the one key it is, so | inserts it and & keeps it alone.
+        auto const s = xstd::bit_enum_set<test::set::perm>{test::set::perm::read};
+        BOOST_CHECK((s | test::set::perm::exec).size() == 2UZ and (s & test::set::perm::read).size() == 1UZ);
+}
+
+// Any block and any order over the flag mapping convert alike: two blocks of a byte, one wider block, ascending keys.
+BOOST_AUTO_TEST_CASE(EveryBlockOverTheFlagMappingConvertsAlike)
+{
+        using byte_blocks        = xstd::basic_bit_fixed_set<fs::perms, std::uint8_t, 16, xstd::bit_flag_mapping<fs::perms, 16>, std::greater<fs::perms>>; // NOLINT(modernize-use-transparent-functors): the flag type's comparator
+        using narrow_byte_blocks = xstd::basic_bit_fixed_set<fs::perms, std::uint8_t, 12, xstd::bit_flag_mapping<fs::perms, 12>>;
+        using wide_block         = xstd::basic_bit_fixed_set<fs::perms, std::uint64_t, 12, xstd::bit_flag_mapping<fs::perms, 12>>;
+        static_assert(sizeof(byte_blocks) == 2UZ and sizeof(xstd::bit_fast<xfs::perms>) == sizeof(std::uint_fast16_t));
+        static_assert(fs::perms(byte_blocks(fs::perms::unknown)) == fs::perms::unknown and byte_blocks{fs::perms::owner_all}.size() == 3UZ);
+        BOOST_CHECK_EQUAL(conversion_mismatches<xfs::perms>(), 0UZ);
+        BOOST_CHECK_EQUAL(conversion_mismatches<byte_blocks>(), 0UZ);
+        BOOST_CHECK_EQUAL(conversion_mismatches<narrow_byte_blocks>(), 0UZ);
+        BOOST_CHECK_EQUAL(conversion_mismatches<wide_block>(), 0UZ);
+        BOOST_CHECK_EQUAL(conversion_mismatches<xstd::bit_fast<xfs::perms>>(), 0UZ);
+        BOOST_CHECK(std::ranges::equal(narrow_byte_blocks(fs::perms::owner_read | fs::perms::set_gid), std::array{fs::perms::owner_read, fs::perms::set_gid}));
+}
+
+// The keys are the mask's one-bit values below N, by bit_flag_mapping, and key_compare is std::greater of the mask.
+BOOST_AUTO_TEST_CASE(TheKeysAreTheMasksOneBitValues)
+{
+        static_assert(std::same_as<xfs::perms::key_type, fs::perms>);
+        static_assert(std::same_as<xfs::perms::key_mapping_type, xstd::bit_flag_mapping<fs::perms, 16>>);
+        static_assert(std::same_as<xfs::perms::key_compare, std::greater<fs::perms>>);
+        static_assert(std::same_as<bitset_flags::key_type, std::bitset<16>>);
+        static_assert(std::same_as<bitset_flags::key_compare, std::greater<std::bitset<16>>>);
+        static_assert(xfs::perms::max_size() == 16UZ and narrow_perms::max_size() == 12UZ and modes::max_size() == 3UZ);
+        static_assert(sizeof(xfs::perms) == sizeof(std::uint16_t) and sizeof(modes) == sizeof(std::uint8_t));
+
+        BOOST_CHECK(true);
+}
+
+// Each name converts to the flag type and back with its value, in a constant expression and at run time.
+BOOST_AUTO_TEST_CASE(EveryNameRoundTrips)
+{
+        static_assert(xstd::bit_convert<std::uint16_t>(xfs::perms(fs::perms::unknown)) == 0xFFFFU);
+        static_assert(xstd::bit_convert<std::uint16_t>(xfs::perms(fs::perms::mask)) == 07777U);
+        static_assert(xfs::perms(fs::perms::all) == fs::perms::all);
+        for (auto const& [name, theirs] : names) {
+                xfs::perms const ours = theirs;
+                BOOST_CHECK(ours == theirs);
+                BOOST_CHECK(fs::perms(ours) == theirs);
+                BOOST_CHECK_EQUAL(name_of(ours), name);
+                BOOST_CHECK_EQUAL(name_of(theirs), name);
+        }
+        BOOST_CHECK_EQUAL(name_of(xfs::perms(fs::perms::owner_read | fs::perms::group_read)), "");
+}
+
+// Every 16-bit value converts in from the standard's type and back unchanged.
+BOOST_AUTO_TEST_CASE(EverySixteenBitValueRoundTrips)
+{
+        auto mismatches = 0UZ;
+        for (auto const block : std::views::iota(0U, 0x10000U)) {
+                auto const theirs     = static_cast<fs::perms>(block);
+                xfs::perms const ours = theirs;
+                if (fs::perms(ours) != theirs or xstd::bit_convert<std::uint16_t>(ours) != block or ours != xfs::perms(xstd::from_blocks, static_cast<std::uint16_t>(block))) {
+                        ++mismatches;
+                }
+        }
+        BOOST_CHECK_EQUAL(mismatches, 0UZ);
+}
+
+// A braced list is the union of its values: one value is the conversion, and one-bit values are the set of them.
+BOOST_AUTO_TEST_CASE(ABracedListIsTheUnionOfItsValues)
+{
+        static_assert(xfs::perms{fs::perms::owner_all} == fs::perms::owner_all);
+        static_assert(xfs::perms{fs::perms::owner_read, fs::perms::group_read} == (fs::perms::owner_read | fs::perms::group_read));
+        static_assert(xfs::perms{fs::perms::owner_all, fs::perms::group_read}.size() == 4UZ);
+        auto const keys = std::vector{fs::perms::others_exec, fs::perms::owner_read};
+        BOOST_CHECK((xfs::perms(keys.begin(), keys.end()) == (fs::perms::owner_read | fs::perms::others_exec)));
+        BOOST_CHECK((xfs::perms(std::from_range, keys) == (fs::perms::owner_read | fs::perms::others_exec)));
+        BOOST_CHECK(xfs::perms{}.empty());
+}
+
+// Each operator takes the standard's type on either side, and answers as the standard's own operator does.
+BOOST_AUTO_TEST_CASE(EachOperatorMeetsTheStandardsTypeInBothOrders)
+{
+        auto const p = xfs::perms(fs::perms::owner_read);
+        static_assert(std::same_as<decltype(p | fs::perms::owner_write), xfs::perms>);
+        static_assert(std::same_as<decltype(fs::perms::owner_write | p), xfs::perms>);
+        static_assert(std::same_as<decltype(p & fs::perms::owner_write), xfs::perms>);
+        static_assert(std::same_as<decltype(fs::perms::owner_write & p), xfs::perms>);
+        static_assert(std::same_as<decltype(p ^ fs::perms::owner_write), xfs::perms>);
+        static_assert(std::same_as<decltype(fs::perms::owner_write ^ p), xfs::perms>);
+        static_assert(std::same_as<decltype(p - fs::perms::owner_write), xfs::perms>);
+        static_assert(std::same_as<decltype(fs::perms::owner_write - p), xfs::perms>);
+        static_assert(std::same_as<decltype(p == fs::perms::owner_write), bool>);
+        static_assert(std::same_as<decltype(fs::perms::owner_write == p), bool>);
+        static_assert(std::same_as<decltype(fs::perms::owner_write != p), bool>);
+        static_assert(std::same_as<decltype(p | p), xfs::perms> and std::same_as<decltype(~p), xfs::perms>);
+
+        for (auto const& [a_name, a] : names) {
+                for (auto const& [b_name, b] : names) {
+                        meets_the_standards_type(a, b);
+                }
+        }
+}
+
+// A multi-bit value is a mask on either side, not one key: owner_all meets all three owner flags.
+BOOST_AUTO_TEST_CASE(AMultiBitValueIsAMaskNotAKey)
+{
+        auto const p = xfs::perms(fs::perms::owner_read | fs::perms::group_all);
+        BOOST_CHECK((p | fs::perms::owner_all) == (fs::perms::owner_all | fs::perms::group_all));
+        BOOST_CHECK((fs::perms::owner_all & p) == fs::perms::owner_read);
+        BOOST_CHECK((p ^ fs::perms::owner_all) == (fs::perms::owner_write | fs::perms::owner_exec | fs::perms::group_all));
+        BOOST_CHECK((fs::perms::owner_all - p) == (fs::perms::owner_write | fs::perms::owner_exec));
+        BOOST_CHECK(xstd::bit_includes(p, xfs::perms(fs::perms::group_all)) and not xstd::bit_includes(p, xfs::perms(fs::perms::owner_all)));
+        BOOST_CHECK(xstd::bit_includes(p, xfs::perms(fs::perms::none)));
+        BOOST_CHECK(xstd::bit_intersects(p, xfs::perms(fs::perms::owner_all)));
+
+        // As a key it names no flag, so the set holds no such element, and erasing it leaves the set as it was.
+        auto x = p;
+        BOOST_CHECK(not x.contains(fs::perms::group_all) and x.count(fs::perms::group_all) == 0UZ); // NOLINT(readability-container-contains): count is the member under test
+        BOOST_CHECK(x.find(fs::perms::owner_all) == x.end());                                       // NOLINT(readability-container-contains): find is the member under test
+        BOOST_CHECK(x.erase(fs::perms::owner_all) == 0UZ and x == p);
+        BOOST_CHECK(not x.contains(fs::perms::none) and x.erase(fs::perms::none) == 0UZ and x == p);
+}
+
+// & and - read the standard's value below sixteen bits, where it can meet a flag, and == finds higher bits unequal.
+BOOST_AUTO_TEST_CASE(AndMinusAndEqualityTakeAValueWithHigherBits)
+{
+        auto const p = xfs::perms(fs::perms::owner_all | fs::perms::group_write);
+        BOOST_CHECK((p & ~fs::perms::group_write) == fs::perms::owner_all);
+        BOOST_CHECK((~fs::perms::group_write & p) == fs::perms::owner_all);
+        BOOST_CHECK((p - ~fs::perms::none) == fs::perms::none);
+        BOOST_CHECK((p - ~fs::perms::owner_all) == fs::perms::owner_all);
+        BOOST_CHECK((xfs::perms(fs::perms::unknown) & ~fs::perms::none) == fs::perms::unknown);
+        BOOST_CHECK(not(xfs::perms(fs::perms::unknown) == ~fs::perms::none));
+        BOOST_CHECK(not(~fs::perms::none == xfs::perms(fs::perms::unknown)));
+        BOOST_CHECK(xfs::perms(fs::perms::unknown) != ~fs::perms::none);
+
+        // The compound forms, against the standard's own on the same values.
+        auto x      = p;
+        auto theirs = fs::perms(p);
+        x &= ~fs::perms::group_write;
+        theirs &= ~fs::perms::group_write;
+        BOOST_CHECK(x == theirs);
+        BOOST_CHECK(&(x -= ~fs::perms::owner_all) == &x);
+        BOOST_CHECK(x == fs::perms::owner_all);
+        BOOST_CHECK(&(x |= fs::perms::group_read) == &x and x == (fs::perms::owner_all | fs::perms::group_read));
+        BOOST_CHECK(&(x ^= fs::perms::owner_all) == &x and x == fs::perms::group_read);
+        static_assert(std::same_as<decltype(x &= ~fs::perms::none), xfs::perms&>);
+        static_assert(std::same_as<decltype(x -= ~fs::perms::none), xfs::perms&>);
+        static_assert(std::same_as<decltype(x |= fs::perms::none), xfs::perms&>);
+        static_assert(std::same_as<decltype(x ^= fs::perms::none), xfs::perms&>);
+}
+
+// The same code, once against the standard's type and once with the variable's type respelled, leaves a file the same.
+BOOST_AUTO_TEST_CASE(RespelledCodeBehavesAsTheStandardsTypeOnARealFile)
+{
+        auto const path       = fs::temp_directory_path() / std::format("xstd-bits-bit-flag-set-{}.tmp", std::random_device()());
+        auto const std_trace  = adjust_permissions<fs::perms>(path);
+        auto const xstd_trace = adjust_permissions<xfs::perms>(path);
+        BOOST_CHECK(std_trace == xstd_trace);
+        BOOST_CHECK(not fs::exists(path));
+}
+
+// Every subset of the twelve permissions, walked, counted, probed, complemented and written through p[k].
+BOOST_AUTO_TEST_CASE(EverySubsetAgreesWithStdSet)
+{
+        for (auto const mask : std::views::iota(0UZ, 1UZ << ranks.size())) {
+                agrees_on_subset(mask);
+        }
+}
+
+// The queries and the four operators over pairs of subsets, against std::set's algorithms.
+BOOST_AUTO_TEST_CASE(PairsOfSubsetsAgreeWithStdSet)
+{
+        for (auto lhs = 0UZ; lhs < (1UZ << ranks.size()); lhs += 31UZ) {
+                for (auto rhs = 0UZ; rhs < (1UZ << ranks.size()); rhs += 37UZ) {
+                        agrees_on_pair(lhs, rhs);
+                }
+        }
+}
+
+// The four bits above the permissions are keys like the others: unknown holds all sixteen.
+BOOST_AUTO_TEST_CASE(TheHighBitsAreKeysToo)
+{
+        auto const unknown = xfs::perms(fs::perms::unknown);
+        BOOST_CHECK_EQUAL(unknown.size(), 16UZ);
+        BOOST_CHECK(*unknown.begin() == bit_at(15UZ) and *unknown.rbegin() == fs::perms::others_exec);
+        BOOST_CHECK(~unknown == fs::perms::none);
+        BOOST_CHECK((unknown - fs::perms::mask).size() == 4UZ);
+        BOOST_CHECK(std::is_lt(xfs::perms(fs::perms::mask) <=> unknown));
+        xfs::perms const back = fs::perms(unknown);
+        BOOST_CHECK(back == unknown);
+}
+
+// insert refuses a one-bit value at or above N, as a set refuses a key past its max_size(), and the block is untouched.
+BOOST_AUTO_TEST_CASE(InsertingAPositionAtOrAboveTheWidthThrows)
+{
+        auto p = narrow_perms(fs::perms::owner_read);
+        BOOST_CHECK_THROW(p.insert(bit_at(12UZ)), std::out_of_range);
+        BOOST_CHECK(p == fs::perms::owner_read);
+        BOOST_CHECK(not p.contains(bit_at(12UZ)));
+}
+
+// The set reading's members come with the base: insert, erase, find, the reverse range, clear, swap and hash.
+BOOST_AUTO_TEST_CASE(TheInheritedSetInterfaceWorks)
+{
+        auto p = xfs::perms(xstd::from_blocks, std::uint16_t{0xF000});
+        BOOST_CHECK(p.insert(fs::perms::owner_read).second);
+        BOOST_CHECK(not p.insert(fs::perms::owner_read).second);
+        p.insert(fs::perms::group_exec);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(p), 0xF108U);
+        BOOST_CHECK(*p.find(fs::perms::group_exec) == fs::perms::group_exec);
+        BOOST_CHECK(p.find(fs::perms::others_read) == p.end()); // NOLINT(readability-container-contains): find is the inherited member under test
+        BOOST_CHECK(*p.rbegin() == fs::perms::group_exec);
+        BOOST_CHECK(std::ranges::equal(std::views::reverse(p) | std::views::take(2), std::array{fs::perms::group_exec, fs::perms::owner_read}));
+        BOOST_CHECK_EQUAL(p.erase(fs::perms::owner_read), 1UZ);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint16_t>(p), 0xF008U);
+
+        auto q = xfs::perms(fs::perms::owner_all);
+        swap(p, q);
+        BOOST_CHECK(p == fs::perms::owner_all and xstd::bit_convert<std::uint16_t>(q) == 0xF008U);
+        std::ranges::swap(p, q);
+        BOOST_CHECK(q == fs::perms::owner_all);
+        BOOST_CHECK_EQUAL(std::hash<xfs::perms>()(q), std::hash<xfs::perms>()(xfs::perms(fs::perms::owner_all)));
+        p.clear();
+        BOOST_CHECK(p == fs::perms::none);
+}
+
+// contains is std::set's membership of one flag; all-of is bit_includes, any-of bit_intersects, none-of bit_disjoint.
+// contains is std::set's membership of one flag; all-of is is_superset_of, any-of intersects and none-of disjoint.
+BOOST_AUTO_TEST_CASE(ContainsIsMembershipOfOneFlag)
+{
+        auto p = xfs::perms(fs::perms::owner_read | fs::perms::group_write);
+        static_assert(std::same_as<decltype(p.contains(fs::perms::owner_read)), bool>);
+        BOOST_CHECK(p.contains(fs::perms::owner_read) and not p.contains(fs::perms::owner_write));
+        BOOST_CHECK(xstd::bit_includes(p, xfs::perms(fs::perms::owner_read)) == p.contains(fs::perms::owner_read));
+        BOOST_CHECK(not xstd::bit_includes(p, xfs::perms(fs::perms::owner_all)) and xstd::bit_intersects(p, xfs::perms(fs::perms::owner_all)));
+        BOOST_CHECK(not p.contains(fs::perms::owner_all) and not xstd::bit_includes(p, fs::perms::owner_all) and xstd::bit_intersects(p, fs::perms::owner_all));
+        BOOST_CHECK(xstd::bit_includes(p, fs::perms::owner_read | fs::perms::group_write) and xstd::bit_includes(xfs::perms(fs::perms::all), p));
+        BOOST_CHECK(not xstd::bit_includes(p, fs::perms::all) and xstd::bit_includes(xfs::perms(fs::perms::owner_read | fs::perms::group_write), p));
+        BOOST_CHECK(xstd::bit_disjoint(p, fs::perms::others_all) and xstd::bit_intersects(p, fs::perms::group_all));
+        static_assert(noexcept(xstd::bit_includes(p, p)) and noexcept(xstd::bit_includes(p, fs::perms::all)));
+        static_assert(noexcept(xstd::bit_disjoint(p, p)) and noexcept(xstd::bit_disjoint(p, fs::perms::all)));
+        p.insert(fs::perms::owner_write);
+        BOOST_CHECK(p == (fs::perms::owner_read | fs::perms::owner_write | fs::perms::group_write));
+        p.erase(fs::perms::owner_read);
+        BOOST_CHECK(p == (fs::perms::owner_write | fs::perms::group_write));
+}
+
+// The flag type is a bidirectional range of the mask's one-bit values, whose read-only proxy converts to each.
+BOOST_AUTO_TEST_CASE(TheFlagTypeIsABidirectionalRangeOfItsKeys)
+{
+        static_assert(std::bidirectional_iterator<xfs::perms::iterator>);
+        static_assert(std::ranges::bidirectional_range<xfs::perms const>);
+        static_assert(std::ranges::sized_range<xfs::perms const>);
+        static_assert(std::same_as<std::iter_reference_t<xfs::perms::iterator>, xfs::perms::const_reference>);
+        static_assert(std::convertible_to<xfs::perms::const_reference, fs::perms>);
+
+        auto const p = xfs::perms(fs::perms::owner_all);
+        auto it      = p.begin();
+        BOOST_CHECK(*it++ == fs::perms::owner_read);
+        BOOST_CHECK(*it == fs::perms::owner_write);
+        BOOST_CHECK(++it != p.end());
+        BOOST_CHECK(++it == p.end());
+}
+
+// The walk runs from the highest flag down, as ls -l reads the mode: owner_read first and others_exec last.
+BOOST_AUTO_TEST_CASE(TheFlagTypeIteratesFromTheHighestFlagDown)
+{
+        constexpr auto rwx = std::to_array({fs::perms::owner_read, fs::perms::owner_write, fs::perms::owner_exec, fs::perms::group_read, fs::perms::group_write, fs::perms::group_exec, fs::perms::others_read, fs::perms::others_write, fs::perms::others_exec});
+        BOOST_CHECK(std::ranges::equal(xfs::perms(fs::perms::all), rwx));
+        BOOST_CHECK(xfs::perms(fs::perms::mask).front() == fs::perms::set_uid and xfs::perms(fs::perms::mask).back() == fs::perms::others_exec);
+}
+
+// <=> on two flag values is the enumeration's on their underlying blocks, and the mixed < via the conversion agrees.
+BOOST_AUTO_TEST_CASE(ThreeWayComparisonIsTheEnumerations)
+{
+        auto mismatches = 0UZ;
+        for (auto const block : std::views::iota(0U, 0x10000U)) {
+                mismatches += order_mismatches(static_cast<std::uint16_t>(block));
+        }
+        BOOST_CHECK_EQUAL(mismatches, 0UZ);
+}
+
+// A width of twelve takes every value whose bits are all below it, and its complement stays within it.
+BOOST_AUTO_TEST_CASE(ANarrowerWidthTakesEveryValueBelowIt)
+{
+        static_assert(sizeof(narrow_perms) == sizeof(std::uint16_t));
+        auto mismatches = 0UZ;
+        for (auto const block : std::views::iota(0U, 0x1000U)) {
+                auto const theirs       = static_cast<fs::perms>(block);
+                narrow_perms const ours = theirs;
+                if (fs::perms(ours) != theirs or ours.size() != static_cast<std::size_t>(std::popcount(block))) {
+                        ++mismatches;
+                }
+        }
+        BOOST_CHECK_EQUAL(mismatches, 0UZ);
+        BOOST_CHECK(~narrow_perms() == fs::perms::mask);
+        BOOST_CHECK(fs::perms::mask == ~narrow_perms());
+
+        // Bits above twelve make a value unequal and are dropped by &, where nothing of the flag set meets them.
+        BOOST_CHECK(~narrow_perms() != fs::perms::none);
+        BOOST_CHECK(~narrow_perms() != fs::perms::unknown);
+        BOOST_CHECK((~narrow_perms() & fs::perms::unknown) == fs::perms::mask);
+}
+
+// A program-defined mask: the flags of three bits or of the whole byte, printed through the mask's own formatter.
+BOOST_AUTO_TEST_CASE(AProgramDefinedMaskKeysAFlagType)
+{
+        auto const m = modes{mode::read, mode::exec};
+        BOOST_CHECK(std::ranges::equal(m, std::array{mode::exec, mode::read}));
+        BOOST_CHECK(m.contains(mode::exec) and not m.contains(mode::write));
+        BOOST_CHECK(xstd::bit_includes(m, modes(mode::exec | mode::read)) and not xstd::bit_includes(m, modes(mode::exec | mode::write)));
+        BOOST_CHECK(~m == mode::write);
+        BOOST_CHECK(mode(~modes()) == (mode::read | mode::write | mode::exec));
+        BOOST_CHECK_EQUAL(std::format("{}", m), "{exec, read}");
+        BOOST_CHECK_EQUAL(std::format("{}", modes()), "{}");
+
+        // The mask's own operators, against which the flag type's are checked.
+        auto bits = mode::read;
+        bits |= mode::write;
+        bits &= ~mode::read;
+        bits ^= mode::exec;
+        BOOST_CHECK(bits == (mode::write | mode::exec) and modes(bits) == (modes{mode::write} | mode::exec));
+
+        // The whole byte: its complement holds the five bits no enumerator names.
+        auto const f = full_modes(mode::write);
+        BOOST_CHECK_EQUAL((~f).size(), 7UZ);
+        BOOST_CHECK(std::to_underlying(mode(~f)) == 0xFDU);
+        BOOST_CHECK((f | mode::read) == (mode::read | mode::write));
+}
+
+// A user's class over the flag type inherits its constructors and set interface, and adds a name of its own.
+BOOST_AUTO_TEST_CASE(AUserMayDeriveAClassOfTheirOwn)
+{
+        auto const p = user_perms(fs::perms::owner_all);
+        BOOST_CHECK(p.is_private());
+        BOOST_CHECK(not user_perms(fs::perms::all).is_private());
+        BOOST_CHECK((user_perms{fs::perms::owner_read, fs::perms::group_read}).size() == 2UZ);
+        static_assert(std::same_as<decltype(p | fs::perms::group_read), xfs::perms>);
+        BOOST_CHECK((p | fs::perms::group_read).size() == 4UZ);
+}
+
+// A bitset mask converts both ways at every 16-bit value, and its flags are one-bit bitsets, the highest first.
+BOOST_AUTO_TEST_CASE(ABitsetMaskConvertsAndIterates)
+{
+        static_assert(std::bitset<16>(bitset_flags(std::bitset<16>(0x0123))) == std::bitset<16>(0x0123));
+        static_assert(bitset_flags(std::bitset<16>(0x0123)) == std::bitset<16>(0x0123));
+        auto mismatches = 0UZ;
+        for (auto const block : std::views::iota(0U, 0x10000U)) {
+                auto const bits         = std::bitset<16>(block);
+                bitset_flags const ours = bits;
+                if (std::bitset<16>(ours) != bits or xstd::bit_convert<std::uint16_t>(ours) != block or ours != bits) {
+                        ++mismatches;
+                }
+        }
+        BOOST_CHECK_EQUAL(mismatches, 0UZ);
+
+        auto const p = bitset_flags(std::bitset<16>(0x0105));
+        BOOST_CHECK((std::vector<std::bitset<16>>(p.begin(), p.end()) == std::vector{std::bitset<16>(0x0100), std::bitset<16>(0x0004), std::bitset<16>(0x0001)}));
+        BOOST_CHECK(xstd::bit_includes(p, bitset_flags(std::bitset<16>(0x0101))) and not xstd::bit_includes(p, bitset_flags(std::bitset<16>(0x0003))));
+        BOOST_CHECK(p.contains(std::bitset<16>(0x0004)) and not p.contains(std::bitset<16>(0x0002)));
+
+        // A bitset of several bits, or of none, is no key: no element, and nothing to erase.
+        auto x = p;
+        BOOST_CHECK(not x.contains(std::bitset<16>(0x0005)) and x.count(std::bitset<16>(0x0005)) == 0UZ); // NOLINT(readability-container-contains): count is the member under test
+        BOOST_CHECK(x.find(std::bitset<16>()) == x.end());                                                // NOLINT(readability-container-contains): find is the member under test
+        BOOST_CHECK(x.erase(std::bitset<16>(0x0105)) == 0UZ and x == p);
+        BOOST_CHECK(xstd::bit_includes(p, std::bitset<16>(0x0005)) and (xstd::bit_includes(decltype(p)(std::bitset<16>(0x0107)), p) and not xstd::bit_includes(p, std::bitset<16>(0x0107))) and xstd::bit_disjoint(p, std::bitset<16>(0x0002)));
+}
+
+// Each operator takes the bitset on either side, as std::bitset's own do.
+BOOST_AUTO_TEST_CASE(EachOperatorMeetsABitsetInBothOrders)
+{
+        auto const q = bitset_flags(xstd::from_blocks, std::uint16_t{0x0F0});
+        BOOST_CHECK(xstd::bit_convert<std::uint16_t>(q | std::bitset<16>(0x00F)) == 0x0FF and xstd::bit_convert<std::uint16_t>(std::bitset<16>(0x00F) | q) == 0x0FF);
+        BOOST_CHECK(xstd::bit_convert<std::uint16_t>(q & std::bitset<16>(0x030)) == 0x030 and xstd::bit_convert<std::uint16_t>(std::bitset<16>(0x030) & q) == 0x030);
+        BOOST_CHECK(xstd::bit_convert<std::uint16_t>(q ^ std::bitset<16>(0x0FF)) == 0x00F and xstd::bit_convert<std::uint16_t>(std::bitset<16>(0x0FF) ^ q) == 0x00F);
+        BOOST_CHECK(xstd::bit_convert<std::uint16_t>(q - std::bitset<16>(0x030)) == 0x0C0 and xstd::bit_convert<std::uint16_t>(std::bitset<16>(0x0FF) - q) == 0x00F);
+        BOOST_CHECK(std::bitset<16>(0x0F0) == q and q != std::bitset<16>(0x0F1));
+
+        auto x = q;
+        BOOST_CHECK(x.insert(std::bitset<16>(0x001)).second);
+        BOOST_CHECK(x == std::bitset<16>(0x0F1) and x.erase(std::bitset<16>(0x010)) == 1UZ);
+        BOOST_CHECK(x.insert(std::bitset<16>(0x8000)).second and x.size() == 5UZ);
+}
+
+// <=> on two bitset flag values is the order of the numbers their bits spell.
+BOOST_AUTO_TEST_CASE(ThreeWayComparisonOfABitsetIsNumeric)
+{
+        auto mismatches = 0UZ;
+        for (auto const block : std::views::iota(0U, 0x10000U)) {
+                mismatches += bitset_order_mismatches(static_cast<std::uint16_t>(block));
+        }
+        BOOST_CHECK_EQUAL(mismatches, 0UZ);
+}
+
+// Against a sixteen-bit bitset, a twelve-bit flag type reads the low twelve, and finds any higher position unequal.
+BOOST_AUTO_TEST_CASE(ANarrowerWidthReadsTheLowPositionsOfABitset)
+{
+        auto const high = std::bitset<16>(0x1001);
+        auto const p    = narrow_bitset_flags(xstd::from_blocks, std::uint16_t{0x0FFF});
+        BOOST_CHECK(std::bitset<16>(p & high) == std::bitset<16>(0x001));
+        BOOST_CHECK(std::bitset<16>(p - high) == std::bitset<16>(0xFFE));
+        BOOST_CHECK(not(narrow_bitset_flags(xstd::from_blocks, std::uint16_t{0x001}) == high));
+        BOOST_CHECK(narrow_bitset_flags(xstd::from_blocks, std::uint16_t{0x001}) == std::bitset<16>(0x001));
+        BOOST_CHECK(std::bitset<16>(~narrow_bitset_flags()) == std::bitset<16>(0x0FFF));
+        BOOST_CHECK(xstd::bit_intersects(p, narrow_bitset_flags(std::bitset<16>(0x001))));
+}
+
+// An integer type is a bitmask type, [bitmask.types]/1, and keys a flag type below its sign bit; bool and char do not.
+BOOST_AUTO_TEST_CASE(AnIntegerMaskKeysAFlagTypeBelowItsSignBit)
+{
+        static_assert(std::same_as<xstd::bit_flag_set<std::uint8_t>, xstd::basic_bit_fixed_set<std::uint8_t, std::uint8_t, 8, xstd::bit_flag_mapping<std::uint8_t, 8>, std::greater<std::uint8_t>>>); // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(std::same_as<xstd::bit_flag_set<int>, xstd::basic_bit_fixed_set<int, std::uint32_t, 31, xstd::bit_flag_mapping<int, 31>, std::greater<int>>>);                                  // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(std::same_as<xstd::bit_flag_set<std::int8_t>, xstd::basic_bit_fixed_set<std::int8_t, std::uint8_t, 7, xstd::bit_flag_mapping<std::int8_t, 7>, std::greater<std::int8_t>>>);     // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(xstd::bit_flag_set<std::uint16_t>::max_size() == 16UZ and xstd::bit_flag_set<std::uint32_t>::max_size() == 32UZ and xstd::bit_flag_set<std::uint64_t>::max_size() == 64UZ);
+        static_assert(xstd::bit_flag_set<int>::max_size() == 31UZ and xstd::bit_flag_set<std::int8_t>::max_size() == 7UZ and xstd::bit_flag_set<std::int64_t>::max_size() == 63UZ);
+        static_assert(sizeof(xstd::bit_flag_set<int>) == sizeof(int) and sizeof(xstd::bit_flag_set<std::uint16_t, 12>) == sizeof(std::uint16_t) and sizeof(xstd::bit_flag_set<std::uint64_t, 5>) == 1UZ);
+        static_assert(xstd::bit_mask<xstd::bit_flag_set<int>> and xstd::bit_mask<xstd::bit_flag_set<std::uint64_t>> and not xstd::bit_mask<int>);
+        static_assert(std::convertible_to<int, xstd::bit_flag_set<int>> and std::convertible_to<xstd::bit_flag_set<int>, int>);
+        static_assert(names_a_flag_type<std::uint8_t> and names_a_flag_type<std::int64_t> and not names_a_flag_type<bool> and not names_a_flag_type<char>);
+        static_assert(names_a_flag_type<signed char> and names_a_flag_type<unsigned char> and not names_a_flag_type<char8_t> and not names_a_flag_type<char16_t> and not names_a_flag_type<wchar_t>);
+        BOOST_CHECK(true);
+}
+
+// Each integer flag type converts, walks, looks up and combines with its mask on either side as the mask itself does.
+BOOST_AUTO_TEST_CASE(AnIntegerMaskAgreesWithItsOwnOperators)
+{
+        test::for_each_type<integer_flags>([]<class X> -> void {
+                BOOST_CHECK_EQUAL(integer_mismatches<X>(), 0UZ);
+        });
+}
+
+// The flags run from the highest bit down, and contains takes a one-bit value: several bits, or none, are no key.
+BOOST_AUTO_TEST_CASE(AnIntegerFlagTypeIteratesHighestFirstAndContainsOneBitValues)
+{
+        auto const wide = xstd::bit_flag_set<std::uint64_t>(0x8000'0000'0000'0101ULL);
+        BOOST_CHECK(std::ranges::equal(wide, std::to_array<std::uint64_t>({0x8000'0000'0000'0000ULL, 0x100ULL, 0x1ULL})));
+        auto const p = xstd::bit_flag_set<int>(0x4000'0005);
+        BOOST_CHECK(std::ranges::equal(p, std::to_array({0x4000'0000, 4, 1})) and p.front() == 0x4000'0000 and p.back() == 1);
+        BOOST_CHECK(p.contains(4) and p.contains(1) and not p.contains(2) and not p.contains(5) and not p.contains(0));
+        BOOST_CHECK(p.find(5) == p.end() and p.count(5) == 0UZ); // NOLINT(readability-container-contains): find and count are the members under test
+        BOOST_CHECK(xstd::bit_includes(p, 5) and xstd::bit_intersects(p, 6) and xstd::bit_disjoint(p, 2) and not xstd::bit_includes(p, 7));
+        BOOST_CHECK((xstd::bit_includes(xstd::bit_flag_set<int>(0x4000'0007), p) and not xstd::bit_includes(p, 0x4000'0007)) and (xstd::bit_includes(p, 4) and not xstd::bit_includes(xstd::bit_flag_set<int>(4), p)) and xstd::bit_includes(xstd::bit_flag_set<int>(0x4000'0005), p));
+
+        auto x = p;
+        BOOST_CHECK(x.erase(5) == 0UZ and x == p);
+        BOOST_CHECK(x.insert(2).second and x == 0x4000'0007);
+        BOOST_CHECK(x.erase(2) == 1UZ and x == p);
+        BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_flag_set<std::int8_t>(0x51)), "{64, 16, 1}");
+}
+
+// A signed mask's sign bit is no key: & and - read a value below it, and no write brings it in.
+BOOST_AUTO_TEST_CASE(ASignedFlagTypeRefusesItsSignBit)
+{
+        constexpr auto sign = std::numeric_limits<int>::min();
+        auto p              = xstd::bit_flag_set<int>(5);
+        BOOST_CHECK(int(~xstd::bit_flag_set<int>()) == std::numeric_limits<int>::max());
+        BOOST_CHECK(not p.contains(sign) and not xstd::bit_flag_mapping<int>::is_key(sign));
+        BOOST_CHECK_THROW(static_cast<void>(p.insert(sign)), std::out_of_range);
+        BOOST_CHECK(p == 5);
+
+        // & and - read the value below the width, and == finds a value with the sign bit unequal.
+        BOOST_CHECK((p & -1) == 5 and (p - -1).empty() and (-1 & p) == 5 and p != -1 and -1 != p);
+        BOOST_CHECK(std::int8_t(~xstd::bit_flag_set<std::int8_t>()) == std::numeric_limits<std::int8_t>::max());
+        // A named set: Clang 23's lifetime-safety analysis crashes on an insert into a temporary here.
+        auto q = xstd::bit_flag_set<std::int8_t>();
+        BOOST_CHECK_THROW(static_cast<void>(q.insert(std::numeric_limits<std::int8_t>::min())), std::out_of_range);
+}
+
+// Twelve bits of sixteen, as the permissions are: & and - read the low twelve, and no write brings in a bit above.
+BOOST_AUTO_TEST_CASE(ANarrowerIntegerFlagTypeRefusesTheBitsAboveIt)
+{
+        using narrow    = xstd::bit_flag_set<std::uint16_t, 12>;
+        auto const high = std::uint16_t{0x1001};
+        auto q          = narrow(std::uint16_t{0x0FFF});
+        BOOST_CHECK(std::uint16_t(q & high) == 0x001U and std::uint16_t(q - high) == 0xFFEU and q != std::uint16_t{0xFFFF});
+        BOOST_CHECK(not(narrow(std::uint16_t{0x001}) == high) and std::uint16_t(~narrow()) == 0x0FFFU);
+        BOOST_CHECK(not q.contains(std::uint16_t{0x1000}));
+        BOOST_CHECK_THROW(static_cast<void>(q.insert(std::uint16_t{0x1000})), std::out_of_range);
+        BOOST_CHECK(q == std::uint16_t{0x0FFF});
+}
+
+// [ios.base]'s three bitmask types, an enumeration in one library and an integer in another, round-trip every constant.
+BOOST_AUTO_TEST_CASE(EveryIosBaseConstantRoundTrips)
+{
+        using ios = std::ios_base;
+        BOOST_CHECK_EQUAL(ios_mismatches<ios::fmtflags>({ios::boolalpha, ios::dec, ios::fixed, ios::hex, ios::internal, ios::left, ios::oct, ios::right, ios::scientific, ios::showbase, ios::showpoint, ios::showpos, ios::skipws, ios::unitbuf, ios::uppercase, ios::adjustfield, ios::basefield, ios::floatfield}), 0UZ);
+        BOOST_CHECK_EQUAL(ios_mismatches<ios::iostate>({ios::goodbit, ios::badbit, ios::eofbit, ios::failbit}), 0UZ);
+        BOOST_CHECK_EQUAL(ios_mismatches<ios::openmode>({ios::app, ios::ate, ios::binary, ios::in, ios::out, ios::trunc}), 0UZ);
+        BOOST_CHECK(ios_flags<ios::iostate>(ios::goodbit).empty());
+        BOOST_CHECK(ios_flags<ios::fmtflags>(ios::adjustfield).size() == 3UZ);
+}
+
+// Code written against a stream's flags and state, with only the variable's type respelled, formats and recovers alike.
+BOOST_AUTO_TEST_CASE(AStreamTakesItsFlagsAndStateAsFlagTypes)
+{
+        using ios      = std::ios_base;
+        using fmtflags = ios_flags<ios::fmtflags>;
+        using iostate  = ios_flags<ios::iostate>;
+
+        auto os    = std::ostringstream();
+        fmtflags f = os.flags();
+        f -= ios::basefield;
+        f |= ios::hex;
+        f |= ios::showbase;
+        os.flags(f);
+        os << 255;
+        BOOST_CHECK_EQUAL(os.str(), "0xff");
+        BOOST_CHECK(fmtflags(os.flags()) == f and f.contains(ios::hex) and not f.contains(ios::dec) and not f.contains(ios::basefield));
+
+        auto is = std::istringstream("x");
+        auto n  = 0;
+        is >> n;
+        iostate st = is.rdstate();
+        BOOST_CHECK(st.contains(ios::failbit) and not st.contains(ios::badbit));
+        st -= ios::failbit;
+        is.clear(st);
+        BOOST_CHECK(is.good() and iostate(is.rdstate()).empty());
+}
+
+// Any enumeration whose | compiles keys a flag type, whatever | returns: Qt's QFlags, a C enumeration's int.
+BOOST_AUTO_TEST_CASE(AFlagEnumerationKeysAFlagTypeWhateverItsOperatorsReturn)
+{
+        using test::qt::alignment_flag;
+        static_assert(not xstd::bit_mask<alignment_flag> and std::same_as<decltype(test::qt::align_left | test::qt::align_top), test::qt::flags<alignment_flag>>);
+        static_assert(names_a_narrow_flag_type<alignment_flag, 9UZ> and xstd::bit_mask<alignment>);
+        static_assert(std::same_as<alignment, xstd::basic_bit_fixed_set<alignment_flag, std::uint16_t, 9, xstd::bit_flag_mapping<alignment_flag, 9>, std::greater<alignment_flag>>>); // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+
+        // An enumerated type that is no bitmask has no |, and is turned away at every width.
+        static_assert(not names_a_flag_type<std::filesystem::file_type> and not names_a_narrow_flag_type<std::filesystem::file_type, 8UZ>);
+        static_assert(names_a_flag_type<std::filesystem::perms>);
+
+        auto a = alignment{test::qt::align_left, test::qt::align_top};
+        BOOST_CHECK(std::ranges::equal(a, std::array{test::qt::align_top, test::qt::align_left}));
+        BOOST_CHECK(a.contains(test::qt::align_top) and not a.contains(test::qt::align_right));
+        a |= test::qt::align_center;
+        BOOST_CHECK(a.size() == 4UZ and xstd::bit_includes(a, test::qt::align_center));
+        BOOST_CHECK(alignment_flag(~alignment()) == 0x1FF);
+        BOOST_CHECK_EQUAL(order_mismatches_over_subsets<alignment>({alignment_flags.begin(), alignment_flags.end()}), 0UZ);
+}
+
+// QFlags' members each have a translation, which answers as QFlags does over every value and every flag.
+BOOST_AUTO_TEST_CASE(EachQFlagsMemberHasATranslation)
+{
+        BOOST_CHECK_EQUAL(qflags_mismatches(), 0UZ);
+}
+
+// An if reads a flag type of an unscoped enumeration as any-of, through the conversion; a scoped one does not.
+BOOST_AUTO_TEST_CASE(AnIfTestsAnyFlagOfAnUnscopedEnumerationOnly)
+{
+        static_assert(tests_in_an_if<test::qt::alignment_flag, 9UZ>);
+        static_assert(not tests_in_an_if<fs::perms, 16UZ> and not tests_in_an_if<mode, 3UZ>);
+
+        auto const a = alignment(test::qt::align_center);
+        auto hits    = 0;
+        if (a & test::qt::align_vertical) { // NOLINT(bugprone-non-zero-enum-to-bool-conversion,readability-implicit-bool-conversion): the conversion under test
+                ++hits;
+        }
+        if (a & test::qt::align_left) { // NOLINT(bugprone-non-zero-enum-to-bool-conversion,readability-implicit-bool-conversion): the conversion under test
+                ++hits;
+        }
+        BOOST_CHECK_EQUAL(hits, 1);
+}
+
+// An enumeration with no fixed underlying type spells its width, its range being only what its enumerators need.
+BOOST_AUTO_TEST_CASE(AnEnumerationWithNoFixedTypeSpellsItsWidth)
+{
+        static_assert(not names_a_flag_type<test::qt::alignment_flag> and names_a_narrow_flag_type<std::regex_constants::syntax_option_type, 11UZ>);
+#ifdef _LIBCPP_VERSION
+        // libc++'s regex flags: eleven and thirteen bits, whose complement stays inside the enumeration's range.
+        using syntax = xstd::bit_flag_set<std::regex_constants::syntax_option_type, 11>;
+        using match  = xstd::bit_flag_set<std::regex_constants::match_flag_type, 13>;
+        static_assert(not names_a_flag_type<std::regex_constants::syntax_option_type> and not names_a_flag_type<std::regex_constants::match_flag_type>);
+        BOOST_CHECK(static_cast<unsigned>(std::regex_constants::syntax_option_type(~syntax())) == 0x7FFU);
+        BOOST_CHECK(static_cast<unsigned>(std::regex_constants::match_flag_type(~match())) == 0x1FFFU);
+        BOOST_CHECK_EQUAL((~syntax()).size(), 11UZ);
+#endif
+#ifdef __GLIBCXX__
+        static_assert(not names_a_flag_type<std::ios_base::fmtflags> and names_a_narrow_flag_type<std::ios_base::fmtflags, 31UZ>);
+#endif
+#if XSTD_TEST_HAS_EPOLL
+        // glibc's epoll events: no fixed type, but EPOLLET on bit 31 stretches the range over all of unsigned.
+        using events = xstd::bit_flag_set<EPOLL_EVENTS, 32>;
+        static_assert(not names_a_flag_type<EPOLL_EVENTS> and xstd::bit_mask<events>);
+        auto const e = events{EPOLLIN, EPOLLET, EPOLLOUT};
+        BOOST_CHECK(e.front() == EPOLLET and e.back() == EPOLLIN and e.size() == 3UZ);
+        BOOST_CHECK(static_cast<std::uint32_t>(EPOLL_EVENTS(e)) == static_cast<std::uint32_t>(EPOLLIN | EPOLLET | EPOLLOUT));
+        BOOST_CHECK_EQUAL(order_mismatches_over_subsets<events>({EPOLLIN, EPOLLPRI, EPOLLOUT, EPOLLERR, EPOLLHUP, EPOLLRDHUP, EPOLLONESHOT, EPOLLET}), 0UZ);
+#endif
+        BOOST_CHECK(true);
+}
+
+// An enumeration on int, std::launch, is as wide as an int: the sign bit is no flag, and a mask holding it is refused.
+BOOST_AUTO_TEST_CASE(ASignedEnumerationIsAsWideAsItsInteger)
+{
+        using launches = xstd::bit_flag_set<std::launch>;
+        static_assert(std::same_as<std::underlying_type_t<std::launch>, int> and launches::max_size() == 31UZ and launches::max_size() == xstd::bit_flag_set<int>::max_size());
+        static_assert(brace_initializes<xstd::bit_flag_set<int>, 0x4000'0000U>);
+#ifndef NDEBUG
+        static_assert(constant_evaluates<[] -> launches { return {std::bit_cast<std::launch>(0x4000'0000)}; }>);
+        static_assert(not constant_evaluates<[] -> launches { return {std::bit_cast<std::launch>(std::numeric_limits<int>::min())}; }>);
+        static_assert(not constant_evaluates<[] -> xstd::bit_flag_set<int> { return {std::numeric_limits<int>::min()}; }>);
+#endif
+#if defined(SA_RESETHAND) && SA_RESETHAND == 0x80000000U
+        // glibc puts SA_RESETHAND on the sign bit of sa_flags, an int: the unsigned constant narrows into it.
+        static_assert(not brace_initializes<xstd::bit_flag_set<int>, SA_RESETHAND>);
+#endif
+        auto const f = launches{std::launch::async, std::launch::deferred, std::bit_cast<std::launch>(0x4000'0000)};
+        BOOST_CHECK(std::ranges::equal(f, std::array{std::bit_cast<std::launch>(0x4000'0000), std::launch::deferred, std::launch::async}));
+        BOOST_CHECK(std::to_underlying(std::launch(~launches())) == std::numeric_limits<int>::max());
+        BOOST_CHECK(not launches().contains(std::bit_cast<std::launch>(std::numeric_limits<int>::min())));
+        BOOST_CHECK_EQUAL(order_mismatches_over_subsets<launches>({std::launch::async, std::launch::deferred, std::bit_cast<std::launch>(0x4000'0000)}), 0UZ);
+}
+
+// sa_flags is an int of unsigned flags: keyed on unsigned, the sign bit's flag is the highest, as std::set has it.
+BOOST_AUTO_TEST_CASE(AnIntFieldOfUnsignedFlagsKeysOnUnsigned)
+{
+        constexpr auto top = 0x8000'0000U;
+        using sa_flags     = xstd::bit_flag_set<unsigned>;
+        auto const field   = static_cast<int>(unsigned(sa_flags{top, 4U}));
+        auto const back    = sa_flags(static_cast<unsigned>(field));
+        BOOST_CHECK(field < 0);
+        BOOST_CHECK(std::ranges::equal(back, std::set<unsigned, std::greater<unsigned>>{top, 4U})); // NOLINT(modernize-use-transparent-functors): the comparator the flag type names
+        BOOST_CHECK_EQUAL(order_mismatches_over_subsets<sa_flags>({top, 0x1000'0000U, 4U, 1U}), 0UZ);
+#ifdef SA_RESETHAND
+        struct sigaction sa{};
+        sa.sa_flags     = static_cast<int>(unsigned(sa_flags{SA_RESETHAND, SA_RESTART}));
+        auto const read = sa_flags(static_cast<unsigned>(sa.sa_flags));
+        BOOST_CHECK(read.contains(SA_RESETHAND) and read.contains(SA_RESTART) and read.size() == 2UZ);
+#endif
+}
+
+// A bitset as wide as no block is one mask over several: std::bitset<147> is three 64-bit blocks, the least holding it.
+BOOST_AUTO_TEST_CASE(AWideBitsetIsAFlagTypeOverSeveralBlocks)
+{
+        using wide = std::bitset<147>;
+        static_assert(std::same_as<xstd::bit_flag_set<wide>, xstd::bit_least<xstd::basic_bit_fixed_set<wide, std::size_t, 147, xstd::bit_flag_mapping<wide>, std::greater<wide>>>>); // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(std::same_as<xstd::bit_flag_set<wide>, xstd::basic_bit_fixed_set<wide, std::uint64_t, 147, xstd::bit_flag_mapping<wide>, std::greater<wide>>>);                // NOLINT(modernize-use-transparent-functors): the comparator the alias names
+        static_assert(sizeof(xstd::bit_flag_set<wide>) == 3UZ * sizeof(std::uint64_t) and xstd::bit_mask<xstd::bit_flag_set<wide>>);
+        static_assert(xstd::bit_flag_set<std::bitset<12>>::max_size() == 12UZ and xstd::bit_flag_set<std::bitset<100>>::max_size() == 100UZ);
+        static_assert(noexcept(xstd::bit_flag_set<wide>(wide())) and noexcept(wide(xstd::bit_flag_set<wide>())));
+        static_assert(wide(xstd::bit_flag_set<wide>(wide().set(0).set(64).set(146))) == wide().set(0).set(64).set(146));
+
+        auto const p = xstd::bit_flag_set<wide>{wide().set(3), wide().set(146), wide().set(64)};
+        BOOST_CHECK((std::vector<wide>(p.begin(), p.end()) == std::vector{wide().set(146), wide().set(64), wide().set(3)}));
+        BOOST_CHECK(p.contains(wide().set(64)) and not p.contains(wide().set(63)) and not p.contains(wide().set(3).set(64)));
+        BOOST_CHECK_EQUAL((~p).size(), 144UZ);
+}
+
+// Every operator, compound form, comparison and containment against a wide bitset answers as std::bitset's own.
+BOOST_AUTO_TEST_CASE(AWideBitsetFlagTypeAgreesWithStdBitset)
+{
+        BOOST_CHECK_EQUAL(wide_bitset_mismatches<12UZ>(), 0UZ);
+        BOOST_CHECK_EQUAL(wide_bitset_mismatches<100UZ>(), 0UZ);
+        BOOST_CHECK_EQUAL(wide_bitset_mismatches<147UZ>(), 0UZ);
+}
+
+// Any block tiles a wide bitset's flags alike: bytes, words, or the alias's own 64-bit blocks.
+BOOST_AUTO_TEST_CASE(EveryBlockOverAWideBitsetConvertsAlike)
+{
+        using wide      = std::bitset<147>;
+        using bytes     = xstd::basic_bit_fixed_set<wide, std::uint8_t, 147, xstd::bit_flag_mapping<wide>, std::greater<wide>>;  // NOLINT(modernize-use-transparent-functors): the flag type's comparator
+        using words     = xstd::basic_bit_fixed_set<wide, std::uint32_t, 147, xstd::bit_flag_mapping<wide>, std::greater<wide>>; // NOLINT(modernize-use-transparent-functors): the flag type's comparator
+        auto mismatches = 0UZ;
+        for (auto const& m : wide_masks<147UZ>()) {
+                mismatches += static_cast<std::size_t>(wide(bytes(m)) != m or wide(words(m)) != m or bytes(m).size() != m.count());
+                auto const keys = keys_of(xstd::bit_flag_set<wide>(m));
+                mismatches += static_cast<std::size_t>(keys_of(bytes(m)) != keys or keys_of(words(m)) != keys);
+        }
+        BOOST_CHECK_EQUAL(mismatches, 0UZ);
+}
+
+// Below the bitset's width, a mask with a bit above N is refused on the way in, and truncated by & and -.
+BOOST_AUTO_TEST_CASE(ANarrowerWidthReadsTheLowPositionsOfAWideBitset)
+{
+        using wide   = std::bitset<147>;
+        using narrow = xstd::bit_flag_set<wide, 140>;
+        static_assert(narrow::max_size() == 140UZ and std::same_as<narrow::key_mapping_type, xstd::bit_flag_mapping<wide, 140>>);
+#ifndef NDEBUG
+        static_assert(constant_evaluates<[] -> narrow { return {wide().set(139)}; }>);
+        static_assert(not constant_evaluates<[] -> narrow { return {wide().set(145)}; }>);
+#endif
+        auto const high = wide().set(145).set(1);
+        auto const p    = ~narrow();
+        BOOST_CHECK(wide(p & high) == wide().set(1) and wide(p - high) == (wide(p) & ~wide().set(1)));
+        BOOST_CHECK(p != high and not(narrow(wide().set(1)) == high) and narrow(wide().set(1)) == wide().set(1));
+        BOOST_CHECK(wide(p).count() == 140UZ and not wide(p).test(140));
+        BOOST_CHECK(not p.contains(wide().set(145)));
+}
+
+#ifdef TEST_HAS_UINT128
+// A 128-bit integer is one block of two 64-bit ones in the flag type, and a bit past 64 round-trips.
+BOOST_AUTO_TEST_CASE(A128BitIntegerKeysAFlagTypeOverTwoBlocks)
+{
+        using X         = xstd::bit_flag_set<xstd::uint128>;
+        auto const high = xstd::uint128{1} << 100U;
+        static_assert(X::max_size() == 128UZ and sizeof(X) == 2UZ * sizeof(std::uint64_t));
+        auto const x = X(high | xstd::uint128{5});
+        BOOST_CHECK(xstd::uint128(x) == (high | xstd::uint128{5}) and x.size() == 3UZ and x.front() == high);
+        BOOST_CHECK(xstd::bit_flag_set<xstd::int128>::max_size() == 127UZ);
+}
+#endif
+
+BOOST_AUTO_TEST_SUITE_END()

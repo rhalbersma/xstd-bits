@@ -48,7 +48,7 @@ b.flip();    // complement
 </td><td>
 
 ```cpp
-#include <xstd/bits/bit_fixed_set.hpp>
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>
 
 auto s = xstd::bit_fixed_set<64>();
 s.insert(3);
@@ -135,7 +135,7 @@ b.to_string();  // "11111101", position 0 last
 
 ```cpp
 #include <xstd/bits/bit_algorithm.hpp>
-#include <xstd/bits/bit_fixed_valarray.hpp>
+#include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>
 
 auto v = xstd::bit_fixed_valarray<8>();
 v[1] = true;
@@ -253,7 +253,7 @@ for (auto x = w; x != 0; x &= x - 1) {
 </td><td>
 
 ```cpp
-#include <xstd/bits/bit_set_view.hpp>
+#include <xstd/bits/bit_set/bit_set_view.hpp>
 
 auto v = xstd::bit_set_view(w);  // w stays where it is
 v.insert(5);
@@ -292,7 +292,7 @@ fs::permissions(path, p);
 
 ```cpp
 #include <xstd/bits/bit_algorithm.hpp>
-#include <xstd/bits/bit_flag_set.hpp>
+#include <xstd/bits/bit_set/bit_flag_set.hpp>
 
 using perms = xstd::bit_flag_set<fs::perms, 16>;
 
@@ -336,7 +336,7 @@ a.toInt();
 
 ```cpp
 #include <xstd/bits/bit_algorithm.hpp>
-#include <xstd/bits/bit_flag_set.hpp>
+#include <xstd/bits/bit_set/bit_flag_set.hpp>
 
 using Alignment = xstd::bit_flag_set<Qt::AlignmentFlag, 9>;
 
@@ -392,7 +392,7 @@ sa.sa_flags |= SA_NODEFER;
 </td><td>
 
 ```cpp
-#include <xstd/bits/bit_flag_set.hpp>
+#include <xstd/bits/bit_set/bit_flag_set.hpp>
 #include <signal.h>
 
 using sa_flags = xstd::bit_flag_set<unsigned>;
@@ -438,7 +438,7 @@ b.intersects(c);
 
 ```cpp
 #include <xstd/bits/bit_algorithm.hpp>
-#include <xstd/bits/bit_set.hpp>
+#include <xstd/bits/bit_set/bit_set.hpp>
 
 auto s = xstd::bit_set{3, 70};
 s.insert(500);  // grows
@@ -468,7 +468,7 @@ auto n = ~b;
 ```cpp
 #include <xstd/bits/bit_algorithm.hpp>
 #include <xstd/bits/bit.hpp>
-#include <xstd/bits/bit_valarray.hpp>
+#include <xstd/bits/bit_valarray/bit_valarray.hpp>
 #include <xstd/bits/bit_vector.hpp>
 
 auto v = xstd::bit_vector();

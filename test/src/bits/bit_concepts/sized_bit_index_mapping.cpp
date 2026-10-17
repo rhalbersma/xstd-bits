@@ -8,9 +8,9 @@
 #include <test/set/strong_index.hpp>                          // offset_mapping, strong_index
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>       // bit_index_mapping
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
-#include <xstd/bits/bit_flag_mapping.hpp>                     // bit_flag_mapping
-#include <xstd/bits/bit_key_mapping.hpp>                      // bit_find_mapping, bit_key_mapping, bit_range_mapping
-#include <xstd/bits/detail/is_key.hpp>                        // is_key
+#include <xstd/bits/bit_set/bit_flag_mapping.hpp>             // bit_flag_mapping
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>              // bit_find_mapping, bit_key_mapping, bit_range_mapping
+#include <xstd/bits/bit_set/detail/is_key.hpp>                // is_key
 #include <boost/test/unit_test.hpp>                           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                                              // array
 #include <cstddef>                                            // byte

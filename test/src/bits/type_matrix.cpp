@@ -3,42 +3,42 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>                          // all_block_types
-#include <xstd/bits/bit_array.hpp>                       // basic_bit_array
-#include <xstd/bits/bit_bounded_set.hpp>                 // basic_bit_bounded_set
-#include <xstd/bits/bit_bounded_valarray.hpp>            // basic_bit_bounded_valarray
-#include <xstd/bits/bit_bounded_vector.hpp>              // basic_bit_bounded_vector
-#include <xstd/bits/bit_concepts/bit_convertible_to.hpp> // bit_convertible_to
-#include <xstd/bits/bit_fixed_set.hpp>                   // basic_bit_fixed_set
-#include <xstd/bits/bit_fixed_valarray.hpp>              // basic_bit_fixed_valarray
-#include <xstd/bits/bit_hasher.hpp>                      // bit_hasher
-#include <xstd/bits/bit_set.hpp>                         // basic_bit_set
-#include <xstd/bits/bit_set_view.hpp>                    // bit_set_view
-#include <xstd/bits/bit_span.hpp>                        // bit_span
-#include <xstd/bits/bit_type_traits/bit_rebind.hpp>      // bit_rebind
-#include <xstd/bits/bit_type_traits/bit_resize.hpp>      // bit_resize
-#include <xstd/bits/bit_valarray.hpp>                    // basic_bit_valarray
-#include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector
-#include <xstd/bits/ext/boost/bit_small_set.hpp>         // basic_bit_small_set
-#include <xstd/bits/ext/boost/bit_small_valarray.hpp>    // basic_bit_small_valarray
-#include <xstd/bits/ext/boost/bit_small_vector.hpp>      // basic_bit_small_vector
-#include <xstd/bits/from_blocks.hpp>                     // from_blocks_t
-#include <xstd/ints/cstdint/bit_int.hpp>                 // bit_uint
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK_MESSAGE
-#include <algorithm>                                     // min
-#include <array>                                         // array
-#include <compare>                                       // three_way_comparable
-#include <concepts>                                      // constructible_from, copyable, default_initializable, equality_comparable, same_as
-#include <cstddef>                                       // size_t
-#include <cstdint>                                       // uint8_t
-#include <format>                                        // formattable
-#include <functional>                                    // hash
-#include <ranges>                                        // bidirectional_range, from_range_t, random_access_range
-#include <string_view>                                   // string_view
-#include <tuple>                                         // tuple, tuple_cat
-#include <type_traits>                                   // conditional_t, remove_cv_t
-#include <utility>                                       // declval
-#include <vector>                                        // vector
+#include <test/block_types.hpp>                            // all_block_types
+#include <xstd/bits/bit_array.hpp>                         // basic_bit_array
+#include <xstd/bits/bit_bounded_vector.hpp>                // basic_bit_bounded_vector
+#include <xstd/bits/bit_concepts/bit_convertible_to.hpp>   // bit_convertible_to
+#include <xstd/bits/bit_functional/bit_hasher.hpp>         // bit_hasher
+#include <xstd/bits/bit_set/bit_bounded_set.hpp>           // basic_bit_bounded_set
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>             // basic_bit_fixed_set
+#include <xstd/bits/bit_set/bit_set.hpp>                   // basic_bit_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>              // bit_set_view
+#include <xstd/bits/bit_span.hpp>                          // bit_span
+#include <xstd/bits/bit_type_traits/bit_rebind.hpp>        // bit_rebind
+#include <xstd/bits/bit_type_traits/bit_resize.hpp>        // bit_resize
+#include <xstd/bits/bit_valarray/bit_bounded_valarray.hpp> // basic_bit_bounded_valarray
+#include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // basic_bit_fixed_valarray
+#include <xstd/bits/bit_valarray/bit_valarray.hpp>         // basic_bit_valarray
+#include <xstd/bits/bit_vector.hpp>                        // basic_bit_vector
+#include <xstd/bits/ext/boost/bit_small_set.hpp>           // basic_bit_small_set
+#include <xstd/bits/ext/boost/bit_small_valarray.hpp>      // basic_bit_small_valarray
+#include <xstd/bits/ext/boost/bit_small_vector.hpp>        // basic_bit_small_vector
+#include <xstd/bits/from_blocks.hpp>                       // from_blocks_t
+#include <xstd/ints/cstdint/bit_int.hpp>                   // bit_uint
+#include <boost/test/unit_test.hpp>                        // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK_MESSAGE
+#include <algorithm>                                       // min
+#include <array>                                           // array
+#include <compare>                                         // three_way_comparable
+#include <concepts>                                        // constructible_from, copyable, default_initializable, equality_comparable, same_as
+#include <cstddef>                                         // size_t
+#include <cstdint>                                         // uint8_t
+#include <format>                                          // formattable
+#include <functional>                                      // hash
+#include <ranges>                                          // bidirectional_range, from_range_t, random_access_range
+#include <string_view>                                     // string_view
+#include <tuple>                                           // tuple, tuple_cat
+#include <type_traits>                                     // conditional_t, remove_cv_t
+#include <utility>                                         // declval
+#include <vector>                                          // vector
 
 BOOST_AUTO_TEST_SUITE(TypeMatrix)
 
