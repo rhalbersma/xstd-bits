@@ -19,6 +19,7 @@
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LT, BOOST_CHECK_THROW
 #include <algorithm>                                // copy, equal, is_sorted, ranges::count, ranges::is_sorted, ranges::sort, sort
+#include <array>                                    // array
 #include <concepts>                                 // same_as
 #include <cstddef>                                  // ptrdiff_t, size_t
 #include <cstdint>                                  // int64_t, uint64_t, uint8_t
@@ -340,6 +341,32 @@ BOOST_AUTO_TEST_CASE(InsertingAtTheEndGrowsGeometrically)
         BOOST_CHECK_EQUAL(v.size(), n);
         BOOST_CHECK_EQUAL(std::ranges::count(v, true), static_cast<std::ptrdiff_t>((n + 2UZ) / 3UZ));
         BOOST_CHECK_LT(allocations, 32);
+}
+
+// A sized append grows through the storage's own resize, as push_back does: n nine-bool appends, O(log n) allocations.
+BOOST_AUTO_TEST_CASE(AppendingSmallRangesGrowsGeometrically)
+{
+        using X                = xstd::basic_bit_vector<std::uint8_t, test::container::propagating<std::uint8_t>>;
+        constexpr auto n       = 10'000UZ;
+        constexpr auto granted = std::int64_t{1'000'000};
+        auto const one         = xstd::bit_vector(1UZ, true);
+        auto book              = test::container::ledger();
+        auto packed            = X(test::container::ledger_allocator<X>(book));
+        auto blitted           = X(test::container::ledger_allocator<X>(book));
+        book.budget            = granted;
+        for (auto const i : std::views::iota(0UZ, n)) {
+                packed.append_range(std::array{i % 3 == 0, false, false, false, false, false, false, false, false});
+        }
+        auto const packing = granted - book.budget;
+        for ([[maybe_unused]] auto const i : std::views::iota(0UZ, n)) {
+                blitted.append_range(one);
+        }
+        auto const blitting = granted - packing - book.budget;
+        book.budget         = -1;
+        BOOST_CHECK_EQUAL(std::ranges::count(packed, true), static_cast<std::ptrdiff_t>((n + 2UZ) / 3UZ));
+        BOOST_CHECK_EQUAL(std::ranges::count(blitted, true), static_cast<std::ptrdiff_t>(n));
+        BOOST_CHECK_LT(packing, 32);
+        BOOST_CHECK_LT(blitting, 32);
 }
 
 // A range that throws while it is read leaves the sequence as it was, the gap opened for it closed again.
