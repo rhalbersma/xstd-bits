@@ -6,13 +6,13 @@
 #ifndef XSTD_BITS_BIT_ARRAY_HPP
 #define XSTD_BITS_BIT_ARRAY_HPP
 
+#include <xstd/bits/bit_ranges/from_blocks.hpp>            // from_blocks, from_blocks_t
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
 #include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container
 #include <xstd/bits/detail/num_blocks.hpp>                 // holds_width, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                  // storage, window
 #include <xstd/bits/detail/rebind.hpp>                     // rebind
 #include <xstd/bits/detail/sequence_adaptor.hpp>           // sequence_adaptor
-#include <xstd/bits/from_blocks.hpp>                       // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
 #include <boost/container_hash/is_range.hpp>               // is_range
 #include <boost/container_hash/is_tuple_like.hpp>          // is_tuple_like

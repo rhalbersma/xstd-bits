@@ -14,6 +14,7 @@
 #include <xstd/bits/bit_algorithm/bit_none_of.hpp>         // bit_none_of
 #include <xstd/bits/bit_algorithm/bit_reverse.hpp>         // bit_reverse
 #include <xstd/bits/bit_algorithm/bit_rotate.hpp>          // bit_rotate
+#include <xstd/bits/bit_ranges/from_blocks.hpp>            // from_blocks, from_blocks_t
 #include <xstd/bits/bit_span/bit_span.hpp>                 // bit_span
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // basic_bit_fixed_valarray
 #include <xstd/bits/bit_valarray/bit_gslice.hpp>           // bit_gslice
@@ -21,7 +22,6 @@
 #include <xstd/bits/bit_valarray/bit_slice.hpp>            // bit_slice
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>         // basic_bit_valarray
 #include <xstd/bits/bit_vector.hpp>                        // bit_vector
-#include <xstd/bits/from_blocks.hpp>                       // from_blocks, from_blocks_t
 #include <xstd/ints/limits.hpp>                            // numeric_limits
 #include <boost/test/unit_test.hpp>                        // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_REQUIRE_EQUAL, BOOST_TEST_CONTEXT
 #include <algorithm>                                       // adjacent_find, all_of, count, equal, min, mismatch, reverse, sort

@@ -6,8 +6,8 @@
 #ifndef XSTD_BITS_BIT_CONCEPTS_BIT_CONSTRUCTIBLE_FROM_HPP
 #define XSTD_BITS_BIT_CONCEPTS_BIT_CONSTRUCTIBLE_FROM_HPP
 
+#include <xstd/bits/bit_ranges/from_blocks.hpp>  // from_blocks_t
 #include <xstd/bits/detail/owned_bit_blocks.hpp> // owned_bit_blocks
-#include <xstd/bits/from_blocks.hpp>             // from_blocks_t
 #include <concepts>                              // constructible_from
 #include <type_traits>                           // remove_cvref_t
 

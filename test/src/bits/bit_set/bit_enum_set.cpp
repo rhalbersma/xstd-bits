@@ -8,12 +8,12 @@
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp> // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp> // bit_includes
 #include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_ranges/from_blocks.hpp>     // from_blocks
 #include <xstd/bits/bit_set/bit_enum_set.hpp>       // bit_enum_set
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping, bit_range_mapping, enum_traits
 #include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set
 #include <xstd/bits/bit_type_traits/bit_least.hpp>  // bit_least
-#include <xstd/bits/from_blocks.hpp>                // from_blocks
 #include <xstd/misc/concepts.hpp>                   // proxy_iterator, proxy_reference
 #include <xstd/misc/utility/to_underlying.hpp>      // to_underlying
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW

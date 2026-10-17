@@ -6,6 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_BIT_BLOCK_CONTAINER_HPP
 #define XSTD_BITS_DETAIL_BIT_BLOCK_CONTAINER_HPP
 
+#include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks_t
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>   // bit_blocks_extent_v
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/assert.hpp>                       // XSTD_BITS_ASSERT
@@ -20,7 +21,6 @@
 #include <xstd/bits/detail/owned_bit_blocks.hpp>             // owned_bit_blocks
 #include <xstd/bits/detail/resizable_bit_blocks.hpp>         // resizable_bit_blocks
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl, shr
-#include <xstd/bits/from_blocks.hpp>                         // from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/ints/cstdlib/div.hpp>                         // div, div_result
 #include <xstd/ints/limits.hpp>                              // numeric_limits

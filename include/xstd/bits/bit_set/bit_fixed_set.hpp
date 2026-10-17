@@ -9,6 +9,7 @@
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>       // bit_index_mapping
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp>        // bit_mask_mapping
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
+#include <xstd/bits/bit_ranges/from_blocks.hpp>               // from_blocks, from_blocks_t
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>              // bit_key_mapping
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp>           // admits_width, key_direction, set_adaptor
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>    // bit_blocks_extent_v
@@ -19,7 +20,6 @@
 #include <xstd/bits/detail/ownership.hpp>                     // storage, storage_access
 #include <xstd/bits/detail/rebind.hpp>                        // rebind
 #include <xstd/bits/detail/shift.hpp>                         // shr
-#include <xstd/bits/from_blocks.hpp>                          // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
 #include <xstd/misc/concepts/container_compatible_range.hpp>  // container_compatible_range
 #include <boost/container_hash/is_range.hpp>                  // is_range

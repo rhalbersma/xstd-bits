@@ -12,6 +12,7 @@
 #include <xstd/bits/bit_array.hpp>                       // basic_bit_array, bit_array
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp> // bit_convertible_to
 #include <xstd/bits/bit_inplace_vector.hpp>              // basic_bit_inplace_vector, bit_inplace_vector
+#include <xstd/bits/bit_ranges/from_blocks.hpp>          // from_blocks
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>           // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>         // basic_bit_inplace_set, bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>                 // basic_bit_set, bit_set
@@ -22,7 +23,6 @@
 #include <xstd/bits/detail/ownership.hpp>                // owner, view
 #include <xstd/bits/ext/boost/bit_small_set.hpp>         // basic_bit_small_set, bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp>      // basic_bit_small_vector, bit_small_vector
-#include <xstd/bits/from_blocks.hpp>                     // from_blocks
 #include <xstd/ints/cstdint/bit_int.hpp>                 // bit_uint
 #include <xstd/ints/cstdint/int128.hpp>                  // uint128
 #include <xstd/ints/memory.hpp>                          // align_up

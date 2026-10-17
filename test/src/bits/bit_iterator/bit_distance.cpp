@@ -3,22 +3,22 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sets.hpp>                  // for_each_set, iterators_of, sets, stops
-#include <test/for_each_type.hpp>                   // for_each_type
-#include <xstd/bits/bit_algorithm/bit_distance.hpp> // bit_distance
-#include <xstd/bits/bit_array.hpp>                  // bit_array
-#include <xstd/bits/bit_set/bit_fixed_set.hpp>      // bit_fixed_set
-#include <xstd/bits/bit_set/bit_set.hpp>            // bit_set
-#include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <array>                                    // array
-#include <concepts>                                 // same_as
-#include <cstddef>                                  // ptrdiff_t, size_t
-#include <cstdint>                                  // uint64_t
-#include <iterator>                                 // distance
-#include <ranges>                                   // iterator_t
-#include <set>                                      // set
-#include <utility>                                  // declval
+#include <test/algorithm/sets.hpp>                 // for_each_set, iterators_of, sets, stops
+#include <test/for_each_type.hpp>                  // for_each_type
+#include <xstd/bits/bit_array.hpp>                 // bit_array
+#include <xstd/bits/bit_iterator/bit_distance.hpp> // bit_distance
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>     // bit_fixed_set
+#include <xstd/bits/bit_set/bit_set.hpp>           // bit_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>      // bit_set_view
+#include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <array>                                   // array
+#include <concepts>                                // same_as
+#include <cstddef>                                 // ptrdiff_t, size_t
+#include <cstdint>                                 // uint64_t
+#include <iterator>                                // distance
+#include <ranges>                                  // iterator_t
+#include <set>                                     // set
+#include <utility>                                 // declval
 
 BOOST_AUTO_TEST_SUITE(BitDistance)
 

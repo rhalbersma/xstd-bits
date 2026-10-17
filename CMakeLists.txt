@@ -81,16 +81,13 @@ target_sources(
         include/xstd/bits/bit_algorithm/detail/blit.hpp
         include/xstd/bits/bit_algorithm/detail/compare.hpp
         include/xstd/bits/bit_algorithm/detail/find.hpp
-        include/xstd/bits/bit_algorithm/detail/select.hpp
         include/xstd/bits/bit_algorithm/detail/walk.hpp
-        include/xstd/bits/bit_algorithm/bit_advance.hpp
         include/xstd/bits/bit_algorithm/bit_all_of.hpp
         include/xstd/bits/bit_algorithm/bit_any_of.hpp
         include/xstd/bits/bit_algorithm/bit_copy.hpp
         include/xstd/bits/bit_algorithm/bit_copy_backward.hpp
         include/xstd/bits/bit_algorithm/bit_count.hpp
         include/xstd/bits/bit_algorithm/bit_disjoint.hpp
-        include/xstd/bits/bit_algorithm/bit_distance.hpp
         include/xstd/bits/bit_algorithm/bit_equal.hpp
         include/xstd/bits/bit_algorithm/bit_fill.hpp
         include/xstd/bits/bit_algorithm/bit_find.hpp
@@ -103,11 +100,9 @@ target_sources(
         include/xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp
         include/xstd/bits/bit_algorithm/bit_mismatch.hpp
         include/xstd/bits/bit_algorithm/bit_move.hpp
-        include/xstd/bits/bit_algorithm/bit_next.hpp
         include/xstd/bits/bit_algorithm/bit_none_of.hpp
         include/xstd/bits/bit_algorithm/bit_partition.hpp
         include/xstd/bits/bit_algorithm/bit_partition_point.hpp
-        include/xstd/bits/bit_algorithm/bit_prev.hpp
         include/xstd/bits/bit_algorithm/bit_reverse.hpp
         include/xstd/bits/bit_algorithm/bit_reverse_copy.hpp
         include/xstd/bits/bit_algorithm/bit_rotate.hpp
@@ -143,6 +138,14 @@ target_sources(
         include/xstd/bits/bit_functional/bit_less_equal.hpp
         include/xstd/bits/bit_functional/bit_not_equal_to.hpp
         include/xstd/bits/bit_functional/detail/bit_hasher.hpp
+        include/xstd/bits/bit_iterator.hpp
+        include/xstd/bits/bit_iterator/bit_advance.hpp
+        include/xstd/bits/bit_iterator/bit_distance.hpp
+        include/xstd/bits/bit_iterator/bit_next.hpp
+        include/xstd/bits/bit_iterator/bit_prev.hpp
+        include/xstd/bits/bit_iterator/detail/select.hpp
+        include/xstd/bits/bit_ranges.hpp
+        include/xstd/bits/bit_ranges/from_blocks.hpp
         include/xstd/bits/bit_set.hpp
         include/xstd/bits/bit_set/bit_inplace_set.hpp
         include/xstd/bits/bit_set/bit_enum_set.hpp
@@ -188,7 +191,6 @@ target_sources(
         include/xstd/bits/bit_set/detail/flag_block.hpp
         include/xstd/bits/detail/ordinal.hpp
         include/xstd/bits/bit_set/detail/is_key.hpp
-        include/xstd/bits/from_blocks.hpp
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/bit_small_set.hpp
         include/xstd/bits/ext/boost/bit_small_vector.hpp

@@ -7,10 +7,10 @@
 #include <test/set/order_isomorphism.hpp>                     // is_order_isomorphism
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp>        // bit_mask_mapping
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
+#include <xstd/bits/bit_ranges/from_blocks.hpp>               // from_blocks
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>                // basic_bit_fixed_set
 #include <xstd/bits/bit_set/bit_flag_mapping.hpp>             // bit_flag_mapping
 #include <xstd/bits/bit_set/detail/flag_block.hpp>            // full_range_mask
-#include <xstd/bits/from_blocks.hpp>                          // from_blocks
 #include <boost/test/unit_test.hpp>                           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                          // ranges::equal
 #include <array>                                              // array

@@ -6,6 +6,7 @@
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_functional/bit_hash.hpp>    // bit_hash
 #include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
+#include <xstd/bits/bit_ranges/from_blocks.hpp>     // from_blocks
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
@@ -14,7 +15,6 @@
 #include <xstd/bits/detail/intrinsic.hpp>           // bools_per_block, byte_bools, expand_block, expand_block_by_table
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <xstd/bits/from_blocks.hpp>                // from_blocks
 #include <xstd/misc/ext/boost/hash2.hpp>            // hasher
 #include <boost/hash2/flavor.hpp>                   // big_endian_flavor, default_flavor, little_endian_flavor
 #include <boost/hash2/fnv1a.hpp>                    // fnv1a_64

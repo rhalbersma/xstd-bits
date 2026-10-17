@@ -6,6 +6,7 @@
 #ifndef XSTD_BITS_BIT_INPLACE_VECTOR_HPP
 #define XSTD_BITS_BIT_INPLACE_VECTOR_HPP
 
+#include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks, from_blocks_t
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>   // bit_blocks_extent_v
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
 #include <xstd/bits/detail/inplace_blocks.hpp>               // inplace_blocks, inplace_blocks_for
@@ -13,7 +14,6 @@
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
-#include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
 #include <boost/container_hash/is_range.hpp>                 // is_range

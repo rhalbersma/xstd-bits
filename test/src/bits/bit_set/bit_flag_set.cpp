@@ -12,6 +12,7 @@
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>     // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>     // bit_includes
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp>   // bit_intersects
+#include <xstd/bits/bit_ranges/from_blocks.hpp>         // from_blocks
 #include <xstd/bits/bit_set/bit_enum_set.hpp>           // bit_enum_set
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>          // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_flag_mapping.hpp>       // bit_flag_mapping
@@ -19,7 +20,6 @@
 #include <xstd/bits/bit_type_traits/bit_fast.hpp>       // bit_fast
 #include <xstd/bits/bit_type_traits/bit_least.hpp>      // bit_least
 #include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
-#include <xstd/bits/from_blocks.hpp>                    // from_blocks
 #include <xstd/filesystem.hpp>                          // perms
 #include <xstd/ints/concepts/bit_mask.hpp>              // bit_mask
 #include <xstd/ints/cstdint.hpp>                        // int128, uint128

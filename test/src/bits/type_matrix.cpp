@@ -8,6 +8,7 @@
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp>   // bit_convertible_to
 #include <xstd/bits/bit_functional/bit_hash.hpp>           // bit_hash
 #include <xstd/bits/bit_inplace_vector.hpp>                // basic_bit_inplace_vector
+#include <xstd/bits/bit_ranges/from_blocks.hpp>            // from_blocks_t
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>             // basic_bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>           // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>                   // basic_bit_set
@@ -22,7 +23,6 @@
 #include <xstd/bits/ext/boost/bit_small_set.hpp>           // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_valarray.hpp>      // basic_bit_small_valarray
 #include <xstd/bits/ext/boost/bit_small_vector.hpp>        // basic_bit_small_vector
-#include <xstd/bits/from_blocks.hpp>                       // from_blocks_t
 #include <xstd/ints/cstdint/bit_int.hpp>                   // bit_uint
 #include <boost/test/unit_test.hpp>                        // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK_MESSAGE
 #include <algorithm>                                       // min

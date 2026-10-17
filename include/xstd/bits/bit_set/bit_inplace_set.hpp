@@ -7,6 +7,7 @@
 #define XSTD_BITS_BIT_SET_BIT_INPLACE_SET_HPP
 
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>      // bit_index_mapping
+#include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks, from_blocks_t
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>             // bit_key_mapping
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp>          // admits_width, key_direction, set_adaptor
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>   // bit_blocks_extent_v
@@ -15,7 +16,6 @@
 #include <xstd/bits/detail/num_blocks.hpp>                   // num_blocks_v, tiling_block
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
-#include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
 #include <boost/container_hash/is_range.hpp>                 // is_range

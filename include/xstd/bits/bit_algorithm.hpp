@@ -46,10 +46,4 @@
 #include <xstd/bits/bit_algorithm/bit_set_symmetric_difference.hpp>          // IWYU pragma: export; bit_set_symmetric_difference
 #include <xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp> // IWYU pragma: export; bit_lexicographical_compare_three_way
 
-// [iterator.operations], iterator operations, the set reading's rank and select
-#include <xstd/bits/bit_algorithm/bit_advance.hpp>  // IWYU pragma: export; bit_advance
-#include <xstd/bits/bit_algorithm/bit_distance.hpp> // IWYU pragma: export; bit_distance
-#include <xstd/bits/bit_algorithm/bit_next.hpp>     // IWYU pragma: export; bit_next
-#include <xstd/bits/bit_algorithm/bit_prev.hpp>     // IWYU pragma: export; bit_prev
-
 #endif // XSTD_BITS_BIT_ALGORITHM_HPP

@@ -8,9 +8,9 @@
 #include <xstd/bits/bit_algorithm/bit_count.hpp>             // bit_count
 #include <xstd/bits/bit_array.hpp>                           // basic_bit_array, bit_array
 #include <xstd/bits/bit_concepts/bit_constructible_from.hpp> // bit_constructible_from
+#include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks, from_blocks_t
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>               // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_vector.hpp>                          // bit_vector
-#include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <boost/test/unit_test.hpp>                          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                                             // array
 #include <bitset>                                            // bitset

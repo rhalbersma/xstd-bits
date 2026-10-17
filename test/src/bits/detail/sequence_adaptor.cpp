@@ -9,6 +9,7 @@
 #include <xstd/bits/bit_algorithm.hpp>              // bit_all_of, bit_any_of, bit_count, bit_fill, bit_for_each, bit_mismatch, bit_none_of
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
+#include <xstd/bits/bit_ranges/from_blocks.hpp>     // from_blocks
 #include <xstd/bits/bit_set/bit_set.hpp>            // bit_set
 #include <xstd/bits/bit_span/bit_span.hpp>          // bit_span
 #include <xstd/bits/bit_span/bit_subspan.hpp>       // bit_subspan
@@ -16,7 +17,6 @@
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, reads, sequence_reading_tag, set_reading_tag, storage
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // blit_source, sequence_adaptor
-#include <xstd/bits/from_blocks.hpp>                // from_blocks
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
 #include <array>                                    // array
