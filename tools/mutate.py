@@ -27,6 +27,7 @@ CMAKE_EXPORT_COMPILE_COMMANDS on, built once before the first run.
 """
 
 import argparse
+import itertools
 import json
 import os
 import re
@@ -195,7 +196,7 @@ def sites(header, include_asserts=False):
         for line in lines:
                 starts.append(starts[-1] + len(line) + 1)
         result, in_concept = [], False
-        for number, (begin, end) in enumerate(zip(starts, starts[1:]), start=1):
+        for number, (begin, end) in enumerate(itertools.pairwise(starts), start=1):
                 stripped = code[begin:end]
                 declarative = DECLARATIVE.match(stripped)
                 # A concept's definition runs to its semicolon, however many lines its conjuncts take.
@@ -227,7 +228,7 @@ def apply(mutant):
 def run(command, cwd, timeout):
         """(returncode, combined output), with returncode None on a timeout."""
         try:
-                done = subprocess.run(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=timeout)
+                done = subprocess.run(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=timeout, check=False)
                 return done.returncode, done.stdout
         except subprocess.TimeoutExpired as expired:
                 return None, (expired.stdout or b"").decode(errors="replace") if isinstance(expired.stdout, bytes) else (expired.stdout or "")
