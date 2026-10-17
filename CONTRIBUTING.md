@@ -148,6 +148,12 @@ The targets are built with ASan and UBSan, and `XSTD_BITS_FUZZ_COMPILE_OPTIONS` 
 
 [ClusterFuzzLite](https://google.github.io/clusterfuzzlite/) runs the same targets in CI, built by [`.clusterfuzzlite/build.sh`](.clusterfuzzlite/build.sh) in the OSS-Fuzz builder image: [`cflite_pr.yml`](.github/workflows/cflite_pr.yml) for five minutes on every pull request, under ASan and UBSan, and [`cflite_batch.yml`](.github/workflows/cflite_batch.yml) nightly for half an hour, keeping the corpus it grows. A crash fails the job and is uploaded as an artifact.
 
+## Mutation testing
+
+Coverage shows a line runs; [`tools/mutate.py`](tools/mutate.py) shows a test would fail if it were wrong. It changes one operator, literal or call at a time in a header, rebuilds the tests that include it, and runs them. A mutant every one of them passes is either a missing test or a change that cannot alter what the code computes, and [doc/mutation.md](doc/mutation.md) lists the second kind with the reason for each. A change to a header in its scope that leaves a new survivor needs a test that kills it, or a row there saying why none can.
+
+[doc/mutation.md](doc/mutation.md) also gives the commands. The [Mutation workflow](.github/workflows/mutation.yml) reruns the scope weekly and by hand, and fails on a survivor the page does not list and on a listed one that a test now kills or the code no longer contains. It takes some three hours of a Linux runner, so it is not a required check.
+
 ## Required status checks
 
 The names to tick under branch protection, exactly as GitHub reports them:

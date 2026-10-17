@@ -1,0 +1,47 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+name: Mutation
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Weekly rather than per pull request: a full run builds every test and then each mutant, some three hours of a
+# Linux runner, which the pull-request ladders need more.
+on:
+  schedule:
+    - cron: '17 3 * * 0'
+  workflow_dispatch:
+
+jobs:
+  # Every mutant of the headers in doc/mutation.md's scope is killed by a test or listed there as equivalent.
+  mutation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the stable rung
+        run: tools/setup-toolchain.sh
+
+      - name: Build every test
+        run: |
+          ~/.local/bin/cmake -S . -B build/mutate -G Ninja -DCMAKE_CXX_COMPILER=clang++-22 -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS_DEBUG=-O0 -DBUILD_TESTING=ON -DXSTD_BITS_WARNINGS_AS_ERRORS=OFF \
+            -DXSTD_BITS_BUILD_BENCHMARKS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_PREFIX_PATH="$HOME/.local/opt/boost-1.92.0"
+          mapfile -t tests < <(ninja -C build/mutate -t targets all | sed -n 's/^\(test\.[^:]*\): phony$/\1/p')
+          ninja -C build/mutate "${tests[@]}"
+
+      - name: Kill or classify every mutant
+        run: |
+          mapfile -t headers < <(cd include && find xstd/bits/bit_algorithm -name '*.hpp' | sort)
+          python3 tools/mutate.py "${headers[@]}" --build build/mutate --jobs "$(nproc)"
