@@ -23,7 +23,7 @@
 #include <new>                                               // bad_alloc
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // overflow_error
-#include <type_traits>                                       // is_array_v, is_const_v, is_integral_v, is_rvalue_reference_v, remove_cvref_t, remove_reference_t
+#include <type_traits>                                       // is_array_v, is_const_v, is_integral_v, is_rvalue_reference_v, is_scalar_v, is_volatile_v, remove_cvref_t, remove_reference_t
 #include <utility>                                           // declval, forward
 
 // What xstd::bit_convert asks of its two ends, and the copy between them: position i to position i, at any widths.
@@ -320,8 +320,12 @@ template<class From, class To>
 concept bit_convertible =
         (fixed_target<To> and fixed_width<From> and bit_width_v<From> <= bit_width_v<To>) or
         (fixed_target<To> and bit_convert_source<From> and (not fixed_width<From>)) or
-        (owner<To> and (not std::is_const_v<To>) and std::default_initializable<To> and owned_bits_t<To>::has_stored_size and bit_convert_source<From>) or
+        (owner<To> and std::default_initializable<To> and owned_bits_t<To>::has_stored_size and bit_convert_source<From>) or
         foreign_convertible<To, From>;
+
+// A volatile source is read once, which only a scalar is: a status register in one load, never an array block by block.
+template<class From>
+concept read_once = (not std::is_volatile_v<std::remove_reference_t<From>>) or std::is_scalar_v<std::remove_reference_t<From>>;
 
 // An rvalue whose blocks To takes as they are, moved rather than copied, into a capacity that holds all of them.
 template<class To, class From>

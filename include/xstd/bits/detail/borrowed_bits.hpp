@@ -8,7 +8,7 @@
 
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
 #include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container, set_bits_t, unbounded_width
-#include <xstd/bits/detail/bit_block_range.hpp>            // bit_block_range
+#include <xstd/bits/detail/bit_block_range.hpp>            // bit_block, bit_block_range
 #include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
 #include <cstddef>                                         // size_t
 #include <memory>                                          // addressof
@@ -30,7 +30,7 @@ using block_span_t = decltype(std::span(std::declval<R&>()));
 
 // One block lent by lvalue, or a range of blocks lent by lvalue or, as an rvalue, borrowed.
 template<class W>
-concept borrowable_block = std::is_lvalue_reference_v<W> and xstd::unsigned_integer<std::remove_reference_t<W>>;
+concept borrowable_block = std::is_lvalue_reference_v<W> and bit_block<std::remove_reference_t<W>>;
 
 template<class W>
 concept borrowable_blocks = bit_block_range<W> and (std::is_lvalue_reference_v<W> or std::ranges::borrowed_range<W>);

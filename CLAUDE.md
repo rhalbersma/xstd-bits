@@ -178,6 +178,28 @@ walk backward with an algorithm such as `std::ranges::copy_backward` rather than
 Iterator loops (`first != last`) and searches that stop at a sentinel such as `npos` are not counted loops, and
 compare as their types allow. A loop whose test carries a second condition stays raw.
 
+## Growth
+
+Storage grows only through its own `resize`, `push_back` or `append`, so the storage's growth policy picks the
+capacity. The library has no growth factor of its own: a factor written here would sit beside the one `std::vector`
+already has, and on MSVC disagree with it.
+
+No `reserve` of a computed size inside an operation a caller can repeat. `reserve` allocates exactly what it is
+asked for, so a `reserve(size() + count)` per call never leaves room for the next call, and every call that needs
+another block reallocates and copies all of them. Correct in isolation, it fails only in a loop: `append_range`
+once made 157 allocations for ten thousand one-bit appends, where `std::vector`'s makes 15. Where room must be made
+before anything is written, as for a no-effects guarantee, resize to the new width and back:
+
+```cpp
+auto const width = size();
+m_bits.resize(total); // the storage's own growth, or its refusal before anything is written
+m_bits.resize(width);
+```
+
+One `reserve` before filling to a size known up front is fine, and so is the public `reserve` member, which
+forwards the caller's own request as `std::vector`'s does. An allocation-counting test holds each growth path to
+O(log n) allocations over n repetitions.
+
 ## `detail` is exposition-only
 
 What sits in a `detail` namespace plays the part the standard gives an exposition-only name: it is specified by

@@ -43,5 +43,14 @@ BOOST_AUTO_TEST_CASE(OnlyAFixedWidthOwnerIsTransformed)
         BOOST_CHECK(true);
 }
 
+// cv-transparent as make_unsigned is: a cv owner is transformed as the bare one and keeps its cv.
+BOOST_AUTO_TEST_CASE(ACvOwnerIsTransformedAsTheBareOneAndKeepsItsCv)
+{
+        static_assert(std::is_same_v<xstd::bit_align<xstd::bit_array<9> const>, xstd::bit_align<xstd::bit_array<9>> const>);
+        static_assert(std::is_same_v<xstd::bit_align<xstd::bit_array<9> volatile>, xstd::bit_align<xstd::bit_array<9>> volatile>);
+        static_assert(not align_rebinds<xstd::bit_set const>);
+        BOOST_CHECK(true);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

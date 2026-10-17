@@ -64,5 +64,15 @@ BOOST_AUTO_TEST_CASE(AMappingForAnotherKeyIsNone)
         BOOST_CHECK(true);
 }
 
+// cv-transparent as xstd-ints is: a cv-qualified key maps exactly as the bare one does.
+BOOST_AUTO_TEST_CASE(ACvKeyMapsAsTheBareOne)
+{
+        static_assert(xstd::bit_index_mapping<xstd::bit_key_mapping<std::size_t>, std::size_t const> and xstd::bit_index_mapping<xstd::bit_key_mapping<std::size_t>, std::size_t volatile>);
+        static_assert(xstd::bit_index_mapping<xstd::bit_flag_mapping<std::launch>, std::launch const volatile>);
+        static_assert(not xstd::bit_index_mapping<xstd::bit_key_mapping<std::size_t>, unsigned char const>);
+
+        BOOST_CHECK(true);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

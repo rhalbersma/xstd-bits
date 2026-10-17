@@ -79,5 +79,17 @@ BOOST_AUTO_TEST_CASE(OnlyAnOwnerIsRebound)
         BOOST_CHECK(true);
 }
 
+// cv-transparent as make_unsigned is: a cv owner rebinds as the bare one and keeps its cv, and a block's cv is dropped.
+BOOST_AUTO_TEST_CASE(ACvOwnerRebindsAsTheBareOneAndKeepsItsCv)
+{
+        using bare = xstd::bit_rebind<std::uint8_t, xstd::bit_vector>;
+        static_assert(std::is_same_v<xstd::bit_rebind<std::uint8_t, xstd::bit_vector const>, bare const>);
+        static_assert(std::is_same_v<xstd::bit_rebind<std::uint8_t, xstd::bit_vector volatile>, bare volatile>);
+        static_assert(std::is_same_v<xstd::bit_rebind<std::uint8_t, xstd::bit_vector const volatile>, bare const volatile>);
+        static_assert(std::is_same_v<xstd::bit_rebind<std::uint8_t const volatile, xstd::bit_vector>, bare>);
+        static_assert(rebinds<std::uint8_t, xstd::bit_set const> and not rebinds<std::uint8_t, xstd::bit_set_view<std::span<std::uint32_t>> const>);
+        BOOST_CHECK(true);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()

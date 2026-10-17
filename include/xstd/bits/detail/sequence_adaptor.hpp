@@ -15,6 +15,7 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                  // three_way
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
+#include <xstd/bits/detail/non_volatile.hpp>                 // non_volatile
 #include <xstd/bits/detail/owner_members.hpp>                // owner_members
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
@@ -247,16 +248,13 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
         // The middle column: growth inside a capacity the type carries, whose counterparts disagree on name shape.
         static constexpr bool has_static_capacity = can_grow and bits_type::has_static_capacity;
 
-        // Room for an insertion is made in place: inside a capacity the type carries, or one that reserve can raise.
-        static constexpr bool shifts_in_place = can_grow and requires (bits_type const& b) { b.capacity(); } and (has_static_capacity or requires (bits_type& b, std::size_t k) { b.reserve(k); });
-
         using window_ptr = sequence::window_ptr<Bits, has_static_window>;
 
         using members_type = sequence::sizes_t<Bits, Store, W, Derived, E>;
         using members_type::m_bits;
 
         // One accessor: self.m_bits propagates the owner's const, *self.m_bits keeps the view shallow.
-        [[nodiscard]] constexpr auto bits(this auto&& self) noexcept
+        [[nodiscard]] constexpr auto bits(this non_volatile auto&& self) noexcept
                 -> auto&&
         {
                 if constexpr (is_owner) {
@@ -839,7 +837,7 @@ public:
                 -> iterator
         {
                 auto const pos = index_of(position);
-                if constexpr (shifts_in_place and not blittable<std::remove_cvref_t<R>> and (std::ranges::forward_range<R> or std::ranges::sized_range<R>)) {
+                if constexpr (not blittable<std::remove_cvref_t<R>> and (std::ranges::forward_range<R> or std::ranges::sized_range<R>)) {
                         auto const n = static_cast<size_type>(std::ranges::distance(rg));
                         open_gap(pos, n);
                         // Reading the range is all that can throw here, and closing the gap again cannot.
@@ -851,7 +849,7 @@ public:
                         }
                         return begin() + static_cast<difference_type>(pos);
                 } else {
-                        if constexpr (shifts_in_place and blittable<std::remove_cvref_t<R>>) {
+                        if constexpr (blittable<std::remove_cvref_t<R>>) {
                                 // A window of this storage would move with its own tail, so it takes the rebuild.
                                 if (not is_storage_of(rg.bits())) {
                                         open_gap(pos, rg.size());
@@ -875,14 +873,9 @@ public:
                 requires can_grow
         {
                 auto const pos = index_of(position);
-                if constexpr (shifts_in_place) {
-                        open_gap(pos, n);
-                        m_bits.set(pos, n, value);
-                        return begin() + static_cast<difference_type>(pos);
-                } else {
-                        // Through the saturating sum: a wrapped total would answer with a shorter sequence.
-                        return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void { tmp.m_bits.resize(bits_type::check_addressable_width(bits_type::width_sum(tmp.size(), n)), value); });
-                }
+                open_gap(pos, n);
+                m_bits.set(pos, n, value);
+                return begin() + static_cast<difference_type>(pos);
         }
 
         template<std::input_iterator I, std::sentinel_for<I> S>
@@ -1031,24 +1024,24 @@ public:
         }
 
         // iterators, spelled over what the accessor hands this self: deep const for an owner, shallow for a view.
-        [[nodiscard]] constexpr auto begin(this auto&& self) noexcept
+        [[nodiscard]] constexpr auto begin(this non_volatile auto&& self) noexcept
                 -> iterator_t<decltype(self)>
         {
                 return {&self.bits(), self.offset()};
         }
 
-        [[nodiscard]] constexpr auto end(this auto&& self) noexcept
+        [[nodiscard]] constexpr auto end(this non_volatile auto&& self) noexcept
                 -> iterator_t<decltype(self)>
         {
                 return {&self.bits(), self.offset() + self.size()};
         }
 
-        [[nodiscard]] constexpr auto rbegin(this auto&& self) noexcept
+        [[nodiscard]] constexpr auto rbegin(this non_volatile auto&& self) noexcept
         {
                 return std::make_reverse_iterator(self.end());
         }
 
-        [[nodiscard]] constexpr auto rend(this auto&& self) noexcept
+        [[nodiscard]] constexpr auto rend(this non_volatile auto&& self) noexcept
         {
                 return std::make_reverse_iterator(self.begin());
         }
@@ -1200,14 +1193,14 @@ public:
         }
 
         // element access, [] unchecked and at() throwing as [array] has them.
-        [[nodiscard]] constexpr auto operator[](this auto&& self, size_type n) noexcept
+        [[nodiscard]] constexpr auto operator[](this non_volatile auto&& self, size_type n) noexcept
                 -> reference_t<decltype(self)>
         {
                 XSTD_BITS_ASSERT(n < self.size());
                 return {&self.bits(), self.offset() + n};
         }
 
-        [[nodiscard]] constexpr auto at(this auto&& self, size_type n)
+        [[nodiscard]] constexpr auto at(this non_volatile auto&& self, size_type n)
                 -> reference_t<decltype(self)>
         {
                 if (n < self.size()) {
@@ -1217,14 +1210,14 @@ public:
         }
 
         // Both are preconditions in [sequence.reqmts]; each assert is spread so the coverage gate excludes it.
-        [[nodiscard]] constexpr auto front(this auto&& self) noexcept
+        [[nodiscard]] constexpr auto front(this non_volatile auto&& self) noexcept
                 -> reference_t<decltype(self)>
         {
                 XSTD_BITS_ASSERT(not self.empty());
                 return {&self.bits(), self.offset()};
         }
 
-        [[nodiscard]] constexpr auto back(this auto&& self) noexcept
+        [[nodiscard]] constexpr auto back(this non_volatile auto&& self) noexcept
                 -> reference_t<decltype(self)>
         {
                 XSTD_BITS_ASSERT(not self.empty());
@@ -1278,9 +1271,7 @@ private:
                         auto const old        = size();
                         // Through the saturating sum: a wrapped total would answer an append with something shorter.
                         auto const total = bits_type::check_addressable_width(bits_type::width_sum(old, count));
-                        if constexpr (requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
-                                m_bits.reserve(total);
-                        }
+                        make_room(total);
                         auto const last = first + count;
                         auto pos        = first;
                         for (; last - pos >= digits; pos += digits) {
@@ -1307,8 +1298,8 @@ private:
                         using block_type      = bits_type::block_type;
                         constexpr auto digits = bits_type::bits_per_block;
                         // Saturating: a sized range's count is the one sum here a caller can wrap on purpose.
-                        if constexpr (std::ranges::sized_range<R> and requires (bits_type& b, std::size_t n) { b.reserve(n); }) {
-                                m_bits.reserve(bits_type::check_addressable_width(bits_type::width_sum(size(), static_cast<std::size_t>(std::ranges::size(rg)))));
+                        if constexpr (std::ranges::sized_range<R>) {
+                                make_room(bits_type::check_addressable_width(bits_type::width_sum(size(), static_cast<std::size_t>(std::ranges::size(rg)))));
                         }
                         auto block = block_type{};
                         auto n     = 0UZ;
@@ -1342,21 +1333,24 @@ private:
                 }
         }
 
-        // The tail moved up by n, after any growth: geometric, as push_back's is, and the one step that can throw.
-        constexpr auto open_gap(size_type pos, size_type n)
+        // Room for a width, made by the storage's own resize and handed back, so its growth policy picks the capacity.
+        constexpr auto make_room(size_type total)
                 -> void
-                requires shifts_in_place
+                requires can_grow
         {
                 auto const width = size();
-                if (n > m_bits.capacity() - width) {
-                        if constexpr (has_static_capacity) {
-                                throw std::bad_alloc(); // [inplace.vector.modifiers]/3
-                        } else {
-                                auto const total = bits_type::check_addressable_width(bits_type::width_sum(width, n));
-                                m_bits.reserve(std::ranges::max(total, std::ranges::min(2UZ * m_bits.capacity(), bits_type::max_addressable_width)));
-                        }
-                }
-                m_bits.resize(width + n);
+                m_bits.resize(total);
+                m_bits.resize(width);
+        }
+
+        // The tail moved up by n, after the storage's own resize: the one step that can throw, before anything moves.
+        constexpr auto open_gap(size_type pos, size_type n)
+                -> void
+                requires can_grow
+        {
+                auto const width = size();
+                // A capacity the type carries refuses here with bad_alloc, as [inplace.vector.modifiers]/3 asks.
+                m_bits.resize(bits_type::check_addressable_width(bits_type::width_sum(width, n)));
                 // A capacity of nought has no tail to shift, rather than through a loop that cannot go round.
                 if constexpr (not bits_type::has_zero_capacity) {
                         using block_type      = bits_type::block_type;

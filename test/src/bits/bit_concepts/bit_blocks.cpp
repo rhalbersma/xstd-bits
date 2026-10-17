@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>    // bit_blocks
 #include <xstd/bits/bit_set.hpp>                    // bit_set
 #include <xstd/bits/bit_set_view.hpp>               // bit_set_view
@@ -17,6 +17,7 @@
 #include <cstdint>                                  // uint16_t, uint32_t, uint64_t, uint8_t
 #include <deque>                                    // deque
 #include <list>                                     // list
+#include <ranges>                                   // range
 #include <span>                                     // span
 #include <vector>                                   // vector
 
@@ -42,6 +43,9 @@ concept deduces_a_view = requires (R& r) { xstd::bit_set_view(r); };
 
 template<class R>
 concept deduces_a_span = requires (R& r) { xstd::bit_span(r); };
+
+template<class Block>
+concept owns_blocks_of = requires { typename xstd::basic_bit_array<Block, 32>; };
 
 // Built-in arrays of blocks, named once so the storage under test is spelled where the check can be told why.
 using four_blocks        = std::uint64_t[4];       // NOLINT(modernize-avoid-c-arrays): the storage under test
@@ -95,6 +99,17 @@ BOOST_AUTO_TEST_CASE(VolatileBlocksAreNotBitStorage)
         static_assert(not holds_blocks<std::span<std::uint32_t volatile>> and not names_a_view<std::uint64_t volatile>);
         static_assert(not deduces_a_view<two_volatile_blocks> and not deduces_a_span<two_volatile_blocks>);
         static_assert(deduces_a_view<three_const_blocks> and deduces_a_span<four_blocks>);
+        BOOST_CHECK(true);
+}
+
+// An owner holds its blocks by value, so bare, and a volatile owner is no range, so no view refers into it.
+BOOST_AUTO_TEST_CASE(AnOwnerHoldsBareBlocksAndAVolatileOneIsNeverViewed)
+{
+        static_assert(owns_blocks_of<std::uint32_t> and not owns_blocks_of<std::uint32_t const> and not owns_blocks_of<std::uint32_t volatile>);
+        static_assert(std::ranges::range<xstd::bit_array<64> const&> and not std::ranges::range<xstd::bit_array<64> volatile&>);
+        static_assert(std::ranges::range<xstd::bit_set const&> and not std::ranges::range<xstd::bit_set const volatile&>);
+        static_assert(deduces_a_span<xstd::bit_array<64> const> and not deduces_a_span<xstd::bit_array<64> volatile>);
+        static_assert(deduces_a_view<xstd::bit_set const> and not deduces_a_view<xstd::bit_set volatile>);
         BOOST_CHECK(true);
 }
 

@@ -44,15 +44,13 @@ blocks, `std::uint64_t[4]`, is bit storage and not owned bit storage: it is not 
 assignment nor an `==` over its blocks, so no owner holds one and no `bit_block_container` has it as `Blocks`. The tag
 constructors, `xstd::bit_convert` and the views read it as they read the `std::array` of the same blocks.
 
-**`bit_blocks` is two cases joined.** One block is an `xstd::unsigned_integer`, const or not, but never volatile:
-that concept is cv-transparent, for the reasons xstd-ints'
-[design notes](https://github.com/rhalbersma/xstd-ints/blob/main/doc/design.md#integer-types) give, and `bit_blocks`
-refuses `volatile` on top of it, since a block algorithm copies, merges and vectorizes the accesses a memory-mapped
-register must keep one by one. The exposition-only `bit_block_range` is a sized contiguous range of such blocks that
-subscripts, and reads the `volatile` off the range's reference type, since `range_value_t` drops it;
-`xstd::bit_blocks` is either, and is the one of the three a user names. Code that treats the scalar and
-the range differently branches on `xstd::unsigned_integer`, and `bit_block_container` asks `bit_block_range` of its
-`Blocks`, which is how a bare block is refused at the constraint while contiguity is named rather than implied.
+**`bit_blocks` is two cases joined.** One block is the exposition-only `bit_block`: an `xstd::unsigned_integer`,
+const or not, but never volatile ([cv-transparency](#cv-transparency)). The exposition-only `bit_block_range` is a
+sized contiguous range of such blocks that subscripts, asking `bit_block` of the range's reference type, since
+`range_value_t` drops the cv a `std::span<std::uint32_t volatile>` carries; `xstd::bit_blocks` is either, and is the
+one of the three a user names. Code that treats the scalar and the range differently branches on
+`xstd::unsigned_integer`, and `bit_block_container` asks `bit_block_range` of its `Blocks`, which is how a bare
+block is refused at the constraint while contiguity is named rather than implied.
 
 **It is exposition-only because no storage joins the library from outside.** The storage under every owner is
 a `bit_block_container` over `owned_bit_blocks Blocks`, while the views take any `bit_blocks`. The split is
@@ -172,6 +170,41 @@ line where [container.reqmts]/68 draws it, so the concept states its own five re
 The name says *block container*, not *storage*: what an adaptor sits on is a different question, asked by
 `bit_block_container_type` and answered by name rather than by members
 ([one-storage](#one-storage)).
+
+### cv-transparency
+
+Every public concept and type trait answers for `T const`, `T volatile` and `T const volatile` as it does for `T`,
+as xstd-ints' do ([integer types](https://github.com/rhalbersma/xstd-ints/blob/main/doc/design.md#integer-types)),
+with one exception, below, for storage a block algorithm reads or writes.
+
+- **Concepts.** `bit_index_mapping`, `sized_bit_index_mapping` and `bit_mask_mapping` ask `from_index` and
+  `from_block` for the cv-stripped key, so a `const` key maps as the bare one. `bit_convertible_to<From, To>` holds
+  for a cv `To` exactly when it does for `To`.
+- **Type transformations.** `bit_rebind`, `bit_resize`, `bit_least`, `bit_fast`, `bit_align` and `bit_underlying`
+  transform a cv owner as the bare one and qualify the result alike, as `xstd::make_unsigned_t<int const>` is
+  `unsigned const`. The block argument is held by value, so its cv is dropped: `bit_rebind<std::uint8_t const, O>`
+  is `bit_rebind<std::uint8_t, O>`.
+- **Values.** `bit_blocks_extent_v` names the bare storage's width, so a `std::span<std::uint32_t, 2> const` is 64
+  bits wide, as the span is.
+- **Functions.** `bit_convert<To>` returns `std::remove_cv_t<To>`, as a cast to `int const` yields an `int`
+  prvalue; a `const` class return would only stop the result from being moved.
+
+**Volatile is the exception, where the order of accesses is the point.** A volatile object promises that each read
+and write the source spells is one access in the program, in order. A memory-mapped status or control register
+needs exactly that, and every block algorithm here breaks it: they copy whole arrays, merge adjacent reads into one
+wider load, vectorize, and read a block twice where once would do. So:
+
+- `bit_blocks` admits a const block or range and never a volatile one: `std::uint32_t volatile`,
+  `std::span<std::uint32_t volatile>` and `std::uint32_t volatile[2]` are no bit storage, and no view deduces over
+  them.
+- An owner or view that is itself volatile is no owner or view. Every member taking an explicit object parameter
+  constrains it against volatile, so `std::ranges::range<xstd::bit_array<64> volatile&>` is false, as it is for a
+  volatile `std::vector`, rather than a hard error inside `begin`.
+- An owner's block is cv-unqualified, as a standard container's element type must be: `basic_bit_array<std::uint32_t
+  const, 32>` is refused at its own constraint, as `std::vector<int const>` is ill-formed.
+- A volatile *scalar* is one access, so it is a source: `xstd::bit_convert<xstd::bit_array<32>>(status)` reads the
+  register once and converts the value it held, and `status = xstd::bit_convert<std::uint32_t>(flags)` writes it
+  back in one store. A volatile array, owner or `std::bitset` would be read piece by piece, and is refused.
 
 ### the-const-reference
 
@@ -1480,8 +1513,8 @@ block the walk is discarded, and a cursor declared outside would never be writte
 
 **A test that only makes a call fail instantiates the path it never runs**, and the same rule scores it. Three
 cases here each handed `append_range` a `views::iota | views::transform` whose sum saturates, to check that the
-reserve refuses it. Each wrote its own lambda, so each was a distinct closure type and a distinct instantiation
-of the packing tier — three of them, and in all three the reserve threw before the loop was entered, so every
+growth ahead of the loop refuses it. Each wrote its own lambda, so each was a distinct closure type and a distinct
+instantiation of the packing tier — three of them, and in all three that growth threw before the loop was entered, so every
 branch in that tier was one no test took: five short of the gate, on the two lines that shape the loop. One
 functor at namespace scope makes the three views one type, and a length the sequence can hold runs that
 instantiation's loop for real. The general form: when a range or a storage enters a template only through the
@@ -2197,17 +2230,22 @@ clearing whatever the last block carried past it. Everything else, a `std::vecto
 reads positions below the old width alone, and no append writes one.
 
 Under a static capacity `[inplace.vector.modifiers]/3` asks more of `append_range`: past the capacity, no
-effects. A sized source gets that for free, the width it needs being reserved, and refused, before a block is
-written. A source with no size finds the capacity only by overrunning it, so the bounded owner remembers its
+effects. A sized source gets that for free: room for the width it needs is made before a block is written, and
+refused there. A source with no size finds the capacity only by overrunning it, so the bounded owner remembers its
 width, and on any exception resizes back to it before rethrowing -- the resize clearing the tail as every
 shrink does. `assign_range` has no such remark in `[sequence.reqmts]`, so its clear-and-append keeps only the
 basic guarantee, and an overflowing source leaves what it appended.
 
 `insert_range`, `insert` in its four shapes and `emplace` shift wherever the count is known before the first
 element is read: a value, a count of them, a sized or forward range, or another sequence's blocks. Room is made
-first, and that is the one step that can throw: a heap grows geometrically, as `push_back`'s does, so
-`insert(end(), b)` is amortized constant as `std::vector<bool>`'s is, and an inline capacity too small for the
-growth throws `bad_alloc` before anything has moved, as `[inplace.vector.modifiers]`/3 asks. The tail then moves up
+first, and that is the one step that can throw: the block container's own `resize`, so the storage's growth
+policy picks the capacity and this library adds no factor of its own. `std::vector`'s `resize` grows geometrically
+on every standard library here, so `insert(end(), b)` is amortized constant as `std::vector<bool>`'s is, and an
+inline capacity too small for the growth throws `bad_alloc` before anything has moved, as
+`[inplace.vector.modifiers]`/3 asks. A sized append makes its room the same way, a `resize` to the new width and
+back, so the blocks that follow are appended without reallocating and many small appends grow as `push_back` does:
+an exact `reserve` of each new width instead reallocated on every call that needed a block, 157 allocations for
+ten thousand one-bit appends against `std::vector`'s 15. The tail then moves up
 a block at a time, descending, each write landing above every read still to come, and the middle is written into
 the gap; a source that throws part way has its gap erased again before the exception leaves. A single-pass source
 with no size, and a window of the sequence itself, which would move with its own tail, rebuild instead: the head
@@ -3637,7 +3675,7 @@ width it asks for by **addition** over a `size_t` the caller names, and every on
 | `set_adaptor::insert_range`, consecutive tier | `lo + len - 1`, the range's last position |
 | `sequence_adaptor::insert(position, n, value)` | `size() + n` |
 | `sequence_adaptor::blit` | `size() + count`, the source's own width |
-| `sequence_adaptor::pack` | `size() + ranges::size(rg)`, reserved ahead of the packing loop |
+| `sequence_adaptor::pack` | `size() + ranges::size(rg)`, made room for ahead of the packing loop |
 
 Not every wrapping sum is a growth. `exclusive_find_next(n)` steps to `n + 1` to scan from the position after
 `n`, and at the top of `size_t` that step is zero, so a scan from there would restart at the beginning and answer
@@ -3722,10 +3760,10 @@ multiplies the blocks' by it; both overflow only once the blocks already hold so
 allocation fails long before, so a branch there is one no test can reach and the coverage gate would be right to
 say so.
 
-`sequence_adaptor::pack` reserves ahead and is **not** left alone, because of what its count is bounded by.
+`sequence_adaptor::pack` makes room ahead and is **not** left alone, because of what its count is bounded by.
 `pack` is handed a range of `bool`, and a sized range answers `size()` for elements it never materializes: `d.append_range(views::iota(0UZ, SIZE_MAX))`
-is one call, and `size() + SIZE_MAX` wraps for every `d` that is not empty. Wrapped, the reserve asks for
-nothing and returns, and the packing loop then walks a range of `2^64` elements a block at a time -- so the
+is one call, and `size() + SIZE_MAX` wraps for every `d` that is not empty. Wrapped, the room asked for is
+none, and the packing loop then walks a range of `2^64` elements a block at a time -- so the
 `length_error` the same call answers **immediately** on an empty sequence becomes, one element in, a call that
 ends when the allocator gives out rather than when the range does. Saturated it is that `length_error` at
 both.
