@@ -5039,7 +5039,7 @@ bitset-shaped takes part.
 
 There is no second sieve running the same shape over `std::bitset` or `boost::dynamic_bitset` through
 `bit_set_view`. Two sieves would be two vocabularies for one algorithm, and what one would demonstrate -- that the
-view reconciles `set(pos)`/`reset(pos)` with `insert`/`erase` -- is what `test/src/bits/bit_set_view.cpp` asserts
+view reconciles `set(pos)`/`reset(pos)` with `insert`/`erase` -- is what `test/src/bits/bit_set/bit_set_view.cpp` asserts
 directly, without a sieve in the way. An example earns its place by showing something no test does.
 
 The bench is dynamic containers only, so it compares like with like: `std::flat_set`, `std::set` and
