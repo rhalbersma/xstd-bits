@@ -12,8 +12,8 @@
 #include <test/spec/set.hpp>                        // all, const_views
 #include <test/spec/span.hpp>                       // all
 #include <xstd/bits/bit_array.hpp>                  // bit_array
-#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
@@ -640,7 +640,7 @@ BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthTakesAnAllocator)
 // [container.alloc.reqmts]/1: every container is allocator-aware but array and inplace_vector, and a view is not one
 BOOST_AUTO_TEST_CASE(OnlyAnAllocatorAwareCandidateTakesAnAllocator)
 {
-        // The fixed and bounded columns of every reading take no allocator argument, and no view does.
+        // The fixed and inplace columns of every reading take no allocator argument, and no view does.
         test::for_each_type<test::spec::set::all>([]<class T> -> void { check_allocator_members<T>(); });
         test::for_each_type<test::spec::set::const_views>([]<class T> -> void { check_allocator_members<T>(); });
         test::for_each_type<test::spec::sequence::all>([]<class T> -> void { check_allocator_members<T>(); });

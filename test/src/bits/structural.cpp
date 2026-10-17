@@ -6,9 +6,9 @@
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <test/structural.hpp>                      // structural, value_parameter
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_set.hpp>            // bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp>         // bit_bounded_vector
-#include <xstd/bits/bit_fixed_set.hpp>              // bit_fixed_set
+#include <xstd/bits/bit_inplace_vector.hpp>         // bit_inplace_vector
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>      // bit_fixed_set
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>    // bit_inplace_set
 #include <xstd/bits/bit_type_traits/bit_align.hpp>  // bit_align
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/from_blocks.hpp>                // from_blocks
@@ -57,9 +57,9 @@ using empty_owners = std::tuple<
         xstd::bit_fixed_set<0>>;
 
 // A run-time width over storage that is not structural itself, and under Boost's static_vector not even literal.
-using bounded_owners = std::tuple<
-        xstd::bit_bounded_vector<64>,
-        xstd::bit_bounded_set<64>>;
+using inplace_owners = std::tuple<
+        xstd::bit_inplace_vector<64>,
+        xstd::bit_inplace_set<64>>;
 
 // Each reading's own door to a bit: a set inserts, and a sequence assigns through its proxy.
 template<class T>
@@ -175,9 +175,9 @@ BOOST_AUTO_TEST_CASE(WidthZeroIsStructural)
         });
 }
 
-BOOST_AUTO_TEST_CASE(ABoundedOwnerIsNotStructural)
+BOOST_AUTO_TEST_CASE(AInplaceOwnerIsNotStructural)
 {
-        test::for_each_type<bounded_owners>([]<class T> -> void {
+        test::for_each_type<inplace_owners>([]<class T> -> void {
                 static_assert(not test::structural<T>);
         });
 }

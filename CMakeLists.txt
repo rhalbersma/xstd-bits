@@ -51,7 +51,7 @@ endif()
 # Boost.Hash2 is a public dependency of this library's headers, not just of the tests, so it is declared explicitly.
 find_package(boost_hash2 CONFIG REQUIRED)
 
-# Boost.Container likewise: the ext/ column's small_vector, opt-in to include, and the bounded column's blocks where the standard library has no std::inplace_vector.
+# Boost.Container likewise: the ext/ column's small_vector, opt-in to include, and the inplace column's blocks where the standard library has no std::inplace_vector.
 find_package(boost_container CONFIG REQUIRED)
 
 add_library(
@@ -70,11 +70,11 @@ target_sources(
     FILES
         include/xstd/bits.hpp
         include/xstd/bits/detail/sequence_adaptor.hpp
-        include/xstd/bits/detail/set_adaptor.hpp
-        include/xstd/bits/detail/valarray_adaptor.hpp
-        include/xstd/bits/detail/valarray_proxy.hpp
-        include/xstd/bits/detail/gslice_index.hpp
-        include/xstd/bits/detail/block_compress_expand.hpp
+        include/xstd/bits/bit_set/detail/set_adaptor.hpp
+        include/xstd/bits/bit_valarray/detail/valarray_adaptor.hpp
+        include/xstd/bits/bit_valarray/detail/valarray_proxy.hpp
+        include/xstd/bits/bit_valarray/detail/gslice_index.hpp
+        include/xstd/bits/bit_valarray/detail/block_compress_expand.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
@@ -131,18 +131,28 @@ target_sources(
         include/xstd/bits/bit_concepts/bit_index_mapping.hpp
         include/xstd/bits/bit_concepts/bit_mask_mapping.hpp
         include/xstd/bits/bit_concepts/sized_bit_index_mapping.hpp
-        include/xstd/bits/bit_bounded_set.hpp
-        include/xstd/bits/bit_bounded_vector.hpp
-        include/xstd/bits/bit_enum_set.hpp
-        include/xstd/bits/bit_flag_set.hpp
-        include/xstd/bits/bit_flag_mapping.hpp
-        include/xstd/bits/bit_key_mapping.hpp
+        include/xstd/bits/bit_inplace_vector.hpp
+        include/xstd/bits/bit_functional.hpp
+        include/xstd/bits/bit_functional/bit_compare_three_way.hpp
+        include/xstd/bits/bit_functional/bit_digest.hpp
+        include/xstd/bits/bit_functional/bit_equal_to.hpp
+        include/xstd/bits/bit_functional/bit_greater.hpp
+        include/xstd/bits/bit_functional/bit_greater_equal.hpp
+        include/xstd/bits/bit_functional/bit_hash.hpp
+        include/xstd/bits/bit_functional/bit_less.hpp
+        include/xstd/bits/bit_functional/bit_less_equal.hpp
+        include/xstd/bits/bit_functional/bit_not_equal_to.hpp
+        include/xstd/bits/bit_functional/detail/bit_hasher.hpp
         include/xstd/bits/bit_set.hpp
-        include/xstd/bits/bit_set_view.hpp
+        include/xstd/bits/bit_set/bit_inplace_set.hpp
+        include/xstd/bits/bit_set/bit_enum_set.hpp
+        include/xstd/bits/bit_set/bit_flag_set.hpp
+        include/xstd/bits/bit_set/bit_flag_mapping.hpp
+        include/xstd/bits/bit_set/bit_key_mapping.hpp
+        include/xstd/bits/bit_set/bit_set.hpp
+        include/xstd/bits/bit_set/bit_set_view.hpp
+        include/xstd/bits/bit_set/bit_fixed_set.hpp
         include/xstd/bits/bit_span.hpp
-        include/xstd/bits/bit_fixed_set.hpp
-        include/xstd/bits/bit_equal_to.hpp
-        include/xstd/bits/bit_hasher.hpp
         include/xstd/bits/bit_subspan.hpp
         include/xstd/bits/bit_type_traits.hpp
         include/xstd/bits/bit_type_traits/bit_align.hpp
@@ -152,30 +162,31 @@ target_sources(
         include/xstd/bits/bit_type_traits/bit_rebind.hpp
         include/xstd/bits/bit_type_traits/bit_resize.hpp
         include/xstd/bits/bit_type_traits/bit_underlying.hpp
-        include/xstd/bits/bit_vector.hpp
         include/xstd/bits/bit_valarray.hpp
-        include/xstd/bits/bit_fixed_valarray.hpp
-        include/xstd/bits/bit_bounded_valarray.hpp
-        include/xstd/bits/bit_slice.hpp
-        include/xstd/bits/bit_gslice.hpp
-        include/xstd/bits/bit_slice_array.hpp
-        include/xstd/bits/bit_gslice_array.hpp
-        include/xstd/bits/bit_mask_array.hpp
-        include/xstd/bits/bit_indirect_array.hpp
+        include/xstd/bits/bit_valarray/bit_valarray.hpp
+        include/xstd/bits/bit_valarray/bit_fixed_valarray.hpp
+        include/xstd/bits/bit_valarray/bit_inplace_valarray.hpp
+        include/xstd/bits/bit_valarray/bit_slice.hpp
+        include/xstd/bits/bit_valarray/bit_gslice.hpp
+        include/xstd/bits/bit_valarray/bit_slice_array.hpp
+        include/xstd/bits/bit_valarray/bit_gslice_array.hpp
+        include/xstd/bits/bit_valarray/bit_mask_array.hpp
+        include/xstd/bits/bit_valarray/bit_indirect_array.hpp
+        include/xstd/bits/bit_vector.hpp
         include/xstd/bits/detail/adapted_bits.hpp
         include/xstd/bits/bit_algorithm/detail/algorithm.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
         include/xstd/bits/detail/assert.hpp
-        include/xstd/bits/detail/bounded_blocks.hpp
+        include/xstd/bits/detail/inplace_blocks.hpp
         include/xstd/bits/detail/bit_block_container.hpp
         include/xstd/bits/detail/block_intersects.hpp
         include/xstd/bits/detail/comparisons.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp
         include/xstd/bits/detail/hash.hpp
         include/xstd/bits/detail/intrinsic.hpp
-        include/xstd/bits/detail/flag_block.hpp
+        include/xstd/bits/bit_set/detail/flag_block.hpp
         include/xstd/bits/detail/ordinal.hpp
-        include/xstd/bits/detail/is_key.hpp
+        include/xstd/bits/bit_set/detail/is_key.hpp
         include/xstd/bits/from_blocks.hpp
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/bit_small_set.hpp
@@ -195,7 +206,7 @@ target_sources(
         include/xstd/bits/detail/storage_ptr.hpp
         include/xstd/bits/detail/views.hpp
         include/xstd/bits/detail/blocks.hpp
-        include/xstd/bits/detail/blocks_extent.hpp
+        include/xstd/bits/bit_type_traits/detail/blocks_extent.hpp
         include/xstd/bits/detail/non_volatile.hpp
         include/xstd/bits/detail/num_blocks.hpp
         include/xstd/bits/detail/owner_members.hpp
@@ -245,8 +256,8 @@ target_compile_features(
 if(PROJECT_IS_TOP_LEVEL)
     include(CTest)
     if(BUILD_TESTING)
-        # The library requires C++23 and says so above, in the INTERFACE a consumer inherits. The bounded column is held in std::inplace_vector only behind __cpp_lib_inplace_vector, which is C++26, and in boost::container::static_vector below it, so at the minimum that storage and the constant evaluation of the three bounded cells are never tested. Raising the standard here rather than in the INTERFACE keeps the requirement a consumer sees at 23 while letting a leg of the matrix test both storages.
-        set(${project_option_prefix}_CXX_STANDARD 23 CACHE STRING "C++ standard for the tests and benchmarks: 23, or 26 to hold the bounded column in std::inplace_vector")
+        # The library requires C++23 and says so above, in the INTERFACE a consumer inherits. The inplace column is held in std::inplace_vector only behind __cpp_lib_inplace_vector, which is C++26, and in boost::container::static_vector below it, so at the minimum that storage and the constant evaluation of the three inplace cells are never tested. Raising the standard here rather than in the INTERFACE keeps the requirement a consumer sees at 23 while letting a leg of the matrix test both storages.
+        set(${project_option_prefix}_CXX_STANDARD 23 CACHE STRING "C++ standard for the tests and benchmarks: 23, or 26 to hold the inplace column in std::inplace_vector")
         set_property(CACHE ${project_option_prefix}_CXX_STANDARD PROPERTY STRINGS 23 26)
 
         # Asking for a standard CMake cannot spell for this compiler fails deep inside a try_compile, with a message blaming the compiler. CMAKE_CXX_COMPILE_FEATURES is what CMake actually knows, so ask it.
@@ -255,7 +266,7 @@ if(PROJECT_IS_TOP_LEVEL)
                 "${project_option_prefix}_CXX_STANDARD=${${project_option_prefix}_CXX_STANDARD} is not something CMake ${CMAKE_VERSION} can ask "
                 "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} for. CMake 3.30 is the first that knows C++26 "
                 "for GCC and Clang, and this project requires it; a front end CMake has not been taught still answers "
-                "no. The bounded column's std::inplace_vector storage needs that answer, nothing else does."
+                "no. The inplace column's std::inplace_vector storage needs that answer, nothing else does."
             )
         endif()
 

@@ -4,12 +4,12 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
-#include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_hasher.hpp>                 // bit_hasher
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
-#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_functional/bit_hash.hpp>    // bit_hash
+#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
+#include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/detail/intrinsic.hpp>           // bools_per_block, byte_bools, expand_block, expand_block_by_table
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
@@ -87,10 +87,10 @@ template<class T>
 
 // The packed hasher at an algorithm, which std::hash runs at the one the length picks.
 template<class Hash, class T>
-[[nodiscard]] auto bit_digest(T const& v)
+[[nodiscard]] auto bit_hashed(T const& v)
         -> std::size_t
 {
-        auto const hasher = xstd::bit_hasher<Hash>();
+        auto const hasher = xstd::bit_hash<T, Hash>();
         return hasher(v);
 }
 
@@ -138,14 +138,14 @@ template<class T>
 } // namespace
 
 // std::hash is the packed hasher at xxHash, whatever the length: FNV-1a would leave a last byte's high bits out.
-BOOST_AUTO_TEST_CASE(TheDefaultIsTheBitHasherAtXxhash)
+BOOST_AUTO_TEST_CASE(TheDefaultIsTheBitHashAtXxhash)
 {
         auto const fixed   = xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 200>({1, 64, 199});
         auto const growing = dynamic_set({1, 3, 63});
         auto const bools   = alternating(sequence(130));
-        BOOST_CHECK_EQUAL(default_digest(fixed), bit_digest<boost::hash2::xxhash_64>(fixed));
-        BOOST_CHECK_EQUAL(default_digest(growing), bit_digest<boost::hash2::xxhash_64>(growing));
-        BOOST_CHECK_EQUAL(default_digest(bools), bit_digest<boost::hash2::xxhash_64>(bools));
+        BOOST_CHECK_EQUAL(default_digest(fixed), bit_hashed<boost::hash2::xxhash_64>(fixed));
+        BOOST_CHECK_EQUAL(default_digest(growing), bit_hashed<boost::hash2::xxhash_64>(growing));
+        BOOST_CHECK_EQUAL(default_digest(bools), bit_hashed<boost::hash2::xxhash_64>(bools));
         BOOST_CHECK_EQUAL(default_digest(xstd::bit_set_view(growing)), default_digest(growing));
 
         // A static width appends no size, so its digest is one on every flavor, folded to std::size_t's width.
@@ -215,8 +215,8 @@ BOOST_AUTO_TEST_CASE(ASeededSipHashKeysAnUnorderedContainer)
         auto const fill_all = [&]<class T>(std::initializer_list<T> values) -> void {
                 fill.template operator()<T, xstd::hasher<boost::hash2::siphash_64>, std::unordered_set>(values);
                 fill.template operator()<T, xstd::hasher<boost::hash2::siphash_64>, boost::unordered_flat_set>(values);
-                fill.template operator()<T, xstd::bit_hasher<boost::hash2::siphash_64>, std::unordered_set>(values);
-                fill.template operator()<T, xstd::bit_hasher<boost::hash2::siphash_64>, boost::unordered_flat_set>(values);
+                fill.template operator()<T, xstd::bit_hash<T, boost::hash2::siphash_64>, std::unordered_set>(values);
+                fill.template operator()<T, xstd::bit_hash<T, boost::hash2::siphash_64>, boost::unordered_flat_set>(values);
         };
 
         // Three values, two of them equal, so each table holds two.
@@ -297,10 +297,10 @@ BOOST_AUTO_TEST_CASE(EqualValuesHashEqualUnderTheDefaultAcrossStorages)
         // The set reading at a run-time width: every resizable owner, and a view over one.
         auto const dynamic_set_digests = [](std::initializer_list<std::size_t> keys) -> std::array<std::size_t, 4> {
                 auto const growing      = xstd::basic_bit_set<std::size_t, std::uint8_t>(keys);
-                auto const bounded      = xstd::basic_bit_bounded_set<std::size_t, std::uint64_t, 256>(keys);
+                auto const inplace      = xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 256>(keys);
                 auto const inline_first = xstd::basic_bit_small_set<std::size_t, std::uint64_t, 256>(keys);
                 auto const view         = xstd::bit_set_view(growing);
-                return {default_digest(growing), default_digest(bounded), default_digest(inline_first), default_digest(view)};
+                return {default_digest(growing), default_digest(inplace), default_digest(inline_first), default_digest(view)};
         };
         for (auto const& digests : {dynamic_set_digests({1, 3}), dynamic_set_digests({1, 3, 5, 200})}) {
                 BOOST_CHECK(digests[0] == digests[1] and digests[1] == digests[2] and digests[2] == digests[3]);
@@ -309,9 +309,9 @@ BOOST_AUTO_TEST_CASE(EqualValuesHashEqualUnderTheDefaultAcrossStorages)
         // The sequence reading at a run-time width, every owner; a static one is std::array's and has no size.
         auto const sequence_digests = []<std::size_t N> -> std::array<std::size_t, 3> {
                 auto const growing      = alternating(xstd::basic_bit_vector<std::uint8_t>(N));
-                auto const bounded      = alternating(xstd::basic_bit_bounded_vector<std::uint64_t, 256>(N));
+                auto const inplace      = alternating(xstd::basic_bit_inplace_vector<std::uint64_t, 256>(N));
                 auto const inline_first = alternating(xstd::basic_bit_small_vector<std::uint64_t, 256>(N));
-                return {default_digest(growing), default_digest(bounded), default_digest(inline_first)};
+                return {default_digest(growing), default_digest(inplace), default_digest(inline_first)};
         };
         for (auto const& digests : {sequence_digests.operator()<10>(), sequence_digests.operator()<200>()}) {
                 BOOST_CHECK(digests[0] == digests[1] and digests[1] == digests[2]);

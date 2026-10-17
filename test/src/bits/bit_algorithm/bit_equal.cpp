@@ -9,11 +9,11 @@
 #include <test/for_each_type.hpp>                // for_each_type
 #include <xstd/bits/bit_algorithm/bit_equal.hpp> // bit_equal
 #include <xstd/bits/bit_array.hpp>               // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_vector.hpp>      // basic_bit_bounded_vector
-#include <xstd/bits/bit_fixed_set.hpp>           // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_key_mapping.hpp>         // bit_key_mapping
-#include <xstd/bits/bit_set.hpp>                 // bit_set
-#include <xstd/bits/bit_set_view.hpp>            // bit_set_view
+#include <xstd/bits/bit_inplace_vector.hpp>      // basic_bit_inplace_vector
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>   // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_set/bit_key_mapping.hpp> // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>         // bit_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>    // bit_set_view
 #include <xstd/bits/bit_span.hpp>                // bit_span
 #include <xstd/bits/bit_vector.hpp>              // basic_bit_vector, bit_vector
 #include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
@@ -108,11 +108,11 @@ BOOST_AUTO_TEST_CASE(WindowsAndViewsCompareTheirOwnElements)
 // A capacity of nought against a run-time width that holds bools: the sizes still decide.
 BOOST_AUTO_TEST_CASE(ZeroCapacityAgainstARunTimeWidth)
 {
-        auto const none = xstd::basic_bit_bounded_vector<std::uint8_t, 0>();
+        auto const none = xstd::basic_bit_inplace_vector<std::uint8_t, 0>();
         BOOST_CHECK(agrees(none, xstd::bit_vector()) and agrees(none, xstd::bit_vector(1UZ)));
 }
 
-// In a constant expression, and over two of one reading and one width kind alone, as bit_hasher keeps them apart.
+// In a constant expression, and over two of one reading and one width kind alone, as bit_hash keeps them apart.
 BOOST_AUTO_TEST_CASE(ComparesOneReadingAndOneWidthKindAlone)
 {
         static_assert(agrees(test::algorithm::patterned(xstd::bit_array<70>()), test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 70>())));

@@ -5,7 +5,7 @@
 
 // The gate on the interface line.
 
-#include <xstd/bits.hpp>           // bit_array, bit_bounded_set, bit_bounded_valarray, bit_bounded_vector, bit_convert, bit_count, bit_fixed_set, bit_fixed_valarray, bit_set, bit_set_view, bit_span, bit_subspan, bit_valarray, bit_vector
+#include <xstd/bits.hpp>           // bit_array, bit_convert, bit_count, bit_fixed_set, bit_fixed_valarray, bit_inplace_set, bit_inplace_valarray, bit_inplace_vector, bit_set, bit_set_view, bit_span, bit_valarray, bit_vector
 #include <xstd/bits/ext/boost.hpp> // bit_small_set, bit_small_vector
 #include <array>                   // array
 #include <concepts>                // copyable, default_initializable, equality_comparable, regular, same_as, totally_ordered
@@ -59,17 +59,17 @@ static_assert(is_sequence_reading<xstd::bit_vector>);
 static_assert(is_sequence_reading<span_of_blocks>);
 static_assert(is_sequence_reading<subspan_of_blocks>);
 
-// The bounded column, over whichever inline storage the standard library leaves it.
-static_assert(is_set_reading<xstd::bit_bounded_set<100>>);
-static_assert(is_sequence_reading<xstd::bit_bounded_vector<100>>);
+// The inplace column, over whichever inline storage the standard library leaves it.
+static_assert(is_set_reading<xstd::bit_inplace_set<100>>);
+static_assert(is_sequence_reading<xstd::bit_inplace_vector<100>>);
 
 // The small column, opt-in through its own header: inline up to a static capacity and on the heap past it.
 static_assert(is_set_reading<xstd::bit_small_set<100>>);
 static_assert(is_sequence_reading<xstd::bit_small_vector<100>>);
 
-// The valarray reading, over the fixed, bounded and dynamic storages.
+// The valarray reading, over the fixed, inplace and dynamic storages.
 static_assert(is_valarray_reading<xstd::bit_fixed_valarray<100>>);
-static_assert(is_valarray_reading<xstd::bit_bounded_valarray<100>>);
+static_assert(is_valarray_reading<xstd::bit_inplace_valarray<100>>);
 static_assert(is_valarray_reading<xstd::bit_valarray>);
 
 } // namespace consumer
@@ -106,9 +106,9 @@ auto main()
         auto const converted = xstd::bit_convert<xstd::bit_vector>(array);
         check(converted.size() == 64 and converted[7]);
 
-        auto bounded = xstd::bit_bounded_set<100>();
-        bounded.insert(99);
-        check(bounded.contains(99));
+        auto inplace = xstd::bit_inplace_set<100>();
+        inplace.insert(99);
+        check(inplace.contains(99));
 
         // The small column, past its inline capacity.
         auto small_set = xstd::bit_small_set<64>();
@@ -125,8 +125,8 @@ auto main()
         check(fixed_lanes.sum() and not fixed_lanes.min());
         check(xstd::bit_count(fixed_lanes == fixed_lanes) == 100);
 
-        auto const bounded_lanes = xstd::bit_bounded_valarray<100>(true, 10);
-        check(bounded_lanes.size() == 10 and bounded_lanes.min());
+        auto const inplace_lanes = xstd::bit_inplace_valarray<100>(true, 10);
+        check(inplace_lanes.size() == 10 and inplace_lanes.min());
 
         auto lanes = xstd::bit_valarray(64);
         lanes[3]   = true;

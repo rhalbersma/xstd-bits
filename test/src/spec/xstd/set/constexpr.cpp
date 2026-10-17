@@ -6,7 +6,7 @@
 #include <test/for_each_type.hpp>   // for_each_type
 #include <test/set/exhaustive.hpp>  // static_width
 #include <test/spec/set.hpp>        // owners
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <compare>                  // strong_ordering
 
 BOOST_AUTO_TEST_SUITE(Spec)

@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Every paragraph an inventory under doc/audit/ lists is accounted for, and every paragraph a test cites is listed.
+  # Every paragraph an inventory under doc/audit/ lists is accounted for, every paragraph a test cites is listed, and every name an include comment lists is used.
   audit:
     runs-on: ubuntu-24.04
     steps:
@@ -28,3 +28,6 @@ jobs:
 
       - name: Check the inventories against the citations
         run: python3 tools/audit.py
+
+      - name: Check the include comments against the names their files use
+        run: python3 tools/include_comments.py

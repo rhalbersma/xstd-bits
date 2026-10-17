@@ -7,17 +7,17 @@
 #define XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>             // bit_blocks
-#include <xstd/bits/bit_hasher.hpp>                          // bit_hasher
+#include <xstd/bits/bit_functional/bit_hash.hpp>             // bit_hash
 #include <xstd/bits/detail/adapted_bits.hpp>                 // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/assert.hpp>                       // XSTD_BITS_ASSERT
-#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container, bit_block_container_type
+#include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                  // three_way
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
 #include <xstd/bits/detail/non_volatile.hpp>                 // non_volatile
 #include <xstd/bits/detail/owner_members.hpp>                // owner_members
-#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
+#include <xstd/bits/detail/ownership.hpp>                    // owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ptr_t, storage_ref_t
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks_t
@@ -45,7 +45,7 @@
 #include <stdexcept>                                         // out_of_range
 #include <tuple>                                             // tuple_element, tuple_size
 #include <type_traits>                                       // bool_constant, conditional_t, false_type, integral_constant, is_const_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, remove_const_t, remove_cvref_t, remove_reference_t
-#include <utility>                                           // as_const, declval, forward, in_place, move, pair
+#include <utility>                                           // as_const, declval, forward, in_place, move
 
 // The sequence reading, [array] over a bit_block_container, owning it or referring to it.
 namespace xstd::bits::detail {
@@ -149,7 +149,7 @@ struct fixed_sizes : Members
 
 // A run-time width under a capacity the type carries: the width a function, the capacity a constant.
 template<class Members, std::size_t Capacity>
-struct bounded_sizes : Members
+struct inplace_sizes : Members
 {
         using Members::Members;
 
@@ -169,7 +169,7 @@ struct bounded_sizes : Members
         static constexpr std::integral_constant<std::size_t, Capacity> max_size = {};
         static constexpr std::integral_constant<std::size_t, Capacity> capacity = {};
 
-        [[nodiscard]] friend auto operator==(bounded_sizes const&, bounded_sizes const&) -> bool = default;
+        [[nodiscard]] friend auto operator==(inplace_sizes const&, inplace_sizes const&) -> bool = default;
 };
 
 // A width read at run time, from the storage or from a window's count, and so as functions.
@@ -225,7 +225,7 @@ using sizes_t = std::conditional_t<
         fixed_sizes<members_t<Bits, Store, W, Derived, E>, static_size<Bits, Store, W, E>()>,
         std::conditional_t<
                 can_grow<Bits, Store>() and std::remove_const_t<Bits>::has_static_capacity,
-                bounded_sizes<members_t<Bits, Store, W, Derived, E>, std::remove_const_t<Bits>::static_capacity()>,
+                inplace_sizes<members_t<Bits, Store, W, Derived, E>, std::remove_const_t<Bits>::static_capacity()>,
                 run_time_sizes<members_t<Bits, Store, W, Derived, E>, Bits, Store, W>>>;
 
 } // namespace sequence
@@ -1568,14 +1568,14 @@ struct formatter<R, CharT> : formatter<bool, CharT>
         }
 };
 
-// The owner's bits, by bit_hasher, where std::vector<bool> has a hash; a view no more than std::span has.
+// The owner's bits, by bit_hash, where std::vector<bool> has a hash; a view no more than std::span has.
 template<class Bits, xstd::bits::detail::window W, class Derived>
 struct hash<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived>>
 {
         [[nodiscard]] constexpr auto operator()(xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived> const& v) const noexcept
                 -> std::size_t
         {
-                return xstd::bit_hasher<boost::hash2::xxhash_64>()(v);
+                return xstd::bit_hash<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived>, boost::hash2::xxhash_64>()(v);
         }
 };
 

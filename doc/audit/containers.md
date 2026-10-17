@@ -103,12 +103,12 @@ A row's `outcome` is one of:
 | `[container.rev.reqmts]` | 13 | `a.crend()` | Result | answered |  |
 | `[container.rev.reqmts]` | 14 | `a.crend()` | Returns | answered |  |
 | `[container.rev.reqmts]` | 15 | `a.crend()` | Complexity | declined | A complexity bound, which no functional check can observe. |
-| `[container.opt.reqmts]` | 1 | — | — | answered | The constant evaluation is asked where the storage is constant-evaluable: not `std::set`, `std::flat_set`, the small columns, the user storage, or the bounded columns before C++26. |
+| `[container.opt.reqmts]` | 1 | — | — | answered | The constant evaluation is asked where the storage is constant-evaluable: not `std::set`, `std::flat_set`, the small columns, the user storage, or the inplace columns before C++26. |
 | `[container.opt.reqmts]` | 2 | `a <=> b` | Result | answered |  |
 | `[container.opt.reqmts]` | 3 | `a <=> b` | Preconditions | no-requirement | A precondition on the element type: `bool` and `std::size_t` are totally ordered. |
 | `[container.opt.reqmts]` | 4 | `a <=> b` | Returns | answered |  |
 | `[container.opt.reqmts]` | 5 | `a <=> b` | Complexity | declined | A complexity bound, which no functional check can observe. |
-| `[container.alloc.reqmts]` | 1 | — | — | answered | Checked on the allocator-aware columns: `std::vector<bool>`, `std::set` and the dynamic and small bit containers. The array and bounded columns have no allocator, as this paragraph exempts them. |
+| `[container.alloc.reqmts]` | 1 | — | — | answered | Checked on the allocator-aware columns: `std::vector<bool>`, `std::set` and the dynamic and small bit containers. The array and inplace columns have no allocator, as this paragraph exempts them. |
 | `[container.alloc.reqmts]` | 2 | — | — | no-requirement | Defines Cpp17DefaultInsertable and its kin in terms of the allocator; each precondition stated with them is audited where it is stated. |
 | `[container.alloc.reqmts]` | 3 | — | — | no-requirement | Names the variables of the expressions below and introduces them; each is audited in its own paragraphs. |
 | `[container.alloc.reqmts]` | 4 | `typename X::allocator_type` | Result | answered | The small columns hand out Boost's wrapper around the allocator they were declared with. |

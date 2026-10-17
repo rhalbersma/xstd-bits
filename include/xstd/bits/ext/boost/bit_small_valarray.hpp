@@ -6,15 +6,15 @@
 #ifndef XSTD_BITS_EXT_BOOST_BIT_SMALL_VALARRAY_HPP
 #define XSTD_BITS_EXT_BOOST_BIT_SMALL_VALARRAY_HPP
 
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/num_blocks.hpp>          // num_blocks_v, tiling_block
-#include <xstd/bits/detail/rebind.hpp>              // rebind
-#include <xstd/bits/detail/valarray_adaptor.hpp>    // valarray_adaptor
-#include <xstd/ints/concepts/unsigned_integer.hpp>  // unsigned_integer
-#include <boost/container/new_allocator.hpp>        // new_allocator
-#include <boost/container/small_vector.hpp>         // small_vector
-#include <cstddef>                                  // size_t
-#include <memory>                                   // allocator_traits
+#include <xstd/bits/bit_valarray/detail/valarray_adaptor.hpp> // valarray_adaptor
+#include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container
+#include <xstd/bits/detail/num_blocks.hpp>                    // num_blocks_v, tiling_block
+#include <xstd/bits/detail/rebind.hpp>                        // rebind
+#include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
+#include <boost/container/new_allocator.hpp>                  // new_allocator
+#include <boost/container/small_vector.hpp>                   // small_vector
+#include <cstddef>                                            // size_t
+#include <memory>                                             // allocator_traits
 
 namespace xstd {
 

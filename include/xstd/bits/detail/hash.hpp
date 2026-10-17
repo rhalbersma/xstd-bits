@@ -13,7 +13,7 @@
 #include <boost/hash2/hash_append.hpp>     // hash_append, hash_append_size
 #include <algorithm>                       // min
 #include <array>                           // array
-#include <concepts>                        // derived_from, same_as
+#include <concepts>                        // derived_from
 #include <cstddef>                         // size_t
 #include <cstdint>                         // uint64_t
 #include <ranges>                          // contiguous_range, data, iota, range_value_t, size, sized_range

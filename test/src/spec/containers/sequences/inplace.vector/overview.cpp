@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(InplaceVector)
 BOOST_AUTO_TEST_CASE(ConstexprIterators)
 {
         test::for_each_type<test::spec::sequence::inplace_vector_all>([]<class T> -> void {
-                // Before C++26 the bounded columns hold their blocks in Boost's static_vector, which is not constexpr.
+                // Before C++26 the inplace columns hold their blocks in Boost's static_vector, which is not constexpr.
                 if constexpr (test::spec::container::constant_evaluable_v<T>) {
                         static_assert(test::sequence::iterates_as_a_constant<T>()); // [inplace.vector.overview]/3
                 }

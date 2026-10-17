@@ -6,13 +6,13 @@
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/whole_blocks.hpp>                    // whole_blocks
 #include <xstd/bits/bit_array.hpp>                  // bit_array
-#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
-#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
+#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/bounded_blocks.hpp>      // bounded_blocks
+#include <xstd/bits/detail/inplace_blocks.hpp>      // inplace_blocks
 #include <xstd/bits/detail/ownership.hpp>           // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
@@ -112,15 +112,15 @@ BOOST_AUTO_TEST_CASE(AdoptionIsConstexpr)
         BOOST_CHECK(true);
 }
 
-// Inline blocks deduce the capacity they hold in whole, through each bounded owner, whichever storage holds them.
+// Inline blocks deduce the capacity they hold in whole, through each inplace owner, whichever storage holds them.
 BOOST_AUTO_TEST_CASE(InlineBlocksDeduceTheirAlignedCapacity)
 {
-        auto const v = xstd::basic_bit_bounded_vector(xstd::from_blocks, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>{0x81});
-        static_assert(std::same_as<decltype(v), xstd::basic_bit_bounded_vector<std::uint8_t, 16> const>);
+        auto const v = xstd::basic_bit_inplace_vector(xstd::from_blocks, xstd::bits::detail::inplace_blocks<std::uint8_t, 2>{0x81});
+        static_assert(std::same_as<decltype(v), xstd::basic_bit_inplace_vector<std::uint8_t, 16> const>);
         BOOST_CHECK(v.size() == 8UZ and v[0] and v[7]);
 
-        auto const s = xstd::basic_bit_bounded_set(xstd::from_blocks, xstd::bits::detail::bounded_blocks<std::uint8_t, 2>{0x81});
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 16> const>);
+        auto const s = xstd::basic_bit_inplace_set(xstd::from_blocks, xstd::bits::detail::inplace_blocks<std::uint8_t, 2>{0x81});
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 16> const>);
         BOOST_CHECK(s.contains(0) and s.contains(7));
 }
 

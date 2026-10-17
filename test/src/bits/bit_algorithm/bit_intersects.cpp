@@ -6,13 +6,13 @@
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>   // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp> // bit_intersects
 #include <xstd/bits/bit_array.hpp>                    // bit_array
-#include <xstd/bits/bit_fixed_set.hpp>                // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_flag_set.hpp>                 // bit_flag_set
-#include <xstd/bits/bit_key_mapping.hpp>              // bit_key_mapping
-#include <xstd/bits/bit_set.hpp>                      // bit_set
-#include <xstd/bits/bit_set_view.hpp>                 // bit_set_view
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>        // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_set/bit_flag_set.hpp>         // bit_flag_set
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>      // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>              // bit_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>         // bit_set_view
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                                  // includes, set_intersection
+#include <algorithm>                                  // set_intersection
 #include <array>                                      // array
 #include <cstddef>                                    // size_t
 #include <cstdint>                                    // uint64_t, uint8_t

@@ -7,8 +7,8 @@
 #include <test/block_types.hpp>                       // block_types, digits_v, graded_extents
 #include <test/uint128.hpp>                           // IWYU pragma: keep; TEST_HAS_UINT128, uint128
 #include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container
-#include <xstd/bits/detail/bounded_blocks.hpp>        // bounded_blocks
 #include <xstd/bits/detail/comparisons.hpp>           // set_equal, three_way
+#include <xstd/bits/detail/inplace_blocks.hpp>        // inplace_blocks
 #include <xstd/bits/detail/owned_bit_blocks.hpp>      // owned_bit_blocks
 #include <xstd/bits/detail/ownership.hpp>             // sequence_reading_tag, set_reading_tag
 #include <xstd/bits/detail/range_const_reference.hpp> // fallback::range_const_reference_t, range_const_reference_t
@@ -996,7 +996,7 @@ BOOST_AUTO_TEST_CASE(ClearingIsResizeToZero)
 namespace {
 
 // The run-time widths, each of which a move leaves at width zero.
-using run_time_storages = std::tuple<xstd::bits::detail::bit_block_container<std::vector<std::uint8_t>>, xstd::bits::detail::bit_block_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 8>, 64>>;
+using run_time_storages = std::tuple<xstd::bits::detail::bit_block_container<std::vector<std::uint8_t>>, xstd::bits::detail::bit_block_container<xstd::bits::detail::inplace_blocks<std::uint8_t, 8>, 64>>;
 
 // Through two references, so that no compiler reads the self-move below as a mistake in the test.
 template<class T>
@@ -1110,7 +1110,7 @@ BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
                 return whole == xstd::align_up(blocks + slot, slot);
         };
 
-        static_assert(tiles(sizeof(xstd::bits::detail::bit_block_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>), sizeof(xstd::bits::detail::bounded_blocks<std::uint8_t, 3>), alignof(xstd::bits::detail::bounded_blocks<std::uint8_t, 3>)));
+        static_assert(tiles(sizeof(xstd::bits::detail::bit_block_container<xstd::bits::detail::inplace_blocks<std::uint8_t, 3>, 24>), sizeof(xstd::bits::detail::inplace_blocks<std::uint8_t, 3>), alignof(xstd::bits::detail::inplace_blocks<std::uint8_t, 3>)));
         static_assert(tiles(sizeof(xstd::bits::detail::bit_block_container<std::vector<std::uint8_t>>), sizeof(std::vector<std::uint8_t>), alignof(std::vector<std::uint8_t>)));
 
         // A static width carries no width member at all, so the class is its blocks exactly.
@@ -1119,8 +1119,8 @@ BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 #ifdef TEST_HAS_UINT128
 
         // The one cell that reaches an over-aligned storage: the width is a block there, and pays nothing for it.
-        static_assert(tiles(sizeof(xstd::bits::detail::bit_block_container<xstd::bits::detail::bounded_blocks<xstd::uint128, 3>, 384>), sizeof(xstd::bits::detail::bounded_blocks<xstd::uint128, 3>), alignof(xstd::bits::detail::bounded_blocks<xstd::uint128, 3>)));
-        static_assert(alignof(xstd::bits::detail::bounded_blocks<xstd::uint128, 3>) > alignof(std::size_t));
+        static_assert(tiles(sizeof(xstd::bits::detail::bit_block_container<xstd::bits::detail::inplace_blocks<xstd::uint128, 3>, 384>), sizeof(xstd::bits::detail::inplace_blocks<xstd::uint128, 3>), alignof(xstd::bits::detail::inplace_blocks<xstd::uint128, 3>)));
+        static_assert(alignof(xstd::bits::detail::inplace_blocks<xstd::uint128, 3>) > alignof(std::size_t));
 
         // The heap column never reaches it: a vector is a pointer's alignment whatever it holds.
         static_assert(sizeof(xstd::bits::detail::bit_block_container<std::vector<xstd::uint128>>) == sizeof(xstd::bits::detail::bit_block_container<std::vector<std::uint64_t>>));
@@ -1129,12 +1129,12 @@ BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 }
 
 // The third storage: a run-time width under a compile-time capacity, growth past it a bad_alloc.
-BOOST_AUTO_TEST_CASE(BoundedBlocksAreARunTimeWidthUnderAStaticCapacity)
+BOOST_AUTO_TEST_CASE(InplaceBlocksAreARunTimeWidthUnderAStaticCapacity)
 {
-        using T = xstd::bits::detail::bit_block_container<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>, 24>;
+        using T = xstd::bits::detail::bit_block_container<xstd::bits::detail::inplace_blocks<std::uint8_t, 3>, 24>;
         static_assert(not T::has_static_size);
-        static_assert(xstd::bits::detail::owned_bit_blocks<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>>);
-        static_assert(std::same_as<xstd::bits::detail::range_const_reference_t<xstd::bits::detail::bounded_blocks<std::uint8_t, 3>>, std::uint8_t const&>);
+        static_assert(xstd::bits::detail::owned_bit_blocks<xstd::bits::detail::inplace_blocks<std::uint8_t, 3>>);
+        static_assert(std::same_as<xstd::bits::detail::range_const_reference_t<xstd::bits::detail::inplace_blocks<std::uint8_t, 3>>, std::uint8_t const&>);
 
         BOOST_CHECK_EQUAL(sweep(T(17)), 0);
 

@@ -67,13 +67,13 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::same_as<decltype(xstd::bit_flag_set<std::bitset<8>>() | xstd::bit_flag_set<std::bitset<8>>()), xstd::bit_flag_set<std::bitset<8>>>);
         static_assert(xstd::bit_flag_mapping<perm>::size == 8UZ);
 
-        // The bounded column, the third storage point: one name per reading, each a class like the rest.
-        static_assert(std::ranges::bidirectional_range<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 8>>);
-        static_assert(std::ranges::random_access_range<xstd::basic_bit_bounded_vector<std::uint8_t, 8>>);
-        static_assert(std::same_as<xstd::bit_bounded_set<8>, xstd::basic_bit_bounded_set<std::size_t, std::size_t, 8>>);
-        static_assert(std::same_as<xstd::bit_bounded_vector<8>, xstd::basic_bit_bounded_vector<std::size_t, 8>>);
-        static_assert(std::same_as<xstd::bit_align<xstd::bit_bounded_set<9>>, xstd::bit_bounded_set<std::numeric_limits<std::size_t>::digits>>);
-        static_assert(std::same_as<xstd::bit_align<xstd::bit_bounded_vector<9>>, xstd::bit_bounded_vector<std::numeric_limits<std::size_t>::digits>>);
+        // The inplace column, the third storage point: one name per reading, each a class like the rest.
+        static_assert(std::ranges::bidirectional_range<xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 8>>);
+        static_assert(std::ranges::random_access_range<xstd::basic_bit_inplace_vector<std::uint8_t, 8>>);
+        static_assert(std::same_as<xstd::bit_inplace_set<8>, xstd::basic_bit_inplace_set<std::size_t, std::size_t, 8>>);
+        static_assert(std::same_as<xstd::bit_inplace_vector<8>, xstd::basic_bit_inplace_vector<std::size_t, 8>>);
+        static_assert(std::same_as<xstd::bit_align<xstd::bit_inplace_set<9>>, xstd::bit_inplace_set<std::numeric_limits<std::size_t>::digits>>);
+        static_assert(std::same_as<xstd::bit_align<xstd::bit_inplace_vector<9>>, xstd::bit_inplace_vector<std::numeric_limits<std::size_t>::digits>>);
 
         // Every name with an N at compile time takes bit_align, the width or capacity rounded up to whole blocks.
         static_assert(std::same_as<xstd::bit_align<xstd::bit_fixed_set<9>>, xstd::bit_fixed_set<std::numeric_limits<std::size_t>::digits>>);

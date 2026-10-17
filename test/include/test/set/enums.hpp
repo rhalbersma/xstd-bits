@@ -6,12 +6,12 @@
 #ifndef TEST_SET_ENUMS_HPP
 #define TEST_SET_ENUMS_HPP
 
-#include <xstd/bits/bit_key_mapping.hpp> // bit_key_mapping, enum_traits
-#include <array>                         // array
-#include <cstdint>                       // int16_t, int8_t, uint8_t
-#include <format>                        // format_to, formatter
-#include <string_view>                   // string_view
-#include <tuple>                         // tuple
+#include <xstd/bits/bit_set/bit_key_mapping.hpp> // bit_key_mapping, enum_traits
+#include <array>                                 // array
+#include <cstdint>                               // int16_t, int8_t, uint8_t
+#include <format>                                // format_to, formatter
+#include <string_view>                           // string_view
+#include <tuple>                                 // tuple
 
 // Enumerations keying a set, each with its values listed beside it as an enumeration's author would list them.
 namespace test::set {

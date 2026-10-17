@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_COMPARE_HPP
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_COMPARE_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // bits_t, descends, first_mismatch, first_position, reads_keys, static_width, whole_sequence
+#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // bits_t, descends, first_mismatch, first_position, static_width, whole_sequence
 #include <xstd/bits/detail/comparisons.hpp>             // numeric_three_way, set_equal, three_way
 #include <xstd/bits/detail/intrinsic.hpp>               // countr_zero
 #include <xstd/bits/detail/ownership.hpp>               // sequence_reading_tag, set_reading_tag, storage_access

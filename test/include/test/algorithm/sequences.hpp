@@ -14,7 +14,7 @@
 #endif
 
 #include <test/sequence/factory.hpp> // limit_v, make_sequence, static_width, stripes
-#include <test/spec/sequence.hpp>    // bounded, dynamic, fixed, small
+#include <test/spec/sequence.hpp>    // dynamic, fixed, inplace, small
 #include <xstd/bits/bit_span.hpp>    // bit_span
 #include <xstd/bits/bit_vector.hpp>  // basic_bit_vector
 #include <algorithm>                 // min
@@ -109,7 +109,7 @@ template<class Block>
 inline constexpr auto offsets = std::array{0UZ, 3UZ, 13UZ, 63UZ, 64UZ};
 
 // Every column of ours the sequence clauses sweep, their standard models left out: blocks, widths and storages.
-using sequences = decltype(std::tuple_cat(std::declval<test::spec::sequence::fixed>(), std::declval<test::spec::sequence::dynamic>(), std::declval<test::spec::sequence::small>(), std::declval<test::spec::sequence::bounded>()));
+using sequences = decltype(std::tuple_cat(std::declval<test::spec::sequence::fixed>(), std::declval<test::spec::sequence::dynamic>(), std::declval<test::spec::sequence::small>(), std::declval<test::spec::sequence::inplace>()));
 
 // The widest run-time width an input takes, past two blocks of the widest builtin Block.
 inline constexpr auto sequence_limit = 130UZ;

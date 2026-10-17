@@ -6,7 +6,7 @@
 #ifndef TEST_SPEC_RANDOM_HPP
 #define TEST_SPEC_RANDOM_HPP
 
-#include <test/sequence/factory.hpp>      // make_sequence, static_capacity, static_width
+#include <test/sequence/factory.hpp>      // static_capacity, static_width
 #include <test/set/exhaustive.hpp>        // static_capacity, static_width
 #include <test/spec/input.hpp>            // key_list, key_vector, keyed, origin, three, two
 #include <xstd/bits/detail/ownership.hpp> // owned_storage
@@ -20,7 +20,7 @@
 #include <limits>                         // numeric_limits
 #include <optional>                       // nullopt, optional
 #include <random>                         // mt19937_64
-#include <ranges>                         // iota, to
+#include <ranges>                         // iota
 #include <string>                         // string
 #include <system_error>                   // errc
 #include <utility>                        // move

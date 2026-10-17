@@ -6,11 +6,11 @@
 #include <test/set/operations.hpp>                                  // disagreements
 #include <xstd/bits/bit_algorithm/bit_set_symmetric_difference.hpp> // bit_set_symmetric_difference
 #include <xstd/bits/bit_array.hpp>                                  // bit_array
-#include <xstd/bits/bit_fixed_set.hpp>                              // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_flag_set.hpp>                               // bit_flag_set
-#include <xstd/bits/bit_key_mapping.hpp>                            // bit_key_mapping
-#include <xstd/bits/bit_set.hpp>                                    // bit_set
-#include <xstd/bits/bit_set_view.hpp>                               // bit_set_view
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>                      // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_set/bit_flag_set.hpp>                       // bit_flag_set
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>                    // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>                            // bit_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>                       // bit_set_view
 #include <boost/test/unit_test.hpp>                                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <range/v3/view/set_algorithm.hpp>                          // set_symmetric_difference
 #include <concepts>                                                 // same_as

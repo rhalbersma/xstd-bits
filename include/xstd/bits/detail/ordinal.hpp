@@ -12,7 +12,7 @@
 #include <algorithm>                               // ranges::all_of
 #include <cstddef>                                 // size_t
 #include <limits>                                  // numeric_limits
-#include <ranges>                                  // begin, iota, range_difference_t, range_value_t, size
+#include <ranges>                                  // begin, iota, range_difference_t, size
 #include <type_traits>                             // is_enum_v
 #include <utility>                                 // to_underlying
 

@@ -7,7 +7,7 @@
 #define TEST_SPEC_BITMASK_HPP
 
 #include <test/spec/input.hpp>                          // context, edge
-#include <xstd/bits/bit_flag_set.hpp>                   // bit_flag_set
+#include <xstd/bits/bit_set/bit_flag_set.hpp>           // bit_flag_set
 #include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
 #include <array>                                        // array, to_array
 #include <bit>                                          // bit_width

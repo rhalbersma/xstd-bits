@@ -9,7 +9,7 @@
 #include <test/spec/container.hpp>       // all, constant_evaluable_v, keyed, objects, pairs, pairs_with_doubletons
 #include <test/spec/input.hpp>           // context
 #include <test/spec/set.hpp>             // triples
-#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <concepts>                      // totally_ordered
 
 BOOST_AUTO_TEST_SUITE(Spec)

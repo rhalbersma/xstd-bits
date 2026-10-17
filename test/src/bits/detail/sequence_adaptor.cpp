@@ -8,8 +8,8 @@
 #include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
 #include <xstd/bits/bit_algorithm.hpp>              // bit_all_of, bit_any_of, bit_count, bit_fill, bit_for_each, bit_mismatch, bit_none_of
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
-#include <xstd/bits/bit_set.hpp>                    // bit_set
+#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
+#include <xstd/bits/bit_set/bit_set.hpp>            // bit_set
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_subspan.hpp>                // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
@@ -21,17 +21,16 @@
 #include <algorithm>                                // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
 #include <array>                                    // array
 #include <bitset>                                   // bitset
-#include <compare>                                  // strong_ordering
+#include <compare>                                  // three_way_comparable
 #include <concepts>                                 // copyable, equality_comparable, regular, same_as, totally_ordered
 #include <cstddef>                                  // ptrdiff_t, size_t
 #include <cstdint>                                  // uint8_t, uint32_t, uint64_t
 #include <functional>                               // identity
-#include <iterator>                                 // reverse_iterator
 #include <limits>                                   // numeric_limits
 #include <ranges>                                   // equal, iota, random_access_range, ssize, transform
 #include <span>                                     // dynamic_extent
 #include <stdexcept>                                // length_error, out_of_range
-#include <type_traits>                              // is_const_v, is_constructible_v, is_convertible_v
+#include <type_traits>                              // is_const_v, is_constructible_v
 #include <utility>                                  // move, pair
 #include <vector>                                   // vector
 
@@ -236,7 +235,7 @@ BOOST_AUTO_TEST_CASE(ABlitSourceIsASequenceOfTheSameBlockType)
         using xstd::bits::detail::blit_source;
         using bytes = xstd::basic_bit_vector<std::uint8_t>;
         static_assert(blit_source<bytes, std::uint8_t> and blit_source<xstd::basic_bit_array<std::uint8_t, 9>, std::uint8_t>);
-        static_assert(blit_source<xstd::basic_bit_bounded_vector<std::uint8_t, 9>, std::uint8_t>);
+        static_assert(blit_source<xstd::basic_bit_inplace_vector<std::uint8_t, 9>, std::uint8_t>);
         static_assert(blit_source<xstd::bit_span<std::array<std::uint8_t, 2>>, std::uint8_t>);
         static_assert(not blit_source<bytes, std::uint64_t>);
         static_assert(not blit_source<xstd::bit_set, std::size_t> and not blit_source<std::vector<bool>, std::size_t>);

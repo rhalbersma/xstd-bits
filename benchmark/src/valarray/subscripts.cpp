@@ -5,20 +5,20 @@
 
 // The valarray row's subscripts: xstd::bit_valarray against std::valarray<bool>, a gather and a scatter each.
 
-#include <xstd/bits/bit_gslice.hpp>       // bit_gslice
-#include <xstd/bits/bit_valarray.hpp>     // bit_valarray
-#include <xstd/bits/detail/ownership.hpp> // storage_access
-#include <xstd/ints/bit.hpp>              // bit_compress, bit_expand, bit_repeat
-#include <benchmark/benchmark.h>          // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
-#include <algorithm>                      // copy
-#include <array>                          // array
-#include <bit>                            // popcount
-#include <cstddef>                        // size_t
-#include <cstdint>                        // int64_t, uint64_t
-#include <numeric>                        // gcd
-#include <ranges>                         // iota
-#include <span>                           // span
-#include <valarray>                       // gslice, slice, valarray
+#include <xstd/bits/bit_valarray/bit_gslice.hpp>   // bit_gslice
+#include <xstd/bits/bit_valarray/bit_valarray.hpp> // bit_valarray
+#include <xstd/bits/detail/ownership.hpp>          // storage_access
+#include <xstd/ints/bit.hpp>                       // bit_compress, bit_expand, bit_repeat
+#include <benchmark/benchmark.h>                   // ClobberMemory, DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
+#include <algorithm>                               // copy
+#include <array>                                   // array
+#include <bit>                                     // popcount
+#include <cstddef>                                 // size_t
+#include <cstdint>                                 // int64_t, uint64_t
+#include <numeric>                                 // gcd
+#include <ranges>                                  // iota
+#include <span>                                    // span
+#include <valarray>                                // gslice, slice, valarray
 
 namespace {
 

@@ -7,12 +7,12 @@
 #define XSTD_BITS_EXT_BOOST_BIT_SMALL_SET_HPP
 
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>      // bit_index_mapping
-#include <xstd/bits/bit_key_mapping.hpp>                     // bit_key_mapping
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>             // bit_key_mapping
+#include <xstd/bits/bit_set/detail/set_adaptor.hpp>          // admits_width, key_direction, set_adaptor
 #include <xstd/bits/detail/bit_block_container.hpp>          // set_bits_t
 #include <xstd/bits/detail/num_blocks.hpp>                   // num_blocks_v, tiling_block
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
-#include <xstd/bits/detail/set_adaptor.hpp>                  // admits_width, key_direction, set_adaptor
 #include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range

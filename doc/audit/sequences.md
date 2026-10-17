@@ -5,7 +5,7 @@ Every numbered paragraph of `[sequence.reqmts]`, of the leaf clauses of `[array]
 
 - **Source:** [cplusplus/draft `f2aa898ea51c1cdc42ad8096bbfebdc2ab54baea`](https://github.com/cplusplus/draft/blob/f2aa898ea51c1cdc42ad8096bbfebdc2ab54baea/source/containers.tex), `source/containers.tex`, `\rSec2[sequence.reqmts]`, `\rSec2[array]`, `\rSec2[vector]`, `\rSec2[vector.bool]` and `\rSec2[inplace.vector]`; and [`source/future.tex`](https://github.com/cplusplus/draft/blob/f2aa898ea51c1cdc42ad8096bbfebdc2ab54baea/source/future.tex), `\rSec2[depr.vector.bool.swap]`.
 - **Cross-checked:** [eel.is/c++draft](https://eel.is/c++draft/sequence.reqmts), generated from Eelis/draft `c7015b485cc3db8efaa9dfb9ff0809c5394a4ed1`: the same paragraph numbers in all twenty-three clauses.
-- **Subjects:** `test::spec::sequence::all`, each column behind its model: `std::array<bool, N>` and the fixed sequences for `[array]`, `std::vector<bool>` and the dynamic and small sequences for `[vector]` and `[vector.bool]`, and `std::inplace_vector<bool, N>`, where the standard library has it, and the bounded sequences for `[inplace.vector]`.
+- **Subjects:** `test::spec::sequence::all`, each column behind its model: `std::array<bool, N>` and the fixed sequences for `[array]`, `std::vector<bool>` and the dynamic and small sequences for `[vector]` and `[vector.bool]`, and `std::inplace_vector<bool, N>`, where the standard library has it, and the inplace sequences for `[inplace.vector]`.
 - **Not audited:** `[array.syn]`, `[vector.syn]` and `[inplace.vector.syn]` say what the headers declare, each declaration audited where it is specified; `[deque]`, `[forward.list]`, `[hive]` and `[list]` have no column.
 
 A row's `outcome` is one of:
@@ -107,7 +107,7 @@ A row's `outcome` is one of:
 | `[sequence.reqmts]` | 85 | `a.emplace_back(args)` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
 | `[sequence.reqmts]` | 86 | `a.emplace_back(args)` | Effects | answered |  |
 | `[sequence.reqmts]` | 87 | `a.emplace_back(args)` | Returns | answered |  |
-| `[sequence.reqmts]` | 88 | `a.emplace_back(args)` | Remarks | answered | Checked as the member existing on the vector and bounded columns. |
+| `[sequence.reqmts]` | 88 | `a.emplace_back(args)` | Remarks | answered | Checked as the member existing on the vector and inplace columns. |
 | `[sequence.reqmts]` | 89 | `a.push_front(t)` | Result | no-requirement | Required only of `deque`, `forward_list` and `list`; no subject provides it. |
 | `[sequence.reqmts]` | 90 | `a.push_front(t)` | Preconditions | no-requirement | Required only of `deque`, `forward_list` and `list`; no subject provides it. |
 | `[sequence.reqmts]` | 91 | `a.push_front(t)` | Effects | no-requirement | Required only of `deque`, `forward_list` and `list`; no subject provides it. |
@@ -120,18 +120,18 @@ A row's `outcome` is one of:
 | `[sequence.reqmts]` | 98 | `a.prepend_range(rg)` | Preconditions | no-requirement | Required only of `deque`, `forward_list` and `list`; no subject provides it. |
 | `[sequence.reqmts]` | 99 | `a.prepend_range(rg)` | Effects | no-requirement | Required only of `deque`, `forward_list` and `list`; no subject provides it. |
 | `[sequence.reqmts]` | 100 | `a.prepend_range(rg)` | Remarks | no-requirement | Required only of `deque`, `forward_list` and `list`; no subject provides it. |
-| `[sequence.reqmts]` | 101 | `a.push_back(t)` | Result | answered | On the vector column; `[inplace.vector.modifiers]/4` gives the bounded column a `reference` instead. |
+| `[sequence.reqmts]` | 101 | `a.push_back(t)` | Result | answered | On the vector column; `[inplace.vector.modifiers]/4` gives the inplace column a `reference` instead. |
 | `[sequence.reqmts]` | 102 | `a.push_back(t)` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
 | `[sequence.reqmts]` | 103 | `a.push_back(t)` | Effects | answered |  |
-| `[sequence.reqmts]` | 104 | `a.push_back(t)` | Remarks | answered | Checked as the member existing on the vector and bounded columns. |
-| `[sequence.reqmts]` | 105 | `a.push_back(rv)` | Result | answered | On the vector column; `[inplace.vector.modifiers]/4` gives the bounded column a `reference` instead. |
+| `[sequence.reqmts]` | 104 | `a.push_back(t)` | Remarks | answered | Checked as the member existing on the vector and inplace columns. |
+| `[sequence.reqmts]` | 105 | `a.push_back(rv)` | Result | answered | On the vector column; `[inplace.vector.modifiers]/4` gives the inplace column a `reference` instead. |
 | `[sequence.reqmts]` | 106 | `a.push_back(rv)` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
 | `[sequence.reqmts]` | 107 | `a.push_back(rv)` | Effects | answered |  |
-| `[sequence.reqmts]` | 108 | `a.push_back(rv)` | Remarks | answered | Checked as the member existing on the vector and bounded columns. |
+| `[sequence.reqmts]` | 108 | `a.push_back(rv)` | Remarks | answered | Checked as the member existing on the vector and inplace columns. |
 | `[sequence.reqmts]` | 109 | `a.append_range(rg)` | Result | answered |  |
 | `[sequence.reqmts]` | 110 | `a.append_range(rg)` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
 | `[sequence.reqmts]` | 111 | `a.append_range(rg)` | Effects | answered | Checked through a view that counts its reads. |
-| `[sequence.reqmts]` | 112 | `a.append_range(rg)` | Remarks | answered | Checked as the member existing on the vector and bounded columns. |
+| `[sequence.reqmts]` | 112 | `a.append_range(rg)` | Remarks | answered | Checked as the member existing on the vector and inplace columns. |
 | `[sequence.reqmts]` | 113 | `a.pop_front()` | Result | no-requirement | Required only of `deque`, `forward_list` and `list`; no subject provides it. |
 | `[sequence.reqmts]` | 114 | `a.pop_front()` | Hardened preconditions | no-requirement | Required only of `deque`, `forward_list` and `list`; no subject provides it. |
 | `[sequence.reqmts]` | 115 | `a.pop_front()` | Effects | no-requirement | Required only of `deque`, `forward_list` and `list`; no subject provides it. |
@@ -139,7 +139,7 @@ A row's `outcome` is one of:
 | `[sequence.reqmts]` | 117 | `a.pop_back()` | Result | answered |  |
 | `[sequence.reqmts]` | 118 | `a.pop_back()` | Hardened preconditions | declined | A violation ends the process under a hardened library and an `assert` in ours, so no in-process check can observe it. The cases call only within it. |
 | `[sequence.reqmts]` | 119 | `a.pop_back()` | Effects | answered |  |
-| `[sequence.reqmts]` | 120 | `a.pop_back()` | Remarks | answered | Checked as the member existing on the vector and bounded columns. |
+| `[sequence.reqmts]` | 120 | `a.pop_back()` | Remarks | answered | Checked as the member existing on the vector and inplace columns. |
 | `[sequence.reqmts]` | 121 | `a[n]` | Result | answered |  |
 | `[sequence.reqmts]` | 122 | `a[n]` | Hardened preconditions | declined | A violation ends the process under a hardened library and an `assert` in ours, so no in-process check can observe it. The cases call only within it. |
 | `[sequence.reqmts]` | 123 | `a[n]` | Effects | answered |  |
@@ -241,9 +241,9 @@ A row's `outcome` is one of:
 | `[depr.vector.bool.swap]` | 2 | `static swap(reference x, reference y)` | Effects | answered | Asked of `std::vector<bool>` alone. |
 | `[inplace.vector.overview]` | 1 | `class inplace_vector` | — | answered | A packed column is random access rather than contiguous: a bit has no address, the recorded forced departure. |
 | `[inplace.vector.overview]` | 2 | — | — | answered |  |
-| `[inplace.vector.overview]` | 3 | — | — | answered | Asked where the bounded columns hold their blocks in `std::inplace_vector`. Before C++26 they use Boost's `static_vector`, which is not constant-evaluable. |
+| `[inplace.vector.overview]` | 3 | — | — | answered | Asked where the inplace columns hold their blocks in `std::inplace_vector`. Before C++26 they use Boost's `static_vector`, which is not constant-evaluable. |
 | `[inplace.vector.overview]` | 4 | — | — | answered |  |
-| `[inplace.vector.overview]` | 5 | — | — | answered | At capacity nought `xstd::bit_bounded_vector` holds no blocks and no width, and is empty (not under the MSVC ABI, which pads a class whose members are all `[[msvc::no_unique_address]]`), trivially copyable and trivially default constructible. At other capacities the trivial copy constructor, copy assignment and destructor are asked where the blocks are in `std::inplace_vector`; over Boost's `static_vector`, before C++26, none of them is trivial. The moves are not trivial at any capacity above nought: they leave the source empty, a departure the repo owner should confirm. |
+| `[inplace.vector.overview]` | 5 | — | — | answered | At capacity nought `xstd::bit_inplace_vector` holds no blocks and no width, and is empty (not under the MSVC ABI, which pads a class whose members are all `[[msvc::no_unique_address]]`), trivially copyable and trivially default constructible. At other capacities the trivial copy constructor, copy assignment and destructor are asked where the blocks are in `std::inplace_vector`; over Boost's `static_vector`, before C++26, none of them is trivial. The moves are not trivial at any capacity above nought: they leave the source empty, a departure the repo owner should confirm. |
 | `[inplace.vector.cons]` | 1 | `inplace_vector(size_type n)` | Preconditions | no-requirement | A precondition on the element type, which `bool` meets; it asks nothing of the container. |
 | `[inplace.vector.cons]` | 2 | `inplace_vector(size_type n)` | Effects | answered |  |
 | `[inplace.vector.cons]` | 3 | `inplace_vector(size_type n)` | Complexity | declined | A complexity bound, which no functional check can observe. |
