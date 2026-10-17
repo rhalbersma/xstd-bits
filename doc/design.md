@@ -1407,9 +1407,9 @@ under every reading. The cross-cutting protocols -- equality, ordering, formatti
 
 The engine is Boost.Hash2, and there are two hashers over it, which differ in **what** they hash.
 
-**`xstd::hash<T, H>` hashes the value**, as its standard model does. It is xstd-misc's, and runs Hash2's
+**`xstd::hash<T, H, Flavor>` hashes the value**, as its standard model does. It is xstd-misc's, and runs Hash2's
 `hash_append`, which finds each adaptor's `tag_invoke` hook. A hook appends exactly the message Hash2 1.92
-builds for the model, so `xstd::hash<T, H>()(x) == xstd::hash<Model, H>()(model(x))` under every algorithm and every
+builds for the model, so `xstd::hash<T, H, Flavor>()(x) == xstd::hash<Model, H, Flavor>()(model(x))` under every algorithm and every
 flavor, and a bit container hashes inside a user's Hash2-hashed aggregate as the standard container would:
 
 | xstd type | model | message |
