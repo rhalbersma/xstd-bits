@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/set/concepts.hpp>                 // bit_set
-#include <xstd/bits/bit_key_mapping.hpp>         // bit_key_mapping
+#include <xstd/bits/bit_set/bit_key_mapping.hpp> // bit_key_mapping
 #include <xstd/bits/ext/boost/bit_small_set.hpp> // basic_bit_small_set, bit_small_set
 #include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                             // ranges::equal

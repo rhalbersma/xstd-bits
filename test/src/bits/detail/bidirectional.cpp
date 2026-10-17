@@ -10,14 +10,14 @@
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/value_reference.hpp>                 // value_reference
-#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
-#include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
-#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_set
-#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
+#include <xstd/bits/bit_set/detail/set_adaptor.hpp> // set_adaptor, set_reference
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // storage
-#include <xstd/bits/detail/set_adaptor.hpp>         // set_adaptor, set_reference
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                    // array
@@ -27,7 +27,7 @@
 #include <cstdint>                                  // uint64_t, uint8_t
 #include <functional>                               // greater
 #include <format>                                   // formattable
-#include <iterator>                                 // iter_reference_t, iter_value_t, next, prev
+#include <iterator>                                 // iter_reference_t, iter_value_t, next
 #include <optional>                                 // optional
 #include <ranges>                                   // iota
 #include <set>                                      // set
@@ -465,7 +465,7 @@ BOOST_AUTO_TEST_CASE(EverySetClosesItsProxyPair)
 {
         static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65>>);
         static_assert(test::closed_proxies<xstd::basic_bit_set<std::size_t, std::uint64_t>>);
-        static_assert(test::closed_proxies<xstd::basic_bit_bounded_set<std::size_t, std::uint64_t, 65>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 65>>);
         static_assert(test::closed_proxies<xstd::basic_bit_small_set<std::size_t, std::uint64_t, 65>>);
         static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<key, std::uint64_t, 65, key_mapping>>);
         static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the descending direction, as a set's comparator names it

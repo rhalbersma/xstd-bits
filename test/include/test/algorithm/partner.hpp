@@ -10,7 +10,7 @@
 #include <concepts>                                 // same_as
 #include <cstdint>                                  // uint64_t, uint8_t
 #include <ranges>                                   // range_value_t
-#include <type_traits>                              // conditional_t, type_identity
+#include <type_traits>                              // conditional_t
 
 // Another container holding the same value over other blocks, for the algorithms that compare across block types.
 namespace test::algorithm {

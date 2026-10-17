@@ -6,8 +6,8 @@
 #include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>    // bit_blocks
-#include <xstd/bits/bit_set.hpp>                    // bit_set
-#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_set/bit_set.hpp>            // bit_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK

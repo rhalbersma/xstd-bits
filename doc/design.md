@@ -57,7 +57,7 @@ a `bit_block_container` over `owned_bit_blocks Blocks`, while the views take any
 the one between owning and borrowing: `std::span<B>` is bit storage a view borrows, and it is neither regular --
 two spans comparing equal would mean the same blocks, not the same bits -- nor read-only through `const`. Each
 owner fixes its storage by its name, and none takes one as an argument: the grid's four columns, the array, the
-bounded vector, the vector and the small vector, are the whole of what an owner holds. A user's own container of
+inplace vector, the vector and the small vector, are the whole of what an owner holds. A user's own container of
 blocks is read by a view over it, which asks only `bit_blocks`. So `owned_bit_blocks` and `resizable_bit_blocks`
 state what the library's own storages provide, as the standard's exposition-only concepts state what its own
 templates ask, and a user never meets them in a signature. Meyers' *Effective STL*, Item 2, "Beware the illusion of
@@ -73,7 +73,7 @@ fixed width while `bit_block_container<std::array<B, K>, std::dynamic_extent>` i
 rather than inside `resize`. The test that the contract is the whole of what a storage has to provide
 is `test::minimal_blocks`: a storage written outside the library with exactly those members and no others, which
 runs the set reading's full primitive suite through the set adaptor over it. `boost::container::static_vector`
-satisfies both concepts as it comes, and it holds the bounded column's blocks wherever `std::inplace_vector` is
+satisfies both concepts as it comes, and it holds the inplace column's blocks wherever `std::inplace_vector` is
 missing, so it runs under coverage. Boost.Container force-inlines an asserting `operator[]`, which at `-O0` would
 put a branch no passing test takes on every subscript in the vehicle; the test tree defines
 `BOOST_CONTAINER_DISABLE_FORCEINLINE`, which leaves the call, and its branch, in Boost's header.
@@ -285,8 +285,8 @@ device that turns two readings over three storages into two plus three, and a fa
 rather than vocabulary. A user reaches every width through `bit_fixed_set<N>` or `basic_bit_array<Block, N>`, and a
 test that needs the container itself spells its storage, as `bit_block_container<std::vector<std::uint8_t>>`.
 Each public header includes only the storage it names, so `bit_array` does not see `std::vector`, and the
-choice between `std::inplace_vector` and `boost::container::static_vector` sits in `detail/bounded_blocks.hpp`,
-which only the two bounded headers include.
+choice between `std::inplace_vector` and `boost::container::static_vector` sits in `detail/inplace_blocks.hpp`,
+which only the two inplace headers include.
 
 **The name says what it does to its argument.** It takes a `owned_bit_blocks` — a range that *is*
 blocks ([owned-bit-storage](#owned-bit-storage)) — and adds the bit interface. In goes
@@ -685,14 +685,14 @@ The run-time widths take `from_blocks` too, with a different argument: not a blo
 `std::bitset` names one `N` and a growing set has no single value for it, but the block container itself, which they
 adopt. The constructor is `flat_set`'s container constructor under the tag -- `block_container_type` by value, moved
 in, with an allocator-extended form beside it -- and `flat_set`'s pair completes it: `extract() &&` hands out
-`block_container_type` -- the `std::vector`, `bounded_blocks` or `small_vector` of blocks -- and leaves the owner
+`block_container_type` -- the `std::vector`, `inplace_blocks` or `small_vector` of blocks -- and leaves the owner
 at width zero, and `replace(block_container_type&&)` takes one back. All three are a move and nothing else, on every
 reading's run-time-width owner and on no view, since a view has nothing of its own to hand. The static widths' tag
 constructor requires a width in the type and the adopting one a width in the object, so the two never meet.
 
 Each owner deduces through guides of its own. `basic_bit_vector(from_blocks, std::move(v))` deduces
-`basic_bit_vector<Block, Allocator>` from a guide spelled on `std::vector<Block, Allocator>`, and the bounded names
-deduce their capacity from `bounded_blocks<Block, K>`, adopted at `N = K * digits`: an alias template is
+`basic_bit_vector<Block, Allocator>` from a guide spelled on `std::vector<Block, Allocator>`, and the inplace names
+deduce their capacity from `inplace_blocks<Block, K>`, adopted at `N = K * digits`: an alias template is
 transparent, so `K` deduces through it from a `std::inplace_vector<Block, K>` or a
 `boost::container::static_vector<Block, K>`, whichever the library holds the blocks in. There is no
 guide over every resizable storage, and `std::vector` has no such guide to match. A storage the library does not
@@ -751,7 +751,7 @@ A defaulted default constructor plus an NSDMI, rather than two constructors cons
 `std::vector` default-constructs empty, and so does a run-time width here -- width zero, no blocks, no
 allocation, as `std::vector<bool>` has it. The two members live in a base, `bit_members`, whose specialization for a
 capacity of nought declares them with no initializer and `[[no_unique_address]]`, since a default member initializer
-makes a defaulted default constructor nontrivial ([the-bounded-column](#the-bounded-column)); everywhere else the
+makes a defaulted default constructor nontrivial ([the-inplace-column](#the-inplace-column)); everywhere else the
 blocks stay a plain member, whose tail padding an overlappable one would expose to `-Wpadded`.
 A static width holds exactly the blocks its width fills, which is none at width zero: `num_blocks_v` and `blocks_for`
 give the same count, and the static arms that index a block directly are the ones selected at one block or two.
@@ -777,7 +777,7 @@ structural.
 
 That gives `bit_align<bit_array<N>>` and `bit_align<bit_fixed_set<N>>` at any width, and the plain owners
 at a multiple of the block's digits. Width zero is among them: its blocks are a `std::array<Block, 0>`, structural by
-`[array.overview]/4` like any other extent, with no bit in it to keep clear. The bounded owners cannot follow at any width,
+`[array.overview]/4` like any other extent, with no bit in it to keep clear. The inplace owners cannot follow at any width,
 since neither `std::inplace_vector` nor `boost::container::static_vector` is structural, and the views hold pointers
 kept non-public as before.
 
@@ -830,7 +830,7 @@ block's tail, as boost's does, so a refused push leaves that tail clear. `reserv
 `boost::dynamic_bitset` mean by it; the set reading's `clear()` is `fill(false)` and never reaches this
 member, so the landmine #80 recorded -- probing `clear()` on boost and emptying the width -- cannot recur.
 
-`bounded_blocks<Block, num_blocks_v<Block, N>>` is the third storage: a run-time width under a compile-time capacity
+`inplace_blocks<Block, num_blocks_v<Block, N>>` is the third storage: a run-time width under a compile-time capacity
 of exactly `N` bits, held in a `std::inplace_vector` where `__cpp_lib_inplace_vector` says the library has one and in
 a `boost::container::static_vector` everywhere else. Either satisfies `owned_bit_blocks` as it is, but each counts
 blocks, so it refuses growth only a whole block at a time; a capacity that stops inside the last block is the
@@ -1416,7 +1416,7 @@ flavor, and a bit container hashes inside a user's Hash2-hashed aggregate as the
 | :--- | :--- | :--- |
 | `bit_array<N>` | `std::array<bool, N>` | N bytes `0x00` or `0x01`, no size; one `'\x00'` when N = 0, Hash2 having every append update |
 | `bit_vector`, `bit_small_vector` | `std::vector<bool>` | N bytes, then `hash_append_size(N)`; an unspecialized `boost::container::vector<bool>` writes the same |
-| `bit_bounded_vector<N>` | `std::inplace_vector<bool, N>` | n bytes, then `hash_append_size(n)`, as `boost::container::static_vector<bool, N>` |
+| `bit_inplace_vector<N>` | `std::inplace_vector<bool, N>` | n bytes, then `hash_append_size(n)`, as `boost::container::static_vector<bool, N>` |
 | every set and set view | `std::set<Key, Compare>` | each key in iteration order, descending under `std::greater`, then `hash_append_size(count)` |
 
 A sequence's bools are not read through its proxies. `detail/hash.hpp` expands each 64-bit word of the bits
@@ -1428,7 +1428,7 @@ does not change a Hash2 digest, so the expansion's grain is free. A set walks it
 costs, and appends each as `Key`, so its message follows the platform's `std::size_t` as the model's does.
 `bit_block_container`, which is no reading, keeps its own hook over its blocks.
 
-**`xstd::bit_hasher<H>` hashes the bits**, the representation rather than the model's value. Its message is
+**`xstd::bit_hash<T, H, Flavor>` hashes the bits**, the representation rather than the model's value. Its message is
 the canonical byte string of the bits: ceil(N / 8) bytes, bit `i` at bit `i % 8` of byte `i / 8`, unused high
 bits zero. A static width appends nothing after it, as `std::array` appends no size: the suffix would carry
 nothing, and equality never crosses types. A run-time width appends `hash_append_size` of the width in bits
@@ -1441,7 +1441,7 @@ since the unused bits are clear; this is the identity `bit_convert` rests on. Th
 `update` over the storage, from `std::uint8_t` blocks to `unsigned __int128` ones. Elsewhere -- a big-endian
 target, a block with padding bits, a class-type 128-bit block whose layout no rule proves, a constant
 expression -- the same bytes are assembled by shifts, up to 256 at a time. Equal values thus hash equal across
-storages **and** block types, which is why `bit_hasher` declares `is_transparent`; `xstd::hasher` cannot, being
+storages **and** block types, which is why `bit_hash` declares `is_transparent`; `xstd::hasher` cannot, being
 generic, where `42` and `std::int64_t{42}` hash differently.
 
 The same message is public as `xstd::bit_hash_append(h, f, x)`, for a user's own hook. It also takes a
@@ -1454,7 +1454,7 @@ side in one `update` of 48 bytes, and `planes[2][6]` in one of 96. A `bit_fixed_
 seven-byte string, goes in a plane at a time, to the same digest. The containers are not made trivially
 equality comparable to get this: that would have Hash2 hash their objects and bypass the model hooks.
 
-`std::hash` is `bit_hasher<boost::hash2::xxhash_64>`, which is also `bit_hasher`'s default, and it is a
+`std::hash<T>` is `bit_hash<T, boost::hash2::xxhash_64>`, which is also `bit_hash`'s default, and it is a
 **default rather than a fact**. It is xxHash at every length, with no switch to FNV-1a for a short string,
 because FNV-1a does not avalanche: each byte is xored into the low bits and multiplied up, so the high bits of
 the last byte never reach the low bits of the result, and the low bits are what a hash table indexes by. Two
@@ -1463,10 +1463,18 @@ every output bit at the end, at a cost a short string barely notices. It is spel
 on every target, `std::size_t` taking Hash2's fold of its result where it is narrower.
 
 `std::hash` cannot take another algorithm: its `operator()` has one argument and its type no parameter for
-one. The door to another algorithm is `bit_hasher<H>` for the bits and `xstd::hasher<H>` for the value, each
-seeded where `H` takes a seed. `std::hash<T>` is `bit_hasher` at the default, so the two agree digit for digit.
+one. The door to another algorithm is `bit_hash<T, H>` for the bits and `xstd::hasher<H>` for the value, each
+seeded where `H` takes a seed. `std::hash<T>` is `bit_hash` at the default, so the two agree digit for digit.
 At any other algorithm the digits differ and the invariant still holds, since it rests on what is appended and
 not on who hashes it.
+
+**A digest beside the hash.** The hash answers a `std::size_t`, Hash2's fold of the algorithm's result, which is
+what a table indexes by. `bit_digest<T, H, Flavor>` answers the result itself, `H::result_type`, over the same
+message, for a digest that stands in for its key: stored, compared or sent where a table's index would collide. Its
+defaults differ for that reason. `bit_hash` runs xxHash-64 over native bytes, as `std::hash` does; `bit_digest`
+runs XXH3-128 over little-endian bytes, so two keys stay apart and a digest is the same on every target. Both share
+one seeded prototype as a private base, and equal bits digest equal across storages and block types as they hash
+equal. The shape follows xstd-misc's value-level `xstd::hash` and `xstd::digest`.
 
 So a caller chooses as follows. The default, through `std::hash`, is for keys the program makes: it is
 unseeded, and fast at every length. A caller who knows the keys better names another Hash2 algorithm.
@@ -1476,16 +1484,16 @@ algorithm lets an attacker who knows it build a table's worth of colliding keys 
 keyed function built to make that infeasible without the seed, at a speed a hash table can afford.
 
 ```cpp
-#include <xstd/bits/bit_hasher.hpp> // xstd::bit_hasher
-#include <xstd/bits/bit_set.hpp>
+#include <xstd/bits/bit_functional/bit_hash.hpp> // xstd::bit_hash
+#include <xstd/bits/bit_set/bit_set.hpp>
 #include <boost/hash2/siphash.hpp>  // siphash_64
 #include <cstdint>
 #include <unordered_set>
 
-using hasher = xstd::bit_hasher<boost::hash2::siphash_64>;
+using hash = xstd::bit_hash<xstd::bit_set, boost::hash2::siphash_64>;
 
 auto const seed = std::uint64_t{/* drawn at random, per container */};
-auto table      = std::unordered_set<xstd::bit_set, hasher>(0, hasher(seed));
+auto table      = std::unordered_set<xstd::bit_set, hash>(0, hash(seed));
 ```
 
 Who hashes follows [views-follow-their-precedent](#views-follow-their-precedent): the set adaptor owned or
@@ -1722,7 +1730,7 @@ draft moves, re-pin the file, renumber the rows, and let the checker name the ci
 
 Two class templates carry the two readings: `set_adaptor` and `sequence_adaptor`. Each is
 written against `bit_block_container` and against nothing else, so one adaptor serves
-`bit_block_container` over `std::array`, `std::vector` and the bounded blocks alike, at both widths and
+`bit_block_container` over `std::array`, `std::vector` and the inplace blocks alike, at both widths and
 in both ownerships ([one-storage](#one-storage)). Each takes the parameters its own reading needs and no
 others: `set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>` and `sequence_adaptor<Bits, Store, W, Derived>`, the set reading
 never windowed and the only one with a key.
@@ -1785,7 +1793,7 @@ last argument over the `bit_block_container` its base clause spells, which `owne
 class over the same storage is a distinct type all the same. Each writes out its constructors in the order and
 notation of the clause it packs: [set.cons] for the three sets, less the allocator forms where the storage has
 none; [vector.bool.pspc] for `basic_bit_vector` and `basic_bit_small_vector`; [inplace.vector.overview] for
-`basic_bit_bounded_vector`; and for `basic_bit_array`, `std::array` being an aggregate, the default and initializer-list
+`basic_bit_inplace_vector`; and for `basic_bit_array`, `std::array` being an aggregate, the default and initializer-list
 constructors its aggregate initialization stands for. What the clause lacks and the adaptor offers -- the
 `from_blocks` doors -- follows the standard ones, each marked as not in the clause. The copy and move constructors, both assignments and the
 destructor are left to the compiler, which declares each as the adaptor underneath answers it, `noexcept` and
@@ -2175,8 +2183,8 @@ static constexpr std::bool_constant<N == 0> empty = {};
 |---|---|---|
 | `bit_array<N>` | `size`, `empty`, `max_size` | -- |
 | `bit_subspan` at a static extent | `size`, `empty`, `max_size` | -- |
-| `bit_bounded_vector<N>` | `capacity`, `max_size` | `size`, `empty` |
-| `bit_fixed_set<N>`, `bit_bounded_set<N>` | `max_size` | `size`, `empty`, which count the keys |
+| `bit_inplace_vector<N>` | `capacity`, `max_size` | `size`, `empty` |
+| `bit_fixed_set<N>`, `bit_inplace_set<N>` | `max_size` | `size`, `empty`, which count the keys |
 
 The run-time widths keep functions, and so do the whole views, `bit_span` and `bit_set_view`, whose width is
 whatever they borrow. A set has no `capacity` at any width ([growth](#growth)).
@@ -2191,11 +2199,11 @@ only under P2280, as `a.size()` on a `std::array` is.
 
 The adaptors declare none of these members. A static data member cannot carry a `requires`-clause, and a member
 function `size()` declared in the adaptor hides a base's `size` even where its own constraints fail, so the members
-come from a base between the adaptor and its storage, chosen per column: `fixed_sizes`, `bounded_sizes` or
+come from a base between the adaptor and its storage, chosen per column: `fixed_sizes`, `inplace_sizes` or
 `run_time_sizes` under the sequence reading, `fixed_max_size` or `run_time_max_size` under the set reading. The
 adaptor's using-declarations make them visible to its own unqualified calls, and a call `size()` there resolves
 through `operator()` as it would through a function. `capacity` is not among them, a fixed column having none, so the
-bounded column's own members name it as `members_type::capacity()`.
+inplace column's own members name it as `members_type::capacity()`.
 
 Two consequences follow from the members being constants rather than functions:
 
@@ -2231,7 +2239,7 @@ reads positions below the old width alone, and no append writes one.
 
 Under a static capacity `[inplace.vector.modifiers]/3` asks more of `append_range`: past the capacity, no
 effects. A sized source gets that for free: room for the width it needs is made before a block is written, and
-refused there. A source with no size finds the capacity only by overrunning it, so the bounded owner remembers its
+refused there. A source with no size finds the capacity only by overrunning it, so the inplace owner remembers its
 width, and on any exception resizes back to it before rethrowing -- the resize clearing the tail as every
 shrink does. `assign_range` has no such remark in `[sequence.reqmts]`, so its clear-and-append keeps only the
 basic guarantee, and an overflowing source leaves what it appended.
@@ -2449,10 +2457,10 @@ storage's `first_difference`, the set reading's `set_equal` and the reading's ow
 64-bit words assembled from each side's blocks at each side's offset. The set reading's order is `std::set`'s, the
 keys in iteration order, lexicographic over ascending keys and the masks as numbers over descending ones. The
 operands must be of one reading, a set's of one key, mapping and comparator, and of one width kind: two widths
-fixed in the type and equal, or two run-time widths. The width kind is what `bit_hasher` hashes differently
+fixed in the type and equal, or two run-time widths. The width kind is what `bit_hash` hashes differently
 ([the-hashing-invariant](#the-hashing-invariant)), so whatever compares equal hashes equal, and
-`xstd::bit_equal_to`, the transparent equality over `bit_equal`, pairs with the transparent `bit_hasher` for a
-lookup across block types and storages: `std::unordered_set<K, xstd::bit_hasher<>, xstd::bit_equal_to>::find` takes a
+`xstd::bit_equal_to`, the transparent equality over `bit_equal`, pairs with the transparent `bit_hash` for a
+lookup across block types and storages: `std::unordered_set<K, xstd::bit_hash<K>, xstd::bit_equal_to>::find` takes a
 view, or the same value over narrower blocks.
 
 **The iterator operations are rank and select.** `std::ranges::advance`, `next`, `prev` and `distance` over a set's
@@ -2526,7 +2534,7 @@ the tests build their own rotations by index for the same reason.
 ### the-valarray-reading
 
 The containers here are principled versions of the standard's: `bit_vector` is what an unspecialized
-`std::vector<bool>` would be, `bit_array<N>` `std::array<bool, N>` and `bit_bounded_vector<N>`
+`std::vector<bool>` would be, `bit_array<N>` `std::array<bool, N>` and `bit_inplace_vector<N>`
 `std::inplace_vector<bool, N>`. None of those has a bitwise operator, so none of ours does. What `&=` means on a
 row of bools is **elementwise logical**, `a[i] = a[i] and b[i]` at every position, and the one standard type
 that spells it is `std::valarray<bool>`, R's logical vector. That is a reading of its own, the sequence read
@@ -2535,7 +2543,7 @@ elementwise, with its own four owners over the sequence's storages:
 | | `std::valarray<bool>` packed |
 | :--- | :--- |
 | static size, `std::bitset<N>` read elementwise | `bit_fixed_valarray<N>` |
-| run-time size within a capacity `N` | `bit_bounded_valarray<N>` |
+| run-time size within a capacity `N` | `bit_inplace_valarray<N>` |
 | run-time size inline up to `N`, on the heap past it, in `<xstd/bits/ext/boost.hpp>` | `bit_small_valarray<N>` |
 | run-time size on the heap, `boost::dynamic_bitset` read elementwise | `bit_valarray` |
 
@@ -2558,7 +2566,7 @@ constructors and no `resize`, and takes `std::array`'s list initialization and a
 `bit_array` does; its pointer constructor and its constructors from a proxy assert that the count is the type's
 own. Each array operator asserts that its operands have one size, the precondition `[valarray]` makes
 undefined behaviour. Everything is `constexpr` as far as the storage is: the fixed one entirely, and structural at
-whole blocks; the heap one in a constant expression as `std::vector` is; the bounded one where its blocks are a
+whole blocks; the heap one in a constant expression as `std::vector` is; the inplace one where its blocks are a
 `std::inplace_vector`. Besides `[valarray]`, the owners take `from_blocks` as every owner does.
 
 **The deviations, each one forced by `bool` or chosen for it:**
@@ -2584,10 +2592,10 @@ whole blocks; the heap one in a constant expression as `std::vector` is; the bou
   have `=` from a `T` but compound assignment only from an array; here `&=`, `|=` and `^=` take a `bool` too, as the
   owners' do. Their `<<=` and `>>=` shift each element's value, which on a `bool` is arithmetic, and a position
   shift over positions that need not be contiguous has no counterpart, so a proxy has neither.
-- **A fixed size gathers into the bounded array.** A const subscript returns a valarray of the run-time size it
-  selects, so `bit_fixed_valarray<N>` returns a `bit_bounded_valarray<N>` over the same block: no heap, and
-  `constexpr` as far as the bounded one is. A gather longer than `N`, which a slice of stride zero, a gslice or an
-  index array can make by repeating positions, throws `std::bad_alloc` as the bounded array does past its capacity.
+- **A fixed size gathers into the inplace array.** A const subscript returns a valarray of the run-time size it
+  selects, so `bit_fixed_valarray<N>` returns a `bit_inplace_valarray<N>` over the same block: no heap, and
+  `constexpr` as far as the inplace one is. A gather longer than `N`, which a slice of stride zero, a gslice or an
+  index array can make by repeating positions, throws `std::bad_alloc` as the inplace array does past its capacity.
 
 **The subscripts.** `[valarray.sub]`'s four each come in two forms: on a const array a gather into a valarray of
 its own, and on a non-const one a proxy, `bit_slice_array`, `bit_gslice_array`, `bit_mask_array` or
@@ -2666,7 +2674,7 @@ there is no signature for an `xstd::bit_compress` over this library's ranges to 
 ([algorithms-not-members](#algorithms-not-members)), and the block-range kernels stay in `detail`, under the proxies.
 
 `std::slice`, `std::gslice` and `std::valarray<std::size_t>` have no `constexpr` constructor, so a mask's subscripts
-and a `bit_slice`'s are the ones that run in a constant expression; they do, on the fixed and bounded arrays.
+and a `bit_slice`'s are the ones that run in a constant expression; they do, on the fixed and inplace arrays.
 
 **The kernels.** Each operator is one bitwise expression over a block of either side, after which the padding past
 `size()` is cleared, so a count over whole blocks stays right. A scalar is a block of all ones or all zeros.
@@ -2901,7 +2909,7 @@ an implementation looks like.
 
 **Enforced, not asserted.** `test/consumer/main.cpp` includes `<xstd/bits.hpp>` and, the `ext/` column being
 opt-in, `<xstd/bits/ext/boost.hpp>`, and no other header of ours. It names the eleven owners, the set and sequence
-readings' over the fixed, bounded, small and dynamic storages and the valarray reading's over the fixed, bounded and
+readings' over the fixed, inplace, small and dynamic storages and the valarray reading's over the fixed, inplace and
 dynamic ones, and the three views, and nothing from `detail/`. It pattern-matches each container against its
 reading — bidirectional with a `key_type`, random-access over `bool`, or random-access over `bool` with an `==` that
 answers an array rather than a `bool` — for all eleven and over the three views besides, which is the
@@ -2939,13 +2947,13 @@ storage, the parameters each reading needs and no more ([the-two-adaptors](#the-
 `basic_` layer chooses the storage and leaves the block open, `basic_string`-style:
 `basic_bit_array<Block, N>`, `basic_bit_vector<Block, Allocator>` and their sequence siblings. A set's `basic_` name
 leads with its key, as `std::set<Key>` does, then the storage, then the defaulted policies, the key's mapping first:
-`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>`,
+`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>`,
 `basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>` and `basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>`,
 with `KeyMapping` defaulting to `bit_key_mapping<Key>` and `Compare` to `std::less<Key>`. The block leads the storage in
 every column, so a `basic_` name hands its base clause the arguments in the order it was given them --
 `basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>` derives from `set_adaptor<bit_block_container<std::array<Block, K>, N>,
 storage::owned, basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>, Key, KeyMapping, Compare>`, straight
-through. Taking `<N, Block>` in the static and bounded columns and transposing at the call would gain nothing:
+through. Taking `<N, Block>` in the static and inplace columns and transposing at the call would gain nothing:
 `Block` carries no default in those columns, so it is free to lead, and leading is what
 `std::array<T, N>`, `std::inplace_vector<T, N>` and `std::span<T, Extent>` all do with the pair. The restricted
 layer fixes `std::size_t` and `std::allocator`: `bit_fixed_set<N>` and `bit_array<N>` keep one
@@ -3083,22 +3091,24 @@ container, same interface, different representation — and the prefix is what s
 first. `fixed_bit_set` would read as a qualified `bit_set`; `bit_fixed_set` is `bit_` applied to a
 fixed set, the way `flat_set` is `flat_` applied to a `set`.
 
-**Why `fixed` and `bounded`.** The qualifier names what the user gets, not where the blocks live. `fixed` is a
-width fixed at compile time; `bounded` is a run-time size under a compile-time capacity. `finite` would select
-nothing, since `bit_set` is a finite set of positions too. `static` is overloaded in C++, which is part of why
-P0843 renamed `boost::static_vector` to `std::inplace_vector`. `inplace` names one storage, and the bounded
-column is not tied to one: `boost::container::static_vector` holds the same blocks where the standard library
-has no `std::inplace_vector`. The qualifier comes after `bit_`, as `small` does in `bit_small_set`.
+**Why `fixed` and `inplace`.** `inplace` is the standard's word for a run-time size under a compile-time
+capacity, and the qualifier takes it so that `bit_inplace_vector` is what `std::inplace_vector<bool, N>` would be.
+It names that behaviour, not one storage: `boost::container::static_vector` holds the same blocks where the
+standard library has no `std::inplace_vector`, as it held them before P0843 renamed `boost::static_vector` to
+`std::inplace_vector`, in part because `static` is overloaded in C++. Where the standard has no word, the
+qualifier names what the user gets: `fixed` is a width fixed at compile time, and `finite` would select nothing,
+since `bit_set` is a finite set of positions too. The qualifier comes after `bit_`, as `small` does in
+`bit_small_set`.
 
 One header per restricted name, holding its `basic_` form beside it, each over one storage: `bit_set` and
 `bit_vector` over `std::vector<Block, Allocator>`, beside `bit_fixed_set` and
-`bit_array` over `std::array<Block, num_blocks_v<Block, N>>`, and `bit_bounded_set` and `bit_bounded_vector`
-over `bounded_blocks<Block, num_blocks_v<Block, N>>` ([the-bounded-column](#the-bounded-column)). The
+`bit_array` over `std::array<Block, num_blocks_v<Block, N>>`, and `bit_inplace_set` and `bit_inplace_vector`
+over `inplace_blocks<Block, num_blocks_v<Block, N>>` ([the-inplace-column](#the-inplace-column)). The
 header is the name's home and the only place it is spelled; `bits.hpp` includes them all.
 
 **What `bit_` names.** The prefix marks what works on the packed bits: the containers, the concepts and
-transformations over blocks (`bit_concepts/`, `bit_type_traits/`, `bit_align`, `bit_least`), and `bit_hasher`. The unprefixed name
-works on the value as the standard model sees it, as `xstd::hasher` does. So `bit_hasher` is the
+transformations over blocks (`bit_concepts/`, `bit_type_traits/`, `bit_align`, `bit_least`), and `bit_hash`. The unprefixed name
+works on the value as the standard model sees it, as `xstd::hasher` does. So `bit_hash` is the
 representation-level hash and `hasher` the value-level one. The prefix names **what** is hashed, the packed
 representation, not whether the code is optimized: the hooks behind `xstd::hasher` expand bits to bools with
 `_pdep_u64`, AVX-512 or a table, and are as optimized, yet still append the model's bytes.
@@ -3121,12 +3131,12 @@ choices written through that pair, the block or width computed from `X`'s own:
 | `bit_underlying<X>` | `underlying_block_t<X::key_type>`: the key's underlying type, enumeration or integer, made unsigned | `N` |
 
 `bit_rebind` and `bit_underlying` take every owner: `basic_bit_array<Block, N>`,
-`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_bounded_vector<Block, N>`,
-`basic_bit_bounded_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_vector<Block, Allocator>`,
+`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_inplace_vector<Block, N>`,
+`basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_vector<Block, Allocator>`,
 `basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>`, and the Boost extension's
 `basic_bit_small_vector<Block, N, Alloc>` and `basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>`, short
 names included. `bit_resize`, `bit_least`, `bit_fast` and `bit_align` read or write `N`, so they take the six whose
-type carries one, the bounded and small ones changing their capacity. So `bit_rebind<std::uint8_t, bit_vector>` is
+type carries one, the inplace and small ones changing their capacity. So `bit_rebind<std::uint8_t, bit_vector>` is
 `basic_bit_vector<std::uint8_t, std::allocator<std::uint8_t>>`, `bit_least<bit_fixed_set<9>>` is
 `basic_bit_fixed_set<std::size_t, std::uint16_t, 9>`, two bytes where `bit_fixed_set<9>` is eight, and
 `bit_align<bit_array<9>>` is `bit_array<64>`, whose last block carries no unused tail. A type with nothing to change,
@@ -3178,7 +3188,7 @@ words. [type_safe](https://github.com/foonathan/type_safe)'s `flag_set<Enum>` st
 A block need not be a power of two. One that is, of a byte or more, tiles any width: no position and no byte
 straddles two blocks, so every owner and view takes it. Any other width, C23's `unsigned _BitInt(17)` or
 `unsigned _BitInt(127)` spelled `xstd::bit_uint<N>`, holds one fixed-width value: `bit_array` and `bit_fixed_set`
-take it for a width up to its own, in a single block, and the bounded, small and growing owners refuse it, since a
+take it for a width up to its own, in a single block, and the inplace, small and growing owners refuse it, since a
 second block would put a position across two of them. Clang on x86-64 stores such a block in the next standard
 integer size, so `_BitInt(23)` takes the four bytes of a `std::uint32_t` and nine padding bits the library never
 reads; what the block buys is the exact width in the type, not fewer bytes.
@@ -3446,7 +3456,7 @@ could throw would cost every growing container its strong guarantee.
 
 The allocator is the exception, and it follows the **column, not the row**: the dynamic column allocates and both
 of its readings answer `get_allocator`; the static column is a `std::array` and has none to show; the
-bounded column holds its blocks inline and has none either. `boost::container::static_vector` does name an
+inplace column holds its blocks inline and has none either. `boost::container::static_vector` does name an
 `allocator_type`, one that holds the elements rather than allocating them, so a storage's allocator counts as one
 only where it has `allocate`. So `bit_set` and `bit_vector` have
 it and the other four do not, which is a fact about `std::vector` rather than about sets or sequences.
@@ -3458,19 +3468,19 @@ That is the table's use: a cell that answers differently from its column, such a
 own exchange through `std::ranges::swap`, so the test checks that values actually move rather than only that
 the expression compiles.
 
-### the-bounded-column
+### the-inplace-column
 
 The third storage point gets public names, one per reading and each a class like every other
-owner: `basic_bit_bounded_set<Key, Block, N>` and `basic_bit_bounded_vector<Block, N>` over
-`bounded_blocks<Block, num_blocks_v<Block, N>>`, with `bit_bounded_set<N>` and `bit_bounded_vector<N>` at the
-machine word. `bounded` is one qualifier down each column rather than a second vocabulary for the same thing.
+owner: `basic_bit_inplace_set<Key, Block, N>` and `basic_bit_inplace_vector<Block, N>` over
+`inplace_blocks<Block, num_blocks_v<Block, N>>`, with `bit_inplace_set<N>` and `bit_inplace_vector<N>` at the
+machine word. `inplace` is one qualifier down each column rather than a second vocabulary for the same thing.
 
 `N` is a **capacity** in bits here, where the static column's `N` is a width, and it is exact in the same way:
-`basic_bit_bounded_vector<std::uint8_t, 9>` holds nine bits, as `std::inplace_vector<bool, 9>` does, in two
+`basic_bit_inplace_vector<std::uint8_t, 9>` holds nine bits, as `std::inplace_vector<bool, 9>` does, in two
 blocks whose last seven bits it never uses. `bit_block_container` reads its second parameter by storage -- the
 width of fixed blocks, the capacity of blocks that resize under a constant one, and `dynamic_extent` for blocks that
 grow without bound -- and defaults it to that, so a container named by its storage alone holds every bit of it:
-`bit_block_container<bounded_blocks<std::uint8_t, 2>>` is the storage `basic_bit_bounded_vector<std::uint8_t, 16>`
+`bit_block_container<inplace_blocks<std::uint8_t, 2>>` is the storage `basic_bit_inplace_vector<std::uint8_t, 16>`
 wraps, one storage however it is spelled. The constant capacity is read without an object: from a `capacity()`
 usable in a constant expression, as `std::inplace_vector`'s is, or from the `static_capacity` beside a static
 `capacity()` callable only at run time, as `boost::container::static_vector`'s is. `boost::container::small_vector`
@@ -3481,15 +3491,15 @@ The class passes `N` through to the storage rather than leaving it in the block 
 distinct capacities distinct types and lets its guide name `N`: `num_blocks_v<Block, N>` is not a
 deducible context, and no inverse exists, since every `N` from 9 to 16 names two `std::uint8_t` blocks. The
 names carry the capacity-versus-width distinction and the parameter lists do not, which is the same hazard
-`basic_bit_fixed_set<Key, Block, N>` and `basic_bit_bounded_set<Key, Block, N>` share by shape.
+`basic_bit_fixed_set<Key, Block, N>` and `basic_bit_inplace_set<Key, Block, N>` share by shape.
 
-The column exists on every standard library, at C++23 and at C++26 alike. `detail/bounded_blocks.hpp` names its
-storage `bounded_blocks<Block, K>`: `std::inplace_vector<Block, K>` where `__cpp_lib_inplace_vector` is defined, in
+The column exists on every standard library, at C++23 and at C++26 alike. `detail/inplace_blocks.hpp` names its
+storage `inplace_blocks<Block, K>`: `std::inplace_vector<Block, K>` where `__cpp_lib_inplace_vector` is defined, in
 practice libstdc++ >= 16 at C++26, and `boost::container::static_vector<Block, K>` everywhere else -- MSVC,
 libc++, and every library at C++23. Boost.Container is already a dependency, so the fallback costs a consumer
 nothing new. Over `std::inplace_vector` the owners are constant-evaluable, and the header says so by defining
-`XSTD_BITS_HAS_CONSTEXPR_BOUNDED` to 1; `static_vector`'s constructors are not `constexpr`, so over it the owners
-are run-time values only. Code that constant-evaluates a bounded owner tests `#ifdef XSTD_BITS_HAS_CONSTEXPR_BOUNDED`,
+`XSTD_BITS_HAS_CONSTEXPR_INPLACE` to 1; `static_vector`'s constructors are not `constexpr`, so over it the owners
+are run-time values only. Code that constant-evaluates an inplace owner tests `#ifdef XSTD_BITS_HAS_CONSTEXPR_INPLACE`,
 never `__cpp_lib_inplace_vector`, which says what the standard library has rather than what the owners are built
 on. Growth past the capacity throws `std::bad_alloc` over either storage, given by the container before the
 storage is asked; on the set reading that is where `insert` stops being total. A left shift is not refused: it
@@ -3503,7 +3513,7 @@ as `std::bitset`'s is. The unbounded column follows the same rule with `max_size
 
 **The two storages promise different things**, and the owners pass the copies' promise on rather than paper over it.
 `std::inplace_vector` of trivially copyable blocks copies and swaps without throwing; `boost::container::static_vector`
-declares its copy constructor, its copy assignment and its `swap` potentially throwing, so over it the bounded
+declares its copy constructor, its copy assignment and its `swap` potentially throwing, so over it the inplace
 owners' copies are not `noexcept` either. Their `swap`, member and free, is `noexcept` over both, as
 `[inplace.vector.modifiers]` declares it for `bool`. `bit_block_container` still calls the storage's own `swap` through
 `std::ranges::swap`, and `swaps_without_throwing_v` names the one storage whose `swap` cannot throw without saying so:
@@ -3515,21 +3525,21 @@ that it swaps without throwing over either.
 
 **A capacity of nought holds nothing.** `[inplace.vector.overview]/5` makes `inplace_vector<T, 0>` empty, trivially
 copyable and trivially default constructible, and `static_vector<Block, 0>` is none of these: it keeps a size.
-The bounded vector therefore holds `bounded_blocks_for<Block, num_blocks_v<Block, N>>`, which is `bounded_blocks`
-itself except at nought where the library's own type is not empty, and `no_blocks<Block>` there. `bounded_blocks` stays a
+The inplace vector therefore holds `inplace_blocks_for<Block, num_blocks_v<Block, N>>`, which is `inplace_blocks`
+itself except at nought where the library's own type is not empty, and `no_blocks<Block>` there. `inplace_blocks` stays a
 plain alias, so the owners' deduction guides deduce its capacity; a `conditional_t` would make that a non-deduced
 context. `no_blocks` is an empty contiguous range whose growth past nought throws `std::bad_alloc`, as
 `std::inplace_vector<Block, 0>`'s does, and it goes with the fallback once every leg ships `<inplace_vector>`. A
 `std::array<Block, 0>` would not do: its layout is the implementation's (one byte in libstdc++, a whole `Block` in
-libc++, and an empty type in neither), and it has no growth members, which would turn the bounded owner into a fixed
+libc++, and an empty type in neither), and it has no growth members, which would turn the inplace owner into a fixed
 one. Over a capacity of nought `bit_block_container` stores no width (`has_zero_capacity`), defaults its moves, and
 takes the `bit_members` whose two members overlap and have no initializer; every adaptor holds the container
-`[[no_unique_address]]` in its `adapted_bits` base, so `basic_bit_bounded_vector<Block, 0>` is an empty type, except
+`[[no_unique_address]]` in its `adapted_bits` base, so `basic_bit_inplace_vector<Block, 0>` is an empty type, except
 under the MSVC ABI, which gives a class whose members are all empty a byte of its own. There the vector's range constructor and both append tiers
 refuse any element up front through one `refuse_any`, and the ordering never compares unequal widths. A loop that
 cannot go round a second time is a branch no test can take, and being trivially destructible the owner compiles to
 control flow no other capacity shares, so gcov counts that branch on its own; it is also code MSVC's C4702 calls
-unreachable. The bounded set, bound by no such paragraph, holds `bounded_blocks<Block, 0>` at `N == 0`
+unreachable. The inplace set, bound by no such paragraph, holds `inplace_blocks<Block, 0>` at `N == 0`
 rather than `no_blocks`, and reaches the same capacity of nought: no width is stored, and every growth past nought
 throws `std::bad_alloc`. Over `no_blocks` the set would carry paths of its own that a width of nought never takes,
 its padded equality and its bulk operators across two widths, each a branch no test can reach. The set's left shift takes an arm there, for the same reason the vector's ordering does: with no element
@@ -3543,7 +3553,7 @@ packing adds, `hash`, is under `test/src/spec/xstd/inplace_vector/`.
 **Testing both storages takes two standards.** `__cpp_lib_inplace_vector` is a C++26 macro, and the library asks
 for C++23, where every library in the matrix holds the column in `boost::container::static_vector`. The two
 owners' suites run the same cases at either standard; what the standard changes is the storage underneath, whether
-`XSTD_CONSTEXPR_BOUNDED_CHECK_EQUAL` adds a `static_assert` to its run-time check, and whether the lines that hold
+`XSTD_CONSTEXPR_INPLACE_CHECK_EQUAL` adds a `static_assert` to its run-time check, and whether the lines that hold
 the owners to `std::inplace_vector` itself, the model, are compiled at all.
 
 `XSTD_BITS_CXX_STANDARD` is how a build asks for more -- 23 by default, 26 to reach the `std::inplace_vector`
@@ -3568,7 +3578,7 @@ set growing by `insert` ([growth](#growth)), so there a capacity is felt at the 
 
 The column is graded over every block the other two are, `xstd::uint128` included, which it can be because the
 width member carries its own alignment ([padding](#padding)). A 16-byte-aligned block after a `std::size_t` width
-would pad the class, and `-Wpadded` under `-Werror` rejects that; the bounded column is the only cell that can
+would pad the class, and `-Wpadded` under `-Werror` rejects that; the inplace column is the only cell that can
 reach it, a static width carrying no width member at all and a `std::vector` over a stateless allocator being
 aligned as a pointer whatever it holds.
 
@@ -3824,7 +3834,7 @@ four writes that can dirty them.
 
 ### the-kept-count
 
-A set's `size()` is its storage's `count()`. At a static width, `bit_fixed_set<N>` and `bit_bounded_set<N>`, that is
+A set's `size()` is its storage's `count()`. At a static width, `bit_fixed_set<N>` and `bit_inplace_set<N>`, that is
 a popcount bounded by `N`: one or two instructions at a board's width, constant in the number of elements as
 `[container.reqmts]` measures it, and a kept count would charge every write a read and an add to save them. Where
 the width grows without bound, `bit_set` and `bit_small_set`, the popcount runs over every block the set has ever
@@ -3969,7 +3979,7 @@ sets share a width ([the-hashing-invariant](#the-hashing-invariant)).
 
 **A run-time width is storage to a set.** `boost::dynamic_bitset`'s width is part of the value, so `==`
 includes it, and the width changes only when the caller asks; `xstd::bit_set`
-and `xstd::bit_bounded_set` are the set reading, and their width is storage: operations grow it as they need --
+and `xstd::bit_inplace_set` are the set reading, and their width is storage: operations grow it as they need --
 `insert`, `|`, and `<<=` up to `max_size()` -- invisibly, since growth changes nothing observable. Hence the
 shift's rule, grow and then truncate at `max_size()`: that is the one bound fixed by the type rather than by how
 the set happened to be stored, and truncating at the current width would give two equal sets two different
@@ -3981,7 +3991,7 @@ universe caps a growing set's `max_size()` at its `size`, so the shift keeps no 
 | | who sets the width | operations change it | part of the value | a left shift truncates at |
 | --- | --- | --- | --- | --- |
 | `boost::dynamic_bitset` | the caller alone | no | yes | `size()` |
-| `bit_set`, `bit_bounded_set` | the operations, as they need | yes, growing | no | `max_size()` |
+| `bit_set`, `bit_inplace_set` | the operations, as they need | yes, growing | no | `max_size()` |
 | `std::bitset<N>`, `bit_fixed_set<N>` | the type | no | the type's | `N`, which is both |
 
 ### the-set-operations-across-widths
@@ -4103,8 +4113,8 @@ shape to learn instead of one per type.
 **The library has no bitset of its own.** `std::bitset` predates the STL, and its interface is three at once: a
 set's (`&`, `|`, `^`, `count`), a sequence's (`operator[]`, `test`, `set`, `reset` and `flip` by position) and a
 string's (`to_string` and the string constructors). The grid gives each of those its own reading, with one
-vocabulary across every storage -- the set reading in `bit_fixed_set`, `bit_bounded_set`, `bit_set` and
-`bit_small_set`, the sequence reading in `bit_array`, `bit_bounded_vector`, `bit_vector` and `bit_small_vector`,
+vocabulary across every storage -- the set reading in `bit_fixed_set`, `bit_inplace_set`, `bit_set` and
+`bit_small_set`, the sequence reading in `bit_array`, `bit_inplace_vector`, `bit_vector` and `bit_small_vector`,
 and a string reading planned as `bit_string`. A bitset here would be a fourth interface over the same blocks, with
 nothing to say that one of those does not say better, and with a contract owed to two counterparts that disagree
 with each other about growth, element access and order.
@@ -4144,18 +4154,18 @@ has its own header under `<xstd/bits/bit_concepts/>`.
   universe, which is its whole blocks up to what it can hold -- `bit_set{3, 64, 129}` over 64-bit blocks is a
   `bit_vector` of 192, and a `bit_fixed_set<100>` one of 100. A set target covers that width in whole blocks of its
   own, so a `bit_vector` of 70 becomes a set over 128 positions in 64-bit blocks and over 72 in 8-bit ones. The
-  bits above the width are clear afterwards, as everywhere ([padding](#padding)). A bounded target too small throws
+  bits above the width are clear afterwards, as everywhere ([padding](#padding)). An inplace target too small throws
   what its own growth throws, `std::bad_alloc`, before a block is written: a sequence target whose capacity is
   short of the source's width, and a set target, capped at its capacity rather than rounded past it, for a key at
   or beyond that capacity. A set never throws over padding: a wide universe whose keys all fit converts.
 - **Blocks.** From a non-const rvalue whose extracted container is `bit_constructible_from` the target -- its
   allocator with it, being part of that type -- under a target whose capacity is the whole of that container, the
   blocks move: `extract()` into the adopting constructor, O(1), the source left at width zero. The capacity clause
-  leaves out a `bit_bounded_vector<100>`, whose `inplace_vector` of two 64-bit blocks holds 128 bits the owner may
+  leaves out a `bit_inplace_vector<100>`, whose `inplace_vector` of two 64-bit blocks holds 128 bits the owner may
   not, and those blocks are inline, so a copy is all a move would have been. Everything else copies: the object
   bytes in one call, as `memcpy` would, where both block types are padding-free built-ins and the target is little-endian
   outside a constant expression, and byte shifts everywhere else. All of it is `constexpr`.
-- **`noexcept`** holds exactly where both ends are fixed widths. A run-time end can allocate, refuse a bounded
+- **`noexcept`** holds exactly where both ends are fixed widths. A run-time end can allocate, refuse an inplace
   capacity, or throw `std::overflow_error` into a fixed target.
 
 Position `i` staying position `i` is the one thing to watch with a `std::bitset` or a `boost::dynamic_bitset` as
@@ -4201,7 +4211,7 @@ A value that is no key of a mapping closing the universe is the fourth reason, a
 extent. It ranks at or past the mapping's `size`, and a static width is that `size`, so a fixed set says
 `out_of_range` for it through the check above. A growing set could grow to the position, and the key it would read
 back there is none, so it asks the same question of `size` before its storage's own ceiling, and says
-`out_of_range` too. The two refusals never meet on one owner: a bounded set over such a mapping has that `size` for
+`out_of_range` too. The two refusals never meet on one owner: an inplace set over such a mapping has that `size` for
 its capacity, so `bad_alloc` is left to an open universe's key past the capacity, and `length_error` to one past
 what a heap can count. Every door a value comes in through asks it: `insert`, `emplace`, `emplace_hint`, the ranged
 and listed forms, the constructors that insert, and an enumerator's `|=` and `^=`. A flag value of
@@ -4945,7 +4955,7 @@ The sequence proxy borrows nothing else, from `[vector.bool]` or `[template.bits
 range, so `[format.range.formatter]` would format each one already, except that it requires
 `formattable<ranges::range_reference_t<R>>` and a reference of ours is a proxy. So each proxy specializes
 `std::formatter` for itself, in its own header, and stops there: `bit_set`, `bit_fixed_set`, `bit_vector`,
-`bit_array`, the views, the windows and the bounded column all follow from that, none of them mentioned.
+`bit_array`, the views, the windows and the inplace column all follow from that, none of them mentioned.
 
 This is the same shape the proxies already had for fmt, in fmt's spelling. `format_as` is fmt's generic
 per-type hook: define it for one type and every range over that type formats, which is why the proxies carry
@@ -5039,7 +5049,7 @@ bitset-shaped takes part.
 
 There is no second sieve running the same shape over `std::bitset` or `boost::dynamic_bitset` through
 `bit_set_view`. Two sieves would be two vocabularies for one algorithm, and what one would demonstrate -- that the
-view reconciles `set(pos)`/`reset(pos)` with `insert`/`erase` -- is what `test/src/bits/bit_set_view.cpp` asserts
+view reconciles `set(pos)`/`reset(pos)` with `insert`/`erase` -- is what `test/src/bits/bit_set/bit_set_view.cpp` asserts
 directly, without a sieve in the way. An example earns its place by showing something no test does.
 
 The bench is dynamic containers only, so it compares like with like: `std::flat_set`, `std::set` and
@@ -5475,7 +5485,7 @@ so the `try_` name promises a contract the function does not keep. And a returne
 to `bool` the opposite way round from the `optional<reference>` of the other two doors: truthy means
 something was left over, not that the call succeeded. The paper defers the design to C++29.
 
-The current draft has no `try_append_range`, so the bounded owners have none either. libstdc++ 16
+The current draft has no `try_append_range`, so the inplace owners have none either. libstdc++ 16
 still ships P0843R14's version, and the suite asks it of no implementation, the model included.
 When C++29 settles what the member means, it is added here and tested in the same change.
 
@@ -5721,7 +5731,7 @@ rounded up to the class's own alignment. That last step is not slack in the layo
 is always a multiple of an `alignof`, so the sum alone names sizes no class can have. Blocks of four
 bytes under a `size_t` width sum to twelve, and twelve is not a size a type aligned to eight can be;
 sixteen is, and sixteen is what the class already was. Written without the round-up, the assertion
-asks the bounded column for the impossible, which only a leg compiling that column over such blocks reports.
+asks the inplace column for the impossible, which only a leg compiling that column over such blocks reports.
 
 ## Design choices for a `bitset` data structure
 
@@ -5769,8 +5779,8 @@ The aforementioned issues can be resolved by implementing a single-purpose conta
 
 |                                  | static size and capacity     | dynamic size, static capacity     | dynamic size and capacity |
 | :------------------------------- | :--------------------------- | :-------------------------------- | :------------------------ |
-| **ordered set of `std::size_t`** | `bit_fixed_set<N>`          | `bit_bounded_set<N>`              | `bit_set` |
-| **sequence of `bool`**           | `bit_array<N>`               | `bit_bounded_vector<N>`           | `bit_vector` |
+| **ordered set of `std::size_t`** | `bit_fixed_set<N>`          | `bit_inplace_set<N>`              | `bit_set` |
+| **sequence of `bool`**           | `bit_array<N>`               | `bit_inplace_vector<N>`           | `bit_vector` |
 | **a reading of blocks**          | `bit_set_view` / `bit_span` over <br> `std::array<Block, K>` | over <br> `std::inplace_vector<Block, K>` | over <br> `std::vector<Block>` |
 
 The columns are the three storages the one underlying vehicle is parameterized on — `std::array` fixes size and capacity, `std::inplace_vector` varies size within a fixed capacity, `std::vector` varies both — so a cell is a reading crossed with a storage, and nothing else. The outer two columns are the ones the current landscape already has; the middle is the pairing it never named.
@@ -5788,7 +5798,29 @@ Notes:
 7. Every static-width name takes `xstd::bit_align`, a type transformation rounding its width up to whole blocks so that no block carries an unused tail: `xstd::bit_align<xstd::bit_array<120>>` is `xstd::bit_array<128>`. The inplace names take it too, rounding their capacity. That costs nothing in storage at a width already spanning whole blocks, and removes the tail-restoring mask from `fill`, `flip` and the left shift.
 8. Every static-width name also takes `xstd::bit_least` and `xstd::bit_fast`, which keep the width and store it in the smallest or the fastest block that holds it, as `std::uint_least8_t` and `std::uint_fast8_t` do: `xstd::bit_least<xstd::bit_fixed_set<9>>` is two bytes, a `std::uint16_t`, and past 64 bits it is several `std::uint64_t`. `xstd::bit_enum_set<E>` is `bit_least` over the enumeration's fixed set. Least then align, `bit_align<bit_least<X>>`, is the compact form with no unused tail ([block-and-width-transformations](#block-and-width-transformations)).
 
-The **middle column** is what allocates nothing and yet carries a run-time width. Its blocks are a `std::inplace_vector` where the standard library provides one (`__cpp_lib_inplace_vector`) and a `boost::container::static_vector` elsewhere, so those two names exist everywhere; only over `std::inplace_vector` are they usable in a constant expression, which `XSTD_BITS_HAS_CONSTEXPR_BOUNDED` says.
+The **middle column** is what allocates nothing and yet carries a run-time width. Its blocks are a `std::inplace_vector` where the standard library provides one (`__cpp_lib_inplace_vector`) and a `boost::container::static_vector` elsewhere, so those two names exist everywhere; only over `std::inplace_vector` are they usable in a constant expression, which `XSTD_BITS_HAS_CONSTEXPR_INPLACE` says.
+
+**Every cell is cheap; the cells come in four tiers.** One `bit_block_container` over three storages is what
+makes the fixed and inplace cells nearly free here: each is the same adaptor over `std::array` or
+`std::inplace_vector` blocks, a header and its tests rather than a design of its own. That is a reason to provide
+them, not to standardize them all at once, should the committee prefer to add the cells in steps:
+
+- **Tier 1, a bit equivalent for each existing standard header:** `bit_array`, `bit_inplace_vector` and
+  `bit_vector` beside `std::array`, `std::inplace_vector` and `std::vector<bool>`, `bit_set` beside `std::set`,
+  and `bit_valarray` beside `std::valarray`.
+- **Tier 2, where `std::bitset<N>` code migrates:** `bit_fixed_set` takes a bitset used as a set of positions
+  ([migration.md](migration.md#stdbitsetn-as-a-set-of-positions)), and `bit_fixed_valarray` the bitwise operators
+  of one combined whole ([migration.md](migration.md#stdbitsetn-as-a-row-of-bool)).
+- **Tier 3, enumerations and flags:** `bit_enum_set` and `bit_flag_set` over `bit_key_mapping` and
+  `bit_flag_mapping`, the fixed set keyed by an enumeration or a bitmask type ([flag-types](#flag-types)).
+- **Tier 4, the remaining storages:** `bit_inplace_set` and `bit_inplace_valarray`, and the small-buffer columns
+  in `ext/boost/`, which have neither a standard counterpart nor bitset code to receive. Or, in their place, the
+  storage made pluggable ([#434](https://github.com/rhalbersma/xstd-bits/issues/434)): a `Blocks` parameter on
+  each `basic_` form under a public concept, as `std::flat_set` takes a `KeyContainer`, with every column one
+  default of it. Then a Tier 4 name is an alias over a standard `basic_` form, so the committee may decline to
+  name it and lose nothing: a user writes the alias.
+
+No tier depends on a later one, and each later cell is one more storage under the same adaptor.
 
 Ownership is deliberately **not** a fourth **column**. A view is not a fourth storage: it takes the shape of whatever it views, which is why the third row spans the same three columns as the two above it rather than standing beside them. `xstd::bit_subspan` is the one that stays out of the table, because it narrows a sequence to a window rather than choosing a reading. All of them are described under [retrofitting](#choosing-a-reading-over-blocks) below.
 
@@ -5887,7 +5919,7 @@ The **full** interface of `xstd::bit_fixed_set` is `constexpr`.
 
 Minor **semantic differences** between common functionality in `xstd::bit_fixed_set<N>` and `std::set<int>` are:
 
-- the `xstd::bit_fixed_set` member function `max_size` is `constexpr`, and at a static width its value is a constant expression usable wherever `N` is. It is a **member** rather than a `static` member function because `std::set`'s is a member: each reading takes the shape its own counterpart spells, which is why the sequence reading's middle column has a `static` one instead — `[inplace.vector.capacity]` spells all four of `capacity`, `max_size`, `reserve` and `shrink_to_fit` static there, and `xstd::bit_bounded_vector<N>::capacity()` answers without an object accordingly ([design.md#max-size-is-the-bits](#max-size-is-the-bits)). So for the set reading `s.max_size()` is a constant expression and `decltype(s)::max_size()` does not compile.
+- the `xstd::bit_fixed_set` member function `max_size` is `constexpr`, and at a static width its value is a constant expression usable wherever `N` is. It is a **member** rather than a `static` member function because `std::set`'s is a member: each reading takes the shape its own counterpart spells, which is why the sequence reading's middle column has a `static` one instead — `[inplace.vector.capacity]` spells all four of `capacity`, `max_size`, `reserve` and `shrink_to_fit` static there, and `xstd::bit_inplace_vector<N>::capacity()` answers without an object accordingly ([design.md#max-size-is-the-bits](#max-size-is-the-bits)). So for the set reading `s.max_size()` is a constant expression and `decltype(s)::max_size()` does not compile.
 - the `xstd::bit_fixed_set` iterators are **proxy iterators**, and taking their address yields **proxy references**. The difference should be undetectable. See the FAQ at the end of this document.
 - every key at once is `~xstd::bit_fixed_set<N>()`, the complement of the empty set, where `std::bitset` has `set()`.
 - `xstd::bit_fixed_set<N>` exchanges bits with any field of `N` bits through a **named pair**, the tagged constructor `bit_fixed_set<N>(xstd::from_blocks, b)` and `xstd::bit_convert<B>(s)`, which also crosses with anything else that has bit storage, not through an untagged constructor or a conversion operator. What they admit is named by a concept rather than by a type: an unsigned integer or a sequence of them, whose layout the language and the sequence state between them, or a field of bits that `bits::detail::bit_layout` reads on `std::bit_cast`'s terms, trivially copyable on a little-endian target with room for `N` bits — so `std::bitset<N>` rides in on the same rule as `unsigned long long`, and a big-endian target or a type too small for `N` fails to compile rather than converting quietly. The widths are the same `N` and a static width is a capacity under this reading, so position `n` here is bit `n` there: nothing truncates, nothing grows, nothing throws, and the round trip is the identity. It is `constexpr` at every width, and a copy rather than a walk over positions.
@@ -6026,7 +6058,7 @@ auto b = a
 ### Bit-layout
 
 **Q**: How is `xstd::bit_fixed_set` implemented?  
-**A**: `bit_fixed_set` uses a `std::array` of unsigned integers, so its storage goes wherever the object does. That is true of the static-width column only: the bounded column holds a `std::inplace_vector` or a `boost::container::static_vector` inline, and the dynamic column a `std::vector`. All three are the same storage vehicle over a different container, which is an implementation detail rather than a name you reach for.
+**A**: `bit_fixed_set` uses a `std::array` of unsigned integers, so its storage goes wherever the object does. That is true of the static-width column only: the inplace column holds a `std::inplace_vector` or a `boost::container::static_vector` inline, and the dynamic column a `std::vector`. All three are the same storage vehicle over a different container, which is an implementation detail rather than a name you reach for.
 
 **Q**: How is a set value mapped onto the array's bit layout?  
 **A**: Position `n` is bit `n % W` of block `n / W`, for a block of `W` bits. So the **least** significant bit of the first array block maps onto set value `0`, and the most significant bit of the last array block onto set value `N - 1`. That is the conventional layout: `boost::dynamic_bitset` and the mainstream `std::bitset` and `std::vector<bool>` implementations all lay their bits out the same way.
@@ -6111,7 +6143,7 @@ and `+`, which prefix codes, tries, CIDR prefixes and k-mers ask of a run of bit
 reading's algorithms, `xstd::bit_find` among them ([algorithms-not-members](#algorithms-not-members)), and calls
 its word-parallel search as an algorithm rather than owning it. The decisions already taken:
 
-- **Five names, one per column:** `bit_fixed_string<N>`, `bit_bounded_string<N>`, `bit_small_string<N>`,
+- **Five names, one per column:** `bit_fixed_string<N>`, `bit_inplace_string<N>`, `bit_small_string<N>`,
   `bit_string` and the view `bit_string_view`, on one `string_adaptor` with no window parameter. A borrowed string
   is always windowed, because `remove_prefix` and `remove_suffix` change the view in place; an owned one never is.
   The iterator and reference are member templates of the adaptor over the character type, as the other readings
@@ -6149,9 +6181,9 @@ its word-parallel search as an algorithm rather than owning it. The decisions al
   `"0110"_bs` is a `bit_string` and `"0110"_bsv` a `bit_string_view` of static extent 4 into the template
   parameter object, both validated at compile time, and a `bit_fixed_string` template parameter makes
   `xstd::bit_search<"1011">(text)` a compile-time pattern without a suffix.
-- **`[string.capacity]` decides capacity in every column**, not the sequence row's bounded rules: the bounded string
+- **`[string.capacity]` decides capacity in every column**, not the sequence row's inplace rules: the inplace string
   throws `std::length_error` past `N`, as `boost::static_string<N>` does, and has no `try_` or `unchecked_` doors.
-  `+` on two bounded strings returns `bit_bounded_string<N + M>`, as Boost, Folly and P3094 all do, and never
+  `+` on two inplace strings returns `bit_inplace_string<N + M>`, as Boost, Folly and P3094 all do, and never
   throws; `+=` and `append` keep the capacity. A smaller capacity converts implicitly and a larger one explicitly,
   checked. The small and dynamic strings keep `std::string`'s `+`.
 - **Declined:** `c_str` and `data`, a bit having no address and two symbols no terminator;
@@ -6176,9 +6208,9 @@ algorithm taking a sequence takes a string. A sequence's elements are bools and 
 first header settles whether a sequence algorithm reads a string's bits or the refinement stands aside. A
 multi-bit alphabet, DNA's `"ACGT"` at two bits, is the same template at `K > 1`, addressing its storage as a
 sequence of `K`-bit elements does. The work runs in this order: `bit_char_traits`; the adaptor with
-`bit_string`, `bit_string_view` and the formatters; `bit_fixed_string` and the two literals; the bounded and small
+`bit_string`, `bit_string_view` and the formatters; `bit_fixed_string` and the two literals; the inplace and small
 strings; search, staged as above; compile-time patterns; the audits; and the string row in the README's tables.
-Prior art for the bounded and small strings is in [prior-art-by-column](#prior-art-by-column).
+Prior art for the inplace and small strings is in [prior-art-by-column](#prior-art-by-column).
 
 ### bit-mdspan
 
@@ -6239,7 +6271,7 @@ string row waits for [the-string-reading](#the-string-reading).
 The small column's storage is `boost::container::small_vector`, and `absl::InlinedVector` and `llvm::SmallVector`
 keep up to N elements inline the same way ([#264](https://github.com/rhalbersma/xstd-bits/issues/264)). The
 owners are named by what the user gets, so `bit_small_set` and `bit_small_vector` would keep their names whichever
-implementation backs them. The bounded column picks its storage from what the standard library provides, so every
+implementation backs them. The inplace column picks its storage from what the standard library provides, so every
 translation unit agrees without configuration; several small-vector libraries can be installed at once, so here
 the choice is the user's, and it has to hold across the whole program.
 
@@ -6249,13 +6281,13 @@ library compiles with the same choice. Only the selected implementation's namesp
 `xstd::with_boost`, `with_absl` or `with_llvm`, so users write `xstd::bit_small_set` and the mangled name carries
 the implementation: two libraries built with different settings fail to link rather than violate the ODR. The
 namespaces are not named `boost`, `absl` or `llvm`, which would hide `::boost` inside `xstd`. Boost.Container stays
-required in every case, for the bounded fallback and the `dynamic_bitset` adapter. The container as a template
+required in every case, for the inplace fallback and the `dynamic_bitset` adapter. The container as a template
 parameter, `std::flat_set`'s shape, is not the alternative: [owned-bit-storage](#owned-bit-storage) records why
 each owner fixes its storage by its name.
 
 Open before the first header: `llvm::SmallVector`'s growth path is defined in `LLVMSupport`, a link dependency on
 a header-only library's INTERFACE target, so whether `with_llvm` is worth carrying or Boost and Abseil ship first;
-`llvm::SmallVector` takes no allocator, so its owners have no `allocator_type`, as the fixed and bounded owners
+`llvm::SmallVector` takes no allocator, so its owners have no `allocator_type`, as the fixed and inplace owners
 have none; whether `absl::InlinedVector` and `llvm::SmallVector` satisfy the owned and resizable storage concepts
 as they stand; and each storage's `swap`, moves and `==` deduce different exception specifications, which the
 tests assert per implementation. CI runs one leg per implementation, with vcpkg features for the two new ones.
@@ -6306,7 +6338,7 @@ The spec suite checks values thoroughly and checks that ill-formed uses are reje
   and a run-time check that cannot drift apart. It runs over the deterministic part of each input builder, edge
   cases and width-gated enumerations, while the seeded random part stays at run time; its `_IF` forms gate the
   `static_assert` on the columns usable in a constant expression, the fixed owners, the dynamic ones through a
-  transient allocation, and the bounded ones where `XSTD_BITS_HAS_CONSTEXPR_BOUNDED` is defined. `std::vector<bool>`
+  transient allocation, and the inplace ones where `XSTD_BITS_HAS_CONSTEXPR_INPLACE` is defined. `std::vector<bool>`
   and `std::array` are `constexpr` and serve as models there; `std::set` and `std::flat_set` are not, so the set
   reading asserts each clause's postconditions directly. Enumerations count against `-fconstexpr-steps` and
   `-fconstexpr-ops-limit`, so this driver may need a lower width cap than the run-time one.
@@ -6328,7 +6360,7 @@ Three parts remain:
   silently not taken fails a build rather than only a benchmark.
 - **A doc-drift check**: a script, run in CI beside the include-order checks, that every backticked identifier in
   `README.md` and this file still names something under `include/` or in the standard.
-- **The `doc/audit/` inventories re-run** against the current owners, the bounded ones (a capacity of nought,
+- **The `doc/audit/` inventories re-run** against the current owners, the inplace ones (a capacity of nought,
   `no_blocks`) and the small ones (rebindable and resizable) first.
 
 ### a-module-interface
@@ -6391,7 +6423,7 @@ questions are to be decided before any syntax: whether a partial migration, two 
 is worse than none, and so whether a mechanism that degrades to `assert` is wanted; the C++23 floor, since the
 library compiles as C++23 and contracts in the interface move it; and what the checked build is for, legibility
 alone if contracts are only ever ignored in release and enforced in tests. The pilot is the smallest file,
-`detail/valarray_adaptor.hpp` with four, reviewed for whether it reads better, and the coverage gate needs an
+`bit_valarray/detail/valarray_adaptor.hpp` with four, reviewed for whether it reads better, and the coverage gate needs an
 exclusion for a contract annotation as it has one for an assert at the start of a line
 ([an-assert-begins-its-line](#an-assert-begins-its-line)).
 
@@ -6462,7 +6494,7 @@ of code and stand either way.
 ### prior-art-by-column
 
 The directions above draw on one inventory of third-party containers, classified by behaviour rather than by
-name: **fixed**, an exact size at compile time; **bounded**, a size up to a compile-time capacity with no heap;
+name: **fixed**, an exact size at compile time; **inplace**, a size up to a compile-time capacity with no heap;
 **small**, an inline buffer of `N` and then the heap; **run-time-fixed**, a size chosen once at construction; and
 **dynamic**, a heap that grows ([#324](https://github.com/rhalbersma/xstd-bits/issues/324)). The block choice is
 compared in [block-and-width-transformations](#block-and-width-transformations) and the enum and flag sets in
@@ -6483,7 +6515,7 @@ Bit containers with a selectable or surprising column: `llvm::BitVector` is smal
 | `ctll::fixed_string` (CTRE) | `template <size_t N> struct fixed_string { char32_t content[N]; size_t real_size; }` | a template-argument string; `real_size`, at most `N`, is set at construction | [fixed_string.hpp](https://github.com/hanickadot/compile-time-regular-expressions/blob/62b060684d571df4dfab0fafeeddcf524db7c99e/include/ctll/fixed_string.hpp) |
 | `Poco::Array` | `template <class T, std::size_t N> class Array` | a `std::array` look-alike | [Array.h](https://github.com/pocoproject/poco/blob/9876c10177a29b987a7d8e9c3e15bce25a6e07ec/Foundation/include/Poco/Array.h) |
 
-| bounded | signature | past the capacity | source |
+| inplace | signature | past the capacity | source |
 |---|---|---|---|
 | `boost::container::static_vector` | `template <typename T, std::size_t Capacity, class Options = void> class static_vector` | `std::bad_alloc` by default; with `throw_on_overflow<false>`, an assert and otherwise undefined | [static_vector.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/static_vector.hpp), [options.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/options.hpp) |
 | `boost::static_strings::basic_static_string` | `template <std::size_t N, typename CharT, typename Traits = std::char_traits<CharT>> class basic_static_string` | `std::length_error`, and `std::out_of_range` for a bad position | [static_string.hpp](https://github.com/boostorg/static_string/blob/2ff9d3535e853f4913e85e7fea28f84b04ea5d81/include/boost/static_string/static_string.hpp) |
@@ -6504,42 +6536,42 @@ Bit containers with a selectable or surprising column: `llvm::BitVector` is smal
 | `llvm::SmallSet` | `template <typename T, unsigned N, typename C = std::less<T>> class SmallSet` | a linear `SmallVector`, then **switches structure** to `std::set` | [SmallSet.h](https://github.com/llvm/llvm-project/blob/1e60b852a9d7f73ffed3540e9ea84aefde1b80ab/llvm/include/llvm/ADT/SmallSet.h) |
 | `llvm::SmallPtrSet`, `llvm::SmallDenseSet` | `template <class PtrType, unsigned SmallSize>`, `template <typename ValueT, unsigned InlineBuckets = 4, typename ValueInfoT>` | a linear array or inline buckets, then a heap hash table | [SmallPtrSet.h](https://github.com/llvm/llvm-project/blob/1e60b852a9d7f73ffed3540e9ea84aefde1b80ab/llvm/include/llvm/ADT/SmallPtrSet.h), [DenseSet.h](https://github.com/llvm/llvm-project/blob/1e60b852a9d7f73ffed3540e9ea84aefde1b80ab/llvm/include/llvm/ADT/DenseSet.h) |
 | `absl::InlinedVector` | `template <typename T, size_t N, typename A = std::allocator<T>> class InlinedVector` | `N > 0` enforced | [inlined_vector.h](https://github.com/abseil/abseil-cpp/blob/33a35cf45087dffab22c0c9ae817021a45e93a47/absl/container/inlined_vector.h) |
-| `folly::small_vector` | `template <class Value, std::size_t RequestedMaxInline = 1, class Policy = void> class small_vector` | `std::length_error` past `max_size()`; bounded under a policy, above | [small_vector.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/container/small_vector.h) |
+| `folly::small_vector` | `template <class Value, std::size_t RequestedMaxInline = 1, class Policy = void> class small_vector` | `std::length_error` past `max_size()`; inplace under a policy, above | [small_vector.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/container/small_vector.h) |
 | `folly::basic_fbstring` | `template <typename E, class T = std::char_traits<E>, class A = std::allocator<E>, class Storage = fbstring_core<E>> class basic_fbstring` | 23 `char` in place on a 64-bit target, then a medium and a reference-counted large form | [FBString.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/FBString.h) |
 | `boost::container::small_vector` | `template <class T, std::size_t N, class Allocator = void, class Options = void> class small_vector` | | [small_vector.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/small_vector.hpp) |
 | `boost::container::basic_string` | `template <class CharT, class Traits = std::char_traits<CharT>, class Allocator = void, class Options = void> class basic_string` | inline capacity set by `string_options<inline_chars<K>>`, clamped to 127; the first release shipping it unverified | [string.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/string.hpp) |
-| `eastl::fixed_vector`, `fixed_string`, `fixed_set` | `template <typename T, size_t nodeCount, bool bEnableOverflow = true, typename OverflowAllocator> class fixed_vector`, and alike | `bEnableOverflow` switches small and bounded with one flag; `fixed_set` is a red-black tree over a node pool | [fixed_vector.h](https://github.com/electronicarts/EASTL/blob/e323f67e5d93fdadcd44f7998069d804697b1945/include/EASTL/fixed_vector.h), [fixed_string.h](https://github.com/electronicarts/EASTL/blob/e323f67e5d93fdadcd44f7998069d804697b1945/include/EASTL/fixed_string.h), [fixed_set.h](https://github.com/electronicarts/EASTL/blob/e323f67e5d93fdadcd44f7998069d804697b1945/include/EASTL/fixed_set.h) |
+| `eastl::fixed_vector`, `fixed_string`, `fixed_set` | `template <typename T, size_t nodeCount, bool bEnableOverflow = true, typename OverflowAllocator> class fixed_vector`, and alike | `bEnableOverflow` switches small and inplace with one flag; `fixed_set` is a red-black tree over a node pool | [fixed_vector.h](https://github.com/electronicarts/EASTL/blob/e323f67e5d93fdadcd44f7998069d804697b1945/include/EASTL/fixed_vector.h), [fixed_string.h](https://github.com/electronicarts/EASTL/blob/e323f67e5d93fdadcd44f7998069d804697b1945/include/EASTL/fixed_string.h), [fixed_set.h](https://github.com/electronicarts/EASTL/blob/e323f67e5d93fdadcd44f7998069d804697b1945/include/EASTL/fixed_set.h) |
 | `QVarLengthArray` | `template <class T, qsizetype Prealloc> class QVarLengthArray` | `Prealloc` defaults to 256 | [qvarlengtharray.h](https://github.com/qt/qtbase/blob/8901c04fd61ad269c3730beb5ea502b0587bbce2/src/corelib/tools/qvarlengtharray.h) |
 | `mozilla::Vector` | `template <typename T, size_t MinInlineCapacity = 0, class AllocPolicy = MallocAllocPolicy> class Vector` | out of memory is `append` returning `false`, not an exception | [Vector.h](https://github.com/mozilla-firefox/firefox/blob/d0f18859d99ecb16f4c5d641b35a5f3bdb7b4f36/mfbt/Vector.h) |
 | `gch::small_vector` | `template <typename T, unsigned InlineCapacity, typename Allocator = std::allocator<T>> class small_vector` | `std::length_error` past the maximum size | [small_vector.hpp](https://github.com/gharveymn/small_vector/blob/efcab60e5360b699f45d2a44dcb9a79bba40c356/source/include/gch/small_vector.hpp) |
 | `itlib::small_vector` | `template <typename T, size_t StaticCapacity = 16, size_t RevertToStaticBelow = 0, class Alloc = std::allocator<T>> class small_vector` | returns to the inline buffer below `RevertToStaticBelow` | [small_vector.hpp](https://github.com/iboB/itlib/blob/b7eedccee7590f39f08bf9e414960a7fe854f1ad/include/itlib/small_vector.hpp) |
 | `fmt::basic_memory_buffer` | `template <typename T, size_t SIZE = inline_buffer_size, typename Allocator> class basic_memory_buffer` | `inline_buffer_size = 500` | [format.h](https://github.com/fmtlib/fmt/blob/9197f51593dab5f637454a8889fb9638e737711a/include/fmt/format.h) |
 | `hpx::detail::small_vector` | `template <typename T, std::size_t MinInlineCapacity, typename Allocator = std::allocator<T>> class small_vector` | `MinInlineCapacity <= 127`, the allocator unused | [small_vector.hpp](https://github.com/STEllAR-GROUP/hpx/blob/d4cd4bd5be7a0b123efc9e25f67bdb369db9672f/libs/core/datastructures/include/hpx/datastructures/detail/small_vector.hpp) |
-| `TInlineAllocator`, `TFixedAllocator` (Unreal) | `TArray<T, TInlineAllocator<N>>` | from the public documentation only; the declarations unverified, `TFixedAllocator` believed bounded | [TInlineAllocator](https://docs.unrealengine.com/5.0/en-US/API/Runtime/Core/Containers/TInlineAllocator/ForElementType/InlineData/) |
+| `TInlineAllocator`, `TFixedAllocator` (Unreal) | `TArray<T, TInlineAllocator<N>>` | from the public documentation only; the declarations unverified, `TFixedAllocator` believed inplace | [TInlineAllocator](https://docs.unrealengine.com/5.0/en-US/API/Runtime/Core/Containers/TInlineAllocator/ForElementType/InlineData/) |
 
 | run-time-fixed, and set adaptors over a container | signature | column | source |
 |---|---|---|---|
 | `absl::FixedArray` | `template <typename T, size_t N = kFixedArrayUseDefault, typename A = std::allocator<T>> class FixedArray` | run-time-fixed: inline up to `N`, or `256 / sizeof(T)` by default, else the heap | [fixed_array.h](https://github.com/abseil/abseil-cpp/blob/33a35cf45087dffab22c0c9ae817021a45e93a47/absl/container/fixed_array.h) |
-| `folly::sorted_vector_set`, `small_sorted_vector_set` | `template <class T, class Compare, class Allocator, class GrowthPolicy, class Container = std::vector<T, Allocator>> class sorted_vector_set` | follows `Container`; the alias is small, or bounded under a policy | [sorted_vector_types.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/container/sorted_vector_types.h) |
-| `boost::container::flat_set`, `small_flat_set` | `template <class Key, class Compare, class AllocatorOrContainer> class flat_set` | follows the container; no `static_flat_set` alias, so the bounded one is spelled out | [flat_set.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/flat_set.hpp), [container_fwd.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/container_fwd.hpp) |
+| `folly::sorted_vector_set`, `small_sorted_vector_set` | `template <class T, class Compare, class Allocator, class GrowthPolicy, class Container = std::vector<T, Allocator>> class sorted_vector_set` | follows `Container`; the alias is small, or inplace under a policy | [sorted_vector_types.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/container/sorted_vector_types.h) |
+| `boost::container::flat_set`, `small_flat_set` | `template <class Key, class Compare, class AllocatorOrContainer> class flat_set` | follows the container; no `static_flat_set` alias, so the inplace one is spelled out | [flat_set.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/flat_set.hpp), [container_fwd.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/container_fwd.hpp) |
 | `base::flat_set` (Chromium) | `template <class Key, class Compare = std::less<>, class Container = std::vector<Key>> using flat_set` | dynamic by default; `fixed_flat_set` is its `std::array` form | [flat_set.h](https://github.com/chromium/chromium/blob/ebdf288ea139cbf98e749f5a552083a7e74fde41/base/containers/flat_set.h) |
 | `itlib::flat_set` | `template <typename Key, typename Compare, typename Container = std::vector<Key>> class flat_set` | follows `Container` | [flat_set.hpp](https://github.com/iboB/itlib/blob/b7eedccee7590f39f08bf9e414960a7fe854f1ad/include/itlib/flat_set.hpp) |
 
 Not containers: `frozen::basic_string` is a `constexpr` view, comparable to `std::string_view`; POCO's Foundation
-has no small, bounded or bit container; Bitsery serializes and defines none; Williams' `enable_bitmask_operators`
+has no small, inplace or bit container; Bitsery serializes and defines none; Williams' `enable_bitmask_operators`
 declares operator templates in the global namespace, which ADL does not search for an enumeration in any other
 namespace, so an operator in the calling namespace hides them; Godot's `BitField<T>` is a typed flag word.
 
-**Names that collide.** "Fixed" means bounded or small as often as it means an exact size: `eastl::fixed_vector`,
-`fixed_string` and `fixed_set` are small by default and bounded without overflow, and `eastl::fixed_bitvector` is
-small; `absl::FixedArray` is run-time-fixed; `folly::FixedString` and Godot's `FixedVector` are bounded;
+**Names that collide.** "Fixed" means inplace or small as often as it means an exact size: `eastl::fixed_vector`,
+`fixed_string` and `fixed_set` are small by default and inplace without overflow, and `eastl::fixed_bitvector` is
+small; `absl::FixedArray` is run-time-fixed; `folly::FixedString` and Godot's `FixedVector` are inplace;
 `ctll::fixed_string<N>` stores at most `N`; only Chromium's `fixed_flat_set` is fixed in this library's sense.
-"Static" means bounded in `boost::container::static_vector`, `boost::static_string` and `itlib::static_vector`.
+"Static" means inplace in `boost::container::static_vector`, `boost::static_string` and `itlib::static_vector`.
 Boost.Container uses "inplace" only for the `inplace_alignment` option. `llvm::BitVector` has no "small" in its
 name and is small all the same, through its `SmallVector`; `llvm::SmallBitVector` is small at a fixed 57 bits;
-`llvm::SmallSet` is small by structure rather than storage; and `folly::small_vector` turns bounded under a policy.
-Hence names here say what the user gets, `fixed` and `bounded`, rather than where the blocks live
-([the-public-names](#the-public-names)).
+`llvm::SmallSet` is small by structure rather than storage; and `folly::small_vector` turns inplace under a policy.
+Hence names here take the standard's word where it has one, `inplace` from `std::inplace_vector`, and say what
+the user gets where it has none, `fixed` ([the-public-names](#the-public-names)).
 
 **SDSL, the encoding axis.** SDSL ([xxsds/sdsl-lite](https://github.com/xxsds/sdsl-lite), the maintained fork of
 Simon Gog's original) is a family of types over bit vectors that varies a different axis: this library varies the

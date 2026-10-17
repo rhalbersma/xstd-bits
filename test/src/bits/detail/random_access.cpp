@@ -11,7 +11,7 @@
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/value_reference.hpp>                 // value_reference
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
+#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
 #include <xstd/bits/bit_span.hpp>                   // bit_span
 #include <xstd/bits/bit_subspan.hpp>                // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector
@@ -417,7 +417,7 @@ BOOST_AUTO_TEST_CASE(EverySequenceClosesItsProxyPair)
 {
         static_assert(test::closed_proxies<xstd::basic_bit_array<std::uint64_t, 65>>);
         static_assert(test::closed_proxies<xstd::basic_bit_vector<std::uint64_t>>);
-        static_assert(test::closed_proxies<xstd::basic_bit_bounded_vector<std::uint64_t, 65>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_inplace_vector<std::uint64_t, 65>>);
         static_assert(test::closed_proxies<xstd::basic_bit_small_vector<std::uint64_t, 65>>);
         static_assert(test::closed_proxies<xstd::bit_span<std::array<std::uint64_t, 2>>>);
         static_assert(test::closed_proxies<xstd::bit_span<std::array<std::uint64_t, 2> const>>);

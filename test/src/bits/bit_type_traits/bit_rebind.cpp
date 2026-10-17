@@ -4,12 +4,12 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array
-#include <xstd/bits/bit_bounded_set.hpp>            // basic_bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp>         // basic_bit_bounded_vector
-#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
-#include <xstd/bits/bit_fixed_set.hpp>              // basic_bit_fixed_set
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_set, bit_set
-#include <xstd/bits/bit_set_view.hpp>               // bit_set_view
+#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
 #include <xstd/bits/bit_type_traits/bit_rebind.hpp> // bit_rebind
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
@@ -41,9 +41,9 @@ concept rebinds = requires { typename xstd::bit_rebind<Block, W>; };
 BOOST_AUTO_TEST_CASE(AFixedWidthOwnerKeepsItsWidth)
 {
         static_assert(std::is_same_v<xstd::bit_rebind<std::uint8_t, xstd::basic_bit_array<std::uint64_t, 9>>, xstd::basic_bit_array<std::uint8_t, 9>>);
-        static_assert(std::is_same_v<xstd::bit_rebind<std::uint16_t, xstd::basic_bit_bounded_vector<std::uint64_t, 9>>, xstd::basic_bit_bounded_vector<std::uint16_t, 9>>);
+        static_assert(std::is_same_v<xstd::bit_rebind<std::uint16_t, xstd::basic_bit_inplace_vector<std::uint64_t, 9>>, xstd::basic_bit_inplace_vector<std::uint16_t, 9>>);
         static_assert(std::is_same_v<xstd::bit_rebind<std::uint32_t, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>>, xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 9, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the comparator the type names
-        static_assert(std::is_same_v<xstd::bit_rebind<std::uint8_t, xstd::basic_bit_bounded_set<std::size_t, std::uint64_t, 9>>, xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 9>>);
+        static_assert(std::is_same_v<xstd::bit_rebind<std::uint8_t, xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 9>>, xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 9>>);
         static_assert(std::is_same_v<xstd::bit_rebind<std::uint64_t, xstd::basic_bit_array<std::uint64_t, 9>>, xstd::basic_bit_array<std::uint64_t, 9>>);
         BOOST_CHECK(true);
 }

@@ -5,10 +5,10 @@
 
 #include <test/whole_blocks.hpp>                         // whole_blocks
 #include <xstd/bits/bit_array.hpp>                       // bit_array
-#include <xstd/bits/bit_bounded_set.hpp>                 // basic_bit_bounded_set, bit_bounded_set
-#include <xstd/bits/bit_bounded_vector.hpp>              // bit_bounded_vector
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp> // bit_convertible_to
-#include <xstd/bits/bit_set.hpp>                         // basic_bit_set, bit_set
+#include <xstd/bits/bit_inplace_vector.hpp>              // bit_inplace_vector
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>         // basic_bit_inplace_set, bit_inplace_set
+#include <xstd/bits/bit_set/bit_set.hpp>                 // basic_bit_set, bit_set
 #include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector, bit_vector
 #include <xstd/bits/ext/boost/dynamic_bitset.hpp>        // bit_convert
 #include <boost/container/small_vector.hpp>              // small_vector
@@ -120,17 +120,17 @@ BOOST_AUTO_TEST_CASE(BothDirectionsAreBitConvertible)
         BOOST_CHECK(true);
 }
 
-// A bounded target that cannot hold the source throws what its own growth throws.
-BOOST_AUTO_TEST_CASE(ABoundedTargetTooSmallThrowsWhatItsGrowthThrows)
+// An inplace target that cannot hold the source throws what its own growth throws.
+BOOST_AUTO_TEST_CASE(AInplaceTargetTooSmallThrowsWhatItsGrowthThrows)
 {
-        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_bounded_vector<100>>(boost::dynamic_bitset<>(101))), std::bad_alloc);
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_inplace_vector<100>>(boost::dynamic_bitset<>(101))), std::bad_alloc);
 
         // Blocks past a set's capacity drop, of the target's block width or not, and a key among them throws.
-        BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_bounded_set<100>>(make<std::size_t>(300, {5}))) == (std::vector<std::size_t>{5}));
-        BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_bounded_set<100>>(make<std::uint8_t>(300, {5}))) == (std::vector<std::size_t>{5}));
-        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_bounded_set<std::size_t, std::uint8_t, 100>>(make<std::uint8_t>(300, {5}))) == (std::vector<std::size_t>{5}));
-        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_bounded_set<100>>(make<std::size_t>(300, {250}))), std::bad_alloc);
-        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::basic_bit_bounded_set<std::size_t, std::uint16_t, 100>>(make<std::uint8_t>(300, {250}))), std::bad_alloc);
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_inplace_set<100>>(make<std::size_t>(300, {5}))) == (std::vector<std::size_t>{5}));
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_inplace_set<100>>(make<std::uint8_t>(300, {5}))) == (std::vector<std::size_t>{5}));
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 100>>(make<std::uint8_t>(300, {5}))) == (std::vector<std::size_t>{5}));
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_inplace_set<100>>(make<std::size_t>(300, {250}))), std::bad_alloc);
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::basic_bit_inplace_set<std::size_t, std::uint16_t, 100>>(make<std::uint8_t>(300, {250}))), std::bad_alloc);
 }
 
 // Boost hands none of its storage out, so an rvalue is copied from and keeps its bits.

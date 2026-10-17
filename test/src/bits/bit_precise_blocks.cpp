@@ -3,19 +3,19 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit.hpp>             // bit_convert
-#include <xstd/bits/bit_algorithm.hpp>   // bit_count, bit_reverse, bit_rotate
-#include <xstd/bits/bit_array.hpp>       // basic_bit_array
-#include <xstd/bits/bit_fixed_set.hpp>   // basic_bit_fixed_set
-#include <xstd/bits/bit_vector.hpp>      // basic_bit_vector
-#include <xstd/ints/cstdint/bit_int.hpp> // bit_uint
-#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <cstddef>                       // size_t
-#include <cstdint>                       // uint8_t
-#include <functional>                    // hash
-#include <ranges>                        // iota
-#include <tuple>                         // tuple
-#include <type_traits>                   // integral_constant
+#include <xstd/bits/bit.hpp>                   // bit_convert
+#include <xstd/bits/bit_algorithm.hpp>         // bit_count, bit_reverse, bit_rotate
+#include <xstd/bits/bit_array.hpp>             // basic_bit_array
+#include <xstd/bits/bit_set/bit_fixed_set.hpp> // basic_bit_fixed_set
+#include <xstd/bits/bit_vector.hpp>            // basic_bit_vector
+#include <xstd/ints/cstdint/bit_int.hpp>       // bit_uint
+#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <cstddef>                             // size_t
+#include <cstdint>                             // uint8_t
+#include <functional>                          // hash
+#include <ranges>                              // iota
+#include <tuple>                               // tuple
+#include <type_traits>                         // integral_constant
 
 BOOST_AUTO_TEST_SUITE(BitPreciseBlocks)
 

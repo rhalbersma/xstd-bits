@@ -6,7 +6,7 @@
 #ifndef TEST_CONTAINER_ALLOCATOR_HPP
 #define TEST_CONTAINER_ALLOCATOR_HPP
 
-#include <xstd/bits/bit_key_mapping.hpp>            // bit_key_mapping
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
 #include <cstddef>                                  // size_t

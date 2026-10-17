@@ -10,7 +10,7 @@
 #include <xstd/bits/bit_span.hpp>   // bit_span
 #include <boost/test/unit_test.hpp> // BOOST_CHECK_EQUAL
 #include <algorithm>                // equal, lexicographical_compare, lexicographical_compare_three_way
-#include <compare>                  // is_gt, is_lt, strong_ordering
+#include <compare>                  // is_gt, is_lt
 #include <cstddef>                  // size_t
 #include <ranges>                   // iota
 #include <vector>                   // vector

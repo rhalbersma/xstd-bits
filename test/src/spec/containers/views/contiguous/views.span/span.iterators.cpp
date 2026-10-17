@@ -11,7 +11,7 @@
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                    // array
 #include <concepts>                 // convertible_to, default_initializable, equality_comparable, same_as
-#include <cstddef>                  // ptrdiff_t, size_t
+#include <cstddef>                  // ptrdiff_t
 #include <iterator>                 // contiguous_iterator, iter_difference_t, iter_reference_t, iter_value_t, random_access_iterator
 #include <span>                     // dynamic_extent
 #include <type_traits>              // is_const_v

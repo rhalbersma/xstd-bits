@@ -5,10 +5,10 @@
 
 #include <xstd/bits/bit/bit_convert.hpp>                // bit_convert
 #include <xstd/bits/bit_array.hpp>                      // bit_array
-#include <xstd/bits/bit_fixed_set.hpp>                  // basic_bit_fixed_set, bit_fixed_set
-#include <xstd/bits/bit_flag_mapping.hpp>               // bit_flag_mapping
-#include <xstd/bits/bit_flag_set.hpp>                   // bit_flag_set
-#include <xstd/bits/bit_set.hpp>                        // basic_bit_set, bit_set
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>          // basic_bit_fixed_set, bit_fixed_set
+#include <xstd/bits/bit_set/bit_flag_mapping.hpp>       // bit_flag_mapping
+#include <xstd/bits/bit_set/bit_flag_set.hpp>           // bit_flag_set
+#include <xstd/bits/bit_set/bit_set.hpp>                // basic_bit_set, bit_set
 #include <xstd/bits/bit_type_traits/bit_align.hpp>      // bit_align
 #include <xstd/bits/bit_type_traits/bit_fast.hpp>       // bit_fast
 #include <xstd/bits/bit_type_traits/bit_least.hpp>      // bit_least

@@ -11,7 +11,7 @@
 #include <boost/test/unit_test.hpp>     // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_NO_THROW
 #include <algorithm>                    // adjacent_find, all_of, copy, equal_range, includes, is_sorted, lexicographical_compare_three_way, max, set_difference, set_intersection, set_symmetric_difference, set_union, sort
 #include <compare>                      // is_gteq, is_gt, is_lteq, is_lt, strong_ordering
-#include <concepts>                     // convertible_to, default_initializable, equality_comparable, integral, same_as, unsigned_integral
+#include <concepts>                     // convertible_to, default_initializable, equality_comparable, integral, same_as
 #include <cstddef>                      // ptrdiff_t
 #include <functional>                   // greater, hash, identity, less
 #include <initializer_list>             // initializer_list

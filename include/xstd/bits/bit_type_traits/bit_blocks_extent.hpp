@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_BIT_TYPE_TRAITS_BIT_BLOCKS_EXTENT_HPP
 #define XSTD_BITS_BIT_TYPE_TRAITS_BIT_BLOCKS_EXTENT_HPP
 
-#include <xstd/bits/bit_concepts/bit_blocks.hpp> // bit_blocks
-#include <xstd/bits/detail/blocks_extent.hpp>    // blocks_extent_v
-#include <cstddef>                               // size_t
-#include <type_traits>                           // remove_cv_t
+#include <xstd/bits/bit_concepts/bit_blocks.hpp>              // bit_blocks
+#include <xstd/bits/bit_type_traits/detail/blocks_extent.hpp> // blocks_extent_v
+#include <cstddef>                                            // size_t
+#include <type_traits>                                        // remove_cv_t
 
 namespace xstd {
 

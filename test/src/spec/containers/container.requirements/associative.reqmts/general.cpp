@@ -3,24 +3,24 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/flat_set.hpp>        // is_flat_set
-#include <test/for_each_type.hpp>   // for_each_type
-#include <test/set/primitives.hpp>  // constructor, key_order, mem_clear, mem_contains, mem_count, mem_emplace, mem_emplace_hint, mem_equal_range, mem_erase, mem_erase_mutable, mem_find, mem_insert, mem_lower_bound, mem_upper_bound, nested_types, no_heterogeneous_members, op_assign, same_order
-#include <test/spec/input.hpp>      // context, with_initializer_list
-#include <test/spec/rejection.hpp>  // has_assign_list, has_clear, has_emplace, has_emplace_hint, has_erase_at, has_erase_key, has_erase_range, has_insert_at, has_insert_iterators, has_insert_key, has_insert_list, has_insert_range
-#include <test/spec/set.hpp>        // all, const_views, key_lists, keyed_sets, keyed_sets_with_singletons, listed_sets, owners, sets, sets_with_doubletons, views
-#include <xstd/bits/bit_set.hpp>    // basic_bit_set, bit_set
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <concepts>                 // same_as
-#include <cstddef>                  // size_t
-#include <functional>               // less
-#include <initializer_list>         // initializer_list
-#include <iterator>                 // prev
-#include <memory>                   // allocator
-#include <ranges>                   // from_range
-#include <set>                      // set
-#include <utility>                  // as_const, pair
-#include <version>                  // IWYU pragma: keep; __cpp_lib_containers_ranges
+#include <test/flat_set.hpp>             // is_flat_set
+#include <test/for_each_type.hpp>        // for_each_type
+#include <test/set/primitives.hpp>       // constructor, key_order, mem_clear, mem_contains, mem_count, mem_emplace, mem_emplace_hint, mem_equal_range, mem_erase, mem_erase_mutable, mem_find, mem_insert, mem_lower_bound, mem_upper_bound, nested_types, no_heterogeneous_members, op_assign, same_order
+#include <test/spec/input.hpp>           // context, with_initializer_list
+#include <test/spec/rejection.hpp>       // has_assign_list, has_clear, has_emplace, has_emplace_hint, has_erase_at, has_erase_key, has_erase_range, has_insert_at, has_insert_iterators, has_insert_key, has_insert_list, has_insert_range
+#include <test/spec/set.hpp>             // all, const_views, key_lists, keyed_sets, keyed_sets_with_singletons, listed_sets, owners, sets, sets_with_doubletons, views
+#include <xstd/bits/bit_set/bit_set.hpp> // basic_bit_set, bit_set
+#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <concepts>                      // same_as
+#include <cstddef>                       // size_t
+#include <functional>                    // less
+#include <initializer_list>              // initializer_list
+#include <iterator>                      // prev
+#include <memory>                        // allocator
+#include <ranges>                        // from_range
+#include <set>                           // set
+#include <utility>                       // as_const, pair
+#include <version>                       // IWYU pragma: keep; __cpp_lib_containers_ranges
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)

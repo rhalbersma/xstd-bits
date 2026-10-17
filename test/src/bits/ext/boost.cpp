@@ -6,13 +6,13 @@
 #include <test/sequence/concepts.hpp>                // bit_sequence
 #include <test/set/concepts.hpp>                     // bit_set
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>     // bit_blocks
-#include <xstd/bits/detail/owned_bit_blocks.hpp>     // owned_bit_blocks
-#include <xstd/bits/detail/resizable_bit_blocks.hpp> // resizable_bit_blocks
-#include <xstd/bits/bit_key_mapping.hpp>             // bit_key_mapping
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>     // bit_key_mapping
+#include <xstd/bits/bit_set/detail/set_adaptor.hpp>  // set_adaptor
 #include <xstd/bits/detail/bit_block_container.hpp>  // bit_block_container
 #include <xstd/bits/detail/num_blocks.hpp>           // num_blocks_v
+#include <xstd/bits/detail/owned_bit_blocks.hpp>     // owned_bit_blocks
 #include <xstd/bits/detail/ownership.hpp>            // owned_bits_t
-#include <xstd/bits/detail/set_adaptor.hpp>          // set_adaptor
+#include <xstd/bits/detail/resizable_bit_blocks.hpp> // resizable_bit_blocks
 #include <xstd/bits/ext/boost.hpp>                   // bit_small_set, bit_small_vector
 #include <boost/container/new_allocator.hpp>         // new_allocator
 #include <boost/container/small_vector.hpp>          // small_vector

@@ -10,7 +10,7 @@
 #include <xstd/bits/detail/ownership.hpp>               // storage_access
 #include <cassert>                                      // assert
 #include <cstddef>                                      // size_t
-#include <ranges>                                       // begin, borrowed_subrange_t, end, iterator_t, size
+#include <ranges>                                       // begin, borrowed_subrange_t, end, iterator_t
 
 namespace xstd {
 

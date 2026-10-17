@@ -3,15 +3,15 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_set.hpp>      // bit_set
-#include <xstd/bits/bit_span.hpp>     // bit_span
-#include <xstd/bits/bit_valarray.hpp> // bit_valarray
-#include <xstd/bits/bit_vector.hpp>   // bit_vector
-#include <array>                      // array
-#include <csignal>                    // SIGABRT, signal
-#include <cstdlib>                    // _Exit, _set_abort_behavior, EXIT_FAILURE, EXIT_SUCCESS
-#include <string_view>                // string_view
-#include <utility>                    // pair
+#include <xstd/bits/bit_set/bit_set.hpp>           // bit_set
+#include <xstd/bits/bit_span.hpp>                  // bit_span
+#include <xstd/bits/bit_valarray/bit_valarray.hpp> // bit_valarray
+#include <xstd/bits/bit_vector.hpp>                // bit_vector
+#include <array>                                   // array
+#include <csignal>                                 // SIGABRT, signal
+#include <cstdlib>                                 // _Exit, _set_abort_behavior, EXIT_FAILURE, EXIT_SUCCESS
+#include <string_view>                             // string_view
+#include <utility>                                 // pair
 
 namespace {
 

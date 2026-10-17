@@ -12,7 +12,7 @@
 #include <algorithm>                 // equal, lexicographical_compare_three_way, min_element
 #include <compare>                   // is_eq, strong_ordering
 #include <concepts>                  // convertible_to, destructible, same_as, signed_integral, unsigned_integral
-#include <cstddef>                   // ptrdiff_t, size_t
+#include <cstddef>                   // ptrdiff_t
 #include <iterator>                  // bidirectional_iterator, distance, forward_iterator, indirectly_writable, iter_difference_t, iter_value_t, next, random_access_iterator, reverse_iterator
 #include <limits>                    // numeric_limits
 #include <type_traits>               // make_unsigned_t

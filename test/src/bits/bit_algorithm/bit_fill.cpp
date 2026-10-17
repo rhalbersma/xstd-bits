@@ -3,20 +3,20 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>         // bools_of, for_each_sequence, patterned, sequences, writes_as_model
-#include <test/for_each_type.hpp>               // for_each_type
-#include <xstd/bits/bit_algorithm/bit_fill.hpp> // bit_fill
-#include <xstd/bits/bit_array.hpp>              // basic_bit_array, bit_array
-#include <xstd/bits/bit_fixed_set.hpp>          // bit_fixed_set
-#include <xstd/bits/bit_span.hpp>               // bit_span
-#include <xstd/bits/bit_valarray.hpp>           // bit_valarray
-#include <boost/test/unit_test.hpp>             // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                            // fill
-#include <concepts>                             // same_as
-#include <cstdint>                              // uint8_t
-#include <ranges>                               // dangling, end
-#include <utility>                              // declval, forward
-#include <vector>                               // vector
+#include <test/algorithm/sequences.hpp>            // bools_of, for_each_sequence, patterned, sequences, writes_as_model
+#include <test/for_each_type.hpp>                  // for_each_type
+#include <xstd/bits/bit_algorithm/bit_fill.hpp>    // bit_fill
+#include <xstd/bits/bit_array.hpp>                 // basic_bit_array, bit_array
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>     // bit_fixed_set
+#include <xstd/bits/bit_span.hpp>                  // bit_span
+#include <xstd/bits/bit_valarray/bit_valarray.hpp> // bit_valarray
+#include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                               // fill
+#include <concepts>                                // same_as
+#include <cstdint>                                 // uint8_t
+#include <ranges>                                  // dangling, end
+#include <utility>                                 // declval, forward
+#include <vector>                                  // vector
 
 BOOST_AUTO_TEST_SUITE(BitFill)
 

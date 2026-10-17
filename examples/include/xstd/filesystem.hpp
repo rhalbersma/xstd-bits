@@ -6,8 +6,8 @@
 #ifndef XSTD_FILESYSTEM_HPP
 #define XSTD_FILESYSTEM_HPP
 
-#include <xstd/bits/bit_flag_set.hpp> // bit_flag_set
-#include <filesystem>                 // perms
+#include <xstd/bits/bit_set/bit_flag_set.hpp> // bit_flag_set
+#include <filesystem>                         // perms
 
 // std::filesystem::perms as a flag type: the same constants, the set vocabulary on top, and nothing else re-exported.
 namespace xstd::filesystem {

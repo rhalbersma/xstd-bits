@@ -6,11 +6,11 @@
 #ifndef TEST_SET_ORDER_ISOMORPHISM_HPP
 #define TEST_SET_ORDER_ISOMORPHISM_HPP
 
-#include <xstd/bits/detail/is_key.hpp> // is_key
-#include <algorithm>                   // all_of
-#include <concepts>                    // totally_ordered
-#include <cstddef>                     // size_t
-#include <ranges>                      // iota
+#include <xstd/bits/bit_set/detail/is_key.hpp> // is_key
+#include <algorithm>                           // all_of
+#include <concepts>                            // totally_ordered
+#include <cstddef>                             // size_t
+#include <ranges>                              // iota
 
 // What makes a mapped set a std::set: its mapping is an order isomorphism from its keys onto the first positions.
 namespace test::set {
