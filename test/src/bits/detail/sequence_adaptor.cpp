@@ -21,6 +21,7 @@
 #include <algorithm>                                // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
 #include <array>                                    // array
 #include <bitset>                                   // bitset
+#include <compare>                                  // three_way_comparable
 #include <concepts>                                 // copyable, equality_comparable, regular, same_as, totally_ordered
 #include <cstddef>                                  // ptrdiff_t, size_t
 #include <cstdint>                                  // uint8_t, uint32_t, uint64_t
