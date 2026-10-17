@@ -29,15 +29,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install the stable rung
+      - name: Install the toolchain
         run: tools/setup-toolchain.sh
 
       - name: Build every test
         run: |
+          # Clang 22 on GCC 15's libstdc++, its own rung's, rather than the newest GCC the toolchain installs.
           ~/.local/bin/cmake -S . -B build/mutate -G Ninja -DCMAKE_CXX_COMPILER=clang++-22 -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS=--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/15 \
             -DCMAKE_CXX_FLAGS_DEBUG=-O0 -DBUILD_TESTING=ON -DXSTD_BITS_WARNINGS_AS_ERRORS=OFF \
-            -DXSTD_BITS_BUILD_BENCHMARKS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-            -DCMAKE_PREFIX_PATH="$HOME/.local/opt/boost-1.92.0"
+            -DXSTD_BITS_BUILD_BENCHMARKS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           mapfile -t tests < <(ninja -C build/mutate -t targets all | sed -n 's/^\(test\.[^:]*\): phony$/\1/p')
           ninja -C build/mutate "${tests[@]}"
 

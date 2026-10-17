@@ -4,31 +4,24 @@
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
 
-# Puts this repository's stable rung on a fresh container, for a Claude Code cloud environment's setup script or
-# for any Ubuntu 24.04 box. Noble ships GCC 13 and clang 18: GCC 13 rejects -std=c++2c outright, so without this
-# there is no local compiler that can build the library at all, and the apt clang-format reports files that are
-# clean against .clang-format as dirty.
+# Brings a fresh container as close to the GitHub Actions ladders as an Ubuntu 24.04 box gets, for a Claude Code
+# cloud environment's setup script or for any noble machine. Noble ships GCC 13, clang 18, CMake 3.28 and Boost
+# 1.83: GCC 13 rejects -std=c++2c outright, CMakeLists.txt asks for CMake 3.30, the apt clang-format reports files
+# that are clean against .clang-format as dirty, and Boost 1.83 predates Boost.Hash2, which the library's headers
+# include.
 #
-# Installed by default, matching the `stable` column of the README's matrix:
+# Installed, matching the three rungs of the README's matrix and the Boost CI resolves:
 #
-#   GCC 15, clang 22, libc++ 22, range-v3 and Google Benchmark from apt, clang-format 22 and CMake 4.4 from PyPI, and
-#   Boost 1.92 built from its CMake release archive into XSTD_BOOST_PREFIX (default ~/.local/opt/boost-1.92.0).
+#   GCC 15, 16 and the trunk snapshot as g++-17; clang 22, 23 and trunk as clang++-24, with clang-tidy for each;
+#   clang-format 22, the format gate's one rung; libc++ 22; GCC 15's 32-bit multilib for the i686 leg; range-v3 and
+#   Google Benchmark from apt; CMake and the same clang-format 22 from PyPI; and Boost 1.92's Container,
+#   Dynamic Bitset, Hash2, Test and Unordered, built from Boost's release tarball by GCC 15 into /usr/local.
 #
-# Set XSTD_TOOLCHAIN_FULL=1 to add GCC 16, the qualification rung. Its libstdc++ is the oldest carrying
-# <inplace_vector>, so a repository with a C++26 leg needs it to reach that leg locally.
-#
-# Boost is the version CI's vcpkg resolves, not noble's 1.83, which predates Boost.Hash2 and answers questions about
-# a Boost that CI never sees. It comes from the release's own CMake archive rather than through vcpkg, because a
-# Claude Code cloud session's GitHub proxy serves release assets and git clones of public repositories but refuses
-# their source archives, and every vcpkg Boost port downloads one. Boost's CMake build, unlike b2, installs a CMake
-# package for each header-only library too, Boost.Hash2 among them. It builds once: re-running finds the install
-# and skips it. A configure then points at the prefix:
-#
-#   cmake -S . -B build -DCMAKE_PREFIX_PATH="${XSTD_BOOST_PREFIX:-$HOME/.local/opt/boost-1.92.0}"
-#
-# Building Boost takes a few minutes on a fresh container; set XSTD_TOOLCHAIN_BOOST=0 to skip it when only
-# syntax-only checks, clang-tidy or the format gate are wanted. CMake still fetches any sibling xstd repository
-# at configure time.
+# A compiler on libc++, on the trunk snapshot's libstdc++ or on a 32-bit target links a Boost.Test of its own, which
+# boost-test.sh beside this script builds; CI gets one from vcpkg, which builds Boost with the compiler under test.
+# The unit tests, clang-tidy and the format gate then all run locally, and ci-local.sh beside this script runs them
+# leg by leg. CMake fetches xstd-ints, xstd-misc and the test suite's pre-release dependencies, such as Boost.Int128,
+# from GitHub at configure time.
 
 set -euo pipefail
 
@@ -43,17 +36,28 @@ fi
 readonly CLANG_VERSION=22
 readonly GCC_VERSION=15
 
-# The release CI's vcpkg resolves, and the digest of its CMake archive, which the release does not publish itself.
+# The rungs above the stable one, as the shared workflows' toolchain table names them.
+readonly GCC_QUALIFICATION_VERSION=16
+readonly GCC_TRUNK_VERSION=17
+readonly CLANG_QUALIFICATION_VERSION=23
+readonly CLANG_TRUNK_VERSION=24
+
+# The Boost that vcpkg resolves for CI, pinned by the SHA-256 Boost publishes beside the tarball.
 readonly BOOST_VERSION=1.92.0
-readonly BOOST_SHA256=f51707c27359a0df0cac1beada86de31bb5eed5e8285592dadec384df99c2984
-BOOST_PREFIX="${XSTD_BOOST_PREFIX:-${HOME:-/root}/.local/opt/boost-${BOOST_VERSION}}"
-readonly BOOST_PREFIX
+readonly BOOST_SHA256=9bed76128d4e46755dbe818487788c6fceb6f72b378f4daa49b7e1e600d9088d
+readonly BOOST_PREFIX=/usr/local
+
+# vcpkg.json's Boost libraries, the test feature's included, and what Boost's CMake build adds for them.
+readonly BOOST_LIBRARIES="container;dynamic_bitset;hash2;test;unordered"
 
 # apt.llvm.org for clang, the toolchain PPA for a GCC newer than noble's. The PPA signs with RSA-1024, so apt
 # warns about a weak algorithm on every update; that is the archive's key, not a fault in this script.
 curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | $SUDO gpg --batch --yes --dearmor -o /usr/share/keyrings/llvm.gpg
-echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-${CLANG_VERSION} main" \
-        | $SUDO tee /etc/apt/sources.list.d/llvm.list > /dev/null
+{
+        echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-${CLANG_VERSION} main"
+        echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble-${CLANG_QUALIFICATION_VERSION} main"
+        echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] https://apt.llvm.org/noble/ llvm-toolchain-noble main"
+} | $SUDO tee /etc/apt/sources.list.d/llvm.list > /dev/null
 
 curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x60c317803a41ba51845e371a1e9377a2ba9ef27f" \
         | $SUDO gpg --batch --yes --dearmor -o /usr/share/keyrings/ubuntu-toolchain.gpg
@@ -66,48 +70,71 @@ packages=(
         "g++-${GCC_VERSION}"
         "clang-${CLANG_VERSION}"
         "clang-tidy-${CLANG_VERSION}"
+        "clang-format-${CLANG_VERSION}"
         "libc++-${CLANG_VERSION}-dev"
         "libc++abi-${CLANG_VERSION}-dev"
+        "g++-${GCC_QUALIFICATION_VERSION}"
+        "g++-${GCC_VERSION}-multilib"
+        # The test suite's range-v3 and the benchmark tree's Google Benchmark, which vcpkg.json's test feature names.
         libbenchmark-dev
         librange-v3-dev
-        # What the Boost build below calls for, beside the CMake from PyPI.
+        # What the builds below and ci-local.sh call for, beside the CMake from PyPI.
         curl
+        jq
         ninja-build
 )
 
-if [[ "${XSTD_TOOLCHAIN_FULL:-0}" == "1" ]]; then
-        packages+=("g++-16")
-fi
+# Each libc++ leg has a runner to itself, but apt's libc++ packages exclude one another, so libc++ stays at the
+# stable rung's here; `apt-get install libc++-24-dev libc++abi-24-dev` swaps it for a trunk libc++ leg.
+for version in "${CLANG_QUALIFICATION_VERSION}" "${CLANG_TRUNK_VERSION}"; do
+        packages+=("clang-${version}" "clang-tidy-${version}")
+done
 
 $SUDO apt-get install -y -qq "${packages[@]}"
 
-# The format gate pins 22, and before 22 clang-format reads `{ a * b }` in a requires-expression as a pointer
-# declaration. CMakeLists.txt requires CMake 3.30, and noble's is 3.28. apt has neither, so both come from PyPI,
-# pinned by hash in clang-format-requirements.txt and cmake-requirements.txt beside this script, and land in
-# ~/.local/bin.
+# GCC trunk is Jonathan Wakely's weekly binary snapshot, the one the ladders' development rung installs, under the
+# same g++-17 name. Upstream publishes neither checksums nor signatures, so what arrived is recorded instead.
+snapshot="$(mktemp -d)"
+curl -fsSL --retry 3 https://kayari.org/gcc-latest/gcc-latest.deb -o "${snapshot}/gcc-latest.deb"
+dpkg-deb -f "${snapshot}/gcc-latest.deb" Package Version
+sha256sum "${snapshot}/gcc-latest.deb"
+$SUDO dpkg -i "${snapshot}/gcc-latest.deb" > /dev/null || $SUDO apt-get install -f -y -qq
+rm -rf "${snapshot}"
+for tool in gcc g++ gcov; do
+        $SUDO ln -sf "/opt/gcc-latest/bin/${tool}" "/usr/bin/${tool}-${GCC_TRUNK_VERSION}"
+done
+printf '%s\n' /opt/gcc-latest/lib /opt/gcc-latest/lib64 | $SUDO tee /etc/ld.so.conf.d/gcc-latest.conf > /dev/null
+$SUDO ldconfig
+
+# The format gate runs clang-format-22 from apt.llvm.org, installed above, at the stable rung alone: a formatter
+# release reformats the code base. Before 22 it reads `{ a * b }` in a requires-expression as a pointer declaration.
+# The same 22 also comes from PyPI as an unversioned clang-format, and CMake comes from there too, since noble's
+# 3.28 is older than the 3.30 CMakeLists.txt asks for. Both are pinned by hash in clang-format-requirements.txt and
+# cmake-requirements.txt beside this script, and land in ~/.local/bin.
 CLANG_FORMAT_REQUIREMENTS="$(dirname "${BASH_SOURCE[0]}")/clang-format-requirements.txt"
 readonly CLANG_FORMAT_REQUIREMENTS
 CMAKE_REQUIREMENTS="$(dirname "${BASH_SOURCE[0]}")/cmake-requirements.txt"
 readonly CMAKE_REQUIREMENTS
 pip install --quiet --user --break-system-packages --require-hashes -r "${CLANG_FORMAT_REQUIREMENTS}" -r "${CMAKE_REQUIREMENTS}" \
         || pip3 install --quiet --user --require-hashes -r "${CLANG_FORMAT_REQUIREMENTS}" -r "${CMAKE_REQUIREMENTS}"
-CMAKE="${HOME:-/root}/.local/bin/cmake"
-readonly CMAKE
+readonly CMAKE="${HOME:-/root}/.local/bin/cmake"
 
-# Boost's CMake release archive, verified against the pinned digest, with vcpkg.json's four libraries and what they
-# depend on built once into BOOST_PREFIX.
-if [[ "${XSTD_TOOLCHAIN_BOOST:-1}" == "1" && ! -f "${BOOST_PREFIX}/lib/cmake/boost_hash2-${BOOST_VERSION}/boost_hash2-config.cmake" ]]; then
-        BOOST_ARCHIVE="boost-${BOOST_VERSION}-cmake.tar.gz"
-        BOOST_WORK="$(mktemp -d)"
-        curl -fsSL "https://github.com/boostorg/boost/releases/download/boost-${BOOST_VERSION}/${BOOST_ARCHIVE}" -o "${BOOST_WORK}/${BOOST_ARCHIVE}"
-        echo "${BOOST_SHA256}  ${BOOST_WORK}/${BOOST_ARCHIVE}" | sha256sum --check --quiet
-        tar -xzf "${BOOST_WORK}/${BOOST_ARCHIVE}" -C "${BOOST_WORK}"
-        "${CMAKE}" -S "${BOOST_WORK}/boost-${BOOST_VERSION}" -B "${BOOST_WORK}/build" -G Ninja -DCMAKE_BUILD_TYPE=Release \
-                -DBUILD_SHARED_LIBS=OFF -DBOOST_INCLUDE_LIBRARIES="container;dynamic_bitset;hash2;test" \
-                -DCMAKE_INSTALL_PREFIX="${BOOST_PREFIX}" > /dev/null
-        "${CMAKE}" --build "${BOOST_WORK}/build" > /dev/null
-        "${CMAKE}" --install "${BOOST_WORK}/build" > /dev/null
-        rm -rf "${BOOST_WORK}"
+# Boost from its CMake release tarball rather than through vcpkg, whose every Boost port downloads a source archive
+# that a Claude Code cloud session's proxy refuses, though it serves release assets. Boost's CMake build, unlike b2,
+# installs a CMake package for each header-only library too, Boost.Hash2 among them. Only what the suite uses is
+# built, by GCC 15, and a rerun skips a done install.
+if [ ! -f "${BOOST_PREFIX}/lib/cmake/Boost-${BOOST_VERSION}/BoostConfig.cmake" ]; then
+        boost="$(mktemp -d)"
+        curl -fsSL --retry 3 "https://github.com/boostorg/boost/releases/download/boost-${BOOST_VERSION}/boost-${BOOST_VERSION}-cmake.tar.xz" \
+                -o "${boost}/boost.tar.xz"
+        echo "${BOOST_SHA256}  ${boost}/boost.tar.xz" | sha256sum --check --quiet
+        tar -xf "${boost}/boost.tar.xz" -C "${boost}"
+        "${CMAKE}" -S "${boost}/boost-${BOOST_VERSION}" -B "${boost}/build" -G Ninja -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_CXX_COMPILER="g++-${GCC_VERSION}" -DBUILD_SHARED_LIBS=OFF \
+                -DBOOST_INCLUDE_LIBRARIES="${BOOST_LIBRARIES}" > /dev/null
+        "${CMAKE}" --build "${boost}/build" --parallel "$(nproc)" > /dev/null
+        $SUDO "${CMAKE}" --install "${boost}/build" --prefix "${BOOST_PREFIX}" > /dev/null
+        rm -rf "${boost}"
 fi
 
 # Report what landed, but never fail a setup over a version banner: everything above has already
@@ -116,6 +143,7 @@ fi
 "clang++-${CLANG_VERSION}" --version | head -1 || true
 "${HOME:-/root}/.local/bin/clang-format" --version || true
 "${CMAKE}" --version | head -1 || true
-if [[ "${XSTD_TOOLCHAIN_BOOST:-1}" == "1" ]]; then
-        grep -m1 'define BOOST_LIB_VERSION' "${BOOST_PREFIX}/include/boost/version.hpp" || true
-fi
+echo "Boost ${BOOST_VERSION} in ${BOOST_PREFIX}"
+for compiler in "g++-${GCC_QUALIFICATION_VERSION}" "g++-${GCC_TRUNK_VERSION}" "clang++-${CLANG_QUALIFICATION_VERSION}" "clang++-${CLANG_TRUNK_VERSION}"; do
+        "${compiler}" --version | head -1 || true
+done

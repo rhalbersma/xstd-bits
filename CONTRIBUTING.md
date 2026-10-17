@@ -27,23 +27,65 @@ This repository enforces its quality bar through CI rather than through review d
 
 ## Getting a toolchain
 
-Ubuntu 24.04 ships GCC 13 and clang 18, neither of which can build this library: GCC 13 rejects `-std=c++2c`, and
-clang-format before 22 reads `{ a * b }` in a requires-expression as a pointer declaration, so it calls files dirty
-that are clean against [`.clang-format`](.clang-format). [`tools/setup-toolchain.sh`](tools/setup-toolchain.sh)
-installs the `stable` column of [README.md](README.md)'s matrix — GCC 15, clang 22, libc++ 22 and clang-format 22 —
-from apt.llvm.org, the Ubuntu toolchain PPA and PyPI, range-v3 and Google Benchmark from apt, CMake 4.4 from PyPI
-(noble's 3.28 is older than the 3.30 [`CMakeLists.txt`](CMakeLists.txt) requires), and Boost 1.92, the release CI
-builds against, from its CMake release archive into `~/.local/opt/boost-1.92.0`:
+Ubuntu 24.04 ships GCC 13, clang 18, CMake 3.28 and Boost 1.83, and none of them is what CI builds with: GCC 13
+rejects `-std=c++2c`, [`CMakeLists.txt`](CMakeLists.txt) asks for CMake 3.30, clang-format before 22 reads `{ a * b }`
+in a requires-expression as a pointer declaration, so it calls files dirty that are clean against
+[`.clang-format`](.clang-format), and Boost 1.83 predates Boost.Hash2, which the library's headers include.
+[`tools/setup-toolchain.sh`](tools/setup-toolchain.sh) brings a container as close to the GitHub Actions ladders as an
+Ubuntu box gets, every rung of [README.md](README.md)'s matrix and the Boost CI resolves:
+
+- GCC 15 and 16 from the Ubuntu toolchain PPA, and the GCC trunk snapshot the development rung uses, as `g++-17`;
+- clang 22, 23 and trunk, as `clang++-24`, each with its clang-tidy, and clang-format 22 and libc++ 22, from apt.llvm.org;
+- GCC 15's 32-bit multilib, for the i686 leg, and range-v3 and Google Benchmark, from apt;
+- the same clang-format 22 as an unversioned `clang-format`, and CMake, from PyPI, pinned by hash in
+  [`tools/clang-format-requirements.txt`](tools/clang-format-requirements.txt) and
+  [`tools/cmake-requirements.txt`](tools/cmake-requirements.txt);
+- Boost 1.92's Container, Dynamic Bitset, Hash2, Test and Unordered, the libraries [`vcpkg.json`](vcpkg.json) names,
+  built by GCC 15 from Boost's CMake release tarball, checked against the SHA-256 Boost publishes, into `/usr/local`.
 
 ```sh
 tools/setup-toolchain.sh
-cmake -S . -B build -DCMAKE_PREFIX_PATH=~/.local/opt/boost-1.92.0
+cmake -S . -B build -DCMAKE_CXX_COMPILER=g++-15
 ```
 
-`XSTD_TOOLCHAIN_FULL=1` adds GCC 16, the qualification rung, whose libstdc++ is the oldest carrying
-`<inplace_vector>`. `XSTD_BOOST_PREFIX` moves the Boost install, and `XSTD_TOOLCHAIN_BOOST=0` skips it where only
-syntax-only checks, clang-tidy or the format gate are wanted. The script is idempotent, so re-running it on a warm
-container is safe.
+apt's libc++ packages exclude one another, so libc++ stays at 22; the script names the command that swaps in another
+for a libc++ leg of a newer rung. The script is idempotent, so re-running it on a warm container is safe.
+
+The Boost.Test it builds is GCC 15's, and serves GCC 15 and 16 and clang 22 and 23. A compiler on libc++, on the trunk
+snapshot's libstdc++ or on a 32-bit target needs a Boost.Test built for it: linked with libc++ or with GCC 17's
+libstdc++, GCC 15's fails before the first test, on a corrupted parameter. CI gets one from vcpkg, which builds Boost
+with the compiler under test. Locally, [`tools/boost-test.sh`](tools/boost-test.sh) builds the framework from the
+installed headers with the compiler and flags given, in about a minute, and prints the `-D` that makes the suite use
+it:
+
+```sh
+cmake -S . -B build-libcxx -DCMAKE_CXX_COMPILER=clang++-22 -DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++ \
+      "$(tools/boost-test.sh build-boost-test-libcxx clang++-22 -stdlib=libc++)"
+```
+
+Before a push, [`tools/ci-local.sh`](tools/ci-local.sh) runs the GitHub Actions ladders' Linux legs on what
+`setup-toolchain.sh` installs, so a change is green here before it waits on CI's runners:
+
+- the suite on GCC 15, 16 and 17-SVN, with the benchmark tree, and on clang 22, 23 and 24-SVN, each clang on its own
+  rung's libstdc++;
+- the C++26 legs on GCC 16 and 17-SVN, the libc++ 22 leg, the i686 leg, and the two hardened legs, libstdc++'s
+  assertions and libc++'s fast mode;
+- clang-tidy 22, 23 and 24-SVN, with the clang-tidy job's passes;
+- the format gate, and the Audit job's two checks.
+
+It takes a list of legs, or runs them all, one after another, with every core each; `--list` names them. Each leg logs
+to `build/ci-local/<leg>.log`, and the run ends in one line per leg. The suite legs build in Debug, or in
+`CI_LOCAL_BUILD_TYPE`; CI builds both. A suite leg's build tree is removed once it passes, and `CI_LOCAL_KEEP=1` keeps
+it.
+
+```sh
+tools/ci-local.sh                  # every leg
+tools/ci-local.sh gcc-17 tidy-24   # the ones a change is likeliest to break
+```
+
+MSVC, clang-cl, MinGW, Apple Clang and Emscripten have no Linux equivalent, and libc++ 23 and 24-SVN would each need
+the libc++ swap above. The sanitizer, coverage, CodeQL, consumption, fuzzing and mutation jobs are not in it either;
+their own commands are in the sections below, and actionlint is a separate binary that setup does not install.
 
 In a [Claude Code cloud](https://code.claude.com/docs/en/claude-code-on-the-web) environment, the environment's
 setup script runs it, so every session starts with the rung already in place. That field holds a script rather than
@@ -139,8 +181,7 @@ The first input byte picks the owner type, at widths on both sides of a block bo
 They need clang, which is what ships libFuzzer. `XSTD_BITS_BUILD_FUZZERS` is off by default and independent of `BUILD_TESTING`:
 
 ```sh
-cmake -S . -B build-fuzz -DCMAKE_CXX_COMPILER=clang++-22 -DBUILD_TESTING=OFF -DXSTD_BITS_BUILD_FUZZERS=ON \
-      -DCMAKE_PREFIX_PATH=~/.local/opt/boost-1.92.0
+cmake -S . -B build-fuzz -DCMAKE_CXX_COMPILER=clang++-22 -DBUILD_TESTING=OFF -DXSTD_BITS_BUILD_FUZZERS=ON
 cmake --build build-fuzz --parallel 2
 mkdir -p corpus && build-fuzz/fuzz/fuzz_set -max_total_time=120 corpus fuzz/corpus/fuzz_set
 ```
