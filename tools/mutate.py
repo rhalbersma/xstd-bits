@@ -117,7 +117,13 @@ class Mutant:
         @property
         def key(self):
                 """What identifies this mutant across edits elsewhere in its header."""
-                return (self.header, self.source_line, self.offset, self.original, self.replacement)
+                return (self.header, self.source_line, self.occurrence, self.offset, self.original, self.replacement)
+
+        @property
+        def occurrence(self):
+                """Which of the header's lines with this same text it is, counting from one, so identical lines stay apart."""
+                lines = (INCLUDE / self.header).read_text().split("\n")[:self.line]
+                return sum(line.strip() == self.source_line for line in lines)
 
         @property
         def offset(self):
@@ -229,7 +235,7 @@ def run(command, cwd, timeout):
 
 PIPE = re.compile(r"(?<!\\)\|")
 EQUIVALENTS = ROOT / "doc" / "mutation.md"
-EQUIVALENT_COLUMNS = ["header", "line", "column", "mutation", "reason"]
+EQUIVALENT_COLUMNS = ["header", "line", "occurrence", "column", "mutation", "reason"]
 MUTATION = re.compile(r"^`(.*)` → `(.*)`$")
 
 
@@ -259,10 +265,10 @@ def read_equivalents(path):
                         continue
                 if all(set(cell) <= set(":-") for cell in row):
                         continue
-                match = MUTATION.match(row[3])
-                if len(row) != len(EQUIVALENT_COLUMNS) or not match or not row[4]:
-                        raise SystemExit(f"{path}:{number}: expected `header` | `line` | column | `from` → `to` | reason")
-                result[(code(row[0]), code(row[1]), int(row[2]), match.group(1), match.group(2))] = row[4]
+                match = MUTATION.match(row[4]) if len(row) == len(EQUIVALENT_COLUMNS) else None
+                if not match or not row[5]:
+                        raise SystemExit(f"{path}:{number}: expected `header` | `line` | occurrence | column | `from` → `to` | reason")
+                result[(code(row[0]), code(row[1]), int(row[2]), int(row[3]), match.group(1), match.group(2))] = row[5]
         return result
 
 
@@ -293,6 +299,16 @@ def load_targets(build):
                         path = (build / path).resolve() if not path.is_absolute() else path.resolve()
                         if path.is_relative_to(INCLUDE):
                                 headers_of[current].add(path.relative_to(INCLUDE).as_posix())
+        # A target counts only where CTest runs it plainly: no arguments and the default pass rule. A death test that passes
+        # by aborting on an argument it is handed, as the hardened preconditions do, would read as failing when run bare.
+        registered = json.loads(subprocess.run(["ctest", "--test-dir", str(build), "--show-only=json-v1"], stdout=subprocess.PIPE, text=True, check=True).stdout)
+        special = {"WILL_FAIL", "PASS_REGULAR_EXPRESSION", "FAIL_REGULAR_EXPRESSION", "SKIP_RETURN_CODE", "SKIP_REGULAR_EXPRESSION"}
+        plain = set()
+        for test in registered.get("tests", []):
+            command = test.get("command") or []
+            properties = {p["name"] for p in test.get("properties", [])}
+            if len(command) == 1 and not (properties & special):
+                plain.add(Path(command[0]).resolve().as_posix())
         targets = {}
         for entry in database.values():
                 command = entry.get("command")
@@ -309,6 +325,8 @@ def load_targets(build):
                         if link[at] == "-Xlinker" and link[at + 1].startswith("--dependency-file="):
                                 del link[at:at + 2]
                 executable = link[link.index("-o") + 1]
+                if (build / executable).resolve().as_posix() not in plain:
+                        continue
                 targets[name] = Target(name, entry["file"], arguments, obj, link, executable, headers=headers_of.get(obj, set()))
         return targets
 
@@ -326,12 +344,13 @@ def family(header):
         return parts[2] if len(parts) > 3 and parts[2] != "detail" else ""
 
 
-def order(header, targets, only):
-        """The targets depending on header: the mirrored test, then those of its family, then those including the fewest headers."""
+def order(header, targets, only, kills=None):
+        """The targets depending on header: the mirrored test, those that killed most of its mutants, its family, the lightest."""
         dependents = [t for t in targets.values() if header in t.headers and (only is None or re.search(only, t.name))]
         own = mirror(header)
         kin = family(header)
-        return sorted(dependents, key=lambda t: (t.name != own, not (kin and f".{kin}." in t.name), len(t.headers), t.name))
+        caught = kills or {}
+        return sorted(dependents, key=lambda t: (t.name != own, -caught.get((header, t.name), 0), not (kin and f".{kin}." in t.name), len(t.headers), t.name))
 
 
 class Worker:
@@ -409,6 +428,7 @@ def main():
         parser.add_argument("--output", type=Path, help="write the results as JSON here")
         parser.add_argument("--equivalents", type=Path, default=EQUIVALENTS, help="the classified survivors, by default doc/mutation.md")
         parser.add_argument("--resume", type=Path, help="take the mutants a previous --output already decided from it, and run the rest")
+        parser.add_argument("--recheck-survivors", action="store_true", help="with --resume, decide its survivors again, trying first the targets that killed most of their header's mutants")
         parser.add_argument("--limit", type=int, default=0, help="decide at most this many mutants in this run, leaving the rest pending (0: all)")
         args = parser.parse_args()
 
@@ -436,6 +456,11 @@ def main():
                                 if m.status == "stillborn" and COMPILE_TIME_CHECK.search(m.detail):
                                         m.status = "killed"
                 print(f"resumed {sum(m.status != 'pending' for m in mutants)} decided mutants from {args.resume}", file=sys.stderr)
+                if args.recheck_survivors:
+                        for m in mutants:
+                                if m.status == "survived":
+                                        m.status, m.target, m.detail, m.seconds = "pending", "", "", 0.0
+                        print(f"rechecking {sum(m.status == 'pending' for m in mutants)} survivors", file=sys.stderr)
 
         if args.list:
                 for m in mutants:
@@ -446,8 +471,14 @@ def main():
         build = args.build.resolve()
         targets = load_targets(build)
         chains = {}
+        kills = {}
+        for m in mutants:
+                if m.status == "killed" and m.target:
+                        kills[(m.header, m.target)] = kills.get((m.header, m.target), 0) + 1
         for header in args.headers:
-                chain = order(header, targets, args.tests)
+                if not any(m.header == header and m.status == "pending" for m in mutants):
+                        continue
+                chain = order(header, targets, args.tests, kills)
                 if args.max_targets:
                         chain = chain[:args.max_targets]
                 if not chain:
@@ -511,9 +542,9 @@ def main():
                                 stale.append(f"listed as equivalent but {m.status}: {m.header}:{m.line}:{m.column}: {m.original!r} -> {m.replacement!r}")
         if not filtered:
                 generated = {m.key for m in mutants}
-                stale += [f"listed as equivalent but no longer generated: {k[0]}: `{k[1]}` column {k[2]}: {k[3]!r} -> {k[4]!r}" for k in equivalents if k[0] in args.headers and k not in generated]
+                stale += [f"listed as equivalent but no longer generated: {k[0]}: `{k[1]}` occurrence {k[2]} column {k[3]}: {k[4]!r} -> {k[5]!r}" for k in equivalents if k[0] in args.headers and k not in generated]
         if args.output:
-                args.output.write_text(json.dumps([asdict(m) | {"offset": m.offset} for m in mutants], indent=1))
+                args.output.write_text(json.dumps([asdict(m) | {"offset": m.offset, "occurrence": m.occurrence} for m in mutants], indent=1))
 
         valid = counts["killed"] + counts["survived"] + counts.get("equivalent", 0)
         score = 100.0 * (counts["killed"] + counts.get("equivalent", 0)) / valid if valid else 100.0
@@ -522,7 +553,7 @@ def main():
         for m in mutants:
                 if m.status == "survived":
                         print(f"SURVIVED {m.header}:{m.line}:{m.column}: {m.original!r} -> {m.replacement!r}    {m.source_line}")
-                        print(f"  | `{m.header}` | `{m.source_line.replace('|', chr(92) + '|')}` | {m.offset} | `{m.original.replace('|', chr(92) + '|')}` → `{m.replacement.replace('|', chr(92) + '|')}` | |")
+                        print(f"  | `{m.header}` | `{m.source_line.replace('|', chr(92) + '|')}` | {m.occurrence} | {m.offset} | `{m.original.replace('|', chr(92) + '|')}` → `{m.replacement.replace('|', chr(92) + '|')}` | |")
         for line in stale:
                 print(f"STALE {line}")
         return 1 if counts["survived"] or stale or pending else 0
