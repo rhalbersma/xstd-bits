@@ -250,6 +250,32 @@ A comment or formatting change is not exempt, because two gates read lines rathe
 the wrong half, where it goes silent with nothing to say it has. Check that the code is byte-identical when a
 change is meant to be comment-only, and that every marker still sits on the line it names.
 
+## Pull requests and CI
+
+A push to a pull request runs the whole matrix, dozens of jobs; a merge into `main` does not, as the weekly canary
+runs it there. Pull requests in this repository whose CI runs side by side finish no sooner for it: each waits
+longer for its first result, and every merge makes the others' runs stale. CI is therefore a queue, one pull request
+long, in each repository.
+
+- **One run in flight in this repository.** Before opening a pull request, or pushing to one, check that no other
+  pull request here has a run queued or in progress. If one has, finish the change locally and push only the
+  branch, which runs nothing; open the pull request when the queue is empty.
+- **A pull request is what merges or reverts as one.** Changes that touch the same files, or that are only tests or
+  only documentation, go in one pull request rather than one per issue. A documentation-only change costs the full
+  matrix like any other, so it rides along with the next pull request instead of going alone.
+- **Neither stack nor fan out.** Each pull request branches off `main` and waits there. Its turn starts by merging
+  `main` into it, never rebasing, so its one run is against the `main` it will land on. A stack costs the same runs
+  and adds a restack whenever a lower pull request changes; pull requests in parallel make every merge put the rest
+  out of date.
+- **Push once per round.** Reproduce a failure and fix it locally, with `ci-local.sh` as above, and push when
+  everything passes. A push cancels the run before it, but not the jobs that already took their slots.
+- **Merge on green, then start the next.** A green, conflict-free pull request is squash-merged at once. The next
+  one opens once the merge has landed. Runs on a pull request that will be updated before it merges are cancelled
+  rather than left to finish.
+
+How an agent drives a pull request from opened to merged is in
+[`.claude/skills/steward/SKILL.md`](.claude/skills/steward/SKILL.md).
+
 ## `[[nodiscard]]`
 
 Every function that returns a value carries it. Two kinds do not.
