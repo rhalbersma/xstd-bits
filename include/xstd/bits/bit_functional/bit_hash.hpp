@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_algorithm/bit_equal.hpp>          // bit_equal
 #include <xstd/bits/bit_functional/detail/bit_hasher.hpp> // bit_hasher
 #include <xstd/bits/detail/hash.hpp>                      // bit_hashable, bit_hashable_range, hash_append_bit_planes, hash_append_bit_string
-#include <xstd/misc/ext/boost/hash2.hpp>                  // hash_algorithm
+#include <xstd/misc/concepts/hash_algorithm.hpp>          // hash_algorithm
 #include <boost/hash2/flavor.hpp>                         // default_flavor
 #include <boost/hash2/xxhash.hpp>                         // xxhash_64
 #include <concepts>                                       // same_as
@@ -43,6 +43,9 @@ class bit_hash : bits::detail::bit_hasher<H, Flavor>
 {
 public:
         using bits::detail::bit_hasher<H, Flavor>::bit_hasher;
+        // Declared rather than using-declared: MSVC then denies access to its members through the private base.
+        // NOLINTNEXTLINE(readability-redundant-typename): clang-cl's -Wc++20-compat rejects the bare dependent name.
+        using is_avalanching = typename bits::detail::bit_hasher<H, Flavor>::is_avalanching;
 
         // Equal bits hash equal whatever blocks or storage hold them, so a lookup may cross containers of one reading.
         using is_transparent = void;

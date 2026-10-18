@@ -17,7 +17,8 @@
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <xstd/misc/ext/boost/hash2.hpp>            // hash_algorithm, hasher
+#include <xstd/misc/concepts/hash_algorithm.hpp>    // hash_algorithm
+#include <xstd/misc/functional/hash.hpp>            // hash
 #include <boost/hash2/flavor.hpp>                   // default_flavor, little_endian_flavor
 #include <boost/hash2/fnv1a.hpp>                    // fnv1a_64
 #include <boost/hash2/get_integral_result.hpp>      // get_integral_result
@@ -364,7 +365,7 @@ BOOST_AUTO_TEST_CASE(AnAggregateOfFullPlanesIsOneString)
         auto copy = h;
         BOOST_CHECK_EQUAL(copy.result(), string_digest<hash_type>(message));
         auto whole = string_hash<hash_type>(message);
-        BOOST_CHECK_EQUAL(xstd::hasher<hash_type>()(p), boost::hash2::get_integral_result<std::size_t>(whole));
+        BOOST_CHECK_EQUAL((xstd::hash<position<64>, hash_type>()(p)), boost::hash2::get_integral_result<std::size_t>(whole));
 
         // The same planes nested, built-in or std::array, one contiguous range and so one update.
         plane<64> nested[sides][kinds]; // NOLINT(modernize-avoid-c-arrays): the nesting a user writes
@@ -466,7 +467,7 @@ BOOST_AUTO_TEST_CASE(PlanesHashAlikeInAConstantExpression)
         BOOST_CHECK_EQUAL(full, string_digest<boost::hash2::fnv1a_64>(planes_string<64>(kinds)));
 }
 
-// bit_hash_append into H, as xstd::hasher is hash_append into it: seeded as H is, and transparent.
+// bit_hash_append into H, as xstd::hash is hash_append into it: seeded as H is, and transparent.
 BOOST_AUTO_TEST_CASE(TheHashIsSeededAndTransparent)
 {
         static_assert(std::same_as<xstd::bit_hash<xstd::bit_fixed_set<100>>::is_transparent, void>);
@@ -487,7 +488,7 @@ BOOST_AUTO_TEST_CASE(TheHashIsSeededAndTransparent)
         BOOST_CHECK_EQUAL(seeded(value), boost::hash2::get_integral_result<std::size_t>(h));
 
         // The bits, not the value as its model has it: no key and no count.
-        BOOST_CHECK(unseeded(value) != xstd::hasher<boost::hash2::siphash_64>()(value));
+        BOOST_CHECK((unseeded(value) != xstd::hash<xstd::bit_fixed_set<100>, boost::hash2::siphash_64>()(value)));
 
         // Owner and view, owner and owner of other blocks, sequence of either storage: equal bits, equal digests.
         BOOST_CHECK_EQUAL(unseeded(xstd::bit_set_view(value)), unseeded(value));
@@ -506,6 +507,15 @@ BOOST_AUTO_TEST_CASE(TheHashIsSeededAndTransparent)
         BOOST_CHECK_EQUAL(expected.result(), 13UZ);
         BOOST_CHECK_EQUAL((xstd::bit_hash<xstd::bit_fixed_set<100>, recorder>(seed)(value)), boost::hash2::get_integral_result<std::size_t>(expected));
         BOOST_CHECK_EQUAL((xstd::bit_hash<xstd::bit_fixed_set<100>, recorder>(seed_bytes.data(), seed_bytes.size())(value)), boost::hash2::get_integral_result<std::size_t>(expected));
+}
+
+// Boost.Unordered skips its post-mix for an avalanching hash: the trait follows the algorithm, xxHash yes, FNV-1a no.
+BOOST_AUTO_TEST_CASE(TheHashAvalanchesAsItsAlgorithmDoes)
+{
+        static_assert(xstd::bit_hash<xstd::bit_fixed_set<100>>::is_avalanching::value);
+        static_assert(xstd::bit_hash<xstd::bit_fixed_set<100>, boost::hash2::siphash_64>::is_avalanching::value);
+        static_assert(not xstd::bit_hash<xstd::bit_fixed_set<100>, boost::hash2::fnv1a_64>::is_avalanching::value);
+        BOOST_CHECK(true);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

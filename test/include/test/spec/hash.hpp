@@ -6,7 +6,7 @@
 #ifndef TEST_SPEC_HASH_HPP
 #define TEST_SPEC_HASH_HPP
 
-#include <xstd/misc/ext/boost/hash2.hpp> // hasher
+#include <xstd/misc/functional/hash.hpp> // hash
 #include <boost/hash2/flavor.hpp>        // big_endian_flavor, default_flavor, little_endian_flavor
 #include <boost/hash2/fnv1a.hpp>         // fnv1a_64
 #include <boost/hash2/hash_append.hpp>   // hash_append
@@ -39,8 +39,7 @@ auto check_hashes_as(X const& x, Model const& model)
         BOOST_CHECK_EQUAL((flavored_digest<boost::hash2::fnv1a_64, boost::hash2::default_flavor>(x)), (flavored_digest<boost::hash2::fnv1a_64, boost::hash2::default_flavor>(model)));
         BOOST_CHECK_EQUAL((flavored_digest<boost::hash2::xxhash_64, boost::hash2::little_endian_flavor>(x)), (flavored_digest<boost::hash2::xxhash_64, boost::hash2::little_endian_flavor>(model)));
         BOOST_CHECK_EQUAL((flavored_digest<boost::hash2::siphash_64, boost::hash2::big_endian_flavor>(x)), (flavored_digest<boost::hash2::siphash_64, boost::hash2::big_endian_flavor>(model)));
-        auto const hasher = xstd::hasher<boost::hash2::siphash_64>(hash_seed);
-        BOOST_CHECK_EQUAL(hasher(x), hasher(model));
+        BOOST_CHECK_EQUAL((xstd::hash<X, boost::hash2::siphash_64>(hash_seed)(x)), (xstd::hash<Model, boost::hash2::siphash_64>(hash_seed)(model)));
 }
 
 } // namespace test::spec
