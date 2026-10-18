@@ -14,6 +14,7 @@
 #include <xstd/bits/bit_set/bit_set_view.hpp>                                // bit_set_view
 #include <xstd/bits/bit_vector.hpp>                                          // basic_bit_vector, bit_vector
 #include <boost/test/unit_test.hpp>                                          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <compare>                                                           // is_lt
 #include <concepts>                                                          // invocable, same_as
 #include <cstddef>                                                           // size_t
 #include <cstdint>                                                           // uint8_t
@@ -32,7 +33,7 @@ template<class X, class Y>
         auto wrong = 0;
         for (auto const& x : xs) {
                 for (auto const& y : ys) {
-                        wrong += static_cast<int>(xstd::bit_less()(x, y) != (xstd::bit_lexicographical_compare_three_way(x, y) < 0));
+                        wrong += static_cast<int>(xstd::bit_less()(x, y) != std::is_lt(xstd::bit_lexicographical_compare_three_way(x, y)));
                 }
         }
         return wrong;

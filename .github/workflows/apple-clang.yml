@@ -21,4 +21,4 @@ on:
 jobs:
   # Two rungs, Apple publishing no Clang trunk; the file keeps its name because the README badge is the workflow's path.
   apple_clang:
-    uses: rhalbersma/cpp-ci/.github/workflows/apple-clang.yml@0e9948a4bd9f844797ce5b1c9b4c915a94cd665a # main after rhalbersma/cpp-ci#68, whose install-gcc fails its step when the PPA did not serve the compiler
+    uses: rhalbersma/cpp-ci/.github/workflows/apple-clang.yml@83edc49715c3245dbff4406654c6f489af6a10e9 # main after rhalbersma/cpp-ci#75, whose clang-tidy and gcovr scripts tools/ci-local.sh runs too
