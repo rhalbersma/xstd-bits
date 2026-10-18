@@ -20,4 +20,4 @@ on:
 jobs:
   # New here; with almost every workflow a "uses" stub, a typo in an input name is most of what can go wrong.
   actionlint:
-    uses: rhalbersma/cpp-ci/.github/workflows/actionlint.yml@83edc49715c3245dbff4406654c6f489af6a10e9 # main after rhalbersma/cpp-ci#75, whose clang-tidy and gcovr scripts tools/ci-local.sh runs too
+    uses: rhalbersma/cpp-ci/.github/workflows/actionlint.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too

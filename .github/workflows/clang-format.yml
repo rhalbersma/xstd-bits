@@ -21,7 +21,7 @@ jobs:
   # Its own tier, deliberately left at stable: a formatter release reformats
   # the code base, which is not something a compiler bump should decide.
   clang_format:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-format.yml@83edc49715c3245dbff4406654c6f489af6a10e9 # main after rhalbersma/cpp-ci#75, whose clang-tidy and gcovr scripts tools/ci-local.sh runs too
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-format.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
     with:
       # benchmark/ too, this repository carrying a benchmark tree of hand-written sources.
       paths: examples include test benchmark
