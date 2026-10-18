@@ -57,7 +57,7 @@ suite() {
                 && { [ "${keep}" = 1 ] || rm -rf "${dir}"; }
 }
 
-# A suite leg on another standard library, the trunk libstdc++ or another target links a Boost.Test built for it.
+# A suite leg on another standard library or the trunk libstdc++ links a Boost.Test built for it.
 boost_test_for() {
         local name="$1"
         shift
@@ -137,10 +137,8 @@ run_leg() {
                 libcxx-22)
                         boost_test="$(boost_test_for libcxx-22 clang++-22 -stdlib=libc++)" || return 1
                         suite "$1" clang++-22 "-stdlib=libc++" "${build_type}" -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++ "${boost_test}" ;;
-                # One rung in Debug, as the i686 job runs it.
-                i686)
-                        boost_test="$(boost_test_for i686 g++-15 -m32)" || return 1
-                        suite "$1" g++-15 "-m32" Debug "${boost_test}" ;;
+                # One rung in Debug, as the i686 job runs it, against the Boost setup-toolchain.sh builds at -m32.
+                i686) suite "$1" g++-15 "-m32" Debug -DCMAKE_PREFIX_PATH=/usr/local/i686 ;;
                 # One rung in Release against each hardened standard library, as the hardened jobs run them.
                 hardened-gcc) suite "$1" g++-15 "-D_GLIBCXX_ASSERTIONS" Release ;;
                 hardened-libcxx)

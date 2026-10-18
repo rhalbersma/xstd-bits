@@ -42,7 +42,8 @@ Ubuntu box gets, every rung of [README.md](README.md)'s matrix and the Boost CI 
   [`tools/cmake-requirements.txt`](tools/cmake-requirements.txt) and
   [`tools/gcovr-requirements.txt`](tools/gcovr-requirements.txt), the last a copy of the one the job installs;
 - Boost 1.92's Container, Dynamic Bitset, Hash2, Test and Unordered, the libraries [`vcpkg.json`](vcpkg.json) names,
-  built by GCC 15 from Boost's CMake release tarball, checked against the SHA-256 Boost publishes, into `/usr/local`.
+  built by GCC 15 from Boost's CMake release tarball, checked against the SHA-256 Boost publishes, into `/usr/local`,
+  and again at `-m32` into `/usr/local/i686` for the i686 leg, as CI's vcpkg builds them for its 32-bit triplet.
 
 ```sh
 tools/setup-toolchain.sh
@@ -52,8 +53,8 @@ cmake -S . -B build -DCMAKE_CXX_COMPILER=g++-15
 apt's libc++ packages exclude one another, so libc++ stays at 22; the script names the command that swaps in another
 for a libc++ leg of a newer rung. The script is idempotent, so re-running it on a warm container is safe.
 
-The Boost.Test it builds is GCC 15's, and serves GCC 15 and 16 and clang 22 and 23. A compiler on libc++, on the trunk
-snapshot's libstdc++ or on a 32-bit target needs a Boost.Test built for it: linked with libc++ or with GCC 17's
+The Boost.Test it builds is GCC 15's, and serves GCC 15 and 16 and clang 22 and 23. A compiler on libc++ or on the
+trunk snapshot's libstdc++ needs a Boost.Test built for it: linked with libc++ or with GCC 17's
 libstdc++, GCC 15's fails before the first test, on a corrupted parameter. CI gets one from vcpkg, which builds Boost
 with the compiler under test. Locally, [`tools/boost-test.sh`](tools/boost-test.sh) builds the framework from the
 installed headers with the compiler and flags given, in about a minute, and prints the `-D` that makes the suite use

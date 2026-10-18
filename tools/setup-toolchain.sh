@@ -15,10 +15,11 @@
 #   GCC 15, 16 and the trunk snapshot as g++-17; clang 22, 23 and trunk as clang++-24, with clang-tidy for each;
 #   clang-format 22, the format gate's one rung; libc++ 22; GCC 15's 32-bit multilib for the i686 leg; range-v3 and
 #   Google Benchmark from apt; CMake, gcovr and the same clang-format 22 from PyPI; and Boost 1.92's Container,
-#   Dynamic Bitset, Hash2, Test and Unordered, built from Boost's release tarball by GCC 15 into /usr/local.
+#   Dynamic Bitset, Hash2, Test and Unordered, built from Boost's release tarball by GCC 15 into /usr/local, and
+#   again at -m32 into /usr/local/i686 for the i686 leg, as CI's vcpkg builds them for its 32-bit triplet.
 #
-# A compiler on libc++, on the trunk snapshot's libstdc++ or on a 32-bit target links a Boost.Test of its own, which
-# boost-test.sh beside this script builds; CI gets one from vcpkg, which builds Boost with the compiler under test.
+# A compiler on libc++ or on the trunk snapshot's libstdc++ links a Boost.Test of its own, which boost-test.sh beside
+# this script builds; CI gets one from vcpkg, which builds Boost with the compiler under test.
 # The unit tests, clang-tidy and the format gate then all run locally, and ci-local.sh beside this script runs them
 # leg by leg. CMake fetches xstd-ints, xstd-misc and the test suite's pre-release dependencies, such as Boost.Int128,
 # from GitHub at configure time.
@@ -46,6 +47,7 @@ readonly CLANG_TRUNK_VERSION=24
 readonly BOOST_VERSION=1.92.0
 readonly BOOST_SHA256=9bed76128d4e46755dbe818487788c6fceb6f72b378f4daa49b7e1e600d9088d
 readonly BOOST_PREFIX=/usr/local
+readonly BOOST_PREFIX_I686=/usr/local/i686
 
 # vcpkg.json's Boost libraries, the test feature's included, and what Boost's CMake build adds for them.
 readonly BOOST_LIBRARIES="container;dynamic_bitset;hash2;test;unordered"
@@ -127,20 +129,26 @@ readonly CMAKE="${HOME:-/root}/.local/bin/cmake"
 # Boost from its CMake release tarball rather than through vcpkg, whose every Boost port downloads a source archive
 # that a Claude Code cloud session's proxy refuses, though it serves release assets. Boost's CMake build, unlike b2,
 # installs a CMake package for each header-only library too, Boost.Hash2 among them. Only what the suite uses is
-# built, by GCC 15, and a rerun skips a done install.
-if [ ! -f "${BOOST_PREFIX}/lib/cmake/Boost-${BOOST_VERSION}/BoostConfig.cmake" ]; then
-        boost="$(mktemp -d)"
-        curl -fsSL --retry 3 "https://github.com/boostorg/boost/releases/download/boost-${BOOST_VERSION}/boost-${BOOST_VERSION}-cmake.tar.xz" \
-                -o "${boost}/boost.tar.xz"
-        echo "${BOOST_SHA256}  ${boost}/boost.tar.xz" | sha256sum --check --quiet
-        tar -xf "${boost}/boost.tar.xz" -C "${boost}"
-        "${CMAKE}" -S "${boost}/boost-${BOOST_VERSION}" -B "${boost}/build" -G Ninja -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_CXX_COMPILER="g++-${GCC_VERSION}" -DBUILD_SHARED_LIBS=OFF \
+# built, by GCC 15, once for x86-64 and once at -m32, and a rerun skips a done install.
+boost=""
+for target in "${BOOST_PREFIX}:" "${BOOST_PREFIX_I686}:-m32"; do
+        prefix="${target%%:*}"
+        flags="${target#*:}"
+        [ ! -f "${prefix}/lib/cmake/Boost-${BOOST_VERSION}/BoostConfig.cmake" ] || continue
+        if [ -z "${boost}" ]; then
+                boost="$(mktemp -d)"
+                curl -fsSL --retry 3 "https://github.com/boostorg/boost/releases/download/boost-${BOOST_VERSION}/boost-${BOOST_VERSION}-cmake.tar.xz" \
+                        -o "${boost}/boost.tar.xz"
+                echo "${BOOST_SHA256}  ${boost}/boost.tar.xz" | sha256sum --check --quiet
+                tar -xf "${boost}/boost.tar.xz" -C "${boost}"
+        fi
+        "${CMAKE}" -S "${boost}/boost-${BOOST_VERSION}" -B "${boost}/build${flags}" -G Ninja -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_CXX_COMPILER="g++-${GCC_VERSION}" -DCMAKE_CXX_FLAGS="${flags}" -DBUILD_SHARED_LIBS=OFF \
                 -DBOOST_INCLUDE_LIBRARIES="${BOOST_LIBRARIES}" > /dev/null
-        "${CMAKE}" --build "${boost}/build" --parallel "$(nproc)" > /dev/null
-        $SUDO "${CMAKE}" --install "${boost}/build" --prefix "${BOOST_PREFIX}" > /dev/null
-        rm -rf "${boost}"
-fi
+        "${CMAKE}" --build "${boost}/build${flags}" --parallel "$(nproc)" > /dev/null
+        $SUDO "${CMAKE}" --install "${boost}/build${flags}" --prefix "${prefix}" > /dev/null
+done
+[ -z "${boost}" ] || rm -rf "${boost}"
 
 # Report what landed, but never fail a setup over a version banner: everything above has already
 # installed by this point, and a caller that cannot print is not a caller that cannot build.
@@ -149,7 +157,7 @@ fi
 "${HOME:-/root}/.local/bin/clang-format" --version || true
 "${CMAKE}" --version | head -1 || true
 PATH="${HOME:-/root}/.local/bin:${PATH}" gcovr --version | head -1 || true
-echo "Boost ${BOOST_VERSION} in ${BOOST_PREFIX}"
+echo "Boost ${BOOST_VERSION} in ${BOOST_PREFIX}, and at -m32 in ${BOOST_PREFIX_I686}"
 for compiler in "g++-${GCC_QUALIFICATION_VERSION}" "g++-${GCC_TRUNK_VERSION}" "clang++-${CLANG_QUALIFICATION_VERSION}" "clang++-${CLANG_TRUNK_VERSION}"; do
         "${compiler}" --version | head -1 || true
 done
