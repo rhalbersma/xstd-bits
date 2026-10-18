@@ -1407,9 +1407,9 @@ under every reading. The cross-cutting protocols -- equality, ordering, formatti
 
 The engine is Boost.Hash2, and there are two hashers over it, which differ in **what** they hash.
 
-**`xstd::hasher<H>` hashes the value**, as its standard model does. It is xstd-misc's, and runs Hash2's
+**`xstd::hash<T, H, Flavor>` hashes the value**, as its standard model does. It is xstd-misc's, and runs Hash2's
 `hash_append`, which finds each adaptor's `tag_invoke` hook. A hook appends exactly the message Hash2 1.92
-builds for the model, so `xstd::hasher<H>()(x) == xstd::hasher<H>()(model(x))` under every algorithm and every
+builds for the model, so `xstd::hash<T, H, Flavor>()(x) == xstd::hash<Model, H, Flavor>()(model(x))` under every algorithm and every
 flavor, and a bit container hashes inside a user's Hash2-hashed aggregate as the standard container would:
 
 | xstd type | model | message |
@@ -1441,8 +1441,8 @@ since the unused bits are clear; this is the identity `bit_convert` rests on. Th
 `update` over the storage, from `std::uint8_t` blocks to `unsigned __int128` ones. Elsewhere -- a big-endian
 target, a block with padding bits, a class-type 128-bit block whose layout no rule proves, a constant
 expression -- the same bytes are assembled by shifts, up to 256 at a time. Equal values thus hash equal across
-storages **and** block types, which is why `bit_hash` declares `is_transparent`; `xstd::hasher` cannot, being
-generic, where `42` and `std::int64_t{42}` hash differently.
+storages **and** block types, which is why `bit_hash` declares `is_transparent`; `xstd::hash` does not, since equal
+values of different types need not append the same bytes, as `42` and `std::int64_t{42}` do not.
 
 The same message is public as `xstd::bit_hash_append(h, f, x)`, for a user's own hook. It also takes a
 contiguous range of one static-width container -- a built-in array, a `std::array` or a `std::span`, nested
@@ -1460,10 +1460,12 @@ because FNV-1a does not avalanche: each byte is xored into the low bits and mult
 the last byte never reach the low bits of the result, and the low bits are what a hash table indexes by. Two
 one-word sets differing only in their top key would land in the same bucket. xxHash mixes every input bit into
 every output bit at the end, at a cost a short string barely notices. It is spelled `boost::hash2::xxhash_64`
-on every target, `std::size_t` taking Hash2's fold of its result where it is narrower.
+on every target, `std::size_t` taking Hash2's fold of its result where it is narrower. `bit_hash` declares
+`is_avalanching` from `xstd::hash_algorithm_is_avalanching`, as `xstd::hash` does, so Boost.Unordered's
+open-addressing tables skip their post-mix under xxHash or SipHash and keep it under FNV-1a.
 
 `std::hash` cannot take another algorithm: its `operator()` has one argument and its type no parameter for
-one. The door to another algorithm is `bit_hash<T, H>` for the bits and `xstd::hasher<H>` for the value, each
+one. The door to another algorithm is `bit_hash<T, H>` for the bits and `xstd::hash<T, H>` for the value, each
 seeded where `H` takes a seed. `std::hash<T>` is `bit_hash` at the default, so the two agree digit for digit.
 At any other algorithm the digits differ and the invariant still holds, since it rests on what is appended and
 not on who hashes it.
@@ -3108,9 +3110,9 @@ header is the name's home and the only place it is spelled; `bits.hpp` includes 
 
 **What `bit_` names.** The prefix marks what works on the packed bits: the containers, the concepts and
 transformations over blocks (`bit_concepts/`, `bit_type_traits/`, `bit_align`, `bit_least`), and `bit_hash`. The unprefixed name
-works on the value as the standard model sees it, as `xstd::hasher` does. So `bit_hash` is the
-representation-level hash and `hasher` the value-level one. The prefix names **what** is hashed, the packed
-representation, not whether the code is optimized: the hooks behind `xstd::hasher` expand bits to bools with
+works on the value as the standard model sees it, as `xstd::hash` does. So `bit_hash` is the
+representation-level hash and `xstd::hash` the value-level one. The prefix names **what** is hashed, the packed
+representation, not whether the code is optimized: the hooks behind `xstd::hash` expand bits to bools with
 `_pdep_u64`, AVX-512 or a table, and are as optimized, yet still append the model's bytes.
 
 ### block-and-width-transformations
