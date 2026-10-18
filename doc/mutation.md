@@ -14,8 +14,8 @@ The tool reads a configured and built Ninja tree of this repository, with `BUILD
 `include/` with the build's own compile and link commands.
 
 ```sh
-cmake -S . -B build/mutate -G Ninja -DCMAKE_CXX_COMPILER=clang++-22 -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG=-O0 \
-      -DXSTD_BITS_WARNINGS_AS_ERRORS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH=~/.local/opt/boost-1.92.0
+cmake -S . -B build/mutate -G Ninja -DCMAKE_CXX_COMPILER=clang++-22 -DCMAKE_CXX_FLAGS=--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/15 \
+      -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG=-O0 -DXSTD_BITS_WARNINGS_AS_ERRORS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build build/mutate
 python3 tools/mutate.py $(cd include && find xstd/bits/bit_algorithm -name '*.hpp') --build build/mutate --output mutants.json
 ```
