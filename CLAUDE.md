@@ -250,8 +250,9 @@ possible, and the work relies on them rather than on whatever happens to be inst
   coverage job's gcovr, the CMake the workflows pin and the Boost CI resolves. Run it once per container; it is
   idempotent.
 - [`tools/ci-local.sh`](tools/ci-local.sh) runs the ladders' Linux legs on that toolchain. Run the legs a change can
-  break while iterating, and every leg before a push. Push only what it reports green: CI is there to confirm,
-  not to discover.
+  break while iterating and again before a push, and push only what they report green: CI is there to confirm, not
+  to discover. Add the rest of the legs where the full run can finish. Where it cannot, as in a container that may
+  not outlive its hours, the legs the change can break are the bar, and CI runs the others.
 
 Never build with whatever `g++` or `clang++` happen to resolve to. Ubuntu 24.04 ships GCC 13, which rejects
 `-std=c++2c` outright, so the default compiler cannot build this library at all, and a check that quietly falls
