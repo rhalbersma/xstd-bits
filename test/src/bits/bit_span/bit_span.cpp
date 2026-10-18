@@ -192,7 +192,7 @@ BOOST_AUTO_TEST_CASE(ItRotatesAndReversesWhatItViews)
 {
         auto block       = std::uint8_t{};
         auto const whole = xstd::bit_span(block);
-        static_assert(noexcept(xstd::bit_rotate(whole, whole.begin())) and noexcept(xstd::bit_reverse(whole)));
+        static_assert(noexcept(xstd::ranges::bit_rotate(whole, whole.begin())) and noexcept(xstd::ranges::bit_reverse(whole)));
 
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::uint8_t{}, as_span()), 0);
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::array<std::uint8_t, 3>(), as_span()), 0);

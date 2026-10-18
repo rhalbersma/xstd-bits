@@ -15,8 +15,8 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesEveryIteratorOperation)
         static_assert([] -> bool {
                 auto const s = xstd::bit_fixed_set<100>{1, 50, 99};
                 auto it      = s.begin();
-                xstd::bit_advance(it, 1);
-                return *it == 50UZ and xstd::bit_next(s.begin(), 2) == xstd::bit_prev(s.end(), 1) and xstd::bit_distance(s.begin(), s.end()) == 3;
+                xstd::ranges::bit_advance(it, 1);
+                return *it == 50UZ and xstd::ranges::bit_next(s.begin(), 2) == xstd::ranges::bit_prev(s.end(), 1) and xstd::ranges::bit_distance(s.begin(), s.end()) == 3;
         }());
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }

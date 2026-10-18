@@ -13,7 +13,7 @@
 #include <ranges>                                            // zip
 #include <type_traits>                                       // remove_cvref_t, type_identity_t
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::includes(s1, s2), a block at a time; s2 converts to s1's type, as a flag does to its flag set.
 // std::ranges::includes(s1, s2), a block at a time; s2 converts to s1's type, as a flag does to its flag set.
@@ -46,6 +46,6 @@ template<bits::detail::reads_keys S>
         }
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_INCLUDES_HPP

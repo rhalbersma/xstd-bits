@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // comparable_readings, reads_keys
 #include <xstd/bits/bit_algorithm/detail/compare.hpp>   // equal_bools, equal_keys
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::equal(r1, r2) over two of one reading, a block at a time, whatever blocks and storage hold each.
 template<class R1, class R2>
@@ -24,6 +24,6 @@ template<class R1, class R2>
         }
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_EQUAL_HPP

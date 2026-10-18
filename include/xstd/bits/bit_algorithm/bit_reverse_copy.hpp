@@ -13,7 +13,7 @@
 #include <cstddef>                                      // ptrdiff_t
 #include <ranges>                                       // borrowed_iterator_t, end, size
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::reverse_copy(r, out), a block at a time: each block read from the top of r, its bits reversed.
 template<bits::detail::reads_bools R, bits::detail::bool_output_iterator O>
@@ -26,6 +26,6 @@ constexpr auto bit_reverse_copy(R&& r, O out) noexcept
         return {std::ranges::borrowed_iterator_t<R>(std::ranges::end(r)), out + static_cast<std::ptrdiff_t>(n)};
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_REVERSE_COPY_HPP

@@ -51,7 +51,7 @@ public:
         using is_transparent = void;
 
         template<class U>
-                requires (std::same_as<U, T> or requires (T const& x, U const& y) { xstd::bit_equal(x, y); }) and (bits::detail::bit_hashable<U> or bits::detail::bit_hashable_range<U>)
+                requires (std::same_as<U, T> or requires (T const& x, U const& y) { xstd::ranges::bit_equal(x, y); }) and (bits::detail::bit_hashable<U> or bits::detail::bit_hashable_range<U>)
         [[nodiscard]] constexpr auto operator()(U const& v) const
                 -> std::size_t
         {

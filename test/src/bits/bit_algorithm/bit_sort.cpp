@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_SUITE(BitSort)
 namespace {
 
 template<class R>
-concept permutable = requires (R&& r) { xstd::bit_sort(std::forward<R>(r)); };
+concept permutable = requires (R&& r) { xstd::ranges::bit_sort(std::forward<R>(r)); };
 
 // The algorithm on x, as an owner or through a whole view, and std::ranges::sort on its bools: zeros, then ones.
 template<class X>
@@ -31,7 +31,7 @@ template<class X>
 {
         auto model = test::algorithm::bools_of(x);
         std::ranges::sort(model);
-        auto const ends  = [](auto&& r) -> bool { return xstd::bit_sort(r) == std::ranges::end(r); };
+        auto const ends  = [](auto&& r) -> bool { return xstd::ranges::bit_sort(r) == std::ranges::end(r); };
         auto const ended = through_view ? ends(xstd::bit_span(x)) : ends(x);
         return ended and test::algorithm::bools_of(x) == model;
 }
@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(AgreesWithRangesSortOverEveryColumn)
 BOOST_AUTO_TEST_CASE(AWindowPermutesItsOwnPositionsAlone)
 {
         auto const a = test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>());
-        BOOST_CHECK_EQUAL(test::algorithm::writes_as_model(a, [](auto w) -> void { static_cast<void>(xstd::bit_sort(w)); }, [](auto model) -> void { static_cast<void>(std::ranges::sort(model)); }), 0);
+        BOOST_CHECK_EQUAL(test::algorithm::writes_as_model(a, [](auto w) -> void { static_cast<void>(xstd::ranges::bit_sort(w)); }, [](auto model) -> void { static_cast<void>(std::ranges::sort(model)); }), 0);
 }
 
 // In a constant expression, and over writable bools of ours alone: never a const owner, a set or std::vector<bool>.
@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(PermutesOurWritableSequencesAlone)
         static_assert(agrees(test::algorithm::patterned(xstd::bit_array<70>()), false) and agrees(test::algorithm::patterned(xstd::bit_array<70>()), true));
         static_assert(permutable<xstd::bit_array<8>&> and permutable<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>()).subspan(1UZ, 3UZ))>);
         static_assert(not permutable<xstd::bit_array<8> const&> and not permutable<std::vector<bool>&> and not permutable<xstd::bit_fixed_set<8>&>);
-        static_assert(std::same_as<decltype(xstd::bit_sort(xstd::bit_array<8>())), std::ranges::dangling>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_sort(xstd::bit_array<8>())), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

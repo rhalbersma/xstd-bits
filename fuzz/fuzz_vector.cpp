@@ -183,23 +183,23 @@ auto fuzz_one(fuzz::decoder& in)
                         case 2: {
                                 check.step("fill");
                                 auto const val = in.boolean();
-                                static_cast<void>(xstd::bit_fill(x, val));
+                                static_cast<void>(xstd::ranges::bit_fill(x, val));
                                 std::ranges::fill(m, val);
                                 break;
                         }
                         case 3: {
                                 check.step("bit_count, bit_all_of, bit_any_of, bit_none_of, bit_mismatch");
                                 auto const n = std::ranges::count(m, true);
-                                check.expect(xstd::bit_count(x) == n, "bit_count");
-                                check.expect(xstd::bit_all_of(x) == (n == std::ranges::ssize(m)), "bit_all_of");
-                                check.expect(xstd::bit_any_of(x) == (n != 0), "bit_any_of");
-                                check.expect(xstd::bit_none_of(x) == (n == 0), "bit_none_of");
+                                check.expect(xstd::ranges::bit_count(x) == n, "bit_count");
+                                check.expect(xstd::ranges::bit_all_of(x) == (n == std::ranges::ssize(m)), "bit_all_of");
+                                check.expect(xstd::ranges::bit_any_of(x) == (n != 0), "bit_any_of");
+                                check.expect(xstd::ranges::bit_none_of(x) == (n == 0), "bit_none_of");
                                 auto z  = y;
                                 auto mz = my;
                                 align(z, mz, size);
                                 if (z.size() == size) {
                                         auto const first = std::ranges::mismatch(m, mz).in1;
-                                        check.expect(xstd::bit_mismatch(x, z).in1 - x.begin() == first - m.begin(), "bit_mismatch");
+                                        check.expect(xstd::ranges::bit_mismatch(x, z).in1 - x.begin() == first - m.begin(), "bit_mismatch");
                                 }
                                 break;
                         }

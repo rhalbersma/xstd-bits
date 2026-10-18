@@ -10,7 +10,7 @@
 #include <xstd/bits/detail/ownership.hpp>               // storage_access
 #include <ranges>                                       // borrowed_iterator_t, end, size
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::fill(r, value), a block at a time: a whole sequence's every block, a window's masked at its ends.
 template<bits::detail::writable_bools R>
@@ -25,6 +25,6 @@ constexpr auto bit_fill(R&& r, bool value) noexcept
         return std::ranges::borrowed_iterator_t<R>(std::ranges::end(r));
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_FILL_HPP

@@ -139,7 +139,7 @@ template<class Set, class Sequence>
         constexpr auto last = xstd::bits::detail::bit_width_v<Set> - 1UZ;
         auto const set      = Set{0, 7, last};
         auto const sequence = xstd::bit_convert<Sequence>(set);
-        return sequence[0] and sequence[7] and sequence[last] and xstd::bit_count(sequence) == 3UZ and xstd::bit_convert<Set>(sequence) == set;
+        return sequence[0] and sequence[7] and sequence[last] and xstd::ranges::bit_count(sequence) == 3UZ and xstd::bit_convert<Set>(sequence) == set;
 }
 
 } // namespace
@@ -294,7 +294,7 @@ BOOST_AUTO_TEST_CASE(AFixedWidthWidensZeroExtended)
         }());
 
         // Every position of a full source crosses, and not one past its width.
-        static_assert(xstd::bit_count(xstd::bit_convert<xstd::bit_array<64>>(~xstd::bit_fixed_set<9>())) == 9);
+        static_assert(xstd::ranges::bit_count(xstd::bit_convert<xstd::bit_array<64>>(~xstd::bit_fixed_set<9>())) == 9);
         static_assert(xstd::bit_convert<xstd::bit_fixed_set<128>>(std::bitset<70>().set()).size() == 70UZ);
         static_assert(xstd::bit_convert<std::uint32_t>(std::array<std::uint8_t, 3>{0xFF, 0xFF, 0xFF}) == 0xFF'FFFFU);
         BOOST_CHECK_EQUAL(xstd::bit_convert<std::bitset<200>>(~xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 100>()).count(), 100UZ);
@@ -514,7 +514,7 @@ BOOST_AUTO_TEST_CASE(TheConversionIsAConstantExpression)
                 auto s             = xstd::basic_bit_set<std::size_t, std::uint8_t>{3, 9, 20};
                 auto const wide    = xstd::bit_convert<xstd::basic_bit_vector<std::uint32_t>>(s);
                 auto const adopted = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(std::move(s));
-                return wide.size() == 24UZ and wide[20] and adopted.size() == 24UZ and xstd::bit_count(adopted) == 3;
+                return wide.size() == 24UZ and wide[20] and adopted.size() == 24UZ and xstd::ranges::bit_count(adopted) == 3;
         }());
         static_assert([] -> bool {
                 auto a       = xstd::basic_bit_array<std::uint16_t, 70>();
@@ -522,10 +522,10 @@ BOOST_AUTO_TEST_CASE(TheConversionIsAConstantExpression)
                 a[69]        = true;
                 auto const s = xstd::bit_convert<xstd::bit_set>(a);
                 auto const v = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(std::bitset<70>(0b1011));
-                return s.contains(69UZ) and s.size() == 2UZ and v.size() == 70UZ and xstd::bit_count(v) == 3;
+                return s.contains(69UZ) and s.size() == 2UZ and v.size() == 70UZ and xstd::ranges::bit_count(v) == 3;
         }());
 #ifdef XSTD_BITS_HAS_CONSTEXPR_INPLACE
-        static_assert(xstd::bit_count(xstd::bit_convert<xstd::bit_inplace_vector<100>>(xstd::bit_fixed_set<100>{7, 99})) == 2);
+        static_assert(xstd::ranges::bit_count(xstd::bit_convert<xstd::bit_inplace_vector<100>>(xstd::bit_fixed_set<100>{7, 99})) == 2);
 #endif
         BOOST_CHECK(true);
 }

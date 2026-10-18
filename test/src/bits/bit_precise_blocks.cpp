@@ -51,7 +51,7 @@ auto check_array()
                 a[i] = in_pattern<N>(i);
                 b[i] = in_pattern<N>(i);
         }
-        BOOST_CHECK_EQUAL(xstd::bit_count(a), xstd::bit_count(b));
+        BOOST_CHECK_EQUAL(xstd::ranges::bit_count(a), xstd::ranges::bit_count(b));
         BOOST_CHECK(xstd::bit_convert<byte>(a) == b);
         BOOST_CHECK(xstd::bit_convert<odd>(b) == a);
         BOOST_CHECK_EQUAL(std::hash<odd>()(a), std::hash<byte>()(b));
@@ -62,12 +62,12 @@ auto check_array()
         d[0]   = not d[0];
         BOOST_CHECK((a <=> c) == (b <=> d));
 
-        xstd::bit_reverse(a);
-        xstd::bit_reverse(b);
+        xstd::ranges::bit_reverse(a);
+        xstd::ranges::bit_reverse(b);
         BOOST_CHECK(xstd::bit_convert<byte>(a) == b);
 
-        xstd::bit_rotate(a, a.begin() + (N / 2UZ));
-        xstd::bit_rotate(b, b.begin() + (N / 2UZ));
+        xstd::ranges::bit_rotate(a, a.begin() + (N / 2UZ));
+        xstd::ranges::bit_rotate(b, b.begin() + (N / 2UZ));
         BOOST_CHECK(xstd::bit_convert<byte>(a) == b);
 }
 

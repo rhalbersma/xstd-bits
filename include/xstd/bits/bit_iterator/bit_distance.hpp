@@ -10,7 +10,7 @@
 #include <xstd/bits/detail/ownership.hpp>               // storage_access
 #include <iterator>                                     // iter_difference_t, iter_reference_t
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::distance(first, last) over a set's keys: the keys between them counted a block at a time.
 template<bits::detail::key_iterator I>
@@ -34,6 +34,6 @@ template<bits::detail::key_iterator I>
         }
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ITERATOR_BIT_DISTANCE_HPP

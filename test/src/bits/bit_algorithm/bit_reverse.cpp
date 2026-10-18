@@ -21,7 +21,7 @@ BOOST_AUTO_TEST_SUITE(BitReverse)
 namespace {
 
 template<class R>
-concept reversible = requires (R&& r) { xstd::bit_reverse(std::forward<R>(r)); };
+concept reversible = requires (R&& r) { xstd::ranges::bit_reverse(std::forward<R>(r)); };
 
 // The algorithm on s against std::ranges::reverse on the same bools, and the end iterator it answers.
 template<class S>
@@ -30,7 +30,7 @@ template<class S>
 {
         auto model = std::vector<bool>(s.begin(), s.end());
         std::ranges::reverse(model);
-        auto const last = xstd::bit_reverse(s);
+        auto const last = xstd::ranges::bit_reverse(s);
         return std::ranges::equal(s, model) and last == std::ranges::end(s);
 }
 
@@ -56,9 +56,9 @@ BOOST_AUTO_TEST_CASE(AWholeViewReversesWhatItViews)
 {
         auto a = xstd::basic_bit_array<std::uint8_t, 13>();
         a[0]   = true;
-        xstd::bit_reverse(xstd::bit_span(a));
+        xstd::ranges::bit_reverse(xstd::bit_span(a));
         BOOST_CHECK(a[12] and std::ranges::count(a, true) == 1);
-        static_assert(std::same_as<decltype(xstd::bit_reverse(xstd::bit_span(a))), std::ranges::iterator_t<decltype(xstd::bit_span(a))>>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_reverse(xstd::bit_span(a))), std::ranges::iterator_t<decltype(xstd::bit_span(a))>>);
 }
 
 // Not a window, which shares its end blocks, nor anything const, and an rvalue owner's end dangles as in std::ranges.
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(WhatItReverses)
         static_assert(not reversible<A const&> and not reversible<decltype(xstd::bit_span(std::declval<A const&>()))>);
         static_assert(not reversible<decltype(xstd::bit_span(std::declval<A&>()).subspan(1UZ, 4UZ))>);
         static_assert(not reversible<std::vector<bool>&>);
-        static_assert(std::same_as<decltype(xstd::bit_reverse(A())), std::ranges::dangling>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_reverse(A())), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

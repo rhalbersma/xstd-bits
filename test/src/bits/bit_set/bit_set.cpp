@@ -116,8 +116,8 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltAndOrderedLikeAStdSet)
         auto t = s;
         t.insert(1);
         BOOST_CHECK(t < s);
-        BOOST_CHECK(xstd::bit_includes(t, s));
-        BOOST_CHECK(xstd::bit_intersects(t, s));
+        BOOST_CHECK(xstd::ranges::bit_includes(t, s));
+        BOOST_CHECK(xstd::ranges::bit_intersects(t, s));
 
         // The view over it refers into the owner's std::vector of blocks, as over every owner.
         auto const v = xstd::bit_set_view(t);
@@ -137,8 +137,8 @@ BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
         BOOST_CHECK(std::is_eq(narrow <=> wide));
         BOOST_CHECK_EQUAL(digest(narrow), digest(wide));
         BOOST_CHECK(digest(narrow) != digest(T({1})));
-        BOOST_CHECK(xstd::bit_includes(wide, narrow) and xstd::bit_includes(narrow, wide));
-        BOOST_CHECK(xstd::bit_intersects(narrow, wide));
+        BOOST_CHECK(xstd::ranges::bit_includes(wide, narrow) and xstd::ranges::bit_includes(narrow, wide));
+        BOOST_CHECK(xstd::ranges::bit_intersects(narrow, wide));
 }
 
 // The compound operators and predicates at two differing widths, against the answers over the elements.
@@ -155,12 +155,12 @@ BOOST_AUTO_TEST_CASE(TheSetOperationsIgnoreTheWidth)
         BOOST_CHECK((a - b) == T({1, 200}));
         BOOST_CHECK((b - a) == T({5}));
         BOOST_CHECK(a < b);
-        BOOST_CHECK(xstd::bit_includes(a | b, b) and not xstd::bit_includes(b, a | b));
-        BOOST_CHECK(xstd::bit_intersects(a | b, b));
-        BOOST_CHECK(not xstd::bit_includes(a, b) and not xstd::bit_includes(b, a));
+        BOOST_CHECK(xstd::ranges::bit_includes(a | b, b) and not xstd::ranges::bit_includes(b, a | b));
+        BOOST_CHECK(xstd::ranges::bit_intersects(a | b, b));
+        BOOST_CHECK(not xstd::ranges::bit_includes(a, b) and not xstd::ranges::bit_includes(b, a));
         auto const both = a | b;
-        BOOST_CHECK(xstd::bit_includes(both, b) and xstd::bit_includes(both, a) and not xstd::bit_includes(b, both));
-        BOOST_CHECK(xstd::bit_disjoint(T({5}), a) and xstd::bit_disjoint(a, T({5})));
+        BOOST_CHECK(xstd::ranges::bit_includes(both, b) and xstd::ranges::bit_includes(both, a) and not xstd::ranges::bit_includes(b, both));
+        BOOST_CHECK(xstd::ranges::bit_disjoint(T({5}), a) and xstd::ranges::bit_disjoint(a, T({5})));
 }
 
 // The shifts translate: left grows the width to hold the result, right empties past it, neither preconditioned.

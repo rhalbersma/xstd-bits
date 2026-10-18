@@ -21,7 +21,7 @@ BOOST_AUTO_TEST_SUITE(BitCount)
 namespace {
 
 template<class R>
-concept countable = requires (R const& r) { xstd::bit_count(r); };
+concept countable = requires (R const& r) { xstd::ranges::bit_count(r); };
 
 } // namespace
 
@@ -29,13 +29,13 @@ concept countable = requires (R const& r) { xstd::bit_count(r); };
 BOOST_AUTO_TEST_CASE(CountsAsRangesCountTrue)
 {
         auto const a = test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>());
-        BOOST_CHECK_EQUAL(xstd::bit_count(a), std::ranges::count(a, true));
-        BOOST_CHECK_EQUAL(xstd::bit_count(xstd::bit_span(a)), std::ranges::count(a, true));
+        BOOST_CHECK_EQUAL(xstd::ranges::bit_count(a), std::ranges::count(a, true));
+        BOOST_CHECK_EQUAL(xstd::ranges::bit_count(xstd::bit_span(a)), std::ranges::count(a, true));
 
         for (auto const n : {0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 130UZ}) {
                 auto const v = test::algorithm::patterned(xstd::bit_vector(n));
-                BOOST_CHECK_EQUAL(xstd::bit_count(v), std::ranges::count(v, true));
-                BOOST_CHECK_EQUAL(xstd::bit_count(xstd::bit_vector(n, true)), static_cast<std::ptrdiff_t>(n));
+                BOOST_CHECK_EQUAL(xstd::ranges::bit_count(v), std::ranges::count(v, true));
+                BOOST_CHECK_EQUAL(xstd::ranges::bit_count(xstd::bit_vector(n, true)), static_cast<std::ptrdiff_t>(n));
         }
 }
 
@@ -44,15 +44,15 @@ BOOST_AUTO_TEST_CASE(AWindowCountsItsOwnPositions)
 {
         auto const a = test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>());
         auto wrong   = 0;
-        test::algorithm::for_each_window(xstd::bit_span(a), [&](auto const& w) -> void { wrong += static_cast<int>(xstd::bit_count(w) != std::ranges::count(w, true)); });
+        test::algorithm::for_each_window(xstd::bit_span(a), [&](auto const& w) -> void { wrong += static_cast<int>(xstd::ranges::bit_count(w) != std::ranges::count(w, true)); });
         BOOST_CHECK_EQUAL(wrong, 0);
 }
 
 // The difference type, as std::ranges::count answers, in a constant expression too, and over bools of ours alone.
 BOOST_AUTO_TEST_CASE(AnswersTheDifferenceTypeOverOurSequencesAlone)
 {
-        static_assert(std::same_as<decltype(xstd::bit_count(xstd::bit_array<8>())), std::ptrdiff_t>);
-        static_assert(xstd::bit_count(test::algorithm::patterned(xstd::bit_array<70>())) == std::ranges::count(test::algorithm::patterned(std::vector<bool>(70)), true));
+        static_assert(std::same_as<decltype(xstd::ranges::bit_count(xstd::bit_array<8>())), std::ptrdiff_t>);
+        static_assert(xstd::ranges::bit_count(test::algorithm::patterned(xstd::bit_array<70>())) == std::ranges::count(test::algorithm::patterned(std::vector<bool>(70)), true));
         static_assert(countable<xstd::bit_vector> and countable<xstd::basic_bit_vector<std::uint8_t>>);
         static_assert(not countable<std::vector<bool>> and not countable<xstd::bit_fixed_set<8>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"

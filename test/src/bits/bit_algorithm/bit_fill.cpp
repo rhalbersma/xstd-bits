@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_SUITE(BitFill)
 namespace {
 
 template<class R>
-concept fillable = requires (R&& r) { xstd::bit_fill(std::forward<R>(r), true); };
+concept fillable = requires (R&& r) { xstd::ranges::bit_fill(std::forward<R>(r), true); };
 
 // The algorithm on x and std::ranges::fill on its bools, through the owner or a whole view: the bools and the end.
 template<class X>
@@ -32,7 +32,7 @@ template<class X>
 {
         auto model = test::algorithm::bools_of(x);
         std::ranges::fill(model, value);
-        auto const ends  = [&](auto&& r) -> bool { return xstd::bit_fill(r, value) == std::ranges::end(r); };
+        auto const ends  = [&](auto&& r) -> bool { return xstd::ranges::bit_fill(r, value) == std::ranges::end(r); };
         auto const ended = through_view ? ends(xstd::bit_span(x)) : ends(x);
         return ended and test::algorithm::bools_of(x) == model;
 }
@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(AWindowFillsItsOwnPositionsAlone)
 {
         auto const a = test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>());
         for (auto const value : {false, true}) {
-                BOOST_CHECK_EQUAL(test::algorithm::writes_as_model(a, [=](auto w) -> void { static_cast<void>(xstd::bit_fill(w, value)); }, [=](auto m) -> void { std::ranges::fill(m, value); }), 0);
+                BOOST_CHECK_EQUAL(test::algorithm::writes_as_model(a, [=](auto w) -> void { static_cast<void>(xstd::ranges::bit_fill(w, value)); }, [=](auto m) -> void { std::ranges::fill(m, value); }), 0);
         }
 }
 
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(FillsOurWritableSequencesAlone)
         static_assert(agrees(test::algorithm::patterned(xstd::bit_array<70>()), true, false) and agrees(xstd::bit_array<70>(), true, true));
         static_assert(fillable<xstd::bit_array<8>&> and fillable<xstd::bit_valarray&> and fillable<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>()).subspan(1UZ, 3UZ))>);
         static_assert(not fillable<xstd::bit_array<8> const&> and not fillable<std::vector<bool>&> and not fillable<xstd::bit_fixed_set<8>&>);
-        static_assert(std::same_as<decltype(xstd::bit_fill(xstd::bit_array<8>(), true)), std::ranges::dangling>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_fill(xstd::bit_array<8>(), true)), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

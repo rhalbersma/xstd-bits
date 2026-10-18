@@ -191,8 +191,8 @@ BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDo)
 
         // A capacity of nought has nothing to move.
         auto z = xstd::basic_bit_inplace_vector<std::uint8_t, 0>();
-        xstd::bit_rotate(z, z.begin());
-        xstd::bit_reverse(z);
+        xstd::ranges::bit_rotate(z, z.begin());
+        xstd::ranges::bit_reverse(z);
         BOOST_CHECK(z.empty());
 }
 

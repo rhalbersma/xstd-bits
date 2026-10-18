@@ -240,7 +240,7 @@ auto query_mismatches_over_pairs()
                 for (auto const rhs : std::views::iota(0UZ, 1UZ << n)) {
                         auto const ym     = split<M>(rhs).first;
                         auto const y      = X(ym.begin(), ym.end());
-                        auto const all_of = xstd::bit_includes(x, y);
+                        auto const all_of = xstd::ranges::bit_includes(x, y);
                         mismatches += static_cast<std::size_t>(all_of != std::ranges::includes(x, y, x.key_comp()));
                         mismatches += static_cast<std::size_t>(all_of != std::ranges::includes(xm, ym, xm.key_comp()));
                 }
@@ -397,7 +397,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(DisjointIsNotIntersectsAndTheSupersetIsTheSubsetRe
         } else {
                 auto const none = xstd::bit_enum_set<E>();
                 auto const all  = ~none;
-                BOOST_CHECK(not xstd::bit_includes(none, all) and xstd::bit_includes(all, none) and xstd::bit_disjoint(none, all));
+                BOOST_CHECK(not xstd::ranges::bit_includes(none, all) and xstd::ranges::bit_includes(all, none) and xstd::ranges::bit_disjoint(none, all));
         }
 }
 

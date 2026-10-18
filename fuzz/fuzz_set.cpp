@@ -379,11 +379,11 @@ auto fuzz_one(fuzz::decoder& in)
                                 check.expect(std::is_eq(order) == std::is_eq(morder), "<=> equal");
                                 check.expect(std::is_lt(order) == std::is_lt(morder), "<=> less");
                                 auto const subset = std::ranges::includes(my, m);
-                                check.expect(xstd::bit_includes(y, x) == subset, "bit_includes(y, x)");
+                                check.expect(xstd::ranges::bit_includes(y, x) == subset, "bit_includes(y, x)");
                                 auto const superset = std::ranges::includes(m, my);
-                                check.expect(xstd::bit_includes(x, y) == superset, "bit_includes(x, y)");
-                                check.expect(xstd::bit_disjoint(x, y) == intersection(m, my).empty(), "bit_disjoint");
-                                check.expect(xstd::bit_intersects(x, y) == not intersection(m, my).empty(), "bit_intersects");
+                                check.expect(xstd::ranges::bit_includes(x, y) == superset, "bit_includes(x, y)");
+                                check.expect(xstd::ranges::bit_disjoint(x, y) == intersection(m, my).empty(), "bit_disjoint");
+                                check.expect(xstd::ranges::bit_intersects(x, y) == not intersection(m, my).empty(), "bit_intersects");
                                 if (m == my) {
                                         check.expect(std::hash<X>()(x) == std::hash<X>()(y), "equal sets hash alike");
                                 }

@@ -13,7 +13,7 @@
 #include <ranges>                                       // zip
 #include <type_traits>                                  // remove_cvref_t, type_identity_t
 
-namespace xstd {
+namespace xstd::ranges {
 
 // Whether std::ranges::set_intersection(s1, s2) would write a key, a block at a time; s2 converts to s1's type.
 // Whether std::ranges::set_intersection(s1, s2) would write a key, a block at a time; s2 converts to s1's type.
@@ -39,6 +39,6 @@ template<bits::detail::reads_keys S>
         }
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_INTERSECTS_HPP

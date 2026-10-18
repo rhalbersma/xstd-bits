@@ -20,14 +20,14 @@ BOOST_AUTO_TEST_SUITE(BitAllOf)
 namespace {
 
 template<class R>
-concept quantifiable = requires (R const& r) { xstd::bit_all_of(r); };
+concept quantifiable = requires (R const& r) { xstd::ranges::bit_all_of(r); };
 
 // The algorithm and std::ranges::all_of with the identity predicate, on one sequence.
 template<class R>
 [[nodiscard]] constexpr auto agrees(R const& r)
         -> bool
 {
-        return xstd::bit_all_of(r) == std::ranges::all_of(r, std::identity());
+        return xstd::ranges::bit_all_of(r) == std::ranges::all_of(r, std::identity());
 }
 
 } // namespace
@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE(AgreesWithRangesOverOwnersAndViews)
                 BOOST_CHECK(agrees(test::algorithm::patterned(xstd::bit_vector(n))));
                 BOOST_CHECK(agrees(xstd::bit_span(last)));
         }
-        static_assert(xstd::bit_all_of(xstd::bit_array<0>()) == true);
+        static_assert(xstd::ranges::bit_all_of(xstd::bit_array<0>()) == true);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

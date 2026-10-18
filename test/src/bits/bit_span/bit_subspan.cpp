@@ -41,7 +41,7 @@ template<class X>
 constexpr bool has_subspan = requires (X x) { x.subspan(0UZ); x.first(0UZ); x.last(0UZ); };
 
 template<class X>
-constexpr bool can_fill = requires (X x) { xstd::bit_fill(x, true); };
+constexpr bool can_fill = requires (X x) { xstd::ranges::bit_fill(x, true); };
 
 template<class X>
 constexpr bool has_bulk_ops = requires (X x) { x &= x; x |= x; x ^= x; };
@@ -141,10 +141,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AWindowFillsItsPositionsAlone, T, ViewedTypes)
                                 v[i]     = true;
                                 model[i] = true;
                         }
-                        static_cast<void>(xstd::bit_fill(v.subspan(off, count), true));
+                        static_cast<void>(xstd::ranges::bit_fill(v.subspan(off, count), true));
                         std::ranges::fill(model.begin() + static_cast<std::ptrdiff_t>(off), model.begin() + static_cast<std::ptrdiff_t>(off + count), true);
                         BOOST_CHECK(std::ranges::equal(v, model));
-                        static_cast<void>(xstd::bit_fill(v.subspan(off, count), false));
+                        static_cast<void>(xstd::ranges::bit_fill(v.subspan(off, count), false));
                         std::ranges::fill(model.begin() + static_cast<std::ptrdiff_t>(off), model.begin() + static_cast<std::ptrdiff_t>(off + count), false);
                         BOOST_CHECK(std::ranges::equal(v, model));
                 }
@@ -172,7 +172,7 @@ BOOST_AUTO_TEST_CASE(AStaticWindowCarriesItsWidthInItsType)
         static_assert(sizeof(v.first<4>()) + sizeof(std::size_t) == sizeof(v.first(4)));
 
         // A masked block at a time, as a dynamic window fills.
-        static_cast<void>(xstd::bit_fill(v.subspan<8, 8>(), true));
+        static_cast<void>(xstd::ranges::bit_fill(v.subspan<8, 8>(), true));
         BOOST_CHECK_EQUAL(std::ranges::count(a, true), 8);
         BOOST_CHECK(a[8] and a[15] and not a[7] and not a[16]);
 }

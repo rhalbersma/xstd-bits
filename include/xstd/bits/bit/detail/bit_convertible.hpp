@@ -182,7 +182,7 @@ struct bit_source<T>
         [[nodiscard]] static constexpr auto count(T const& from) noexcept
                 -> std::size_t
         {
-                return static_cast<std::size_t>(xstd::bit_count(from));
+                return static_cast<std::size_t>(xstd::ranges::bit_count(from));
         }
 
         // Steps of the narrower block, so that each one lands inside a single target block.

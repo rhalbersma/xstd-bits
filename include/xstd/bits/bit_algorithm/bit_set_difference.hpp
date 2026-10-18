@@ -11,7 +11,7 @@
 #include <type_traits>                                  // type_identity_t
 #include <utility>                                      // declval
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::set_difference(s1, s2) as a set, which s1 - s2 spells; s2 converts to s1's type.
 template<bits::detail::reads_keys S>
@@ -22,6 +22,6 @@ template<bits::detail::reads_keys S>
         return s1 - s2;
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_SET_DIFFERENCE_HPP

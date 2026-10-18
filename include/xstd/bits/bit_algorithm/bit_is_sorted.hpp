@@ -11,7 +11,7 @@
 #include <xstd/bits/detail/ownership.hpp>               // storage_access
 #include <ranges>                                       // size
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::is_sorted(r), a block at a time: no false after the first true.
 template<bits::detail::reads_bools R>
@@ -25,6 +25,6 @@ template<bits::detail::reads_bools R>
         return bits::detail::find_value(c, first + one, n - one, false) == n - one;
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_IS_SORTED_HPP

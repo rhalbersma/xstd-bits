@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(AnArrayOfBlocksDeducesTheirWidth)
 
         constexpr auto a = xstd::basic_bit_array(xstd::from_blocks, blocks);
         static_assert(std::same_as<decltype(a), xstd::basic_bit_array<std::uint8_t, 24> const>);
-        static_assert(a[0] and a[23] and xstd::bit_count(a) == 2);
+        static_assert(a[0] and a[23] and xstd::ranges::bit_count(a) == 2);
 
         constexpr auto s = xstd::basic_bit_fixed_set(xstd::from_blocks, blocks);
         static_assert(std::same_as<decltype(s), xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 24> const>);
@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE(OnlyAnUnsignedIntegerOrItsArrayDeduces)
         static_assert(deduces_from_blocks_of<xstd::uint128>);
         constexpr auto wide = xstd::basic_bit_array(xstd::from_blocks, xstd::uint128{1} << 100U);
         static_assert(std::same_as<decltype(wide), xstd::basic_bit_array<xstd::uint128, 128> const>);
-        static_assert(wide[100] and xstd::bit_count(wide) == 1);
+        static_assert(wide[100] and xstd::ranges::bit_count(wide) == 1);
 
 #endif
         BOOST_CHECK(true);

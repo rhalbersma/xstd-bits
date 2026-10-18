@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_SUITE(BitAdvance)
 namespace {
 
 template<class I>
-concept advanceable = requires (I& it) { xstd::bit_advance(it, 1); };
+concept advanceable = requires (I& it) { xstd::ranges::bit_advance(it, 1); };
 
 // Every unbounded advance from each stop: forward to every reachable index, backward to every one behind.
 template<class X>
@@ -38,7 +38,7 @@ template<class X>
         for (auto const i : test::algorithm::stops(n)) {
                 for (auto const j : test::algorithm::stops(n)) {
                         auto it = its[i];
-                        xstd::bit_advance(it, static_cast<std::ptrdiff_t>(j) - static_cast<std::ptrdiff_t>(i));
+                        xstd::ranges::bit_advance(it, static_cast<std::ptrdiff_t>(j) - static_cast<std::ptrdiff_t>(i));
                         wrong += static_cast<int>(it != its[j]);
                 }
         }
@@ -59,7 +59,7 @@ template<class X>
                                 auto const signed_steps = b < i ? -steps : steps;
                                 auto got                = its[i];
                                 auto want               = its[i];
-                                auto const got_rest     = xstd::bit_advance(got, signed_steps, its[b]);
+                                auto const got_rest     = xstd::ranges::bit_advance(got, signed_steps, its[b]);
                                 auto const want_rest    = std::ranges::advance(want, signed_steps, its[b]);
                                 wrong += static_cast<int>(got != want or got_rest != want_rest);
                         }
@@ -99,14 +99,14 @@ BOOST_AUTO_TEST_CASE(AdvancesOurSetIteratorsAlone)
         static_assert([] -> bool {
                 auto const s = xstd::bit_fixed_set<200>{3UZ, 64UZ, 150UZ, 199UZ};
                 auto it      = s.begin();
-                xstd::bit_advance(it, 3);
-                auto const rest = xstd::bit_advance(it, -9, s.begin());
+                xstd::ranges::bit_advance(it, 3);
+                auto const rest = xstd::ranges::bit_advance(it, -9, s.begin());
                 return *it == 3UZ and rest == -6;
         }());
         using S = xstd::bit_fixed_set<8>;
         static_assert(advanceable<std::ranges::iterator_t<S>> and advanceable<std::ranges::iterator_t<xstd::bit_set>>);
         static_assert(not advanceable<std::ranges::iterator_t<xstd::bit_array<8>>> and not advanceable<std::set<std::size_t>::iterator> and not advanceable<int*>);
-        static_assert(std::same_as<decltype(xstd::bit_advance(std::declval<std::ranges::iterator_t<S>&>(), 1, std::declval<std::ranges::iterator_t<S>>())), std::ptrdiff_t>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_advance(std::declval<std::ranges::iterator_t<S>&>(), 1, std::declval<std::ranges::iterator_t<S>>())), std::ptrdiff_t>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

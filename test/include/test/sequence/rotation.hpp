@@ -75,12 +75,12 @@ template<class S>
 {
         a[0] = true;
         a[8] = true;
-        xstd::bit_rotate(a, std::ranges::next(std::ranges::begin(a), 1));
-        auto const turned_once = a[9] and a[7] and xstd::bit_count(a) == 2;
-        xstd::bit_rotate(a, std::ranges::next(std::ranges::begin(a), 7));
-        auto const turned_twice = a[2] and a[0] and xstd::bit_count(a) == 2;
-        xstd::bit_reverse(a);
-        return turned_once and turned_twice and a[7] and a[9] and xstd::bit_count(a) == 2;
+        xstd::ranges::bit_rotate(a, std::ranges::next(std::ranges::begin(a), 1));
+        auto const turned_once = a[9] and a[7] and xstd::ranges::bit_count(a) == 2;
+        xstd::ranges::bit_rotate(a, std::ranges::next(std::ranges::begin(a), 7));
+        auto const turned_twice = a[2] and a[0] and xstd::ranges::bit_count(a) == 2;
+        xstd::ranges::bit_reverse(a);
+        return turned_once and turned_twice and a[7] and a[9] and xstd::ranges::bit_count(a) == 2;
 }
 
 // The object a permutation is applied through: the owner itself, unless a test hands in a view over it.
@@ -112,7 +112,7 @@ template<class S>
 [[nodiscard]] auto holds(S const& got, std::vector<bool> const& want)
         -> bool
 {
-        return std::ranges::equal(got, want) and xstd::bit_count(got) == std::ranges::count(want, true);
+        return std::ranges::equal(got, want) and xstd::ranges::bit_count(got) == std::ranges::count(want, true);
 }
 
 // Bit i takes bit (i + turn) % size(), by index: libstdc++ 15's ranges::rotate loses a vector<bool> bit, GCC PR 121913.
@@ -147,10 +147,10 @@ template<class O, class Through>
         auto&& rs           = through(r);
         auto const first    = std::ranges::begin(rs);
         auto const last     = std::ranges::end(rs);
-        auto const result   = xstd::bit_rotate(rs, std::ranges::next(first, turn));
+        auto const result   = xstd::ranges::bit_rotate(rs, std::ranges::next(first, turn));
         auto const by_index = holds(rs, turned(model, n)) and result.begin() == std::ranges::next(last, -turn) and result.end() == last;
         auto const as_ints  = std::ranges::equal(rs, ints, {}, [](bool b) noexcept -> int { return static_cast<int>(b); });
-        xstd::bit_rotate(rs, std::ranges::next(last, -turn));
+        xstd::ranges::bit_rotate(rs, std::ranges::next(last, -turn));
         auto const restored = holds(rs, model);
         return static_cast<int>(not by_index) + static_cast<int>(not as_ints) + static_cast<int>(not restored);
 }
@@ -183,9 +183,9 @@ template<class O, class Through>
 
         auto reversed = model;
         std::ranges::reverse(reversed);
-        auto const last = xstd::bit_reverse(seq);
+        auto const last = xstd::ranges::bit_reverse(seq);
         disagreements += static_cast<int>(not holds(seq, reversed) or last != std::ranges::end(seq));
-        xstd::bit_reverse(seq);
+        xstd::ranges::bit_reverse(seq);
         disagreements += static_cast<int>(not holds(seq, model));
         return disagreements;
 }

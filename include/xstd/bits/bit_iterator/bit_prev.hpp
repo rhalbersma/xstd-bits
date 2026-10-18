@@ -10,14 +10,14 @@
 #include <xstd/bits/bit_iterator/bit_advance.hpp>       // bit_advance
 #include <iterator>                                     // iter_difference_t
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::prev(it, n) over a set's keys, through bit_advance by -n.
 template<bits::detail::key_iterator I>
 [[nodiscard]] constexpr auto bit_prev(I it, std::iter_difference_t<I> n) noexcept
         -> I
 {
-        xstd::bit_advance(it, -n);
+        xstd::ranges::bit_advance(it, -n);
         return it;
 }
 
@@ -26,10 +26,10 @@ template<bits::detail::key_iterator I>
 [[nodiscard]] constexpr auto bit_prev(I it, std::iter_difference_t<I> n, I bound) noexcept
         -> I
 {
-        static_cast<void>(xstd::bit_advance(it, -n, bound));
+        static_cast<void>(xstd::ranges::bit_advance(it, -n, bound));
         return it;
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ITERATOR_BIT_PREV_HPP

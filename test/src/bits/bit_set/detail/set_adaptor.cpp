@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(AViewIsShallow)
 
         Reader const r(c);
         BOOST_CHECK(r.contains(42UZ) and keys(r) == keys(v));
-        BOOST_CHECK(xstd::bit_includes(r, r) and xstd::bit_intersects(r, r));
+        BOOST_CHECK(xstd::ranges::bit_includes(r, r) and xstd::ranges::bit_intersects(r, r));
 }
 
 BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
@@ -263,13 +263,13 @@ BOOST_AUTO_TEST_CASE(TheSetPredicatesAgreeAcrossStorages)
         auto const x = S(a);
         auto const y = S(b);
 
-        BOOST_CHECK(xstd::bit_includes(y, x) and not xstd::bit_includes(x, y));
-        BOOST_CHECK(xstd::bit_intersects(x, y) and xstd::bit_disjoint(x, S(e)));
+        BOOST_CHECK(xstd::ranges::bit_includes(y, x) and not xstd::ranges::bit_includes(x, y));
+        BOOST_CHECK(xstd::ranges::bit_intersects(x, y) and xstd::ranges::bit_disjoint(x, S(e)));
         BOOST_CHECK(x != y and x < y);
         BOOST_CHECK((x <=> y) == std::strong_ordering::less);
 
         x.insert(3UZ);
-        BOOST_CHECK(x == y and xstd::bit_includes(x, y) and xstd::bit_includes(y, x));
+        BOOST_CHECK(x == y and xstd::ranges::bit_includes(x, y) and xstd::ranges::bit_includes(y, x));
 }
 
 // The ordering invariant: the block-wise entry and the iterators agree, and the fallback is the invariant itself.
@@ -774,27 +774,27 @@ BOOST_AUTO_TEST_CASE(SubsetAndIntersectionAcrossWidthsCompareBlocks)
         auto const wide   = grown_to(300UZ, {1UZ, 5UZ, 59UZ, 280UZ});
 
         // Ours inside theirs: nothing of ours lies above their last block, so the remainder is empty.
-        BOOST_CHECK(xstd::bit_includes(wide, narrow));
+        BOOST_CHECK(xstd::ranges::bit_includes(wide, narrow));
 
         // Theirs is not inside ours: 280 lives above our last block, which the remainder check catches.
-        BOOST_CHECK(not xstd::bit_includes(narrow, wide));
+        BOOST_CHECK(not xstd::ranges::bit_includes(narrow, wide));
 
         // A wider operand whose remainder IS clear still fails on the shared blocks when it holds more there.
         auto const wide_low = grown_to(300UZ, {1UZ, 5UZ, 59UZ});
-        BOOST_CHECK(not xstd::bit_includes(narrow, wide_low));
-        BOOST_CHECK(xstd::bit_includes(wide_low, narrow));
+        BOOST_CHECK(not xstd::ranges::bit_includes(narrow, wide_low));
+        BOOST_CHECK(xstd::ranges::bit_includes(wide_low, narrow));
 
         // And succeeds when the shared blocks agree and the remainder is clear.
         auto const wide_same = grown_to(300UZ, {1UZ, 5UZ});
-        BOOST_CHECK(xstd::bit_includes(narrow, wide_same));
+        BOOST_CHECK(xstd::ranges::bit_includes(narrow, wide_same));
 
         // Meeting in a shared block, and not meeting at all.
-        BOOST_CHECK(xstd::bit_intersects(narrow, wide));
-        BOOST_CHECK(xstd::bit_intersects(wide, narrow));
+        BOOST_CHECK(xstd::ranges::bit_intersects(narrow, wide));
+        BOOST_CHECK(xstd::ranges::bit_intersects(wide, narrow));
 
         auto const elsewhere = grown_to(300UZ, {7UZ, 280UZ});
-        BOOST_CHECK(xstd::bit_disjoint(narrow, elsewhere));
-        BOOST_CHECK(xstd::bit_disjoint(elsewhere, narrow));
+        BOOST_CHECK(xstd::ranges::bit_disjoint(narrow, elsewhere));
+        BOOST_CHECK(xstd::ranges::bit_disjoint(elsewhere, narrow));
 }
 
 // The ordering turns on one position, the lowest at which the two sets disagree, in both operand orders.
@@ -1166,7 +1166,7 @@ template<class X>
 auto query_mismatches(X const& x, X const& y)
         -> std::size_t
 {
-        return static_cast<std::size_t>(xstd::bit_includes(x, y) != std::ranges::includes(x, y, x.key_comp()));
+        return static_cast<std::size_t>(xstd::ranges::bit_includes(x, y) != std::ranges::includes(x, y, x.key_comp()));
 }
 
 // Every pair of subsets of the first width positions, owned and, where the owner can be viewed, viewed.
@@ -1209,10 +1209,10 @@ BOOST_AUTO_TEST_CASE(DisjointIsNotIntersectsAndTheSupersetIsTheSubsetReadTheOthe
         auto const wide   = xstd::bit_set({1UZ, 100UZ});
         auto const narrow = xstd::bit_set({1UZ});
         auto const empty  = xstd::bit_set();
-        BOOST_CHECK(xstd::bit_includes(wide, narrow) and not xstd::bit_includes(narrow, wide) and xstd::bit_intersects(wide, narrow));
-        BOOST_CHECK(xstd::bit_includes(narrow, empty) and not xstd::bit_includes(empty, narrow) and xstd::bit_disjoint(narrow, empty));
-        BOOST_CHECK(xstd::bit_includes(empty, empty));
-        static_assert(noexcept(xstd::bit_disjoint(wide, narrow)) and noexcept(xstd::bit_includes(wide, narrow)));
+        BOOST_CHECK(xstd::ranges::bit_includes(wide, narrow) and not xstd::ranges::bit_includes(narrow, wide) and xstd::ranges::bit_intersects(wide, narrow));
+        BOOST_CHECK(xstd::ranges::bit_includes(narrow, empty) and not xstd::ranges::bit_includes(empty, narrow) and xstd::ranges::bit_disjoint(narrow, empty));
+        BOOST_CHECK(xstd::ranges::bit_includes(empty, empty));
+        static_assert(noexcept(xstd::ranges::bit_disjoint(wide, narrow)) and noexcept(xstd::ranges::bit_includes(wide, narrow)));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

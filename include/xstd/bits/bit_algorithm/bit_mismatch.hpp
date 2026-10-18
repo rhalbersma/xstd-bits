@@ -14,7 +14,7 @@
 #include <ranges>                                       // begin, borrowed_iterator_t, size
 #include <type_traits>                                  // remove_cvref_t
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::mismatch(r1, r2), a block at a time over two whole sequences; a window is compared a bool at a time.
 template<class R1, class R2>
@@ -35,6 +35,6 @@ template<class R1, class R2>
         }
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_MISMATCH_HPP

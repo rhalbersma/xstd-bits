@@ -96,11 +96,11 @@ auto main()
         // The sequence reading.
         auto array = xstd::bit_array<64>();
         array[7]   = true;
-        check(xstd::bit_count(array) == 1);
+        check(xstd::ranges::bit_count(array) == 1);
 
         auto vector = xstd::bit_vector(64);
         vector[63]  = true;
-        check(vector.size() == 64 and xstd::bit_count(vector) == 1);
+        check(vector.size() == 64 and xstd::ranges::bit_count(vector) == 1);
 
         // A fixed width into a run-time one, the width carried along.
         auto const converted = xstd::bit_convert<xstd::bit_vector>(array);
@@ -117,20 +117,20 @@ auto main()
 
         auto small_vector = xstd::bit_small_vector<64>(100);
         small_vector[99]  = true;
-        check(small_vector.size() == 100 and xstd::bit_count(small_vector) == 1);
+        check(small_vector.size() == 100 and xstd::ranges::bit_count(small_vector) == 1);
 
         // The valarray reading: an operator answers for every element, and a reduction for the whole array.
         auto fixed_lanes = xstd::bit_fixed_valarray<100>();
         fixed_lanes[99]  = true;
         check(fixed_lanes.sum() and not fixed_lanes.min());
-        check(xstd::bit_count(fixed_lanes == fixed_lanes) == 100);
+        check(xstd::ranges::bit_count(fixed_lanes == fixed_lanes) == 100);
 
         auto const inplace_lanes = xstd::bit_inplace_valarray<100>(true, 10);
         check(inplace_lanes.size() == 10 and inplace_lanes.min());
 
         auto lanes = xstd::bit_valarray(64);
         lanes[3]   = true;
-        check(xstd::bit_count(lanes ^ true) == 63);
+        check(xstd::ranges::bit_count(lanes ^ true) == 63);
 
         // The three view names end to end, over blocks no container owns, read one way and then the other.
         auto owner = consumer::blocks();
@@ -141,12 +141,12 @@ auto main()
         check(view.size() == 2);
 
         auto span = xstd::bit_span(owner);
-        check(xstd::bit_count(span) == 2);
+        check(xstd::ranges::bit_count(span) == 2);
         check(span[9] and not span[10]);
 
         auto const window = span.subspan(8, 8);
         check(window.size() == 8);
-        check(xstd::bit_count(window) == 1);
+        check(xstd::ranges::bit_count(window) == 1);
 
         // Const blocks reach a read-only view, and the const is part of the type.
         auto const& frozen = owner;

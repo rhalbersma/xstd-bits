@@ -12,7 +12,7 @@
 #include <cstddef>                                      // ptrdiff_t
 #include <ranges>                                       // begin, borrowed_iterator_t, size
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::partition_point(r, std::identity()) of a partitioned r, a block at a time: its first false.
 template<bits::detail::reads_bools R>
@@ -23,6 +23,6 @@ template<bits::detail::reads_bools R>
         return std::ranges::borrowed_iterator_t<R>(std::ranges::begin(r) + static_cast<std::ptrdiff_t>(i));
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_PARTITION_POINT_HPP

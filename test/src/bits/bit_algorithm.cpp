@@ -21,14 +21,14 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesEveryAlgorithm)
                 auto a = xstd::bit_array<10>();
                 a[0]   = true;
                 a[8]   = true;
-                xstd::bit_rotate(a, std::ranges::next(std::ranges::begin(a), 1));
-                xstd::bit_reverse(a);
+                xstd::ranges::bit_rotate(a, std::ranges::next(std::ranges::begin(a), 1));
+                xstd::ranges::bit_reverse(a);
                 auto const b = xstd::bit_array<10>();
-                return xstd::bit_count(a) == 2 and a[0] and a[2] and xstd::bit_any_of(a) and not xstd::bit_all_of(a) and xstd::bit_none_of(b) and xstd::bit_mismatch(a, b).in1 == std::ranges::begin(a);
+                return xstd::ranges::bit_count(a) == 2 and a[0] and a[2] and xstd::ranges::bit_any_of(a) and not xstd::ranges::bit_all_of(a) and xstd::ranges::bit_none_of(b) and xstd::ranges::bit_mismatch(a, b).in1 == std::ranges::begin(a);
         }());
-        static_assert(xstd::bit_includes(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}) and xstd::bit_disjoint(xstd::bit_fixed_set<8>{1}, xstd::bit_fixed_set<8>{2}) and xstd::bit_intersects(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}));
-        static_assert(xstd::bit_set_union(xstd::bit_fixed_set<8>{1}, xstd::bit_fixed_set<8>{2}) == xstd::bit_fixed_set<8>{1, 2} and xstd::bit_set_intersection(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}) == xstd::bit_fixed_set<8>{2});
-        static_assert(xstd::bit_set_difference(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}) == xstd::bit_fixed_set<8>{1} and xstd::bit_set_symmetric_difference(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2, 3}) == xstd::bit_fixed_set<8>{1, 3});
+        static_assert(xstd::ranges::bit_includes(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}) and xstd::ranges::bit_disjoint(xstd::bit_fixed_set<8>{1}, xstd::bit_fixed_set<8>{2}) and xstd::ranges::bit_intersects(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}));
+        static_assert(xstd::ranges::bit_set_union(xstd::bit_fixed_set<8>{1}, xstd::bit_fixed_set<8>{2}) == xstd::bit_fixed_set<8>{1, 2} and xstd::ranges::bit_set_intersection(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}) == xstd::bit_fixed_set<8>{2});
+        static_assert(xstd::ranges::bit_set_difference(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}) == xstd::bit_fixed_set<8>{1} and xstd::ranges::bit_set_symmetric_difference(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2, 3}) == xstd::bit_fixed_set<8>{1, 3});
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
@@ -38,23 +38,23 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesTheWrites)
         static_assert([] -> bool {
                 auto a = xstd::bit_array<10>();
                 auto b = xstd::bit_array<10>();
-                static_cast<void>(xstd::bit_fill(a, true));
-                static_cast<void>(xstd::bit_shift_left(a, 4));
-                static_cast<void>(xstd::bit_copy(a, b.begin()));
-                static_cast<void>(xstd::bit_move(a, b.begin()));
-                static_cast<void>(xstd::bit_copy_backward(a, b.end()));
-                static_cast<void>(xstd::bit_reverse_copy(a, b.begin()));
-                static_cast<void>(xstd::bit_rotate_copy(a, std::ranges::begin(a), b.begin()));
-                static_cast<void>(xstd::bit_swap_ranges(a, b));
-                static_cast<void>(xstd::bit_transform(a, b, a.begin(), std::bit_or<>()));
-                static_cast<void>(xstd::bit_transform(b, b.begin(), std::logical_not<>()));
-                static_cast<void>(xstd::bit_shift_right(a, 1));
-                static_cast<void>(xstd::bit_partition(a));
-                auto const partitioned = xstd::bit_is_partitioned(a) and xstd::bit_partition_point(a) == xstd::bit_find(a, false);
-                static_cast<void>(xstd::bit_sort(a));
+                static_cast<void>(xstd::ranges::bit_fill(a, true));
+                static_cast<void>(xstd::ranges::bit_shift_left(a, 4));
+                static_cast<void>(xstd::ranges::bit_copy(a, b.begin()));
+                static_cast<void>(xstd::ranges::bit_move(a, b.begin()));
+                static_cast<void>(xstd::ranges::bit_copy_backward(a, b.end()));
+                static_cast<void>(xstd::ranges::bit_reverse_copy(a, b.begin()));
+                static_cast<void>(xstd::ranges::bit_rotate_copy(a, std::ranges::begin(a), b.begin()));
+                static_cast<void>(xstd::ranges::bit_swap_ranges(a, b));
+                static_cast<void>(xstd::ranges::bit_transform(a, b, a.begin(), std::bit_or<>()));
+                static_cast<void>(xstd::ranges::bit_transform(b, b.begin(), std::logical_not<>()));
+                static_cast<void>(xstd::ranges::bit_shift_right(a, 1));
+                static_cast<void>(xstd::ranges::bit_partition(a));
+                auto const partitioned = xstd::ranges::bit_is_partitioned(a) and xstd::ranges::bit_partition_point(a) == xstd::ranges::bit_find(a, false);
+                static_cast<void>(xstd::ranges::bit_sort(a));
                 auto ones = 0;
-                static_cast<void>(xstd::bit_for_each(a, [&](bool x) -> void { ones += static_cast<int>(x); }));
-                return partitioned and xstd::bit_is_sorted(a) and xstd::bit_find_last(a, false).begin() == std::ranges::next(std::ranges::begin(a), 10 - ones - 1) and xstd::bit_equal(a, a) and std::is_eq(xstd::bit_lexicographical_compare_three_way(a, a));
+                static_cast<void>(xstd::ranges::bit_for_each(a, [&](bool x) -> void { ones += static_cast<int>(x); }));
+                return partitioned and xstd::ranges::bit_is_sorted(a) and xstd::ranges::bit_find_last(a, false).begin() == std::ranges::next(std::ranges::begin(a), 10 - ones - 1) and xstd::ranges::bit_equal(a, a) and std::is_eq(xstd::bit_lexicographical_compare_three_way(a, a));
         }());
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }

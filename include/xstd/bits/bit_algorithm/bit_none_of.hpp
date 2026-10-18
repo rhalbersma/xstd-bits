@@ -8,7 +8,7 @@
 
 #include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // none_true, reads_bools
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::none_of(r, std::identity()), a block at a time: true on an empty sequence.
 template<bits::detail::reads_bools R>
@@ -18,6 +18,6 @@ template<bits::detail::reads_bools R>
         return bits::detail::none_true(r);
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_NONE_OF_HPP

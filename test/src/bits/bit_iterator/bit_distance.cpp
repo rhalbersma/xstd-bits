@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_SUITE(BitDistance)
 namespace {
 
 template<class I>
-concept measurable = requires (I it) { xstd::bit_distance(it, it); };
+concept measurable = requires (I it) { xstd::ranges::bit_distance(it, it); };
 
 // From each stop to each one at or after it, as std::ranges::distance counts the steps between them.
 template<class X>
@@ -38,7 +38,7 @@ template<class X>
         for (auto const i : test::algorithm::stops(n)) {
                 for (auto const j : test::algorithm::stops(n)) {
                         if (i <= j) {
-                                wrong += static_cast<int>(xstd::bit_distance(its[i], its[j]) != std::ranges::distance(its[i], its[j]));
+                                wrong += static_cast<int>(xstd::ranges::bit_distance(its[i], its[j]) != std::ranges::distance(its[i], its[j]));
                         }
                 }
         }
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(AViewCountsWhatItViews)
         auto owner = xstd::bit_fixed_set<200>{0UZ, 64UZ, 65UZ, 130UZ, 199UZ};
         BOOST_CHECK_EQUAL(disagreements(xstd::bit_set_view(owner)), 0);
         auto const none = xstd::bit_set();
-        BOOST_CHECK_EQUAL(xstd::bit_distance(none.begin(), none.end()), 0);
+        BOOST_CHECK_EQUAL(xstd::ranges::bit_distance(none.begin(), none.end()), 0);
         auto blocks = std::array<std::uint64_t, 3>{0x5U, 0x0U, 0x8000'0000'0000'0001U};
         BOOST_CHECK_EQUAL(disagreements(xstd::bit_set_view(blocks)), 0);
 }
@@ -73,11 +73,11 @@ BOOST_AUTO_TEST_CASE(MeasuresOurSetIteratorsAlone)
 {
         static_assert([] -> bool {
                 auto const s = xstd::bit_fixed_set<200>{3UZ, 64UZ, 150UZ, 199UZ};
-                return xstd::bit_distance(s.begin(), s.end()) == 4 and xstd::bit_distance(s.find(64UZ), s.find(199UZ)) == 2;
+                return xstd::ranges::bit_distance(s.begin(), s.end()) == 4 and xstd::ranges::bit_distance(s.find(64UZ), s.find(199UZ)) == 2;
         }());
         using S = xstd::bit_fixed_set<8>;
         static_assert(measurable<std::ranges::iterator_t<S>> and not measurable<std::ranges::iterator_t<xstd::bit_array<8>>> and not measurable<std::set<std::size_t>::iterator>);
-        static_assert(std::same_as<decltype(xstd::bit_distance(std::declval<std::ranges::iterator_t<S>>(), std::declval<std::ranges::iterator_t<S>>())), std::ptrdiff_t>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_distance(std::declval<std::ranges::iterator_t<S>>(), std::declval<std::ranges::iterator_t<S>>())), std::ptrdiff_t>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

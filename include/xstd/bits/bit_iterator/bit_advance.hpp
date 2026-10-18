@@ -12,7 +12,7 @@
 #include <cassert>                                      // assert
 #include <iterator>                                     // iter_difference_t
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::advance(it, n) over a set's keys: whole blocks skipped by their popcount, the last one selected in.
 template<bits::detail::key_iterator I>
@@ -33,6 +33,6 @@ constexpr auto bit_advance(I& it, std::iter_difference_t<I> n, I bound) noexcept
         return bits::detail::advance_keys(it, n, bits::detail::storage_access::position(bound));
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ITERATOR_BIT_ADVANCE_HPP

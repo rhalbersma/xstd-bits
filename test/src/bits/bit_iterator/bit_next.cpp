@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_SUITE(BitNext)
 namespace {
 
 template<class I>
-concept steppable = requires (I it) { xstd::bit_next(it, 1); };
+concept steppable = requires (I it) { xstd::ranges::bit_next(it, 1); };
 
 // From each stop to each one forward of it, unbounded, and bounded by every stop at every distance.
 template<class X>
@@ -32,11 +32,11 @@ template<class X>
         for (auto const i : test::algorithm::stops(n)) {
                 for (auto const j : test::algorithm::stops(n)) {
                         if (i <= j) {
-                                wrong += static_cast<int>(xstd::bit_next(its[i], static_cast<std::ptrdiff_t>(j - i)) != its[j]);
+                                wrong += static_cast<int>(xstd::ranges::bit_next(its[i], static_cast<std::ptrdiff_t>(j - i)) != its[j]);
                         }
                         for (auto const steps : {0Z, 1Z, 9Z, 200Z}) {
                                 if (i <= j) {
-                                        wrong += static_cast<int>(xstd::bit_next(its[i], steps, its[j]) != std::ranges::next(its[i], steps, its[j]));
+                                        wrong += static_cast<int>(xstd::ranges::bit_next(its[i], steps, its[j]) != std::ranges::next(its[i], steps, its[j]));
                                 }
                         }
                 }
@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(StepsOurSetIteratorsAlone)
 {
         static_assert([] -> bool {
                 auto const s = xstd::bit_fixed_set<200>{3UZ, 64UZ, 150UZ, 199UZ};
-                return *xstd::bit_next(s.begin(), 2) == 150UZ and xstd::bit_next(s.begin(), 9, s.end()) == s.end();
+                return *xstd::ranges::bit_next(s.begin(), 2) == 150UZ and xstd::ranges::bit_next(s.begin(), 9, s.end()) == s.end();
         }());
         static_assert(steppable<std::ranges::iterator_t<xstd::bit_fixed_set<8>>> and not steppable<std::ranges::iterator_t<xstd::bit_array<8>>> and not steppable<std::set<std::size_t>::iterator>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"

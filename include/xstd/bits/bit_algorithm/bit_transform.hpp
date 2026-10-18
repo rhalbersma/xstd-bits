@@ -14,7 +14,7 @@
 #include <ranges>                                       // begin, borrowed_iterator_t, end, size
 #include <type_traits>                                  // remove_cvref_t
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::transform(r, out, f), f asked of false and of true once each and applied a block at a time.
 template<bits::detail::reads_bools R, bits::detail::bool_output_iterator O, bits::detail::bool_function<bool> F>
@@ -51,6 +51,6 @@ constexpr auto bit_transform(R1&& r1, R2&& r2, O out, F f)
         return {std::ranges::borrowed_iterator_t<R1>(std::ranges::begin(r1) + d), std::ranges::borrowed_iterator_t<R2>(std::ranges::begin(r2) + d), out + d};
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_TRANSFORM_HPP

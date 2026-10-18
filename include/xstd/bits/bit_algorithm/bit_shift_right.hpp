@@ -12,7 +12,7 @@
 #include <cstddef>                                      // size_t
 #include <ranges>                                       // begin, borrowed_subrange_t, end, range_difference_t
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::shift_right(r, n), a block at a time: bit i + n takes bit i, and the n before the new begin read false.
 template<bits::detail::whole_sequence R>
@@ -34,6 +34,6 @@ constexpr auto bit_shift_right(R&& r, std::ranges::range_difference_t<R> n) noex
         return {first + n, last};
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_SHIFT_RIGHT_HPP
