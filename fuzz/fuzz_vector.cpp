@@ -190,7 +190,7 @@ auto fuzz_one(fuzz::decoder& in)
                         case 3: {
                                 check.step("bit_count, bit_all_of, bit_any_of, bit_none_of, bit_mismatch");
                                 auto const n = std::ranges::count(m, true);
-                                check.expect(xstd::ranges::bit_count(x) == n, "bit_count");
+                                check.expect(xstd::ranges::bit_count(x, true) == n, "bit_count");
                                 check.expect(xstd::ranges::bit_all_of(x) == (n == std::ranges::ssize(m)), "bit_all_of");
                                 check.expect(xstd::ranges::bit_any_of(x) == (n != 0), "bit_any_of");
                                 check.expect(xstd::ranges::bit_none_of(x) == (n == 0), "bit_none_of");

@@ -63,7 +63,7 @@ template<class W, class R>
                         from_sequence.push_back(n);
                 }
         }
-        return forward == expected and backward == expected and from_sequence == expected and set.size() == expected.size() and static_cast<std::size_t>(xstd::ranges::bit_count(seq)) == expected.size();
+        return forward == expected and backward == expected and from_sequence == expected and set.size() == expected.size() and static_cast<std::size_t>(xstd::ranges::bit_count(seq, true)) == expected.size();
 }
 
 template<class W>

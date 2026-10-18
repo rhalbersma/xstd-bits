@@ -3,22 +3,26 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/algorithm/sequences.hpp>           // for_each_sequence, for_each_window, patterned, sequences
 #include <test/algorithm/sets.hpp>                // for_each_set, iterators_of, sets, stops
 #include <test/for_each_type.hpp>                 // for_each_type
-#include <xstd/bits/bit_array.hpp>                // bit_array
+#include <xstd/bits/bit_array.hpp>                // basic_bit_array, bit_array
 #include <xstd/bits/bit_iterator/bit_advance.hpp> // bit_advance
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>    // bit_fixed_set
 #include <xstd/bits/bit_set/bit_set.hpp>          // bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>     // bit_set_view
+#include <xstd/bits/bit_span/bit_span.hpp>        // bit_span
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                  // array
 #include <concepts>                               // same_as
 #include <cstddef>                                // ptrdiff_t, size_t
-#include <cstdint>                                // uint64_t
+#include <cstdint>                                // uint64_t, uint8_t
 #include <iterator>                               // advance
 #include <ranges>                                 // iterator_t
 #include <set>                                    // set
+#include <span>                                   // span
 #include <utility>                                // declval
+#include <vector>                                 // vector
 
 BOOST_AUTO_TEST_SUITE(BitAdvance)
 
@@ -80,6 +84,23 @@ BOOST_AUTO_TEST_CASE(AgreesWithRangesAdvanceOverEverySetColumn)
         });
 }
 
+// Every input of every sequence column of ours, a span of each and every window, as std::ranges::advance steps them.
+BOOST_AUTO_TEST_CASE(AgreesWithRangesAdvanceOverEverySequenceColumn)
+{
+        test::for_each_type<test::algorithm::sequences>([]<class X> -> void {
+                auto wrong = 0;
+                test::algorithm::for_each_sequence<X>([&](X const& x) -> void {
+                        auto const span = xstd::bit_span(x);
+                        wrong += unbounded_disagreements(x) + bounded_disagreements(x) + unbounded_disagreements(span) + bounded_disagreements(span);
+                });
+                BOOST_CHECK_EQUAL(wrong, 0);
+        });
+        auto const a = test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>());
+        auto wrong   = 0;
+        test::algorithm::for_each_window(xstd::bit_span(a), [&](auto const& w) -> void { wrong += unbounded_disagreements(w) + bounded_disagreements(w); });
+        BOOST_CHECK_EQUAL(wrong, 0);
+}
+
 // A view's iterators skip the blocks they view, its owner's or lent ones, and an empty set's begin is its end.
 BOOST_AUTO_TEST_CASE(AViewAdvancesOverWhatItViews)
 {
@@ -93,8 +114,8 @@ BOOST_AUTO_TEST_CASE(AViewAdvancesOverWhatItViews)
         BOOST_CHECK_EQUAL(unbounded_disagreements(lent) + bounded_disagreements(lent), 0);
 }
 
-// In a constant expression, and over our sets' iterators alone, answering what std::ranges::advance answers.
-BOOST_AUTO_TEST_CASE(AdvancesOurSetIteratorsAlone)
+// In a constant expression, and over our iterators alone, answering what std::ranges::advance answers.
+BOOST_AUTO_TEST_CASE(AdvancesOurIteratorsAlone)
 {
         static_assert([] -> bool {
                 auto const s = xstd::bit_fixed_set<200>{3UZ, 64UZ, 150UZ, 199UZ};
@@ -105,7 +126,8 @@ BOOST_AUTO_TEST_CASE(AdvancesOurSetIteratorsAlone)
         }());
         using S = xstd::bit_fixed_set<8>;
         static_assert(advanceable<std::ranges::iterator_t<S>> and advanceable<std::ranges::iterator_t<xstd::bit_set>>);
-        static_assert(not advanceable<std::ranges::iterator_t<xstd::bit_array<8>>> and not advanceable<std::set<std::size_t>::iterator> and not advanceable<int*>);
+        static_assert(advanceable<std::ranges::iterator_t<xstd::bit_array<8>>> and advanceable<std::ranges::iterator_t<xstd::bit_span<std::span<std::uint64_t>>>>);
+        static_assert(not advanceable<std::vector<bool>::iterator> and not advanceable<std::set<std::size_t>::iterator>);
         static_assert(std::same_as<decltype(xstd::ranges::bit_advance(std::declval<std::ranges::iterator_t<S>&>(), 1, std::declval<std::ranges::iterator_t<S>>())), std::ptrdiff_t>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }

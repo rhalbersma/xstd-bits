@@ -76,11 +76,11 @@ template<class S>
         a[0] = true;
         a[8] = true;
         xstd::ranges::bit_rotate(a, std::ranges::next(std::ranges::begin(a), 1));
-        auto const turned_once = a[9] and a[7] and xstd::ranges::bit_count(a) == 2;
+        auto const turned_once = a[9] and a[7] and xstd::ranges::bit_count(a, true) == 2;
         xstd::ranges::bit_rotate(a, std::ranges::next(std::ranges::begin(a), 7));
-        auto const turned_twice = a[2] and a[0] and xstd::ranges::bit_count(a) == 2;
+        auto const turned_twice = a[2] and a[0] and xstd::ranges::bit_count(a, true) == 2;
         xstd::ranges::bit_reverse(a);
-        return turned_once and turned_twice and a[7] and a[9] and xstd::ranges::bit_count(a) == 2;
+        return turned_once and turned_twice and a[7] and a[9] and xstd::ranges::bit_count(a, true) == 2;
 }
 
 // The object a permutation is applied through: the owner itself, unless a test hands in a view over it.
@@ -112,7 +112,7 @@ template<class S>
 [[nodiscard]] auto holds(S const& got, std::vector<bool> const& want)
         -> bool
 {
-        return std::ranges::equal(got, want) and xstd::ranges::bit_count(got) == std::ranges::count(want, true);
+        return std::ranges::equal(got, want) and xstd::ranges::bit_count(got, true) == std::ranges::count(want, true);
 }
 
 // Bit i takes bit (i + turn) % size(), by index: libstdc++ 15's ranges::rotate loses a vector<bool> bit, GCC PR 121913.

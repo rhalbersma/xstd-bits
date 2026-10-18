@@ -474,7 +474,7 @@ BOOST_AUTO_TEST_CASE(SortingRandomBitsLeavesThemSorted)
                 std::ranges::sort(m);
                 BOOST_CHECK(std::is_sorted(v.begin(), v.end())); // NOLINT(modernize-use-ranges)
                 BOOST_CHECK(std::ranges::equal(v, m));
-                BOOST_CHECK_EQUAL(static_cast<std::size_t>(xstd::ranges::bit_count(v)), ones);
+                BOOST_CHECK_EQUAL(static_cast<std::size_t>(xstd::ranges::bit_count(v, true)), ones);
 
                 // Descending under std::ranges::greater: every true before every false.
                 fill(v, m);

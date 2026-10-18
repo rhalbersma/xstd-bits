@@ -78,12 +78,20 @@ concept key_iterator =
         reads<typename std::iter_reference_t<I>::adaptor_type, set_reading_tag> and
         std::same_as<I, typename std::iter_reference_t<I>::adaptor_type::iterator>;
 
-// An iterator into one of our sequences that writes: its proxy names the adaptor and the iterator it came from.
+// An iterator into one of our sequences: its proxy names the adaptor and the iterator it came from.
 template<class I>
-concept bool_output_iterator =
+concept bool_iterator =
         requires { typename std::iter_reference_t<I>::adaptor_type; } and
         reads<typename std::iter_reference_t<I>::adaptor_type, sequence_reading_tag> and
-        std::same_as<I, typename std::iter_reference_t<I>::iterator> and std::indirectly_writable<I, bool>;
+        std::same_as<I, typename std::iter_reference_t<I>::iterator>;
+
+// An iterator into one of our sequences that writes.
+template<class I>
+concept bool_output_iterator = bool_iterator<I> and std::indirectly_writable<I, bool>;
+
+// An iterator into one of ours, stepping over a sequence's bools or a set's keys.
+template<class I>
+concept bit_iterator = bool_iterator<I> or key_iterator<I>;
 
 // The storage under one of our sequences, as the algorithms that write it reach it.
 template<class R>

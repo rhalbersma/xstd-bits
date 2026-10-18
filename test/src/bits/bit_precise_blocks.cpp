@@ -51,7 +51,7 @@ auto check_array()
                 a[i] = in_pattern<N>(i);
                 b[i] = in_pattern<N>(i);
         }
-        BOOST_CHECK_EQUAL(xstd::ranges::bit_count(a), xstd::ranges::bit_count(b));
+        BOOST_CHECK_EQUAL(xstd::ranges::bit_count(a, true), xstd::ranges::bit_count(b, true));
         BOOST_CHECK(xstd::bit_convert<byte>(a) == b);
         BOOST_CHECK(xstd::bit_convert<odd>(b) == a);
         BOOST_CHECK_EQUAL(std::hash<odd>()(a), std::hash<byte>()(b));

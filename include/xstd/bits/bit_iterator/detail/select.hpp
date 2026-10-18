@@ -13,7 +13,7 @@
 #include <xstd/ints/bit/bit_select.hpp>                 // bit_select
 #include <cassert>                                      // assert
 #include <cstddef>                                      // ptrdiff_t, size_t
-#include <iterator>                                     // iter_reference_t
+#include <iterator>                                     // iter_difference_t, iter_reference_t
 #include <ranges>                                       // iota
 
 namespace xstd::bits::detail {
@@ -120,6 +120,27 @@ template<class I>
                 return c.total_find_prev(c.size());
         } else {
                 return c.find_first();
+        }
+}
+
+// The keys from first up to last, in the set's order, counted a block at a time.
+template<class I>
+[[nodiscard]] constexpr auto keys_between(I const& first, I const& last) noexcept
+        -> std::iter_difference_t<I>
+{
+        auto&& c         = storage_access::iterated_bits(first);
+        auto const size  = c.size();
+        auto const from  = storage_access::position(first);
+        auto const until = storage_access::position(last);
+        if constexpr (descends<typename std::iter_reference_t<I>::adaptor_type>) {
+                // Down from first's key to just above last's, or to position zero where last is the end below it.
+                if (from == size) {
+                        return 0;
+                }
+                auto const lo = until == size ? 0UZ : until + 1UZ;
+                return static_cast<std::iter_difference_t<I>>(c.count(lo, from + 1UZ - lo));
+        } else {
+                return static_cast<std::iter_difference_t<I>>(c.count(from, until - from));
         }
 }
 

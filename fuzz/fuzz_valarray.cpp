@@ -59,7 +59,7 @@ auto expect_equal(fuzz::checker const& check, X const& x, model const& m)
 {
         check.expect(x.size() == m.size(), "size");
         check.expect(std::ranges::equal(x, m), "elements");
-        check.expect(xstd::ranges::bit_count(x) == std::ranges::count(m, true), "padding");
+        check.expect(xstd::ranges::bit_count(x, true) == std::ranges::count(m, true), "padding");
 }
 
 // The owner holding the model's bools, at the model's size.

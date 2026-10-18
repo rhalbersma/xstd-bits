@@ -140,7 +140,7 @@ b.to_string();  // "11111101", position 0 last
 auto v = xstd::bit_fixed_valarray<8>();
 v[1] = true;
 v = ~v;
-xstd::ranges::bit_count(v);  // 7
+xstd::ranges::bit_count(v, true);  // 7
 v.min();             // false, or xstd::ranges::bit_all_of(v)
 v.max();             // true, or xstd::ranges::bit_any_of(v)
 v = v.cshift(-1);    // position i to i + 1
@@ -476,7 +476,7 @@ v.push_back(true);
 v.resize(10);
 auto a = xstd::bit_convert<xstd::bit_valarray>(v);
 a = ~a;
-xstd::ranges::bit_count(a);
+xstd::ranges::bit_count(a, true);
 a &= c;
 a ^= c;
 auto n = ~a;
@@ -530,7 +530,7 @@ bits.popcount();
 auto bits = xstd::bit_vector{false, true, true, false, false};
 bits.push_back(false);
 bits.insert(bits.begin() + 2, {true, true});
-xstd::ranges::bit_count(bits);
+xstd::ranges::bit_count(bits, true);
 ```
 
 </td></tr>

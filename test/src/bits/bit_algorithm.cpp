@@ -24,7 +24,7 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesEveryAlgorithm)
                 xstd::ranges::bit_rotate(a, std::ranges::next(std::ranges::begin(a), 1));
                 xstd::ranges::bit_reverse(a);
                 auto const b = xstd::bit_array<10>();
-                return xstd::ranges::bit_count(a) == 2 and a[0] and a[2] and xstd::ranges::bit_any_of(a) and not xstd::ranges::bit_all_of(a) and xstd::ranges::bit_none_of(b) and xstd::ranges::bit_mismatch(a, b).in1 == std::ranges::begin(a);
+                return xstd::ranges::bit_count(a, true) == 2 and a[0] and a[2] and xstd::ranges::bit_any_of(a) and not xstd::ranges::bit_all_of(a) and xstd::ranges::bit_none_of(b) and xstd::ranges::bit_mismatch(a, b).in1 == std::ranges::begin(a);
         }());
         static_assert(xstd::ranges::bit_includes(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}) and xstd::ranges::bit_disjoint(xstd::bit_fixed_set<8>{1}, xstd::bit_fixed_set<8>{2}) and xstd::ranges::bit_intersects(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}));
         static_assert(xstd::ranges::bit_set_union(xstd::bit_fixed_set<8>{1}, xstd::bit_fixed_set<8>{2}) == xstd::bit_fixed_set<8>{1, 2} and xstd::ranges::bit_set_intersection(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2}) == xstd::bit_fixed_set<8>{2});

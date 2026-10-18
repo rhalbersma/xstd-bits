@@ -82,7 +82,7 @@ auto bm_sequential_bit_count(benchmark::State& state)
         auto const n = bits(state);
         auto const v = filled<T>(n);
         for (auto _ : state) {
-                auto c = xstd::ranges::bit_count(v);
+                auto c = xstd::ranges::bit_count(v, true);
                 benchmark::DoNotOptimize(c);
         }
         state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(n / 8UZ));

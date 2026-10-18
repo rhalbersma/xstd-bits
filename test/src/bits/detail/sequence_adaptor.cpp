@@ -450,9 +450,9 @@ template<class Seq>
 auto aggregate_disagreements(Seq const& s, std::vector<bool> const& m)
         -> std::size_t
 {
-        auto disagreements = static_cast<std::size_t>(xstd::ranges::bit_count(s) != std::ranges::count(m, true));
+        auto disagreements = static_cast<std::size_t>(xstd::ranges::bit_count(s, true) != std::ranges::count(m, true));
         // And against the generic algorithm over the sequence itself, which the benchmark's ratio assumes.
-        disagreements += static_cast<std::size_t>(xstd::ranges::bit_count(s) != std::ranges::count(s, true));
+        disagreements += static_cast<std::size_t>(xstd::ranges::bit_count(s, true) != std::ranges::count(s, true));
         disagreements += static_cast<std::size_t>(xstd::ranges::bit_all_of(s) != std::ranges::all_of(m, std::identity()));
         disagreements += static_cast<std::size_t>(xstd::ranges::bit_any_of(s) != std::ranges::any_of(m, std::identity()));
         disagreements += static_cast<std::size_t>(xstd::ranges::bit_none_of(s) != std::ranges::none_of(m, std::identity()));
@@ -563,7 +563,7 @@ BOOST_AUTO_TEST_CASE(TheRangeForWritesThroughTheProxy)
         for (auto const r : a) {
                 r = true;
         }
-        BOOST_CHECK_EQUAL(xstd::ranges::bit_count(a), std::ranges::ssize(a));
+        BOOST_CHECK_EQUAL(xstd::ranges::bit_count(a, true), std::ranges::ssize(a));
 }
 
 // The byte exchange at the sequence reading: byte j holds [8j, 8j + 8), least significant bit first.
@@ -576,7 +576,7 @@ BOOST_AUTO_TEST_CASE(APackedArrayExchangesBytesWithAFieldOfBits)
         }
 
         auto const a = xstd::bit_convert<xstd::bit_array<N>>(src);
-        BOOST_CHECK_EQUAL(static_cast<std::size_t>(xstd::ranges::bit_count(a)), src.count());
+        BOOST_CHECK_EQUAL(static_cast<std::size_t>(xstd::ranges::bit_count(a, true)), src.count());
         for (auto const i : std::views::iota(0UZ, N)) {
                 BOOST_CHECK_EQUAL(a[i], src.test(i));
         }
@@ -649,7 +649,7 @@ BOOST_AUTO_TEST_CASE(RawBlocksAreElementsUnderThisReading)
         auto const a = xstd::bit_array<64>(xstd::from_blocks, std::array<std::uint64_t, 1>{5ULL});
         // Combined with `and`: a bare proxy is an ambiguous initializer for Boost.Test's assertion_result.
         BOOST_CHECK(a[0] and not a[1] and a[2]);
-        BOOST_CHECK_EQUAL(xstd::ranges::bit_count(a), 2);
+        BOOST_CHECK_EQUAL(xstd::ranges::bit_count(a, true), 2);
 
         static_assert([] -> bool {
                 auto const b = std::array<std::uint64_t, 2>{0xF0F0ULL, 3ULL};

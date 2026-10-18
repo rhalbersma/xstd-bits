@@ -3,22 +3,25 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/algorithm/sequences.hpp>            // for_each_sequence, for_each_window, patterned, sequences
 #include <test/algorithm/sets.hpp>                 // for_each_set, iterators_of, sets, stops
 #include <test/for_each_type.hpp>                  // for_each_type
-#include <xstd/bits/bit_array.hpp>                 // bit_array
+#include <xstd/bits/bit_array.hpp>                 // basic_bit_array, bit_array
 #include <xstd/bits/bit_iterator/bit_distance.hpp> // bit_distance
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>     // bit_fixed_set
 #include <xstd/bits/bit_set/bit_set.hpp>           // bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>      // bit_set_view
+#include <xstd/bits/bit_span/bit_span.hpp>         // bit_span
 #include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                   // array
 #include <concepts>                                // same_as
 #include <cstddef>                                 // ptrdiff_t, size_t
-#include <cstdint>                                 // uint64_t
+#include <cstdint>                                 // uint64_t, uint8_t
 #include <iterator>                                // distance
-#include <ranges>                                  // iterator_t
+#include <ranges>                                  // distance, iterator_t, subrange
 #include <set>                                     // set
 #include <utility>                                 // declval
+#include <vector>                                  // vector
 
 BOOST_AUTO_TEST_SUITE(BitDistance)
 
@@ -27,7 +30,7 @@ namespace {
 template<class I>
 concept measurable = requires (I it) { xstd::ranges::bit_distance(it, it); };
 
-// From each stop to each one at or after it, as std::ranges::distance counts the steps between them.
+// Whole, and from each stop to each one at or after it, as std::ranges::distance counts the steps between them.
 template<class X>
 [[nodiscard]] auto disagreements(X const& s)
         -> int
@@ -38,11 +41,13 @@ template<class X>
         for (auto const i : test::algorithm::stops(n)) {
                 for (auto const j : test::algorithm::stops(n)) {
                         if (i <= j) {
+                                auto const between = std::ranges::subrange(its[i], its[j]);
                                 wrong += static_cast<int>(xstd::ranges::bit_distance(its[i], its[j]) != std::ranges::distance(its[i], its[j]));
+                                wrong += static_cast<int>(xstd::ranges::bit_distance(between) != std::ranges::distance(between));
                         }
                 }
         }
-        return wrong;
+        return wrong + static_cast<int>(xstd::ranges::bit_distance(s) != std::ranges::distance(s));
 }
 
 } // namespace
@@ -57,6 +62,20 @@ BOOST_AUTO_TEST_CASE(AgreesWithRangesDistanceOverEverySetColumn)
         });
 }
 
+// Every input of every sequence column of ours, a span of each and every window, as std::ranges::distance measures.
+BOOST_AUTO_TEST_CASE(AgreesWithRangesDistanceOverEverySequenceColumn)
+{
+        test::for_each_type<test::algorithm::sequences>([]<class X> -> void {
+                auto wrong = 0;
+                test::algorithm::for_each_sequence<X>([&](X const& x) -> void { wrong += disagreements(x) + disagreements(xstd::bit_span(x)); });
+                BOOST_CHECK_EQUAL(wrong, 0);
+        });
+        auto const a = test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>());
+        auto wrong   = 0;
+        test::algorithm::for_each_window(xstd::bit_span(a), [&](auto const& w) -> void { wrong += disagreements(w); });
+        BOOST_CHECK_EQUAL(wrong, 0);
+}
+
 // A view's iterators count the keys it views, its owner's or lent ones, and an empty set has none between its ends.
 BOOST_AUTO_TEST_CASE(AViewCountsWhatItViews)
 {
@@ -68,15 +87,16 @@ BOOST_AUTO_TEST_CASE(AViewCountsWhatItViews)
         BOOST_CHECK_EQUAL(disagreements(xstd::bit_set_view(blocks)), 0);
 }
 
-// In a constant expression, and over our sets' iterators alone, in their difference type.
-BOOST_AUTO_TEST_CASE(MeasuresOurSetIteratorsAlone)
+// In a constant expression, and over our iterators alone, in their difference type.
+BOOST_AUTO_TEST_CASE(MeasuresOurIteratorsAlone)
 {
         static_assert([] -> bool {
                 auto const s = xstd::bit_fixed_set<200>{3UZ, 64UZ, 150UZ, 199UZ};
                 return xstd::ranges::bit_distance(s.begin(), s.end()) == 4 and xstd::ranges::bit_distance(s.find(64UZ), s.find(199UZ)) == 2;
         }());
         using S = xstd::bit_fixed_set<8>;
-        static_assert(measurable<std::ranges::iterator_t<S>> and not measurable<std::ranges::iterator_t<xstd::bit_array<8>>> and not measurable<std::set<std::size_t>::iterator>);
+        static_assert(measurable<std::ranges::iterator_t<S>> and measurable<std::ranges::iterator_t<xstd::bit_array<8>>>);
+        static_assert(not measurable<std::vector<bool>::iterator> and not measurable<std::set<std::size_t>::iterator>);
         static_assert(std::same_as<decltype(xstd::ranges::bit_distance(std::declval<std::ranges::iterator_t<S>>(), std::declval<std::ranges::iterator_t<S>>())), std::ptrdiff_t>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }

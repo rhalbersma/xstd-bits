@@ -2325,21 +2325,33 @@ direction, beside `valarray`'s own `shift` ([the-valarray-reading](#the-valarray
 A container here has its standard counterpart's members, and no member that `std::ranges` spells as an algorithm.
 Every block-wise operation the standard expresses as an algorithm over the elements lives in
 `<xstd/bits/bit_algorithm/bit_*.hpp>`, one header each, exported together by `<xstd/bits/bit_algorithm.hpp>` and by
-`<xstd/bits.hpp>`, as a free function named `xstd::bit_` and the algorithm's name. Each takes the arguments the
-`std::ranges` algorithm takes and returns what it returns: `xstd::ranges::bit_count` a `range_difference_t`, signed as
+`<xstd/bits.hpp>`, as a free function in `xstd::ranges` named `bit_` and the algorithm's name, as the algorithm is in
+`std::ranges`. Each takes the arguments the `std::ranges` algorithm takes and returns what it returns: `xstd::ranges::bit_count` a `range_difference_t`, signed as
 `std::ranges::count`'s is, `xstd::ranges::bit_mismatch` a `std::ranges::mismatch_result`, `xstd::ranges::bit_rotate` a
 `borrowed_subrange_t`, `xstd::ranges::bit_copy` a `std::ranges::copy_result` and `xstd::ranges::bit_for_each` a
 `std::ranges::for_each_result`. The `std::ranges` call over the same container is the specification, and the tests
 hold each algorithm to it, on `std::vector<bool>` and `std::set<std::size_t>` models of every column's inputs;
 what the prefix adds is the blocks.
 
+**A namespace for each of the standard's.** A port from the standard library is a rename that works the same way
+everywhere: each `std` namespace becomes the matching `xstd` one, and the name takes `bit_`. So
+`std::ranges::copy(v, out)` is `xstd::ranges::bit_copy(v, out)`, and `std::lexicographical_compare_three_way`, which
+`std::ranges` lacks, is `xstd::bit_lexicographical_compare_three_way`. `xstd` itself is where the classic
+iterator-pair shapes go when they come, as ordinary functions a user's overload joins through argument-dependent
+lookup, so `std::copy` and `std::ranges::copy` land on two names, as they are two in the standard. The split also
+keeps apart what the standard keeps apart: xstd-ints' `xstd::bit_reverse(x)` reverses the bits of an integer as
+P3104's `std::bit_reverse` does, and `xstd::ranges::bit_reverse(v)` reverses a sequence as `std::ranges::reverse`
+does. The iterator operations live in `xstd::ranges` too, as `std::ranges::advance` and its siblings do. Inside
+`namespace xstd`, an unqualified `ranges::` finds `xstd::ranges` before `std::ranges` or range-v3's `::ranges`, so
+`tools/qualified_ranges.py`, run by the Audit job, fails on a `ranges::` that names none of the three.
+
 **Which algorithms get a `bit_` form.** One whose work on packed bits is a pass over blocks rather than a walk of
 proxies: it beats a bit at a time because a block answers, moves or writes `digits` positions in one instruction,
 or, on the set reading, because a loop can hold a block an iterator cannot. That is the whole list below, and it is
 a closed list in the sense that an algorithm not on it is one of two kinds. **It reduces to one of these on
 bools**: every `false` is like every other, so `stable_sort`, `nth_element`, `partial_sort` and `ranges::sort` with
-`std::ranges::less` are all `bit_sort`, `stable_partition` is `bit_partition`, `count(v, false)` is
-`ssize(v) - bit_count(v)`, `find_if(v, std::identity())` is `bit_find(v, true)`, `fill_n` and `copy_n` are
+`std::ranges::less` are all `bit_sort`, `stable_partition` is `bit_partition`, `find_if(v, std::identity())` is
+`bit_find(v, true)`, `fill_n` and `copy_n` are
 `bit_fill` and `bit_copy` over a `subspan`, `lexicographical_compare` is `bit_lexicographical_compare_three_way(a, b)
 < 0`, and `upper_bound`, `lower_bound` and `equal_range` over a sorted sequence are `bit_partition_point` and
 `bit_find`. **Or packing gains it nothing**: an algorithm taking a predicate or a function of an element the
@@ -2353,7 +2365,7 @@ tests; the set reading's predicate algorithms are the one family still open, the
 
 | algorithm | `std::ranges` equivalent | reading | a window |
 | :--- | :--- | :--- | :--- |
-| `bit_count(r)` | `count(r, true)` | sequence | yes |
+| `bit_count(r, value)` | `count(r, value)` | sequence | yes |
 | `bit_all_of(r)` | `all_of(r, std::identity())` | sequence | yes |
 | `bit_any_of(r)` | `any_of(r, std::identity())` | sequence | yes |
 | `bit_none_of(r)` | `none_of(r, std::identity())` | sequence | yes |
@@ -2388,16 +2400,25 @@ tests; the set reading's predicate algorithms are the one family still open, the
 | `bit_set_union(s1, s2)` | range-v3's `views::set_union(s1, s2)`, as a set | set | — |
 | `bit_set_difference(s1, s2)` | range-v3's `views::set_difference(s1, s2)`, as a set | set | — |
 | `bit_set_symmetric_difference(s1, s2)` | range-v3's `views::set_symmetric_difference(s1, s2)`, as a set | set | — |
-| `bit_advance(it, n)`, `bit_advance(it, n, bound)` | `advance(it, n)`, `advance(it, n, bound)` | set | — |
-| `bit_next(it, n)`, `bit_next(it, n, bound)` | `next(it, n)`, `next(it, n, bound)` | set | — |
-| `bit_prev(it, n)`, `bit_prev(it, n, bound)` | `prev(it, n)`, `prev(it, n, bound)` | set | — |
-| `bit_distance(first, last)` | `distance(first, last)` | set | — |
+| `bit_advance(it, n)`, `bit_advance(it, n, bound)` | `advance(it, n)`, `advance(it, n, bound)` | both | yes |
+| `bit_next(it, n)`, `bit_next(it, n, bound)` | `next(it, n)`, `next(it, n, bound)` | both | yes |
+| `bit_prev(it, n)`, `bit_prev(it, n, bound)` | `prev(it, n)`, `prev(it, n, bound)` | both | yes |
+| `bit_distance(first, last)` | `distance(first, last)` | both | yes |
+| `bit_distance(r)` | `distance(r)` | both | yes |
+
+**The iterator operations dispatch on the iterator's category.** On a sequence, distance is an offset difference and
+advance an offset step, which a random-access iterator does in O(1), so the four forward to `std::ranges::advance`,
+`next`, `prev` and `distance`, bounded forms included. On a set a step is a key, so they pop and select whole blocks.
+Each asks no more of its iterator than its `std::ranges` counterpart: `bit_prev` a bidirectional one, as
+`std::ranges::prev` does. `bit_distance(r)` takes a set, or a `std::ranges::subrange` of its iterators such as
+`subrange(s.lower_bound(a), s.lower_bound(b))`: counting keys is a distance on a set and not a count, since
+`std::ranges::count(s, k)` asks how often `k` occurs, which `s.contains(k)` answers.
 
 **Free, because the counterpart has no such member.** `std::vector<bool>` has no `count`, `std::array` no `rotate`
 and `std::set` no `is_subset_of`, and a member would answer a question the counterpart's synopsis does not ask, in
 a vocabulary of its own choosing: a nullary `count()`, an `all()` taking a `bool`, a `rotate(n)` reducing its
 argument modulo the size. An algorithm takes the shape `std::ranges` already fixed, so a reader who knows
-`std::ranges::count(v, true)` knows `xstd::ranges::bit_count(v)`. The standard libraries make the same split for
+`std::ranges::count(v, true)` knows `xstd::ranges::bit_count(v, true)`. The standard libraries make the same split for
 `vector<bool>`: libc++ answers `std::count`, `std::find` and `std::fill` a word at a time through overloads on its
 `__bit_iterator`, not through members of the container. A user may not add overloads to `std::ranges`' algorithms,
 so these take the `bit_` prefix instead, and a call says which of the two it is.
@@ -4812,21 +4833,21 @@ returning anything, whose answer is dropped as `std::ranges::for_each` drops it.
 The sequence reading counts and queries its bools through four algorithms, `xstd::ranges::bit_count`, `xstd::ranges::bit_all_of`,
 `xstd::ranges::bit_any_of` and `xstd::ranges::bit_none_of`, and compares two sequences through `xstd::ranges::bit_mismatch`
 ([algorithms-not-members](#algorithms-not-members)). Each is the `std::ranges` algorithm it is named after, over
-`true` or through `std::identity`, as [alg.count] and [alg.all.of] spell them: `bit_count(v)` is
-`std::ranges::count(v, true)` and returns its signed `range_difference_t`, where `std::bitset::count` returns a
+a value or through `std::identity`, as [alg.count] and [alg.all.of] spell them: `bit_count(v, b)` is
+`std::ranges::count(v, b)` and returns its signed `range_difference_t`, the ones popped and the zeros the size less
+the ones, where `std::bitset::count` returns a
 `size_t`, and `bit_all_of(v)` is `true` on an empty sequence, as `std::ranges::all_of` is.
 
 They are not redundant with `bit_set_view(v).size()`, which already answers a block-parallel count over the
 same storage. That view asks a *different question* -- reinterpret these bools as a set of positions and give
-me its cardinality -- which happens to return the same integer as `bit_count(v)`. Two readings over one storage is
+me its cardinality -- which happens to return the same integer as `bit_count(v, true)`. Two readings over one storage is
 the whole design, and [two-readings-disagree](#two-readings-disagree) exists to say they are not interchangeable;
 making a caller change reading to count their bools is the fault the README levels at the two containers this
 library replaces.
 
-**The questions about `false` are identities, not further algorithms**, and they hold on a window too:
+**The other questions about `false` are identities, not further algorithms**, and they hold on a window too:
 
 ```
-std::ranges::count(v, false)                 == std::ranges::ssize(v) - xstd::ranges::bit_count(v)
 std::ranges::all_of(v, std::logical_not())   == xstd::ranges::bit_none_of(v)
 std::ranges::any_of(v, std::logical_not())   == not xstd::ranges::bit_all_of(v)
 std::ranges::none_of(v, std::logical_not())  == xstd::ranges::bit_all_of(v)
@@ -4850,7 +4871,7 @@ Measured on GCC 15.2, `-O3 -march=native`, 20% density, best of fifteen:
 
 | | 2^16 | 2^20 | 2^24 |
 |---|---|---|---|
-| `xstd::ranges::bit_count(v)` | 0.1 µs | 2.0 µs | 49.5 µs |
+| `xstd::ranges::bit_count(v, true)` | 0.1 µs | 2.0 µs | 49.5 µs |
 | `std::count` over `bit_vector` | 54.6 µs | 889 µs | 15072 µs |
 | `std::count` over `std::vector<bool>` | 45.1 µs | 702 µs | 11590 µs |
 
@@ -4870,7 +4891,7 @@ density and best of fifteen:
 | clang 18, µs | 2^16 | 2^20 | 2^24 |
 |---|---|---|---|
 | `std::count` over `std::vector<bool>`, **libc++** | 0.2 | 6.1 | 68.4 |
-| `xstd::ranges::bit_count(v)` | 0.3 | 3.7 | 72.6 |
+| `xstd::ranges::bit_count(v, true)` | 0.3 | 3.7 | 72.6 |
 | `std::count` over `std::vector<bool>`, libstdc++ | 72.3 | 1181 | 19316 |
 | `std::count` over `bit_vector` | 129 | 2122 | 33489 |
 
