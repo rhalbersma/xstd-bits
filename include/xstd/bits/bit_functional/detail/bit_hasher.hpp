@@ -6,11 +6,13 @@
 #ifndef XSTD_BITS_BIT_FUNCTIONAL_DETAIL_BIT_HASHER_HPP
 #define XSTD_BITS_BIT_FUNCTIONAL_DETAIL_BIT_HASHER_HPP
 
-#include <xstd/bits/detail/hash.hpp>           // bit_hashable, bit_hashable_range, hash_append_bit_planes, hash_append_bit_string
-#include <xstd/misc/ext/boost/hash2.hpp>       // hash_algorithm
-#include <boost/hash2/get_integral_result.hpp> // get_integral_result
-#include <cstddef>                             // size_t
-#include <cstdint>                             // uint64_t
+#include <xstd/bits/detail/hash.hpp>                               // bit_hashable, bit_hashable_range, hash_append_bit_planes, hash_append_bit_string
+#include <xstd/misc/concepts/hash_algorithm.hpp>                   // hash_algorithm
+#include <xstd/misc/type_traits/hash_algorithm_is_avalanching.hpp> // hash_algorithm_is_avalanching_v
+#include <boost/hash2/get_integral_result.hpp>                     // get_integral_result
+#include <cstddef>                                                 // size_t
+#include <cstdint>                                                 // uint64_t
+#include <type_traits>                                             // bool_constant
 
 namespace xstd::bits::detail {
 
@@ -36,6 +38,9 @@ class bit_hasher
 public:
         // NOLINTNEXTLINE(readability-redundant-typename): clang-cl's -Wc++20-compat rejects the bare dependent name.
         using digest_type = typename H::result_type;
+
+        // Read by boost::hash_is_avalanching: where true, Boost.Unordered's open-addressing tables skip their post-mix.
+        using is_avalanching = std::bool_constant<xstd::hash_algorithm_is_avalanching_v<H>>;
 
         [[nodiscard]] bit_hasher() = default;
 
