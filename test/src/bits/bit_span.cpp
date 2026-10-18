@@ -19,8 +19,10 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesTheSpanAndItsWindow)
         auto const span = xstd::bit_span(blocks);
         using Blocks    = std::span<std::uint64_t, 1>;
         static_assert(std::same_as<decltype(span), xstd::bit_span<Blocks, 64> const>);
-        static_assert(std::same_as<decltype(span.subspan(1UZ, 2UZ)), xstd::bit_subspan<Blocks, std::dynamic_extent, 64>>);
-        BOOST_CHECK(span.subspan(1UZ, 2UZ)[0]);
+        // Clang 23's lifetime-safety analysis crashes on an index into the temporary subspan, so the window is named.
+        auto const window = span.subspan(1UZ, 2UZ);
+        static_assert(std::same_as<decltype(window), xstd::bit_subspan<Blocks, std::dynamic_extent, 64> const>);
+        BOOST_CHECK(window[0]);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
