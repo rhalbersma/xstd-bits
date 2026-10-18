@@ -21,7 +21,7 @@ on:
 jobs:
   # The msvc.yml ladder with clang-cl in front of the MSVC STL, on its own cache prefix. All three rungs: clang-cl is clang, so its 2022 rung keeps the VS 2022 platform covered where the MSVC compiler at that rung is out.
   clang_cl:
-    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@83edc49715c3245dbff4406654c6f489af6a10e9 # main after rhalbersma/cpp-ci#75, whose clang-tidy and gcovr scripts tools/ci-local.sh runs too
+    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
     with:
       toolset: ClangCL,host=x64
       preview_toolset_prefix: "ClangCL,"
