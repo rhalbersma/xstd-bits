@@ -7,9 +7,8 @@
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                    // array
 #include <concepts>                 // same_as
-#include <cstddef>                  // dynamic_extent
 #include <cstdint>                  // uint64_t
-#include <span>                     // span
+#include <span>                     // dynamic_extent, span
 
 BOOST_AUTO_TEST_SUITE(Span)
 
