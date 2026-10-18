@@ -85,12 +85,13 @@ cpp_ci_script() {
 }
 
 # The clang-tidy job: its configure, then cpp-ci's clang-tidy script with the inputs .github/workflows/clang-tidy.yml
-# passes it, over the generated per-header units, each public header, and the test sources.
+# passes it, over the generated per-header units, each public header, and the test sources. Every clang reads the
+# stable rung's libstdc++, the one gcc_tier defaults to, rather than its own rung's.
 tidy() {
         local version="$1" dir="${out}/tidy-$1" script
         script="$(cpp_ci_script clang-tidy)" || return 1
         "${cmake}" -S "${root}" -B "${dir}" -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER="clang++-${version}" \
-                -DCMAKE_CXX_FLAGS="$(gcc_for_clang "${version}")" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                -DCMAKE_CXX_FLAGS="$(gcc_for_clang 22)" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
                 -DCMAKE_CXX_SCAN_FOR_MODULES=OFF || return 1
         (cd "${root}" && CLANG_TIDY_VERSION="${version}" BUILD_DIR="${dir}" TEST_DIR=test/src \
                 SELF_SUFFICIENCY_REGEX="${dir}/test/header_self_sufficiency/.*" \

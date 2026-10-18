@@ -7,6 +7,7 @@
 #define XSTD_BITS_BIT_FUNCTIONAL_BIT_GREATER_HPP
 
 #include <xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp> // bit_lexicographical_compare_three_way
+#include <compare>                                                           // is_gt
 
 namespace xstd {
 
@@ -20,7 +21,7 @@ struct bit_greater
         [[nodiscard]] constexpr auto operator()(T const& x, U const& y) const noexcept
                 -> bool
         {
-                return xstd::bit_lexicographical_compare_three_way(x, y) > 0;
+                return std::is_gt(xstd::bit_lexicographical_compare_three_way(x, y));
         }
 };
 

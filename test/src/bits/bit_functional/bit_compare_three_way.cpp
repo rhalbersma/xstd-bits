@@ -14,7 +14,7 @@
 #include <xstd/bits/bit_set/bit_set.hpp>                                     // bit_set
 #include <xstd/bits/bit_vector.hpp>                                          // basic_bit_vector, bit_vector
 #include <boost/test/unit_test.hpp>                                          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <compare>                                                           // strong_ordering
+#include <compare>                                                           // is_eq, strong_ordering
 #include <concepts>                                                          // invocable, same_as
 #include <cstddef>                                                           // size_t
 #include <cstdint>                                                           // uint8_t
@@ -33,7 +33,7 @@ template<class X, class Y>
         for (auto const& x : xs) {
                 for (auto const& y : ys) {
                         auto const order = xstd::bit_compare_three_way()(x, y);
-                        wrong += static_cast<int>(order != xstd::bit_lexicographical_compare_three_way(x, y) or (order == 0) != xstd::bit_equal_to()(x, y));
+                        wrong += static_cast<int>(order != xstd::bit_lexicographical_compare_three_way(x, y) or std::is_eq(order) != xstd::bit_equal_to()(x, y));
                 }
         }
         return wrong;
