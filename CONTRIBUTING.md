@@ -72,14 +72,16 @@ Before a push, [`tools/ci-local.sh`](tools/ci-local.sh) runs the GitHub Actions 
   rung's libstdc++;
 - the C++26 legs on GCC 16 and 17-SVN, the libc++ 22 leg, the i686 leg, and the two hardened legs, libstdc++'s
   assertions and libc++'s fast mode;
-- clang-tidy 22, 23 and 24-SVN, with the clang-tidy job's passes;
-- the coverage gate, on GCC 15 with the job's arguments and gcovr filters, failing below 100% of lines or branches;
+- clang-tidy 22, 23 and 24-SVN, through the clang-tidy job's own script;
+- the coverage gate, on GCC 15 with the job's arguments, through its own gcovr script, failing below 100% of lines or
+  branches;
 - the format gate, and the Audit job's two checks.
 
-It takes a list of legs, or runs them all, one after another, with every core each; `--list` names them. Each leg logs
-to `build/ci-local/<leg>.log`, and the run ends in one line per leg. The suite legs build in Debug, or in
-`CI_LOCAL_BUILD_TYPE`; CI builds both. A suite leg's build tree is removed once it passes, and `CI_LOCAL_KEEP=1` keeps
-it.
+Those two scripts are rhalbersma/cpp-ci's, fetched at the commit the workflows pin, so a local verdict is the one CI
+reaches. The runner takes a list of legs, or runs them all, one after another, with every core each; `--list` names
+them. Each leg logs to `build/ci-local/<leg>.log`, and the run ends in one line per leg. The suite legs build in Debug,
+or in `CI_LOCAL_BUILD_TYPE`; CI builds both. A suite leg's build tree is removed once it passes, and `CI_LOCAL_KEEP=1`
+keeps it.
 
 ```sh
 tools/ci-local.sh                  # every leg

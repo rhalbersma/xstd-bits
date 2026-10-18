@@ -64,44 +64,53 @@ boost_test_for() {
         "${root}/tools/boost-test.sh" "${out}/boost-test-${name}" "$@"
 }
 
-# The clang-tidy job's passes over the compile database, and its check of each public header on its own, with the
-# directories the job names as adapted_dirs.
-tidy() {
-        local version="$1" dir="${out}/tidy-$1" flags std status=0
-        flags="$(gcc_for_clang "${version}")"
-        "${cmake}" -S "${root}" -B "${dir}" -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER="clang++-${version}" \
-                -DCMAKE_CXX_FLAGS="${flags}" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_SCAN_FOR_MODULES=OFF || return 1
-        std="$(jq -r '.[0].command // (.[0].arguments | join(" "))' "${dir}/compile_commands.json" | grep -o -- '-std=[^ ]*' | head -1)"
-        "run-clang-tidy-${version}" -quiet -p "${dir}" "${dir}/test/header_self_sufficiency/.*" || status=1
-        while IFS= read -r -d '' header; do
-                # shellcheck disable=SC2086 # flags is one option or none
-                "clang-tidy-${version}" --quiet "${header}" -- -x c++-header "${std}" -I"${root}/include" ${flags} \
-                        -isystem "${dir}/_deps/xstd-ints-src/include" -isystem "${dir}/_deps/xstd-misc-src/include" || status=1
-        done < <(find "${root}/include" -type f -name '*.hpp' -print0)
-        "run-clang-tidy-${version}" -quiet -p "${dir}" "${root}/test/src/.*" || status=1
-        return "${status}"
+# rhalbersma/cpp-ci's shared script for a job, at the commit this repository's workflows pin, so the local verdict is
+# the one CI reaches. Fetched once per commit into build/ci-local/cpp-ci/<commit>/.
+cpp_ci_script() {
+        local name="$1" sha script
+        sha="$(grep -oE 'rhalbersma/cpp-ci/\.github/workflows/clang-tidy\.yml@[0-9a-f]{40}' "${root}/.github/workflows/clang-tidy.yml" | head -1)"
+        sha="${sha##*@}"
+        [ -n "${sha}" ] || { echo "no cpp-ci pin in .github/workflows/clang-tidy.yml" >&2; return 1; }
+        script="${out}/cpp-ci/${sha}/${name}.sh"
+        if [ ! -s "${script}" ]; then
+                mkdir -p "${script%/*}"
+                if ! curl -fsSL --retry 3 -o "${script}.part" \
+                        "https://raw.githubusercontent.com/rhalbersma/cpp-ci/${sha}/.github/actions/${name}/${name}.sh"; then
+                        rm -f "${script}.part"
+                        return 1
+                fi
+                mv "${script}.part" "${script}"
+        fi
+        echo "${script}"
 }
 
-# The coverage job: the stable rung's GCC with --coverage, the stub's arguments and excludes, and the workflow's gcovr
-# filters, failing below 100% of lines or branches. gcovr reads only this leg's tree, not the other legs' beside it.
+# The clang-tidy job: its configure, then cpp-ci's clang-tidy script with the inputs .github/workflows/clang-tidy.yml
+# passes it, over the generated per-header units, each public header, and the test sources.
+tidy() {
+        local version="$1" dir="${out}/tidy-$1" script
+        script="$(cpp_ci_script clang-tidy)" || return 1
+        "${cmake}" -S "${root}" -B "${dir}" -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER="clang++-${version}" \
+                -DCMAKE_CXX_FLAGS="$(gcc_for_clang "${version}")" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                -DCMAKE_CXX_SCAN_FOR_MODULES=OFF || return 1
+        (cd "${root}" && CLANG_TIDY_VERSION="${version}" BUILD_DIR="${dir}" TEST_DIR=test/src \
+                SELF_SUFFICIENCY_REGEX="${dir}/test/header_self_sufficiency/.*" \
+                ADAPTED_DIRS="${dir}/_deps/xstd-ints-src/include ${dir}/_deps/xstd-misc-src/include" \
+                REPORT="${out}/tidy-${version}-report.txt" bash "${script}")
+}
+
+# The coverage job: the stable rung's GCC with --coverage and the stub's arguments, then cpp-ci's gcovr script with the
+# stub's excludes and thresholds. gcovr reads only this leg's tree, not the other legs' beside it.
 coverage() {
-        local dir="${out}/coverage"
-        local gcovr="${HOME:-/root}/.local/bin/gcovr"
-        [ -x "${gcovr}" ] || gcovr="gcovr"
+        local dir="${out}/coverage" script
+        script="$(cpp_ci_script gcovr)" || return 1
         "${cmake}" -S "${root}" -B "${dir}" -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-15 \
                 -DCMAKE_CXX_FLAGS="--coverage -O0" -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_CXX_FLAGS_DEBUG=-g1 \
                 -DCMAKE_CXX_SCAN_FOR_MODULES=OFF -DXSTD_BITS_BUILD_BENCHMARKS=OFF -DXSTD_BITS_BUILD_HARDENED_TESTS=OFF \
                 && "${cmake}" --build "${dir}" --parallel "${jobs}" \
                 && ctest --test-dir "${dir}" --output-on-failure --parallel "${jobs}" \
-                && "${gcovr}" --root "${root}" "${dir}" --gcov-executable gcov-15 --merge-lines \
-                        --exclude 'test/.*' --exclude 'benchmark/.*' --exclude 'build/.*' \
-                        --exclude-lines-by-pattern '^\s*(assert|[A-Z][A-Z0-9_]*_ASSERT)\(' \
-                        --exclude-lines-by-pattern '=\s*default;' \
-                        --exclude-lines-by-pattern '\s*\}\s*$' \
-                        --exclude-branches-by-pattern '^\s*(assert|[A-Z][A-Z0-9_]*_ASSERT)\(' \
-                        --exclude-branches-by-pattern '^\s*.*=\s*default;' \
-                        --exclude-throw-branches --exclude-unreachable-branches \
-                        --print-summary --fail-under-line 100 --fail-under-branch 100 --txt "${out}/coverage.txt" \
+                && (cd "${root}" && PATH="${HOME:-/root}/.local/bin:${PATH}" GCOV=gcov-15 BUILD_DIR="${out}" \
+                        EXCLUDE="test/.* benchmark/.* build/.*" FAIL_UNDER_LINE=100 FAIL_UNDER_BRANCH=100 \
+                        SEARCH_PATHS="${dir}" bash "${script}") \
                 && { [ "${keep}" = 1 ] || rm -rf "${dir}"; }
 }
 
