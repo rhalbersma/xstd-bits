@@ -22,7 +22,9 @@ python3 tools/mutate.py $(cd include && find xstd/bits/bit_algorithm xstd/bits/b
 
 `--list` prints the mutants without building anything. `--lines`, `--operators` and `--tests` narrow a run to one
 site, one kind of change or some of the tests. `--resume` takes the verdicts an earlier `--output` reached and
-decides the rest, and `--limit` decides only that many, so a long run can be split. Warnings are off as errors
+decides the rest, and `--limit` decides only that many, so a long run can be split. `--max-targets` stops a mutant after
+that many of the targets that depend on its header, the likeliest to catch it first. A survivor records how many it
+passed, and a later `--resume` run with a higher cap, or none, widens it from there rather than from the start. Warnings are off as errors
 because a mutant that only trips a warning has not been caught by a test.
 
 Only executables CTest runs with no arguments and the default pass rule are run. The hardened preconditions, a

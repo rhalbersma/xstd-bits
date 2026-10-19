@@ -114,6 +114,8 @@ class Mutant:
         target: str = ""
         detail: str = ""
         seconds: float = 0.0
+        tried: int = 0
+        dependents: int = 0
 
         @property
         def key(self):
@@ -397,21 +399,24 @@ class Worker:
                         return "killed", f"exit {returncode}"
                 return "survived", ""
 
-        def evaluate(self, mutant, chain, timeout, link_timeout):
+        def evaluate(self, mutant, chain, cap, timeout, link_timeout):
+                """Run mutant against chain[mutant.tried:cap], so a survivor of a capped run widens where it stopped."""
                 original = (self.include / mutant.header).read_text()
                 (self.include / mutant.header).write_text(apply(mutant))
                 start = time.monotonic()
                 try:
                         verdict = ("survived", "", "")
-                        for target in chain:
+                        for target in chain[mutant.tried:cap]:
                                 status, detail = self.attempt(mutant, target, timeout, link_timeout)
                                 if status != "survived":
                                         verdict = (status, target.name, detail)
                                         break
+                                mutant.tried += 1
                         mutant.status, mutant.target, mutant.detail = verdict
+                        mutant.dependents = len(chain)
                 finally:
                         (self.include / mutant.header).write_text(original)
-                        mutant.seconds = round(time.monotonic() - start, 1)
+                        mutant.seconds = round(mutant.seconds + time.monotonic() - start, 1)
                 return mutant
 
 
@@ -421,7 +426,7 @@ def main():
         parser.add_argument("--build", type=Path, required=True, help="the configured and built Ninja build directory")
         parser.add_argument("--jobs", type=int, default=os.cpu_count(), help="mutants compiled and run side by side")
         parser.add_argument("--tests", help="only the test targets whose name matches this regex")
-        parser.add_argument("--max-targets", type=int, default=0, help="stop widening after this many targets (0: every dependent)")
+        parser.add_argument("--max-targets", type=int, default=0, help="stop widening after this many targets (0: every dependent); a survivor records how many it passed, and a later run with a higher cap widens it from there")
         parser.add_argument("--lines", help="only sites on these lines, as 10-20,35")
         parser.add_argument("--operators", help="only these operator classes, comma-separated: " + ", ".join(sorted({o[0] for o in OPERATORS})))
         parser.add_argument("--include-asserts", action="store_true", help="also mutate assert() preconditions")
@@ -454,13 +459,15 @@ def main():
                         record = decided.get((m.header, m.line, m.column, m.original, m.replacement))
                         if record:
                                 m.status, m.target, m.detail, m.seconds = record["status"], record["target"], record["detail"], record["seconds"]
+                                # A record from before targets were counted ran every dependent.
+                                m.tried, m.dependents = record.get("tried", -1), record.get("dependents", -1)
                                 if m.status == "stillborn" and COMPILE_TIME_CHECK.search(m.detail):
                                         m.status = "killed"
                 print(f"resumed {sum(m.status != 'pending' for m in mutants)} decided mutants from {args.resume}", file=sys.stderr)
                 if args.recheck_survivors:
                         for m in mutants:
                                 if m.status == "survived":
-                                        m.status, m.target, m.detail, m.seconds = "pending", "", "", 0.0
+                                        m.status, m.target, m.detail, m.seconds, m.tried = "pending", "", "", 0.0, 0
                         print(f"rechecking {sum(m.status == 'pending' for m in mutants)} survivors", file=sys.stderr)
 
         if args.list:
@@ -476,12 +483,20 @@ def main():
         for m in mutants:
                 if m.status == "killed" and m.target:
                         kills[(m.header, m.target)] = kills.get((m.header, m.target), 0) + 1
+        for m in mutants:
+                if m.tried < 0:
+                        m.tried = m.dependents = 0 if m.status == "pending" else len(order(m.header, targets, args.tests))
+        for m in mutants:
+                cap = min(args.max_targets or m.dependents, m.dependents)
+                if m.status == "survived" and m.tried < cap:
+                        m.status = "pending"
+        widening = sum(m.status == "pending" and m.tried > 0 for m in mutants)
+        if widening:
+                print(f"widening {widening} survivors of a capped run", file=sys.stderr)
         for header in args.headers:
                 if not any(m.header == header and m.status == "pending" for m in mutants):
                         continue
                 chain = order(header, targets, args.tests, kills)
-                if args.max_targets:
-                        chain = chain[:args.max_targets]
                 if not chain:
                         print(f"error: no test target depends on {header}", file=sys.stderr)
                         return 2
@@ -508,7 +523,8 @@ def main():
         def task(mutant):
                 worker = free.pop()
                 try:
-                        return worker.evaluate(mutant, chains[mutant.header], timeout, 1800)
+                        chain = chains[mutant.header]
+                        return worker.evaluate(mutant, chain, min(args.max_targets or len(chain), len(chain)), timeout, 1800)
                 finally:
                         free.append(worker)
 
@@ -525,7 +541,8 @@ def main():
                                 counts[mutant.status] += 1
                                 mark = {"killed": ".", "survived": "S", "stillborn": "x"}[mutant.status]
                                 where = f" [{mutant.target}: {mutant.detail}]" if mutant.status != "survived" and mutant.detail else ""
-                                print(f"{mark} {done}/{len(todo)} {mutant.header}:{mutant.line}:{mutant.column} {mutant.original!r}->{mutant.replacement!r} {mutant.seconds}s{where}", flush=True)
+                                reach = f" ({mutant.tried} of {mutant.dependents} targets)" if mutant.status == "survived" else ""
+                                print(f"{mark} {done}/{len(todo)} {mutant.header}:{mutant.line}:{mutant.column} {mutant.original!r}->{mutant.replacement!r} {mutant.seconds}s{reach}{where}", flush=True)
                                 if args.output:
                                         args.output.write_text(json.dumps([asdict(m) for m in mutants], indent=1))
         finally:
@@ -553,7 +570,7 @@ def main():
         print(f"killed {counts['killed']}, equivalent {counts.get('equivalent', 0)}, survived {counts['survived']}, stillborn {counts['stillborn']}, pending {pending}: score {score:.1f}%")
         for m in mutants:
                 if m.status == "survived":
-                        print(f"SURVIVED {m.header}:{m.line}:{m.column}: {m.original!r} -> {m.replacement!r}    {m.source_line}")
+                        print(f"SURVIVED {m.header}:{m.line}:{m.column}: {m.original!r} -> {m.replacement!r} ({m.tried} of {m.dependents} targets)    {m.source_line}")
                         print(f"  | `{m.header}` | `{m.source_line.replace('|', chr(92) + '|')}` | {m.occurrence} | {m.offset} | `{m.original.replace('|', chr(92) + '|')}` → `{m.replacement.replace('|', chr(92) + '|')}` | |")
         for line in stale:
                 print(f"STALE {line}")
