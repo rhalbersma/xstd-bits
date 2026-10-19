@@ -11,6 +11,7 @@
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp>        // bit_mask_mapping
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
 #include <xstd/bits/bit_functional/bit_hash.hpp>              // bit_hash
+#include <xstd/bits/bit_ranges/from_blocks.hpp>               // from_blocks_t
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>              // bit_key_mapping
 #include <xstd/bits/bit_set/detail/is_key.hpp>                // is_key
 #include <xstd/bits/detail/adapted_bits.hpp>                  // adapted_bits
@@ -24,7 +25,6 @@
 #include <xstd/bits/detail/owner_members.hpp>                 // owner_members
 #include <xstd/bits/detail/ownership.hpp>                     // owned_storage, owner_of, owns, reads, set_reading_tag, storage, storage_access
 #include <xstd/bits/detail/storage_ptr.hpp>                   // storage_ptr_t, storage_ref_t
-#include <xstd/bits/from_blocks.hpp>                          // from_blocks_t
 #include <xstd/misc/concepts/specialization_of.hpp>           // specialization_of
 #include <xstd/misc/type_traits/empty_base_type.hpp>          // empty_base_type
 #include <boost/container_hash/is_range.hpp>                  // is_range

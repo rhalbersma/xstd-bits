@@ -8,6 +8,7 @@
 
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>             // bit_blocks
 #include <xstd/bits/bit_functional/bit_hash.hpp>             // bit_hash
+#include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks_t
 #include <xstd/bits/detail/adapted_bits.hpp>                 // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/assert.hpp>                       // XSTD_BITS_ASSERT
@@ -20,7 +21,6 @@
 #include <xstd/bits/detail/ownership.hpp>                    // owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ptr_t, storage_ref_t
-#include <xstd/bits/from_blocks.hpp>                         // from_blocks_t
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <xstd/misc/type_traits/empty_base_type.hpp>         // empty_base_type
 #include <boost/container_hash/is_range.hpp>                 // is_range

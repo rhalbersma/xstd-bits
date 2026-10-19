@@ -1982,7 +1982,7 @@ buy symmetry.
 `sequence_adaptor<Bits, storage::borrowed, window::all>`, where `Bits` is the storage the blocks map to
 ([the-views-are-named-by-their-blocks](#the-views-are-named-by-their-blocks)), each passing itself as the adaptor's last argument so that
 the adaptor hands back the view; `bit_subspan` is the same shape with the window argument set. They are the
-referring adaptors under the names of [the-public-names](#the-public-names), one header each beside the owners,
+referring adaptors under the names of [the-public-names](#the-public-names), one header each, the two sequence views in `<xstd/bits/bit_span/>`,
 and not a second implementation of either reading. Views with iterators, proxies and customization points of
 their own — a `set_find`, a `sequence_find`, a `block_access` and a `bit_extent` — would be a storage trait under
 another name, and with the adaptors reading the storage alone there is nothing left for one to do.
@@ -2078,8 +2078,8 @@ instead.
 `subspan`, and the public name of that window is spelled in blocks the adaptor never sees: `bit_subspan<Blocks,
 Extent, N>`, where the adaptor holds only the storage. So the adaptor asks `window_of<Derived, Bits, E>`, whose
 primary answers the adaptor windowed, and `detail/views.hpp` specializes it for both views from declarations of
-their templates, which carry no default arguments since those are given once, on each class. `bit_span.hpp` and
-`bit_subspan.hpp` include it before defining their class -- the specialization has to exist when the base's member
+their templates, which carry no default arguments since those are given once, on each class. `bit_span/bit_span.hpp` and
+`bit_span/bit_subspan.hpp` include it before defining their class -- the specialization has to exist when the base's member
 declarations are instantiated, which is while the view is still incomplete. `blit_source` needs no entry
 there: whatever derives from its `adaptor_type`, a view or a sequence owner, blits as that adaptor does. That is the hook back into the header above, and it
 spares the adaptor a forward declaration of `bit_subspan`.

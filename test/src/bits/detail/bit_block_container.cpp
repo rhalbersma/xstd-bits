@@ -6,13 +6,13 @@
 #include <test/array_storage.hpp>                     // array_storage
 #include <test/block_types.hpp>                       // block_types, digits_v, graded_extents
 #include <test/uint128.hpp>                           // IWYU pragma: keep; TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit_ranges/from_blocks.hpp>       // from_blocks
 #include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container
 #include <xstd/bits/detail/comparisons.hpp>           // set_equal, three_way
 #include <xstd/bits/detail/inplace_blocks.hpp>        // inplace_blocks
 #include <xstd/bits/detail/owned_bit_blocks.hpp>      // owned_bit_blocks
 #include <xstd/bits/detail/ownership.hpp>             // sequence_reading_tag, set_reading_tag
 #include <xstd/bits/detail/range_const_reference.hpp> // fallback::range_const_reference_t, range_const_reference_t
-#include <xstd/bits/from_blocks.hpp>                  // from_blocks
 #include <xstd/ints/memory.hpp>                       // align_up
 #include <boost/test/unit_test.hpp>                   // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                  // all_of, any_of, count, lexicographical_compare_three_way, min, reverse

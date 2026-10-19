@@ -5,6 +5,7 @@
 
 #include <xstd/bits/bit/bit_convert.hpp>                // bit_convert
 #include <xstd/bits/bit_array.hpp>                      // bit_array
+#include <xstd/bits/bit_ranges/from_blocks.hpp>         // from_blocks
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>          // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_flag_mapping.hpp>       // bit_flag_mapping
 #include <xstd/bits/bit_set/bit_flag_set.hpp>           // bit_flag_set
@@ -13,7 +14,6 @@
 #include <xstd/bits/bit_type_traits/bit_fast.hpp>       // bit_fast
 #include <xstd/bits/bit_type_traits/bit_least.hpp>      // bit_least
 #include <xstd/bits/bit_type_traits/bit_underlying.hpp> // bit_underlying, underlying_block_t
-#include <xstd/bits/from_blocks.hpp>                    // from_blocks
 #include <boost/test/unit_test.hpp>                     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                        // array
 #include <bit>                                          // bit_cast

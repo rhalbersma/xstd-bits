@@ -17,7 +17,7 @@ The tool reads a configured and built Ninja tree of this repository, with `BUILD
 cmake -S . -B build/mutate -G Ninja -DCMAKE_CXX_COMPILER=clang++-22 -DCMAKE_CXX_FLAGS=--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/15 \
       -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS_DEBUG=-O0 -DXSTD_BITS_WARNINGS_AS_ERRORS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build build/mutate
-python3 tools/mutate.py $(cd include && find xstd/bits/bit_algorithm -name '*.hpp') --build build/mutate --output mutants.json
+python3 tools/mutate.py $(cd include && find xstd/bits/bit_algorithm xstd/bits/bit_iterator -name '*.hpp') --build build/mutate --output mutants.json
 ```
 
 `--list` prints the mutants without building anything. `--lines`, `--operators` and `--tests` narrow a run to one
@@ -30,7 +30,7 @@ death test handed the violation to commit, are not.
 
 ## Scope
 
-`include/xstd/bits/bit_algorithm/`, 417 mutants. Every dependent test was run against each survivor. The block
+`include/xstd/bits/bit_algorithm/` and `include/xstd/bits/bit_iterator/`, 417 mutants. Every dependent test was run against each survivor. The block
 kernels under `include/xstd/bits/detail/` follow: each of their headers is included by some 170 tests, and the
 portable and BMI2 paths of `intrinsic.hpp` are compiled out on a machine with AVX-512, so they need builds for those
 targets as well.
@@ -44,7 +44,7 @@ in that text, so an edit to the line, or a new line with the same text above it,
 
 | header | line | occurrence | column | mutation | reason |
 | :--- | :--- | ---: | ---: | :--- | :--- |
-| `xstd/bits/bit_algorithm/bit_advance.hpp` | `auto const bound                 = 0 < n ? bits::detail::storage_access::iterated_bits(it).size() : bits::detail::first_key_position(it);` | 1 | 38 | `<` → `<=` | At `n == 0` only, where `advance_keys` returns `n` before it reads the bound. |
+| `xstd/bits/bit_iterator/bit_advance.hpp` | `auto const bound                 = 0 < n ? bits::detail::storage_access::iterated_bits(it).size() : bits::detail::first_key_position(it);` | 1 | 38 | `<` → `<=` | At `n == 0` only, where `advance_keys` returns `n` before it reads the bound. |
 | `xstd/bits/bit_algorithm/bit_mismatch.hpp` | `auto const n  = n1 <= n2 ? bits::detail::first_mismatch(storage_access::bits(r1), storage_access::bits(r2), n1) : bits::detail::first_mismatch(storage_access::bits(r2), storage_access::bits(r1), n2);` | 1 | 20 | `<=` → `<` | At `n1 == n2` only, where both arms call `first_mismatch` on storages of one size, which XORs them block by block and so does not depend on their order. |
 | `xstd/bits/bit_algorithm/detail/compare.hpp` | `if (last <= n) {` | 1 | 10 | `<=` → `<` | At `last == n` only, where `count` is zero: the loop runs zero times and `partial_block_mask(0)` clears the word, the zero the early return gives. |
 | `xstd/bits/bit_algorithm/detail/compare.hpp` | `for (auto k = 0UZ; k < n; k += word_digits) {` | 1 | 22 | `<` → `<=` | An extra pass at `k == n`, reached when `n` is a multiple of 64, reads two words at or past `last`, both zero, which compare equal. |
@@ -57,8 +57,8 @@ in that text, so an edit to the line, or a new line with the same text above it,
 | `xstd/bits/bit_algorithm/detail/compare.hpp` | `auto const words = (std::ranges::max(x.size(), y.size()) + word_digits - 1UZ) / word_digits;` | 1 | 79 | `/` → `*` | Many more words above both sizes, all read as zero on both sides, which compare equal: the order is unchanged, only its cost. |
 | `xstd/bits/bit_algorithm/detail/compare.hpp` | `return xw < yw ? std::strong_ordering::less : std::strong_ordering::greater;` | 1 | 11 | `<` → `<=` | Inside `xw != yw`, where `<` and `<=` agree. |
 | `xstd/bits/bit_algorithm/detail/compare.hpp` | `for (auto k = 0UZ; k < n; k += word_digits) {` | 4 | 22 | `<` → `<=` | An extra pass at `k == n`, reached when `n` is a multiple of 64, reads two words at or past both sizes, both zero, which compare equal. |
-| `xstd/bits/bit_algorithm/detail/select.hpp` | `if (index == (last - 1UZ) / digits) {` | 1 | 22 | `1UZ` → `0UZ` | Differs only when `last` is a multiple of the block width, and there the mask it skips is `partial_block_mask(digits)`, all ones. |
-| `xstd/bits/bit_algorithm/detail/select.hpp` | `for (auto index = (last - 1UZ) / digits, N = index + 1UZ - lo; index - lo < N; --index) {` | 1 | 58 | `-` → `+` | `N` bounds the countdown from above only: for every `index >= lo`, `index - lo` is below both `index + 1 - lo` and `index + 1 + lo`, and below `lo` it wraps and stops the loop either way. |
-| `xstd/bits/bit_algorithm/detail/select.hpp` | `auto const m    = static_cast<std::size_t>(n < 0 ? -n : n);` | 1 | 46 | `<` → `<=` | At `n == 0` only, where `-n == n`; `advance_keys` has also returned by then. |
-| `xstd/bits/bit_algorithm/detail/select.hpp` | `auto const result = ((0 < n) != descends<typename std::iter_reference_t<I>::adaptor_type>)` | 1 | 25 | `<` → `<=` | At `n == 0` only, and `advance_keys` has returned before this line when `n == 0`. |
-| `xstd/bits/bit_algorithm/detail/select.hpp` | `return n < 0 ? -rest : rest;` | 1 | 10 | `<` → `<=` | At `n == 0` only, and `advance_keys` has returned before this line when `n == 0`. |
+| `xstd/bits/bit_iterator/detail/select.hpp` | `if (index == (last - 1UZ) / digits) {` | 1 | 22 | `1UZ` → `0UZ` | Differs only when `last` is a multiple of the block width, and there the mask it skips is `partial_block_mask(digits)`, all ones. |
+| `xstd/bits/bit_iterator/detail/select.hpp` | `for (auto index = (last - 1UZ) / digits, N = index + 1UZ - lo; index - lo < N; --index) {` | 1 | 58 | `-` → `+` | `N` bounds the countdown from above only: for every `index >= lo`, `index - lo` is below both `index + 1 - lo` and `index + 1 + lo`, and below `lo` it wraps and stops the loop either way. |
+| `xstd/bits/bit_iterator/detail/select.hpp` | `auto const m    = static_cast<std::size_t>(n < 0 ? -n : n);` | 1 | 46 | `<` → `<=` | At `n == 0` only, where `-n == n`; `advance_keys` has also returned by then. |
+| `xstd/bits/bit_iterator/detail/select.hpp` | `auto const result = ((0 < n) != descends<typename std::iter_reference_t<I>::adaptor_type>)` | 1 | 25 | `<` → `<=` | At `n == 0` only, and `advance_keys` has returned before this line when `n == 0`. |
+| `xstd/bits/bit_iterator/detail/select.hpp` | `return n < 0 ? -rest : rest;` | 1 | 10 | `<` → `<=` | At `n == 0` only, and `advance_keys` has returned before this line when `n == 0`. |

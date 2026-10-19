@@ -7,7 +7,7 @@
 #include <xstd/bits/bit_set/bit_fixed_set.hpp> // bit_fixed_set
 #include <xstd/bits/bit_set/bit_set.hpp>       // bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>  // bit_set_view
-#include <xstd/bits/bit_span.hpp>              // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>     // bit_span
 #include <xstd/bits/bit_vector.hpp>            // bit_vector
 #include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <concepts>                            // swappable, swappable_with

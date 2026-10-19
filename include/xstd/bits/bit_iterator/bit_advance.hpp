@@ -3,11 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_ALGORITHM_BIT_ADVANCE_HPP
-#define XSTD_BITS_BIT_ALGORITHM_BIT_ADVANCE_HPP
+#ifndef XSTD_BITS_BIT_ITERATOR_BIT_ADVANCE_HPP
+#define XSTD_BITS_BIT_ITERATOR_BIT_ADVANCE_HPP
 
 #include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // key_iterator
-#include <xstd/bits/bit_algorithm/detail/select.hpp>    // advance_keys, first_key_position
+#include <xstd/bits/bit_iterator/detail/select.hpp>     // advance_keys, first_key_position
 #include <xstd/bits/detail/ownership.hpp>               // storage_access
 #include <cassert>                                      // assert
 #include <iterator>                                     // iter_difference_t
@@ -35,4 +35,4 @@ constexpr auto bit_advance(I& it, std::iter_difference_t<I> n, I bound) noexcept
 
 } // namespace xstd
 
-#endif // XSTD_BITS_BIT_ALGORITHM_BIT_ADVANCE_HPP
+#endif // XSTD_BITS_BIT_ITERATOR_BIT_ADVANCE_HPP

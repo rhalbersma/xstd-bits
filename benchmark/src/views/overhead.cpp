@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_array.hpp>                  // bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // bit_fixed_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
-#include <xstd/bits/bit_span.hpp>                   // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>          // bit_span
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <benchmark/benchmark.h>                    // DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
 #include <array>                                    // array

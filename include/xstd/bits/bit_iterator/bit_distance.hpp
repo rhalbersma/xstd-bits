@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_ALGORITHM_BIT_DISTANCE_HPP
-#define XSTD_BITS_BIT_ALGORITHM_BIT_DISTANCE_HPP
+#ifndef XSTD_BITS_BIT_ITERATOR_BIT_DISTANCE_HPP
+#define XSTD_BITS_BIT_ITERATOR_BIT_DISTANCE_HPP
 
 #include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // descends, key_iterator
 #include <xstd/bits/detail/ownership.hpp>               // storage_access
@@ -36,4 +36,4 @@ template<bits::detail::key_iterator I>
 
 } // namespace xstd
 
-#endif // XSTD_BITS_BIT_ALGORITHM_BIT_DISTANCE_HPP
+#endif // XSTD_BITS_BIT_ITERATOR_BIT_DISTANCE_HPP

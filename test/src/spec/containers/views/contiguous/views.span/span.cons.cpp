@@ -3,16 +3,16 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/for_each_type.hpp>    // for_each_type
-#include <test/spec/input.hpp>       // context
-#include <test/spec/span.hpp>        // all, pairs, read, same_position, views
-#include <xstd/bits/bit_span.hpp>    // bit_span
-#include <xstd/bits/bit_subspan.hpp> // bit_subspan
-#include <boost/test/unit_test.hpp>  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <concepts>                  // same_as
-#include <cstddef>                   // size_t
-#include <span>                      // dynamic_extent, span
-#include <type_traits>               // is_const_v, is_constructible_v, is_convertible_v, is_nothrow_constructible_v, is_nothrow_copy_assignable_v, is_nothrow_copy_constructible_v
+#include <test/for_each_type.hpp>             // for_each_type
+#include <test/spec/input.hpp>                // context
+#include <test/spec/span.hpp>                 // all, pairs, read, same_position, views
+#include <xstd/bits/bit_span/bit_span.hpp>    // bit_span
+#include <xstd/bits/bit_span/bit_subspan.hpp> // bit_subspan
+#include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <concepts>                           // same_as
+#include <cstddef>                            // size_t
+#include <span>                               // dynamic_extent, span
+#include <type_traits>                        // is_const_v, is_constructible_v, is_convertible_v, is_nothrow_constructible_v, is_nothrow_copy_assignable_v, is_nothrow_copy_constructible_v
 
 BOOST_AUTO_TEST_SUITE(Spec)
 BOOST_AUTO_TEST_SUITE(Containers)

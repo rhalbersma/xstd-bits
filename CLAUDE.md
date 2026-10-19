@@ -48,8 +48,11 @@ you. A file that already deviates is a file to fix, not the convention speaking.
 file publishes a surface rather than naming what it needs, and its order is the one a reader
 should meet it in: a macro before what expands it, a type before the functions returning it, and
 whatever grouping the comments mark. Alphabetizing that throws away the argument it was making.
-Where no such dependency orders a run of peers, they are alphabetical: the sequence a paper or a
-proposal lists them in is not an argument the header makes.
+An umbrella over the counterparts of one standard header follows that header's synopsis: a section
+per subclause it mirrors, titled by the synopsis's own comment or the subclause's stable name, as
+`// [comparisons], comparisons`, and its entries in the synopsis's order. A name with no counterpart
+sits beside its nearest kin, and the title says so. Elsewhere, where no dependency orders a run of
+peers, they are alphabetical.
 
 A trailing `//` names what each include is for, and that comment, an `IWYU pragma` and a `NOLINT`
 belong to the line rather than to the position: move the whole line or none of it. Reordering
@@ -247,8 +250,9 @@ possible, and the work relies on them rather than on whatever happens to be inst
   coverage job's gcovr, the CMake the workflows pin and the Boost CI resolves. Run it once per container; it is
   idempotent.
 - [`tools/ci-local.sh`](tools/ci-local.sh) runs the ladders' Linux legs on that toolchain. Run the legs a change can
-  break while iterating, and every leg before a push. Push only what it reports green: CI is there to confirm,
-  not to discover.
+  break while iterating and again before a push, and push only what they report green: CI is there to confirm, not
+  to discover. Add the rest of the legs where the full run can finish. Where it cannot, as in a container that may
+  not outlive its hours, the legs the change can break are the bar, and CI runs the others.
 
 Never build with whatever `g++` or `clang++` happen to resolve to. Ubuntu 24.04 ships GCC 13, which rejects
 `-std=c++2c` outright, so the default compiler cannot build this library at all, and a check that quietly falls

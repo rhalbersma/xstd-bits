@@ -7,7 +7,7 @@
 #include <xstd/bits/bit_algorithm/bit_none_of.hpp> // bit_none_of
 #include <xstd/bits/bit_array.hpp>                 // basic_bit_array, bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>     // bit_fixed_set
-#include <xstd/bits/bit_span.hpp>                  // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>         // bit_span
 #include <xstd/bits/bit_vector.hpp>                // bit_vector
 #include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                               // none_of

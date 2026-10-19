@@ -9,11 +9,11 @@
 #include <xstd/bits/bit/detail/bit_width.hpp>                // bit_width_v
 #include <xstd/bits/bit_algorithm/bit_count.hpp>             // bit_count
 #include <xstd/bits/bit_concepts/bit_constructible_from.hpp> // bit_constructible_from
+#include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks
 #include <xstd/bits/detail/bit_blocks_capacity.hpp>          // bit_blocks_capacity_v
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, byte_count, bytes_bits, copy_bits
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owner, reads, set_reading_tag, storage_access, view
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
-#include <xstd/bits/from_blocks.hpp>                         // from_blocks
 #include <xstd/ints/limits.hpp>                              // numeric_limits
 #include <algorithm>                                         // copy, min
 #include <array>                                             // array

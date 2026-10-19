@@ -3,11 +3,11 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_ALGORITHM_BIT_PREV_HPP
-#define XSTD_BITS_BIT_ALGORITHM_BIT_PREV_HPP
+#ifndef XSTD_BITS_BIT_ITERATOR_BIT_PREV_HPP
+#define XSTD_BITS_BIT_ITERATOR_BIT_PREV_HPP
 
-#include <xstd/bits/bit_algorithm/bit_advance.hpp>      // bit_advance
 #include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // key_iterator
+#include <xstd/bits/bit_iterator/bit_advance.hpp>       // bit_advance
 #include <iterator>                                     // iter_difference_t
 
 namespace xstd {
@@ -32,4 +32,4 @@ template<bits::detail::key_iterator I>
 
 } // namespace xstd
 
-#endif // XSTD_BITS_BIT_ALGORITHM_BIT_PREV_HPP
+#endif // XSTD_BITS_BIT_ITERATOR_BIT_PREV_HPP

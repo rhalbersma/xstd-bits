@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_SELECT_HPP
-#define XSTD_BITS_BIT_ALGORITHM_DETAIL_SELECT_HPP
+#ifndef XSTD_BITS_BIT_ITERATOR_DETAIL_SELECT_HPP
+#define XSTD_BITS_BIT_ITERATOR_DETAIL_SELECT_HPP
 
 #include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // descends
 #include <xstd/bits/detail/intrinsic.hpp>               // popcount
@@ -125,4 +125,4 @@ template<class I>
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_BIT_ALGORITHM_DETAIL_SELECT_HPP
+#endif // XSTD_BITS_BIT_ITERATOR_DETAIL_SELECT_HPP

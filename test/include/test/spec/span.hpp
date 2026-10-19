@@ -6,27 +6,27 @@
 #ifndef TEST_SPEC_SPAN_HPP
 #define TEST_SPEC_SPAN_HPP
 
-#include <test/spec/input.hpp>       // keyed, keyed_pair, memo, one, rebuilt, two
-#include <test/spec/random.hpp>      // block_digits_v
-#include <test/spec/sequence.hpp>    // bools, values
-#include <test/spec/view.hpp>        // input_t, owner_t, view_traits, viewed
-#include <xstd/bits/bit_array.hpp>   // basic_bit_array
-#include <xstd/bits/bit_span.hpp>    // bit_span
-#include <xstd/bits/bit_subspan.hpp> // bit_subspan
-#include <xstd/bits/bit_vector.hpp>  // basic_bit_vector
-#include <algorithm>                 // all_of, min
-#include <array>                     // array
-#include <cstddef>                   // size_t
-#include <cstdint>                   // uint8_t, uint64_t
-#include <iterator>                  // begin
-#include <limits>                    // numeric_limits
-#include <ranges>                    // iota
-#include <span>                      // dynamic_extent, span
-#include <tuple>                     // tuple, tuple_cat
-#include <type_traits>               // is_assignable_v
-#include <utility>                   // as_const, declval
-#include <valarray>                  // valarray
-#include <vector>                    // vector
+#include <test/spec/input.hpp>                // keyed, keyed_pair, memo, one, rebuilt, two
+#include <test/spec/random.hpp>               // block_digits_v
+#include <test/spec/sequence.hpp>             // bools, values
+#include <test/spec/view.hpp>                 // input_t, owner_t, view_traits, viewed
+#include <xstd/bits/bit_array.hpp>            // basic_bit_array
+#include <xstd/bits/bit_span/bit_span.hpp>    // bit_span
+#include <xstd/bits/bit_span/bit_subspan.hpp> // bit_subspan
+#include <xstd/bits/bit_vector.hpp>           // basic_bit_vector
+#include <algorithm>                          // all_of, min
+#include <array>                              // array
+#include <cstddef>                            // size_t
+#include <cstdint>                            // uint8_t, uint64_t
+#include <iterator>                           // begin
+#include <limits>                             // numeric_limits
+#include <ranges>                             // iota
+#include <span>                               // dynamic_extent, span
+#include <tuple>                              // tuple, tuple_cat
+#include <type_traits>                        // is_assignable_v
+#include <utility>                            // as_const, declval
+#include <valarray>                           // valarray
+#include <vector>                             // vector
 
 // The candidates for [views.span], std::span<bool> first, and the inputs a clause checks them over.
 namespace test::spec::span {

@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_algorithm.hpp>         // bit_advance, bit_all_of, bit_any_of, bit_copy, bit_copy_backward, bit_count, bit_disjoint, bit_distance, bit_equal, bit_fill, bit_find, bit_find_last, bit_for_each, bit_includes, bit_intersects, bit_is_partitioned, bit_is_sorted, bit_lexicographical_compare_three_way, bit_mismatch, bit_move, bit_next, bit_none_of, bit_partition, bit_partition_point, bit_prev, bit_reverse, bit_reverse_copy, bit_rotate, bit_rotate_copy, bit_set_difference, bit_set_intersection, bit_set_symmetric_difference, bit_set_union, bit_shift_left, bit_shift_right, bit_sort, bit_swap_ranges, bit_transform
+#include <xstd/bits/bit_algorithm.hpp>         // bit_all_of, bit_any_of, bit_copy, bit_copy_backward, bit_count, bit_disjoint, bit_equal, bit_fill, bit_find, bit_find_last, bit_for_each, bit_includes, bit_intersects, bit_is_partitioned, bit_is_sorted, bit_lexicographical_compare_three_way, bit_mismatch, bit_move, bit_none_of, bit_partition, bit_partition_point, bit_reverse, bit_reverse_copy, bit_rotate, bit_rotate_copy, bit_set_difference, bit_set_intersection, bit_set_symmetric_difference, bit_set_union, bit_shift_left, bit_shift_right, bit_sort, bit_swap_ranges, bit_transform
 #include <xstd/bits/bit_array.hpp>             // bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp> // bit_fixed_set
 #include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
@@ -32,8 +32,8 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesEveryAlgorithm)
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
-// The second batch through the same include: the writes, the searches, the walk, the comparisons and rank and select.
-BOOST_AUTO_TEST_CASE(TheUmbrellaReachesTheWritesAndTheIteratorOperations)
+// The second batch through the same include: the writes, the searches, the walk and the comparisons.
+BOOST_AUTO_TEST_CASE(TheUmbrellaReachesTheWrites)
 {
         static_assert([] -> bool {
                 auto a = xstd::bit_array<10>();
@@ -55,12 +55,6 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesTheWritesAndTheIteratorOperations)
                 auto ones = 0;
                 static_cast<void>(xstd::bit_for_each(a, [&](bool x) -> void { ones += static_cast<int>(x); }));
                 return partitioned and xstd::bit_is_sorted(a) and xstd::bit_find_last(a, false).begin() == std::ranges::next(std::ranges::begin(a), 10 - ones - 1) and xstd::bit_equal(a, a) and std::is_eq(xstd::bit_lexicographical_compare_three_way(a, a));
-        }());
-        static_assert([] -> bool {
-                auto const s = xstd::bit_fixed_set<100>{1, 50, 99};
-                auto it      = s.begin();
-                xstd::bit_advance(it, 1);
-                return *it == 50UZ and xstd::bit_next(s.begin(), 2) == xstd::bit_prev(s.end(), 1) and xstd::bit_distance(s.begin(), s.end()) == 3;
         }());
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }

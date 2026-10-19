@@ -7,13 +7,13 @@
 #define XSTD_BITS_BIT_SET_BIT_SET_HPP
 
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>      // bit_index_mapping
+#include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks, from_blocks_t
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>             // bit_key_mapping
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp>          // key_direction, set_adaptor
 #include <xstd/bits/detail/bit_block_container.hpp>          // set_bits_t
 #include <xstd/bits/detail/num_blocks.hpp>                   // tiling_block
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
-#include <xstd/bits/from_blocks.hpp>                         // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
 #include <xstd/misc/concepts/simple_allocator.hpp>           // simple_allocator

@@ -6,9 +6,9 @@
 #ifndef TEST_BIT_EXCHANGE_HPP
 #define TEST_BIT_EXCHANGE_HPP
 
-#include <xstd/bits/bit/bit_convert.hpp> // bit_convert
-#include <xstd/bits/from_blocks.hpp>     // from_blocks
-#include <concepts>                      // same_as
+#include <xstd/bits/bit/bit_convert.hpp>        // bit_convert
+#include <xstd/bits/bit_ranges/from_blocks.hpp> // from_blocks
+#include <concepts>                             // same_as
 
 namespace test {
 

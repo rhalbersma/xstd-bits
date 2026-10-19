@@ -7,6 +7,7 @@
 #include <test/whole_blocks.hpp>                    // whole_blocks
 #include <xstd/bits/bit_array.hpp>                  // bit_array
 #include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
+#include <xstd/bits/bit_ranges/from_blocks.hpp>     // from_blocks, from_blocks_t
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
 #include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
@@ -16,7 +17,6 @@
 #include <xstd/bits/detail/ownership.hpp>           // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <xstd/bits/from_blocks.hpp>                // from_blocks, from_blocks_t
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                // equal
 #include <concepts>                                 // same_as
