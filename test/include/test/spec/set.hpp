@@ -14,11 +14,7 @@
 #include <test/spec/random.hpp>                     // block_digits_v, key_samples, keyed_samples, pair_samples, triple_samples, width
 #include <test/spec/view.hpp>                       // input_t, owner_t, view_traits, view_type, viewed
 #include <test/uint128.hpp>                         // TEST_HAS_UINT128, uint128
-#include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set
-#include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
-#include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
-#include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set
-#include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
+#include <xstd/bits/bit_set.hpp>                    // basic_bit_fixed_set, basic_bit_inplace_set, basic_bit_set, bit_key_mapping, bit_set_view
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp> // set_adaptor
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // owned_storage, storage
