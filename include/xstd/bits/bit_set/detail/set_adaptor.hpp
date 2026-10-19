@@ -1315,22 +1315,6 @@ struct owned_storage<set_adaptor<Bits, storage::owned, Derived, Key, KeyMapping,
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.
 
-// 23.4.6.3 Erasure                                                [set.erasure]
-template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare, class Predicate>
-constexpr auto erase_if(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>& c, Predicate pred)
-        -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::size_type
-{
-        auto const original_size = c.size();
-        for (auto i = c.begin(), last = c.end(); i != last;) {
-                if (pred(*i)) {
-                        i = c.erase(i);
-                } else {
-                        ++i;
-                }
-        }
-        return original_size - c.size();
-}
-
 // The non-member forms copy, so they are the owner's alone: a copied view would write through.
 template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare>
 [[nodiscard]] constexpr auto operator~(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& lhs) noexcept(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::has_static_width)

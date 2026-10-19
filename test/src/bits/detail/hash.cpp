@@ -7,6 +7,7 @@
 #include <xstd/bits/bit_functional/bit_hash.hpp>    // bit_hash
 #include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
 #include <xstd/bits/bit_ranges/from_blocks.hpp>     // from_blocks
+#include <xstd/bits/bit_set.hpp>                    // hash
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set

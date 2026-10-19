@@ -70,7 +70,9 @@ target_sources(
     FILES
         include/xstd/bits.hpp
         include/xstd/bits/detail/sequence_adaptor.hpp
+        include/xstd/bits/detail/sequence_erasure.hpp
         include/xstd/bits/bit_set/detail/set_adaptor.hpp
+        include/xstd/bits/bit_set/detail/erase_if.hpp
         include/xstd/bits/bit_valarray/detail/valarray_adaptor.hpp
         include/xstd/bits/bit_valarray/detail/valarray_proxy.hpp
         include/xstd/bits/bit_valarray/detail/gslice_index.hpp
@@ -117,6 +119,11 @@ target_sources(
         include/xstd/bits/bit_algorithm/bit_swap_ranges.hpp
         include/xstd/bits/bit_algorithm/bit_transform.hpp
         include/xstd/bits/bit_array.hpp
+        include/xstd/bits/bit_array/bit_array.hpp
+        include/xstd/bits/bit_array/to_array.hpp
+        include/xstd/bits/bit_array/tuple_element.hpp
+        include/xstd/bits/bit_array/hash.hpp
+        include/xstd/bits/bit_array/container_hash.hpp
         include/xstd/bits/bit.hpp
         include/xstd/bits/bit/bit_convert.hpp
         include/xstd/bits/bit_concepts.hpp
@@ -127,6 +134,10 @@ target_sources(
         include/xstd/bits/bit_concepts/bit_mask_mapping.hpp
         include/xstd/bits/bit_concepts/sized_bit_index_mapping.hpp
         include/xstd/bits/bit_inplace_vector.hpp
+        include/xstd/bits/bit_inplace_vector/bit_inplace_vector.hpp
+        include/xstd/bits/bit_inplace_vector/erase_if.hpp
+        include/xstd/bits/bit_inplace_vector/hash.hpp
+        include/xstd/bits/bit_inplace_vector/container_hash.hpp
         include/xstd/bits/bit_functional.hpp
         include/xstd/bits/bit_functional/bit_compare_three_way.hpp
         include/xstd/bits/bit_functional/bit_digest.hpp
@@ -155,6 +166,9 @@ target_sources(
         include/xstd/bits/bit_set/bit_set.hpp
         include/xstd/bits/bit_set/bit_set_view.hpp
         include/xstd/bits/bit_set/bit_fixed_set.hpp
+        include/xstd/bits/bit_set/erase_if.hpp
+        include/xstd/bits/bit_set/hash.hpp
+        include/xstd/bits/bit_set/container_hash.hpp
         include/xstd/bits/bit_span.hpp
         include/xstd/bits/bit_span/bit_span.hpp
         include/xstd/bits/bit_span/bit_subspan.hpp
@@ -177,6 +191,10 @@ target_sources(
         include/xstd/bits/bit_valarray/bit_mask_array.hpp
         include/xstd/bits/bit_valarray/bit_indirect_array.hpp
         include/xstd/bits/bit_vector.hpp
+        include/xstd/bits/bit_vector/bit_vector.hpp
+        include/xstd/bits/bit_vector/erase_if.hpp
+        include/xstd/bits/bit_vector/hash.hpp
+        include/xstd/bits/bit_vector/container_hash.hpp
         include/xstd/bits/detail/adapted_bits.hpp
         include/xstd/bits/bit_algorithm/detail/algorithm.hpp
         include/xstd/bits/detail/allocator_base_type.hpp

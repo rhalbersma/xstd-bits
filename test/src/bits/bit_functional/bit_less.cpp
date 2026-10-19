@@ -33,7 +33,7 @@ template<class X, class Y>
         auto wrong = 0;
         for (auto const& x : xs) {
                 for (auto const& y : ys) {
-                        wrong += static_cast<int>(xstd::bit_less()(x, y) != std::is_lt(xstd::bit_lexicographical_compare_three_way(x, y)));
+                        wrong += static_cast<int>(xstd::bit_less()(x, y) != std::is_lt(xstd::ranges::bit_lexicographical_compare_three_way(x, y)));
                 }
         }
         return wrong;

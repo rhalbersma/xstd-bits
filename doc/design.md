@@ -2335,8 +2335,10 @@ what the prefix adds is the blocks.
 
 **A namespace for each of the standard's.** A port from the standard library is a rename that works the same way
 everywhere: each `std` namespace becomes the matching `xstd` one, and the name takes `bit_`. So
-`std::ranges::copy(v, out)` is `xstd::ranges::bit_copy(v, out)`, and `std::lexicographical_compare_three_way`, which
-`std::ranges` lacks, is `xstd::bit_lexicographical_compare_three_way`. `xstd` itself is where the classic
+`std::ranges::copy(v, out)` is `xstd::ranges::bit_copy(v, out)`. A range signature puts an algorithm in
+`xstd::ranges` even where `std::ranges` has no counterpart yet: `xstd::ranges::bit_lexicographical_compare_three_way`
+takes two ranges and answers only the ordering, the shape P2022R3 proposes for
+`std::ranges::lexicographical_compare_three_way`, where the standard has only the iterator-pair form. `xstd` itself is where the classic
 iterator-pair shapes go when they come, as ordinary functions a user's overload joins through argument-dependent
 lookup, so `std::copy` and `std::ranges::copy` land on two names, as they are two in the standard. The split also
 keeps apart what the standard keeps apart: xstd-ints' `xstd::bit_reverse(x)` reverses the bits of an integer as

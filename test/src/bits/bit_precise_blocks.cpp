@@ -6,6 +6,7 @@
 #include <xstd/bits/bit.hpp>                   // bit_convert
 #include <xstd/bits/bit_algorithm.hpp>         // bit_count, bit_reverse, bit_rotate
 #include <xstd/bits/bit_array.hpp>             // basic_bit_array
+#include <xstd/bits/bit_set.hpp>               // hash
 #include <xstd/bits/bit_set/bit_fixed_set.hpp> // basic_bit_fixed_set
 #include <xstd/bits/bit_vector.hpp>            // basic_bit_vector
 #include <xstd/ints/cstdint/bit_int.hpp>       // bit_uint
