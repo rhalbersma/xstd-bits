@@ -8,6 +8,7 @@
 #include <array>                    // array
 #include <cstdint>                  // uint64_t
 #include <functional>               // hash
+#include <type_traits>              // remove_cvref_t
 
 BOOST_AUTO_TEST_SUITE(BitSetHash)
 
@@ -18,9 +19,10 @@ BOOST_AUTO_TEST_CASE(EverySetHashesItsKeys)
         BOOST_CHECK(std::hash<xstd::bit_set>()({1UZ}) != std::hash<xstd::bit_set>()({2UZ}));
         BOOST_CHECK_EQUAL(std::hash<xstd::bit_fixed_set<70>>()({3UZ}), std::hash<xstd::bit_fixed_set<70>>()({3UZ}));
         BOOST_CHECK_EQUAL(std::hash<xstd::bit_inplace_set<70>>()({3UZ}), std::hash<xstd::bit_inplace_set<70>>()({3UZ}));
-        auto blocks = std::array<std::uint64_t, 1>{0b1010};
-        auto view   = xstd::bit_set_view(blocks);
-        BOOST_CHECK_EQUAL(std::hash<decltype(view)>()(view), std::hash<decltype(view)>()(view));
+        auto blocks     = std::array<std::uint64_t, 1>{0b1010};
+        auto const view = xstd::bit_set_view(blocks);
+        using V         = std::remove_cvref_t<decltype(view)>;
+        BOOST_CHECK_EQUAL(std::hash<V>()(view), std::hash<V>()(view));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
