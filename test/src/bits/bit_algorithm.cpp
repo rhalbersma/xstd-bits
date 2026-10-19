@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesTheWrites)
                 static_cast<void>(xstd::ranges::bit_sort(a));
                 auto ones = 0;
                 static_cast<void>(xstd::ranges::bit_for_each(a, [&](bool x) -> void { ones += static_cast<int>(x); }));
-                return partitioned and xstd::ranges::bit_is_sorted(a) and xstd::ranges::bit_find_last(a, false).begin() == std::ranges::next(std::ranges::begin(a), 10 - ones - 1) and xstd::ranges::bit_equal(a, a) and std::is_eq(xstd::bit_lexicographical_compare_three_way(a, a));
+                return partitioned and xstd::ranges::bit_is_sorted(a) and xstd::ranges::bit_find_last(a, false).begin() == std::ranges::next(std::ranges::begin(a), 10 - ones - 1) and xstd::ranges::bit_equal(a, a) and std::is_eq(xstd::ranges::bit_lexicographical_compare_three_way(a, a));
         }());
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }

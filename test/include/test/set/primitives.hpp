@@ -6,22 +6,23 @@
 #ifndef TEST_SET_PRIMITIVES_HPP
 #define TEST_SET_PRIMITIVES_HPP
 
-#include <test/container/allocator.hpp> // strong_guarantee
-#include <test/reference.hpp>           // proxy_reference
-#include <boost/test/unit_test.hpp>     // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_NO_THROW
-#include <algorithm>                    // adjacent_find, all_of, copy, equal_range, includes, is_sorted, lexicographical_compare_three_way, max, set_difference, set_intersection, set_symmetric_difference, set_union, sort
-#include <compare>                      // is_gteq, is_gt, is_lteq, is_lt, strong_ordering
-#include <concepts>                     // convertible_to, default_initializable, equality_comparable, integral, same_as
-#include <cstddef>                      // ptrdiff_t
-#include <functional>                   // greater, hash, identity, less
-#include <initializer_list>             // initializer_list
-#include <iterator>                     // back_inserter, distance, empty, iter_difference_t, iter_value_t, next, prev, reverse_iterator, size, ssize
-#include <limits>                       // numeric_limits
-#include <ranges>                       // count, equal, find, lexicographical_compare, lower_bound, , subrange, upper_bound
-#include <set>                          // erase_if, set
-#include <type_traits>                  // add_const_t, common_type_t, make_signed_t, remove_reference_t
-#include <utility>                      // declval, move, pair
-#include <vector>                       // vector
+#include <test/container/allocator.hpp>   // strong_guarantee
+#include <test/reference.hpp>             // proxy_reference
+#include <xstd/bits/bit_set/erase_if.hpp> // erase_if
+#include <boost/test/unit_test.hpp>       // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_NO_THROW
+#include <algorithm>                      // adjacent_find, all_of, copy, equal_range, includes, is_sorted, lexicographical_compare_three_way, max, set_difference, set_intersection, set_symmetric_difference, set_union, sort
+#include <compare>                        // is_gteq, is_gt, is_lteq, is_lt, strong_ordering
+#include <concepts>                       // convertible_to, default_initializable, equality_comparable, integral, same_as
+#include <cstddef>                        // ptrdiff_t
+#include <functional>                     // greater, hash, identity, less
+#include <initializer_list>               // initializer_list
+#include <iterator>                       // back_inserter, distance, empty, iter_difference_t, iter_value_t, next, prev, reverse_iterator, size, ssize
+#include <limits>                         // numeric_limits
+#include <ranges>                         // count, equal, find, lexicographical_compare, lower_bound, , subrange, upper_bound
+#include <set>                            // erase_if, set
+#include <type_traits>                    // add_const_t, common_type_t, make_signed_t, remove_reference_t
+#include <utility>                        // declval, move, pair
+#include <vector>                         // vector
 
 namespace test::set {
 

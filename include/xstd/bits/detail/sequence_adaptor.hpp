@@ -27,7 +27,7 @@
 #include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append_tag
 #include <boost/hash2/xxhash.hpp>                            // xxhash_64
-#include <algorithm>                                         // copy, min, remove_if
+#include <algorithm>                                         // copy, min
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
 #include <concepts>                                          // constructible_from, derived_from, same_as
@@ -1461,26 +1461,6 @@ struct owned_storage<sequence_adaptor<Bits, storage::owned, window::all, Derived
 {
         using bits_type = Bits;
 };
-
-// [vector.erasure], over the owner's own erase: the proxies move and swap, so remove_if runs unchanged.
-template<class Bits, storage Store, window W, class Derived, std::size_t E, class Pred>
-constexpr auto erase_if(sequence_adaptor<Bits, Store, W, Derived, E>& c, Pred pred)
-        -> sequence_adaptor<Bits, Store, W, Derived, E>::size_type
-        requires requires { c.erase(c.cbegin(), c.cend()); }
-{
-        auto const [first, last] = std::ranges::remove_if(c, pred);
-        auto const n             = static_cast<sequence_adaptor<Bits, Store, W>::size_type>(last - first);
-        c.erase(first, last);
-        return n;
-}
-
-template<class Bits, storage Store, window W, class Derived, std::size_t E, class U = bool>
-constexpr auto erase(sequence_adaptor<Bits, Store, W, Derived, E>& c, U const& value)
-        -> sequence_adaptor<Bits, Store, W, Derived, E>::size_type
-        requires requires { c.erase(c.cbegin(), c.cend()); }
-{
-        return xstd::bits::detail::erase_if(c, [&](bool x) -> bool { return x == value; });
-}
 
 // [array]'s tuple interface, the one line of that synopsis a packed bool can answer; static width alone.
 template<class Bits, storage Store, window W>

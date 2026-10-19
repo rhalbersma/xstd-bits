@@ -17,11 +17,11 @@ struct bit_less
         using is_transparent = void;
 
         template<class T, class U>
-                requires requires (T const& x, U const& y) { xstd::bit_lexicographical_compare_three_way(x, y); }
+                requires requires (T const& x, U const& y) { xstd::ranges::bit_lexicographical_compare_three_way(x, y); }
         [[nodiscard]] constexpr auto operator()(T const& x, U const& y) const noexcept
                 -> bool
         {
-                return std::is_lt(xstd::bit_lexicographical_compare_three_way(x, y));
+                return std::is_lt(xstd::ranges::bit_lexicographical_compare_three_way(x, y));
         }
 };
 

@@ -33,7 +33,7 @@ template<class X, class Y>
         for (auto const& x : xs) {
                 for (auto const& y : ys) {
                         auto const order = xstd::bit_compare_three_way()(x, y);
-                        wrong += static_cast<int>(order != xstd::bit_lexicographical_compare_three_way(x, y) or std::is_eq(order) != xstd::bit_equal_to()(x, y));
+                        wrong += static_cast<int>(order != xstd::ranges::bit_lexicographical_compare_three_way(x, y) or std::is_eq(order) != xstd::bit_equal_to()(x, y));
                 }
         }
         return wrong;

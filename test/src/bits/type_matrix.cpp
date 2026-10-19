@@ -9,10 +9,7 @@
 #include <xstd/bits/bit_functional/bit_hash.hpp>           // bit_hash
 #include <xstd/bits/bit_inplace_vector.hpp>                // basic_bit_inplace_vector
 #include <xstd/bits/bit_ranges/from_blocks.hpp>            // from_blocks_t
-#include <xstd/bits/bit_set/bit_fixed_set.hpp>             // basic_bit_fixed_set
-#include <xstd/bits/bit_set/bit_inplace_set.hpp>           // basic_bit_inplace_set
-#include <xstd/bits/bit_set/bit_set.hpp>                   // basic_bit_set
-#include <xstd/bits/bit_set/bit_set_view.hpp>              // bit_set_view
+#include <xstd/bits/bit_set.hpp>                           // basic_bit_fixed_set, basic_bit_inplace_set, basic_bit_set, bit_set_view
 #include <xstd/bits/bit_span/bit_span.hpp>                 // bit_span
 #include <xstd/bits/bit_type_traits/bit_rebind.hpp>        // bit_rebind
 #include <xstd/bits/bit_type_traits/bit_resize.hpp>        // bit_resize
