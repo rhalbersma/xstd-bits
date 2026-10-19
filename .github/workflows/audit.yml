@@ -32,5 +32,5 @@ jobs:
       - name: Check the include comments against the names their files use
         run: python3 tools/include_comments.py
 
-      - name: Check that every ranges:: says whose ranges it means
+      - name: "Check that every ranges:: says whose ranges it means"
         run: python3 tools/qualified_ranges.py
