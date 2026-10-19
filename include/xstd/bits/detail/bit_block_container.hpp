@@ -88,7 +88,7 @@ consteval auto admits_owner_extent() noexcept
                 return false;
         } else {
                 using block_type = std::ranges::range_value_t<Blocks>;
-                return capacity == 0UZ or num_blocks_v<block_type, N> * xstd::bit_blocks_extent_v<block_type> == capacity;
+                return num_blocks_v<block_type, N> * xstd::bit_blocks_extent_v<block_type> == capacity;
         }
 }
 
