@@ -1,6 +1,4 @@
-# Rebooting the bits franchise
-
-*Your standard library for bit twiddling*
+# Rebooting the bitset franchise
 
 > "The reasonable man adapts himself to the world: the unreasonable one persists
 > in trying to adapt the world to himself. Therefore all progress depends on the

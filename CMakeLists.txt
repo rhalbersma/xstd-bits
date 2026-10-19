@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.30)
 project(
     xstd-bits
     VERSION 0.1.0
-    DESCRIPTION "Your standard library for bit twiddling"
+    DESCRIPTION "Bit-packed C++ containers and views modelling their standard counterparts, with the bit-parallel operations packing makes possible"
     # Spelled out: project()'s own arguments expand before it sets PROJECT_NAME, so ${PROJECT_NAME} here is empty.
     HOMEPAGE_URL https://github.com/rhalbersma/xstd-bits
     LANGUAGES CXX
