@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_CASE(EverySetHashesItsKeys)
         BOOST_CHECK_EQUAL(std::hash<xstd::bit_fixed_set<70>>()({3UZ}), std::hash<xstd::bit_fixed_set<70>>()({3UZ}));
         BOOST_CHECK_EQUAL(std::hash<xstd::bit_inplace_set<70>>()({3UZ}), std::hash<xstd::bit_inplace_set<70>>()({3UZ}));
         auto blocks     = std::array<std::uint64_t, 1>{0b1010};
-        auto const view = xstd::bit_set_view(blocks);
+        auto view       = xstd::bit_set_view(blocks);
         BOOST_CHECK_EQUAL(std::hash<decltype(view)>()(view), std::hash<decltype(view)>()(view));
 }
 
