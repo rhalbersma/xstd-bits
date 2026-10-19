@@ -22,8 +22,10 @@ BOOST_AUTO_TEST_CASE(BoostHashesItAsTheValueItIs)
         boost::hash2::hash_append(h1, {}, xstd::bit_set({1UZ, 64UZ}));
         boost::hash2::hash_append(h2, {}, xstd::bit_set({1UZ, 64UZ}));
         BOOST_CHECK_EQUAL(h1.result(), h2.result());
-        static_assert(not boost::container_hash::is_range<xstd::bit_fixed_set<70>>::value and not boost::container_hash::is_tuple_like<xstd::bit_fixed_set<70>>::value);
-        static_assert(not boost::container_hash::is_range<xstd::bit_inplace_set<70>>::value and not boost::container_hash::is_tuple_like<xstd::bit_inplace_set<70>>::value);
+        static_assert(not boost::container_hash::is_range<xstd::bit_fixed_set<70>>::value);
+        static_assert(not boost::container_hash::is_tuple_like<xstd::bit_fixed_set<70>>::value);
+        static_assert(not boost::container_hash::is_range<xstd::bit_inplace_set<70>>::value);
+        static_assert(not boost::container_hash::is_tuple_like<xstd::bit_inplace_set<70>>::value);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
