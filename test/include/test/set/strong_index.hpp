@@ -8,6 +8,7 @@
 
 #include <xstd/bits/bit_algorithm/bit_for_each.hpp> // bit_for_each
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
+#include <xstd/bits/bit_set/erase_if.hpp>           // erase_if
 #include <boost/test/unit_test.hpp>                 // BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                // ranges::equal
 #include <compare>                                  // strong_ordering

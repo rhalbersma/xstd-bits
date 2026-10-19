@@ -13,6 +13,7 @@
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>     // bit_includes
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp>   // bit_intersects
 #include <xstd/bits/bit_ranges/from_blocks.hpp>         // from_blocks
+#include <xstd/bits/bit_set.hpp>                        // hash
 #include <xstd/bits/bit_set/bit_enum_set.hpp>           // bit_enum_set
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>          // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_flag_mapping.hpp>       // bit_flag_mapping

@@ -14,6 +14,7 @@
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>    // bit_includes
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp>  // bit_intersects
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp> // bit_mask_mapping
+#include <xstd/bits/bit_set.hpp>                       // erase_if
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>         // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_flag_mapping.hpp>      // bit_flag_mapping
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>       // basic_bit_inplace_set

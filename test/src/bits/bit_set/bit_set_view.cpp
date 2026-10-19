@@ -5,6 +5,7 @@
 
 #include <test/set/ordering.hpp>                    // ordering_agrees_with_std_set
 #include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_set.hpp>                    // hash
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // bit_fixed_set
 #include <xstd/bits/bit_set/bit_set.hpp>            // bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
