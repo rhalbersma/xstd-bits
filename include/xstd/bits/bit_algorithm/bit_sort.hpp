@@ -10,7 +10,7 @@
 #include <xstd/bits/detail/ownership.hpp>               // storage_access
 #include <ranges>                                       // borrowed_iterator_t, end, size
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::sort(r), a block at a time: the ones counted, then the zeros filled in before them.
 template<bits::detail::writable_bools R>
@@ -25,6 +25,6 @@ constexpr auto bit_sort(R&& r) noexcept
         return std::ranges::borrowed_iterator_t<R>(std::ranges::end(r));
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_SORT_HPP

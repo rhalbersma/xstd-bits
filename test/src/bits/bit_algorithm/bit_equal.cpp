@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_SUITE(BitEqual)
 namespace {
 
 template<class R1, class R2>
-concept comparable = requires (R1 const& r1, R2 const& r2) { xstd::bit_equal(r1, r2); };
+concept comparable = requires (R1 const& r1, R2 const& r2) { xstd::ranges::bit_equal(r1, r2); };
 
 // The algorithm on r1 and r2 and std::ranges::equal on their elements in iteration order, either way round.
 template<class R1, class R2>
@@ -39,7 +39,7 @@ template<class R1, class R2>
         auto const model = [](auto const& a, auto const& b) -> bool { return std::ranges::equal(a, b); };
         auto const x     = std::vector<std::ranges::range_value_t<R1>>(r1.begin(), r1.end());
         auto const y     = std::vector<std::ranges::range_value_t<R2>>(r2.begin(), r2.end());
-        return xstd::bit_equal(r1, r2) == model(x, y) and xstd::bit_equal(r2, r1) == model(y, x);
+        return xstd::ranges::bit_equal(r1, r2) == model(x, y) and xstd::ranges::bit_equal(r2, r1) == model(y, x);
 }
 
 // Every input of X against every input of Y.

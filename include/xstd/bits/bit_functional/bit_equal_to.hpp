@@ -11,17 +11,17 @@
 // The equality bit_hash hashes for: equal bits whatever blocks or storage hold them, so lookups cross containers.
 namespace xstd {
 
-// std::equal_to<> through xstd::bit_equal, constrained on the call itself so the two cannot drift: transparent.
+// std::equal_to<> through xstd::ranges::bit_equal, constrained on the call itself so the two cannot drift: transparent.
 struct bit_equal_to
 {
         using is_transparent = void;
 
         template<class T, class U>
-                requires requires (T const& x, U const& y) { xstd::bit_equal(x, y); }
+                requires requires (T const& x, U const& y) { xstd::ranges::bit_equal(x, y); }
         [[nodiscard]] constexpr auto operator()(T const& x, U const& y) const noexcept
                 -> bool
         {
-                return xstd::bit_equal(x, y);
+                return xstd::ranges::bit_equal(x, y);
         }
 };
 

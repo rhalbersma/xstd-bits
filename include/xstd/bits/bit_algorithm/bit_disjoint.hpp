@@ -10,7 +10,7 @@
 #include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // reads_keys
 #include <type_traits>                                  // type_identity_t
 
-namespace xstd {
+namespace xstd::ranges {
 
 // Whether std::ranges::set_intersection(s1, s2) would be empty, a block at a time; s2 converts to s1's type.
 // Whether std::ranges::set_intersection(s1, s2) would be empty, a block at a time; s2 converts to s1's type.
@@ -18,9 +18,9 @@ template<bits::detail::reads_keys S>
 [[nodiscard]] constexpr auto bit_disjoint(S const& s1, std::type_identity_t<S> const& s2) noexcept
         -> bool
 {
-        return not xstd::bit_intersects(s1, s2);
+        return not xstd::ranges::bit_intersects(s1, s2);
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_DISJOINT_HPP

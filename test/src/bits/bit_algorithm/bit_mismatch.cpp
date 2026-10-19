@@ -21,14 +21,14 @@ BOOST_AUTO_TEST_SUITE(BitMismatch)
 namespace {
 
 template<class R1, class R2>
-concept comparable = requires (R1 const& r1, R2 const& r2) { xstd::bit_mismatch(r1, r2); };
+concept comparable = requires (R1 const& r1, R2 const& r2) { xstd::ranges::bit_mismatch(r1, r2); };
 
 // Both iterators of the algorithm's answer where std::ranges::mismatch puts them, as offsets from each begin.
 template<class R>
 [[nodiscard]] constexpr auto agrees(R const& r1, R const& r2)
         -> bool
 {
-        auto const got  = xstd::bit_mismatch(r1, r2);
+        auto const got  = xstd::ranges::bit_mismatch(r1, r2);
         auto const want = std::ranges::mismatch(r1, r2);
         return got.in1 - std::ranges::begin(r1) == want.in1 - std::ranges::begin(r1) and got.in2 - std::ranges::begin(r2) == want.in2 - std::ranges::begin(r2);
 }
@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE(WindowsCompareAsRangesMismatch)
 BOOST_AUTO_TEST_CASE(AnswersAsRangesMismatchDoes)
 {
         using A = xstd::bit_array<8>;
-        static_assert(std::same_as<decltype(xstd::bit_mismatch(A(), std::declval<A&>())), std::ranges::mismatch_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_mismatch(A(), std::declval<A&>())), std::ranges::mismatch_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
         static_assert(agrees(test::algorithm::patterned(xstd::bit_array<70>()), xstd::bit_array<70>()));
         static_assert(comparable<A, A> and not comparable<A, xstd::bit_array<9>> and not comparable<std::vector<bool>, std::vector<bool>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"

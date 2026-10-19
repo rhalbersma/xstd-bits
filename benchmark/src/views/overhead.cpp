@@ -106,7 +106,7 @@ auto sequence_count_owner(benchmark::State& state)
         auto v = filled<N, xstd::bit_array<N>>();
         benchmark::DoNotOptimize(&v);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::bit_count(v));
+                benchmark::DoNotOptimize(xstd::ranges::bit_count(v, true));
         }
 }
 
@@ -118,7 +118,7 @@ auto sequence_count_view_of_storage(benchmark::State& state)
         benchmark::DoNotOptimize(&blocks);
         auto const v = xstd::bit_span(blocks);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::bit_count(v));
+                benchmark::DoNotOptimize(xstd::ranges::bit_count(v, true));
         }
 }
 

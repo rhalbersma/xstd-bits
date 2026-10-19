@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_SUITE(BitRotateCopy)
 namespace {
 
 template<class R, class O>
-concept copyable = requires (R const& r, O out) { xstd::bit_rotate_copy(r, std::ranges::begin(r), out); };
+concept copyable = requires (R const& r, O out) { xstd::ranges::bit_rotate_copy(r, std::ranges::begin(r), out); };
 
 // The algorithm and std::ranges::rotate_copy from r at a turn into a striped destination over Block at an offset.
 template<class Block, class R>
@@ -36,7 +36,7 @@ template<class Block, class R>
         auto const t      = static_cast<std::ptrdiff_t>(turn);
         auto const d      = static_cast<std::ptrdiff_t>(offset);
         auto const want   = std::ranges::rotate_copy(source, source.begin() + t, model.begin() + d);
-        auto const got    = xstd::bit_rotate_copy(r, std::ranges::begin(r) + t, dst.begin() + d);
+        auto const got    = xstd::ranges::bit_rotate_copy(r, std::ranges::begin(r) + t, dst.begin() + d);
         return got.in == std::ranges::end(r) and got.out - dst.begin() == want.out - model.begin() and test::algorithm::bools_of(dst) == model;
 }
 
@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE(TurnsBetweenOurSequencesAlone)
         static_assert([] -> bool {
                 auto const a = test::algorithm::patterned(xstd::bit_array<70>());
                 auto b       = xstd::bit_array<70>();
-                auto const r = xstd::bit_rotate_copy(a, a.begin() + 3, b.begin());
+                auto const r = xstd::ranges::bit_rotate_copy(a, a.begin() + 3, b.begin());
                 auto model   = test::algorithm::bools_of(a);
                 auto turned  = test::algorithm::bools_of(b);
                 std::ranges::rotate_copy(model, model.begin() + 3, turned.begin());
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(TurnsBetweenOurSequencesAlone)
         using A = xstd::bit_array<8>;
         static_assert(copyable<A, std::ranges::iterator_t<xstd::bit_vector>> and not copyable<A, std::ranges::iterator_t<A const>> and not copyable<A, std::vector<bool>::iterator>);
         static_assert(not copyable<std::vector<bool>, std::ranges::iterator_t<A>>);
-        static_assert(std::same_as<decltype(xstd::bit_rotate_copy(A(), std::declval<std::ranges::iterator_t<A>>(), std::declval<std::ranges::iterator_t<A>>())), std::ranges::rotate_copy_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_rotate_copy(A(), std::declval<std::ranges::iterator_t<A>>(), std::declval<std::ranges::iterator_t<A>>())), std::ranges::rotate_copy_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

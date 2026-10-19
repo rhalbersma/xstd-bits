@@ -72,7 +72,7 @@ template<class S>
 [[nodiscard]] auto by_algorithm(S s, std::size_t turn)
         -> S
 {
-        xstd::bit_rotate(s, std::ranges::next(std::ranges::begin(s), static_cast<std::ptrdiff_t>(turn)));
+        xstd::ranges::bit_rotate(s, std::ranges::next(std::ranges::begin(s), static_cast<std::ptrdiff_t>(turn)));
         return s;
 }
 
@@ -195,7 +195,7 @@ BOOST_AUTO_TEST_CASE(StdRotateIsExactOnEveryLibrary)
 BOOST_AUTO_TEST_CASE(BitRotateIsExactOnEveryLibrary)
 {
         auto const inexact = []<class S>(S const& s, std::vector<bool> const& pattern, std::size_t turn) -> int {
-                if constexpr (requires (S& r) { xstd::bit_rotate(r, std::ranges::begin(r)); }) {
+                if constexpr (requires (S& r) { xstd::ranges::bit_rotate(r, std::ranges::begin(r)); }) {
                         return static_cast<int>(mismatches(by_algorithm(s, turn), test::sequence::rotated_ints(pattern, turn)) != 0UZ);
                 } else {
                         return 0;

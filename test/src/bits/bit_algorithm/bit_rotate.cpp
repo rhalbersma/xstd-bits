@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_SUITE(BitRotate)
 namespace {
 
 template<class R>
-concept rotatable = requires (R&& r) { xstd::bit_rotate(std::forward<R>(r), std::ranges::begin(r)); };
+concept rotatable = requires (R&& r) { xstd::ranges::bit_rotate(std::forward<R>(r), std::ranges::begin(r)); };
 
 // The algorithm on s against std::rotate on the same bools as ints, and the subrange it answers, at one turn.
 template<class S>
@@ -33,7 +33,7 @@ template<class S>
         auto model   = std::vector<int>(s.begin(), s.end());
         auto const t = static_cast<std::ptrdiff_t>(turn);
         std::ranges::rotate(model, model.begin() + t);
-        auto const [first, last] = xstd::bit_rotate(s, std::ranges::next(std::ranges::begin(s), t));
+        auto const [first, last] = xstd::ranges::bit_rotate(s, std::ranges::next(std::ranges::begin(s), t));
         auto const as_int        = [](bool b) noexcept -> int { return static_cast<int>(b); };
         return std::ranges::equal(s, model, {}, as_int) and first == std::ranges::end(s) - t and last == std::ranges::end(s);
 }
@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(AWholeViewRotatesWhatItViews)
         auto a = xstd::basic_bit_array<std::uint8_t, 13>();
         a[0]   = true;
         auto s = xstd::bit_span(a);
-        xstd::bit_rotate(s, std::ranges::next(std::ranges::begin(s)));
+        xstd::ranges::bit_rotate(s, std::ranges::next(std::ranges::begin(s)));
         BOOST_CHECK(a[12] and std::ranges::count(a, true) == 1);
 }
 
@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE(WhatItRotates)
         static_assert(not rotatable<A const&> and not rotatable<decltype(xstd::bit_span(std::declval<A const&>()))>);
         static_assert(not rotatable<decltype(xstd::bit_span(std::declval<A&>()).subspan(1UZ, 4UZ))>);
         static_assert(not rotatable<std::vector<bool>&>);
-        static_assert(std::same_as<decltype(xstd::bit_rotate(A(), std::declval<std::ranges::iterator_t<A>>())), std::ranges::dangling>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_rotate(A(), std::declval<std::ranges::iterator_t<A>>())), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

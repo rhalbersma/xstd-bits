@@ -167,8 +167,8 @@ template<class Block, std::size_t... N>
 // bit_rotate and bit_reverse over it throw nothing.
 BOOST_AUTO_TEST_CASE_TEMPLATE(ItsRotationAndReversalThrowNothing, T, Types)
 {
-        static_assert(noexcept(xstd::bit_rotate(std::declval<T&>(), std::declval<T&>().begin())));
-        static_assert(noexcept(xstd::bit_reverse(std::declval<T&>())));
+        static_assert(noexcept(xstd::ranges::bit_rotate(std::declval<T&>(), std::declval<T&>().begin())));
+        static_assert(noexcept(xstd::ranges::bit_reverse(std::declval<T&>())));
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(T()), 0);
 }
 

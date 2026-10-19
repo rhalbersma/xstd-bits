@@ -1015,7 +1015,7 @@ public:
                 : members_type(std::in_place, handle_of(other))
         {}
 
-        // [array.members]' fill, std::array's alone among the models: xstd::bit_fill fills any other sequence.
+        // [array.members]' fill, std::array's alone among the models: xstd::ranges::bit_fill fills any other sequence.
         constexpr auto fill(value_type const& u) noexcept
                 -> void
                 requires is_owner and bits_type::has_static_size

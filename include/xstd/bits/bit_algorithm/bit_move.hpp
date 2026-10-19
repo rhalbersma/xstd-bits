@@ -13,7 +13,7 @@
 #include <cstddef>                                      // ptrdiff_t
 #include <ranges>                                       // borrowed_iterator_t, end, size
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::move(r, out), which for a bool is std::ranges::copy: a block of the destination at a time.
 template<bits::detail::reads_bools R, bits::detail::bool_output_iterator O>
@@ -26,6 +26,6 @@ constexpr auto bit_move(R&& r, O out) noexcept
         return {std::ranges::borrowed_iterator_t<R>(std::ranges::end(r)), out + static_cast<std::ptrdiff_t>(n)};
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_MOVE_HPP

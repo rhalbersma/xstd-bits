@@ -10,17 +10,17 @@
 
 namespace xstd {
 
-// std::not_equal_to<> through xstd::bit_equal, over the pairs bit_equal_to takes: transparent.
+// std::not_equal_to<> through xstd::ranges::bit_equal, over the pairs bit_equal_to takes: transparent.
 struct bit_not_equal_to
 {
         using is_transparent = void;
 
         template<class T, class U>
-                requires requires (T const& x, U const& y) { xstd::bit_equal(x, y); }
+                requires requires (T const& x, U const& y) { xstd::ranges::bit_equal(x, y); }
         [[nodiscard]] constexpr auto operator()(T const& x, U const& y) const noexcept
                 -> bool
         {
-                return not xstd::bit_equal(x, y);
+                return not xstd::ranges::bit_equal(x, y);
         }
 };
 

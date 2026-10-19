@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Every paragraph an inventory under doc/audit/ lists is accounted for, every paragraph a test cites is listed, and every name an include comment lists is used.
+  # Every paragraph an inventory under doc/audit/ lists is accounted for, every paragraph a test cites is listed, every name an include comment lists is used, and every ranges:: names its namespace.
   audit:
     runs-on: ubuntu-24.04
     steps:
@@ -31,3 +31,6 @@ jobs:
 
       - name: Check the include comments against the names their files use
         run: python3 tools/include_comments.py
+
+      - name: "Check that every ranges:: says whose ranges it means"
+        run: python3 tools/qualified_ranges.py

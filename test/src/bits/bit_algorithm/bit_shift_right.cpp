@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_SUITE(BitShiftRight)
 namespace {
 
 template<class R>
-concept shiftable = requires (R&& r) { xstd::bit_shift_right(std::forward<R>(r), 1); };
+concept shiftable = requires (R&& r) { xstd::ranges::bit_shift_right(std::forward<R>(r), 1); };
 
 // The algorithm on r and std::shift_right on its bools: where the subranges lie, and what stays, from the new begin.
 template<class R>
@@ -32,7 +32,7 @@ template<class R>
 {
         auto model      = test::algorithm::bools_of(r);
         auto const want = std::shift_right(model.begin(), model.end(), n);
-        auto const got  = xstd::bit_shift_right(r, n);
+        auto const got  = xstd::ranges::bit_shift_right(r, n);
         return got.end() == std::ranges::end(r) and got.begin() - std::ranges::begin(r) == want - model.begin() and std::ranges::equal(got, std::ranges::subrange(want, model.end()));
 }
 
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(ShiftsWholeWritableSequencesAlone)
         static_assert(shiftable<xstd::bit_array<8>&> and shiftable<xstd::bit_valarray&> and shiftable<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>()))>);
         static_assert(not shiftable<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>()).subspan(1UZ, 3UZ))>);
         static_assert(not shiftable<xstd::bit_array<8> const&> and not shiftable<std::vector<bool>&> and not shiftable<xstd::bit_fixed_set<8>&>);
-        static_assert(std::same_as<decltype(xstd::bit_shift_right(xstd::bit_array<8>(), 1)), std::ranges::dangling>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_shift_right(xstd::bit_array<8>(), 1)), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

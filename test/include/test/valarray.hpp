@@ -136,7 +136,7 @@ auto check_equal(V const& v, model const& m)
 {
         BOOST_CHECK_EQUAL(v.size(), m.size());
         BOOST_CHECK(model_of(v) == m);
-        BOOST_CHECK_EQUAL(xstd::bit_count(v), std::ranges::count(m, true));
+        BOOST_CHECK_EQUAL(xstd::ranges::bit_count(v, true), std::ranges::count(m, true));
 }
 
 template<class F>
@@ -595,18 +595,18 @@ auto check_algorithms()
         for_each_pair<V>([](model const& a, model const& b) -> void {
                 auto const n = std::ranges::count(a, true);
                 auto v       = make<V>(a);
-                BOOST_CHECK_EQUAL(xstd::bit_count(v), n);
-                BOOST_CHECK_EQUAL(xstd::bit_all_of(v), n == std::ranges::ssize(a));
-                BOOST_CHECK_EQUAL(xstd::bit_any_of(v), n != 0);
-                BOOST_CHECK_EQUAL(xstd::bit_none_of(v), n == 0);
+                BOOST_CHECK_EQUAL(xstd::ranges::bit_count(v, true), n);
+                BOOST_CHECK_EQUAL(xstd::ranges::bit_all_of(v), n == std::ranges::ssize(a));
+                BOOST_CHECK_EQUAL(xstd::ranges::bit_any_of(v), n != 0);
+                BOOST_CHECK_EQUAL(xstd::ranges::bit_none_of(v), n == 0);
                 auto const w = make<V>(b);
-                BOOST_CHECK(xstd::bit_mismatch(v, w).in1 - std::ranges::begin(v) == std::ranges::mismatch(a, b).in1 - a.begin());
+                BOOST_CHECK(xstd::ranges::bit_mismatch(v, w).in1 - std::ranges::begin(v) == std::ranges::mismatch(a, b).in1 - a.begin());
                 auto m = a;
                 std::ranges::reverse(m);
-                xstd::bit_reverse(v);
+                xstd::ranges::bit_reverse(v);
                 check_equal(v, m);
                 if (not a.empty()) {
-                        xstd::bit_rotate(v, std::ranges::begin(v) + 1);
+                        xstd::ranges::bit_rotate(v, std::ranges::begin(v) + 1);
                         check_equal(v, rotated(m, 1));
                 }
         });

@@ -7,18 +7,19 @@
 #define XSTD_BITS_BIT_ALGORITHM_BIT_COUNT_HPP
 
 #include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // count_true, reads_bools
-#include <ranges>                                       // range_difference_t
+#include <ranges>                                       // range_difference_t, size
 
-namespace xstd {
+namespace xstd::ranges {
 
-// std::ranges::count(r, true), a block at a time.
+// std::ranges::count(r, value), a block at a time: the ones popped, and the zeros as the size less the ones.
 template<bits::detail::reads_bools R>
-[[nodiscard]] constexpr auto bit_count(R const& r) noexcept
+[[nodiscard]] constexpr auto bit_count(R const& r, bool value) noexcept
         -> std::ranges::range_difference_t<R const>
 {
-        return static_cast<std::ranges::range_difference_t<R const>>(bits::detail::count_true(r));
+        auto const ones = bits::detail::count_true(r);
+        return static_cast<std::ranges::range_difference_t<R const>>(value ? ones : std::ranges::size(r) - ones);
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_COUNT_HPP

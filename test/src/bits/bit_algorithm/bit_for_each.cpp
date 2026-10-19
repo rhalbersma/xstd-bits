@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_SUITE(BitForEach)
 namespace {
 
 template<class R, class F>
-concept walks = requires (R const& r, F f) { xstd::bit_for_each(r, f); };
+concept walks = requires (R const& r, F f) { xstd::ranges::bit_for_each(r, f); };
 
 // What a walk saw, in the order it saw it, carried back in the functor the algorithm returns.
 template<class T>
@@ -47,7 +47,7 @@ template<class R>
 {
         using T         = std::ranges::range_value_t<R>;
         auto const want = std::ranges::for_each(r, collector<T>());
-        auto const got  = xstd::bit_for_each(r, collector<T>());
+        auto const got  = xstd::ranges::bit_for_each(r, collector<T>());
         return got.in == std::ranges::end(r) and got.fun.seen == want.fun.seen;
 }
 
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(ABoolReturningFunctorDoesNotStopTheWalk)
 {
         auto const s = xstd::bit_fixed_set<130>{0UZ, 1UZ, 63UZ, 64UZ, 65UZ, 129UZ};
         auto calls   = 0UZ;
-        static_cast<void>(xstd::bit_for_each(s, [&](std::size_t) -> bool { ++calls; return false; }));
+        static_cast<void>(xstd::ranges::bit_for_each(s, [&](std::size_t) -> bool { ++calls; return false; }));
         BOOST_CHECK_EQUAL(calls, s.size());
 }
 
@@ -129,10 +129,10 @@ BOOST_AUTO_TEST_CASE(TheFunctorTakesAValue)
         auto took_a_reference = false;
         auto const s          = S{3UZ};
         auto const a          = test::algorithm::patterned(A());
-        static_cast<void>(xstd::bit_for_each(s, probe<std::size_t>{&took_a_reference}));
-        static_cast<void>(xstd::bit_for_each(std::views::reverse(s), probe<std::size_t>{&took_a_reference}));
-        static_cast<void>(xstd::bit_for_each(a, probe<bool>{&took_a_reference}));
-        static_cast<void>(xstd::bit_for_each(std::views::reverse(a), probe<bool>{&took_a_reference}));
+        static_cast<void>(xstd::ranges::bit_for_each(s, probe<std::size_t>{&took_a_reference}));
+        static_cast<void>(xstd::ranges::bit_for_each(std::views::reverse(s), probe<std::size_t>{&took_a_reference}));
+        static_cast<void>(xstd::ranges::bit_for_each(a, probe<bool>{&took_a_reference}));
+        static_cast<void>(xstd::ranges::bit_for_each(std::views::reverse(a), probe<bool>{&took_a_reference}));
         BOOST_CHECK(not took_a_reference);
 }
 
@@ -141,7 +141,7 @@ BOOST_AUTO_TEST_CASE(AnswersAsRangesForEachDoes)
 {
         static_assert(disagreements(test::algorithm::patterned(xstd::bit_array<70>())) == 0);
         static_assert(disagreements(xstd::bit_fixed_set<70>{0UZ, 3UZ, 64UZ, 69UZ}) == 0);
-        static_assert(std::same_as<decltype(xstd::bit_for_each(xstd::bit_array<8>(), collector<bool>())), std::ranges::for_each_result<std::ranges::dangling, collector<bool>>>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_for_each(xstd::bit_array<8>(), collector<bool>())), std::ranges::for_each_result<std::ranges::dangling, collector<bool>>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

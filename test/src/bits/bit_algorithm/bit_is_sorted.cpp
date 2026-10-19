@@ -20,7 +20,7 @@ BOOST_AUTO_TEST_SUITE(BitIsSorted)
 namespace {
 
 template<class R>
-concept askable = requires (R const& r) { xstd::bit_is_sorted(r); };
+concept askable = requires (R const& r) { xstd::ranges::bit_is_sorted(r); };
 
 // The algorithm and std::ranges::is_sorted(model) on the same bools.
 template<class R>
@@ -28,7 +28,7 @@ template<class R>
         -> bool
 {
         auto const model = std::vector<bool>(std::ranges::begin(r), std::ranges::end(r));
-        return xstd::bit_is_sorted(r) == std::ranges::is_sorted(model);
+        return xstd::ranges::bit_is_sorted(r) == std::ranges::is_sorted(model);
 }
 
 } // namespace

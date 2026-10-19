@@ -21,7 +21,7 @@ BOOST_AUTO_TEST_SUITE(BitIsPartitioned)
 namespace {
 
 template<class R>
-concept askable = requires (R const& r) { xstd::bit_is_partitioned(r); };
+concept askable = requires (R const& r) { xstd::ranges::bit_is_partitioned(r); };
 
 // The algorithm and std::ranges::is_partitioned(model, std::identity()) on the same bools.
 template<class R>
@@ -29,7 +29,7 @@ template<class R>
         -> bool
 {
         auto const model = std::vector<bool>(std::ranges::begin(r), std::ranges::end(r));
-        return xstd::bit_is_partitioned(r) == std::ranges::is_partitioned(model, std::identity());
+        return xstd::ranges::bit_is_partitioned(r) == std::ranges::is_partitioned(model, std::identity());
 }
 
 } // namespace

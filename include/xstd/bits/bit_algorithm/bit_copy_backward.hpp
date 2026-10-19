@@ -13,7 +13,7 @@
 #include <cstddef>                                      // ptrdiff_t
 #include <ranges>                                       // borrowed_iterator_t, end, size
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::copy_backward(r, out_last), a block at a time from the top, so it may overlap r from above.
 template<bits::detail::reads_bools R, bits::detail::bool_output_iterator O>
@@ -27,6 +27,6 @@ constexpr auto bit_copy_backward(R&& r, O out_last) noexcept
         return {std::ranges::borrowed_iterator_t<R>(std::ranges::end(r)), first};
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_COPY_BACKWARD_HPP

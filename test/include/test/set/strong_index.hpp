@@ -104,10 +104,10 @@ auto constructs_and_walks_as_std_set(std::vector<strong_index> const& keys, std:
         }
 
         auto walked = std::vector<strong_index>();
-        static_cast<void>(xstd::bit_for_each(a, [&](strong_index k) -> void { walked.push_back(k); }));
+        static_cast<void>(xstd::ranges::bit_for_each(a, [&](strong_index k) -> void { walked.push_back(k); }));
         BOOST_CHECK(std::ranges::equal(walked, model));
         walked.clear();
-        static_cast<void>(xstd::bit_for_each(std::views::reverse(a), [&](strong_index k) -> void { walked.push_back(k); }));
+        static_cast<void>(xstd::ranges::bit_for_each(std::views::reverse(a), [&](strong_index k) -> void { walked.push_back(k); }));
         BOOST_CHECK(std::ranges::equal(walked, model | std::views::reverse));
 }
 

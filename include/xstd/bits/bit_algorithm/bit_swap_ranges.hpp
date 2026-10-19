@@ -13,7 +13,7 @@
 #include <cstddef>                                      // ptrdiff_t
 #include <ranges>                                       // begin, borrowed_iterator_t, size
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::swap_ranges(r1, r2), a block at a time, as far as the shorter goes.
 template<bits::detail::writable_bools R1, bits::detail::writable_bools R2>
@@ -27,6 +27,6 @@ constexpr auto bit_swap_ranges(R1&& r1, R2&& r2) noexcept
         return {std::ranges::borrowed_iterator_t<R1>(std::ranges::begin(r1) + d), std::ranges::borrowed_iterator_t<R2>(std::ranges::begin(r2) + d)};
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_SWAP_RANGES_HPP

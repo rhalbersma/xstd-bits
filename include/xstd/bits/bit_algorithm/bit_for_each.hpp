@@ -13,7 +13,7 @@
 #include <ranges>                                       // borrowed_iterator_t, end, range_value_t
 #include <utility>                                      // move
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::for_each(r, f), a block at a time: f takes each key or bool by value, in the order r iterates.
 template<class R, class F>
@@ -35,6 +35,6 @@ constexpr auto bit_for_each(R&& r, F f)
         return {std::ranges::borrowed_iterator_t<R>(std::ranges::end(r)), std::move(f)};
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_FOR_EACH_HPP

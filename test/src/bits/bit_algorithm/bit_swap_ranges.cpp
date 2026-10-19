@@ -24,7 +24,7 @@ BOOST_AUTO_TEST_SUITE(BitSwapRanges)
 namespace {
 
 template<class R1, class R2>
-concept swappable = requires (R1&& r1, R2&& r2) { xstd::bit_swap_ranges(std::forward<R1>(r1), std::forward<R2>(r2)); };
+concept swappable = requires (R1&& r1, R2&& r2) { xstd::ranges::bit_swap_ranges(std::forward<R1>(r1), std::forward<R2>(r2)); };
 
 // The algorithm and std::ranges::swap_ranges between x and a window of a striped sequence over Block.
 template<class Block, class X>
@@ -37,7 +37,7 @@ template<class Block, class X>
         auto const d    = static_cast<std::ptrdiff_t>(offset);
         auto const want = std::ranges::swap_ranges(xm, std::ranges::subrange(ym.begin() + d, ym.begin() + d + static_cast<std::ptrdiff_t>(length)));
         auto const w    = xstd::bit_span(y).subspan(offset, length);
-        auto const got  = xstd::bit_swap_ranges(x, w);
+        auto const got  = xstd::ranges::bit_swap_ranges(x, w);
         return got.in1 - x.begin() == want.in1 - xm.begin() and got.in2 - w.begin() == want.in2 - (ym.begin() + d) and test::algorithm::bools_of(x) == xm and test::algorithm::bools_of(y) == ym;
 }
 
@@ -74,13 +74,13 @@ BOOST_AUTO_TEST_CASE(SwapsOurWritableSequencesAlone)
         static_assert([] -> bool {
                 auto a       = test::algorithm::patterned(xstd::bit_array<70>());
                 auto b       = xstd::bit_array<70>();
-                auto const r = xstd::bit_swap_ranges(a, b);
+                auto const r = xstd::ranges::bit_swap_ranges(a, b);
                 return r.in1 == a.end() and r.in2 == b.end() and test::algorithm::bools_of(b) == test::algorithm::bools_of(test::algorithm::patterned(xstd::bit_array<70>())) and test::algorithm::bools_of(a) == test::algorithm::bools_of(xstd::bit_array<70>());
         }());
         using A = xstd::bit_array<8>;
         static_assert(swappable<A&, xstd::bit_vector&> and swappable<A&, decltype(xstd::bit_span(std::declval<A&>()).subspan(1UZ, 3UZ))>);
         static_assert(not swappable<A const&, A&> and not swappable<A&, std::vector<bool>&> and not swappable<A&, xstd::bit_fixed_set<8>&>);
-        static_assert(std::same_as<decltype(xstd::bit_swap_ranges(A(), std::declval<A&>())), std::ranges::swap_ranges_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_swap_ranges(A(), std::declval<A&>())), std::ranges::swap_ranges_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

@@ -23,7 +23,7 @@ BOOST_AUTO_TEST_SUITE(BitPartition)
 namespace {
 
 template<class R>
-concept permutable = requires (R&& r) { xstd::bit_partition(std::forward<R>(r)); };
+concept permutable = requires (R&& r) { xstd::ranges::bit_partition(std::forward<R>(r)); };
 
 // The algorithm on x, as owner or whole view, and std::ranges::partition on its bools: ones, then zeros from the split.
 template<class X>
@@ -33,7 +33,7 @@ template<class X>
         auto model        = test::algorithm::bools_of(x);
         auto const want   = std::ranges::partition(model, std::identity());
         auto const splits = [&](auto&& r) -> bool {
-                auto const [first, last] = xstd::bit_partition(r);
+                auto const [first, last] = xstd::ranges::bit_partition(r);
                 return first - std::ranges::begin(r) == want.begin() - model.begin() and last == std::ranges::end(r);
         };
         auto const split = through_view ? splits(xstd::bit_span(x)) : splits(x);
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(AgreesWithRangesPartitionOverEveryColumn)
 BOOST_AUTO_TEST_CASE(AWindowPermutesItsOwnPositionsAlone)
 {
         auto const a = test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>());
-        BOOST_CHECK_EQUAL(test::algorithm::writes_as_model(a, [](auto w) -> void { static_cast<void>(xstd::bit_partition(w)); }, [](auto model) -> void { static_cast<void>(std::ranges::partition(model, std::identity())); }), 0);
+        BOOST_CHECK_EQUAL(test::algorithm::writes_as_model(a, [](auto w) -> void { static_cast<void>(xstd::ranges::bit_partition(w)); }, [](auto model) -> void { static_cast<void>(std::ranges::partition(model, std::identity())); }), 0);
 }
 
 // In a constant expression, and over writable bools of ours alone: never a const owner, a set or std::vector<bool>.
@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(PermutesOurWritableSequencesAlone)
         static_assert(agrees(test::algorithm::patterned(xstd::bit_array<70>()), false) and agrees(test::algorithm::patterned(xstd::bit_array<70>()), true));
         static_assert(permutable<xstd::bit_array<8>&> and permutable<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>()).subspan(1UZ, 3UZ))>);
         static_assert(not permutable<xstd::bit_array<8> const&> and not permutable<std::vector<bool>&> and not permutable<xstd::bit_fixed_set<8>&>);
-        static_assert(std::same_as<decltype(xstd::bit_partition(xstd::bit_array<8>())), std::ranges::dangling>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_partition(xstd::bit_array<8>())), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

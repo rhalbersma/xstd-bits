@@ -49,7 +49,7 @@ template<class X>
 constexpr bool has_static_swap = requires (X x) { X::swap(x[0], x[0]); };
 
 template<class X>
-constexpr bool can_permute = requires (X x) { xstd::bit_rotate(x, x.begin()); xstd::bit_reverse(x); };
+constexpr bool can_permute = requires (X x) { xstd::ranges::bit_rotate(x, x.begin()); xstd::ranges::bit_reverse(x); };
 
 template<class X>
 constexpr bool has_range_members = requires (X x, std::vector<bool> const& r) { x.append_range(r); x.insert_range(x.cbegin(), r); x.erase(x.cbegin()); };
@@ -474,7 +474,7 @@ BOOST_AUTO_TEST_CASE(SortingRandomBitsLeavesThemSorted)
                 std::ranges::sort(m);
                 BOOST_CHECK(std::is_sorted(v.begin(), v.end())); // NOLINT(modernize-use-ranges)
                 BOOST_CHECK(std::ranges::equal(v, m));
-                BOOST_CHECK_EQUAL(static_cast<std::size_t>(xstd::bit_count(v)), ones);
+                BOOST_CHECK_EQUAL(static_cast<std::size_t>(xstd::ranges::bit_count(v, true)), ones);
 
                 // Descending under std::ranges::greater: every true before every false.
                 fill(v, m);
@@ -549,7 +549,7 @@ struct as_span
 // bit_rotate and bit_reverse, as std::ranges::rotate and std::ranges::reverse move the bools, at every run-time width.
 BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDo)
 {
-        static_assert(noexcept(xstd::bit_rotate(std::declval<T&>(), std::declval<T&>().begin())) and noexcept(xstd::bit_reverse(std::declval<T&>())));
+        static_assert(noexcept(xstd::ranges::bit_rotate(std::declval<T&>(), std::declval<T&>().begin())) and noexcept(xstd::ranges::bit_reverse(std::declval<T&>())));
         static_assert(test::sequence::permutes_ten_bits(T(10)));
         BOOST_CHECK_EQUAL(permutation_sweeps<T>(), 0);
         BOOST_CHECK_EQUAL(permutation_sweeps<xstd::basic_bit_vector<std::uint64_t>>(), 0);

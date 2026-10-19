@@ -919,7 +919,7 @@ operations on a window ([windows](#windows)).
 `bit_block_container::block_at(pos, value, mask)` is its write side, on our storage alone as `set_block`
 is: the bits of `value` under `mask` land at `[pos, pos + digits)`, split over two blocks where `pos` is not
 aligned, the tail kept clear. Every masked write goes through it: the storage's ranged `set`,
-`xstd::bit_fill` over a window, the copy algorithms at any two offsets, and a window's bulk operators, each walking the blocks a range spans with the mask of what each
+`xstd::ranges::bit_fill` over a window, the copy algorithms at any two offsets, and a window's bulk operators, each walking the blocks a range spans with the mask of what each
 holds, whole blocks and a partial one at the end.
 
 ### the-funnel-shift
@@ -1186,8 +1186,8 @@ two values with neither as its subject, and the member spelling put one of them 
 not have -- the same asymmetry a member `operator<=>` would carry. Each is a template constrained on
 `bit_block_container_type`, in the storage's own namespace, so the adaptors reach it by ordinary lookup and a caller
 holding two storages by ADL. Both adaptors are constrained on the same concept, so every storage they adapt has
-these primitives, and `set_adaptor`'s `<=>` calls them with no fallback, as `xstd::bit_includes`,
-`xstd::bit_intersects` and `xstd::bit_disjoint` walk the storage's blocks.
+these primitives, and `set_adaptor`'s `<=>` calls them with no fallback, as `xstd::ranges::bit_includes`,
+`xstd::ranges::bit_intersects` and `xstd::ranges::bit_disjoint` walk the storage's blocks.
 
 They are not the storage's because they are readings and it is not. What they are built from is: `first_difference`,
 `any_above`, `any_block_set`, `padded_block`, `padded_first_difference`, `padded_any_above`, `block`, `test` and
@@ -1208,18 +1208,18 @@ so the question is free.
 
 **Which reading keeps a member is then decided by the counterpart, not by taste.** `std::set`
 has nothing of the kind, so `set_adaptor` keeps neither a member nor a friend, and a reading asks the question
-through the algorithm `xstd::bit_intersects`, named for the `set_intersection` it predicts
+through the algorithm `xstd::ranges::bit_intersects`, named for the `set_intersection` it predicts
 ([algorithms-not-members](#algorithms-not-members)) — which is also the spelling the analogy above asks for.
-`xstd::bit_disjoint` asks the negation, so neither question is written with a `not`.
+`xstd::ranges::bit_disjoint` asks the negation, so neither question is written with a `not`.
 
-Neither inclusion nor intersection is a storage member. `xstd::bit_includes` and `xstd::bit_intersects` walk the two
+Neither inclusion nor intersection is a storage member. `xstd::ranges::bit_includes` and `xstd::ranges::bit_intersects` walk the two
 storages' blocks themselves, keeping the storage's hand-unrolled one- and two-block arms through its public
 `static_num_blocks`, and ask each pair of blocks through `block_includes` and `block_intersects`: the one-block
 predicates, named for their unit as the public algorithms are, `bit_` for the whole and `block_` for one block.
 `block_intersects` sits in `detail/`, since the containers' single-bit tests ask it too; `block_includes` sits in
 `bit_algorithm/detail/`, since only `bit_includes` does. `block_includes(a, b)` takes `std::ranges::includes`'s order
 of arguments: every position of `b` is one of `a`. A proper subset and either superset are no primitive at all:
-`xstd::bit_includes(a, b)` is the superset, and each proper form is one inclusion without the other, both answered
+`xstd::ranges::bit_includes(a, b)` is the superset, and each proper form is one inclusion without the other, both answered
 across two widths.
 
 Both orderings are answered a block at a time, from two pieces:
@@ -1290,9 +1290,9 @@ the standard library already spells:
 | query | true where | spelled | named after |
 | :--- | :--- | :--- | :--- |
 | `contains(k)` | `k` is an element | member | `std::set::contains`, the predicate form of `find` |
-| `xstd::bit_includes(x, y)` | every element of `y` is one of `x`'s | algorithm | `std::ranges::includes(x, y)` |
-| `xstd::bit_intersects(x, y)` | some element is in both | algorithm | `std::ranges::set_intersection`, its result nonempty |
-| `xstd::bit_disjoint(x, y)` | no element is in both | algorithm | `std::ranges::set_intersection`, its result empty |
+| `xstd::ranges::bit_includes(x, y)` | every element of `y` is one of `x`'s | algorithm | `std::ranges::includes(x, y)` |
+| `xstd::ranges::bit_intersects(x, y)` | some element is in both | algorithm | `std::ranges::set_intersection`, its result nonempty |
+| `xstd::ranges::bit_disjoint(x, y)` | no element is in both | algorithm | `std::ranges::set_intersection`, its result empty |
 
 `contains` is total, as `std::set`'s is: a key past the width, and a value that is no key of the mapping at all, are
 no element. The three over sets are all-of, any-of and none-of, and every other relation between two sets is one of
@@ -1300,12 +1300,12 @@ them, its operands swapped, or a conjunction of two:
 
 | relation | spelled |
 | :--- | :--- |
-| `x ⊇ y`, superset | `xstd::bit_includes(x, y)` |
-| `x ⊆ y`, subset | `xstd::bit_includes(y, x)` |
-| `x ⊋ y`, proper superset | `xstd::bit_includes(x, y) and not xstd::bit_includes(y, x)` |
-| `x ⊊ y`, proper subset | `xstd::bit_includes(y, x) and not xstd::bit_includes(x, y)` |
-| some element is in both | `xstd::bit_intersects(x, y)` |
-| no element is in both | `xstd::bit_disjoint(x, y)` |
+| `x ⊇ y`, superset | `xstd::ranges::bit_includes(x, y)` |
+| `x ⊆ y`, subset | `xstd::ranges::bit_includes(y, x)` |
+| `x ⊋ y`, proper superset | `xstd::ranges::bit_includes(x, y) and not xstd::ranges::bit_includes(y, x)` |
+| `x ⊊ y`, proper subset | `xstd::ranges::bit_includes(y, x) and not xstd::ranges::bit_includes(x, y)` |
+| some element is in both | `xstd::ranges::bit_intersects(x, y)` |
+| no element is in both | `xstd::ranges::bit_disjoint(x, y)` |
 
 All three are free functions because `std::ranges` spells each as one, an algorithm over two ranges rather than a
 member of either, and they take its order of arguments: `includes(x, y)` asks whether `y` lies within `x`. Each reads the
@@ -1359,7 +1359,7 @@ is an uncovered branch, and gcovr scores instantiations separately:
 
 Everything wider shares the general arms. A single block still needs the block-loop specialisations -- a
 one-block instantiation cannot take a loop's exit branch -- which is why `first_difference` and `any_above`
-each spell out the one- and two-block cases the way `find_front` and `xstd::bit_intersects` do.
+each spell out the one- and two-block cases the way `find_front` and `xstd::ranges::bit_intersects` do.
 
 Each caller of a scan carries the width-zero arm ahead of the call, and `is_zero_width` is the one
 predicate they all ask: at width zero every answer is zero -- the total answer, `size()` -- and the storage's
@@ -2136,7 +2136,7 @@ to-the-end sentinel. A window is a view in `std::ranges`' sense and borrowed lik
 neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-precedent)).
 
 A window's end blocks are shared with what lies outside it, so every write to one is masked blocks:
-`xstd::bit_fill` over a window is `bit_block_container::set(pos, len, value)`, a block at a time through
+`xstd::ranges::bit_fill` over a window is `bit_block_container::set(pos, len, value)`, a block at a time through
 `block_at`, and the copies, `bit_sort` and `bit_partition` write a window the same way
 ([algorithms-not-members](#algorithms-not-members)). Like `std::span`, no view combines: elementwise logic is
 the valarray reading's, over an owner ([the-valarray-reading](#the-valarray-reading)), and no sequence has shifts,
@@ -2145,7 +2145,7 @@ window or whole ([no-shifts-on-a-sequence](#no-shifts-on-a-sequence)).
 **A window over a const storage writes nothing, and the predicate has to be asked of the right type to say so.**
 `bits_type` is `Bits` with the const stripped, because a view over a const owner names `Bits const` and the
 typedef wants the storage's own name. Asking whether *that* takes a write is always yes, so a writer is
-constrained through the storage expression itself, which carries the const: `xstd::bit_fill` drops out of overload
+constrained through the storage expression itself, which carries the const: `xstd::ranges::bit_fill` drops out of overload
 resolution on a const window rather than failing inside its body. `set_adaptor`'s const view does the same: every
 one of its mutators constrains through the storage expression.
 
@@ -2305,7 +2305,7 @@ The four ways a reading answers an operation are all visible in the current surf
 |---|---|
 | one name, a different thing per reading | `size()` -- the sequence's element count, the set's **cardinality** |
 | one reading alone | `cshift` and `apply`, the valarray's, after `[valarray.members]` |
-| one reading spelling it otherwise | the set's cardinality `size()` is `xstd::bit_count` over the sequence, an algorithm rather than a member |
+| one reading spelling it otherwise | the set's cardinality `size()` is `xstd::ranges::bit_count` over the sequence, an algorithm rather than a member |
 | one reading declining it | `-=` and the shifts on the set, not the sequence |
 
 ### no-shifts-on-a-sequence
@@ -2325,21 +2325,33 @@ direction, beside `valarray`'s own `shift` ([the-valarray-reading](#the-valarray
 A container here has its standard counterpart's members, and no member that `std::ranges` spells as an algorithm.
 Every block-wise operation the standard expresses as an algorithm over the elements lives in
 `<xstd/bits/bit_algorithm/bit_*.hpp>`, one header each, exported together by `<xstd/bits/bit_algorithm.hpp>` and by
-`<xstd/bits.hpp>`, as a free function named `xstd::bit_` and the algorithm's name. Each takes the arguments the
-`std::ranges` algorithm takes and returns what it returns: `xstd::bit_count` a `range_difference_t`, signed as
-`std::ranges::count`'s is, `xstd::bit_mismatch` a `std::ranges::mismatch_result`, `xstd::bit_rotate` a
-`borrowed_subrange_t`, `xstd::bit_copy` a `std::ranges::copy_result` and `xstd::bit_for_each` a
+`<xstd/bits.hpp>`, as a free function in `xstd::ranges` named `bit_` and the algorithm's name, as the algorithm is in
+`std::ranges`. Each takes the arguments the `std::ranges` algorithm takes and returns what it returns: `xstd::ranges::bit_count` a `range_difference_t`, signed as
+`std::ranges::count`'s is, `xstd::ranges::bit_mismatch` a `std::ranges::mismatch_result`, `xstd::ranges::bit_rotate` a
+`borrowed_subrange_t`, `xstd::ranges::bit_copy` a `std::ranges::copy_result` and `xstd::ranges::bit_for_each` a
 `std::ranges::for_each_result`. The `std::ranges` call over the same container is the specification, and the tests
 hold each algorithm to it, on `std::vector<bool>` and `std::set<std::size_t>` models of every column's inputs;
 what the prefix adds is the blocks.
+
+**A namespace for each of the standard's.** A port from the standard library is a rename that works the same way
+everywhere: each `std` namespace becomes the matching `xstd` one, and the name takes `bit_`. So
+`std::ranges::copy(v, out)` is `xstd::ranges::bit_copy(v, out)`, and `std::lexicographical_compare_three_way`, which
+`std::ranges` lacks, is `xstd::bit_lexicographical_compare_three_way`. `xstd` itself is where the classic
+iterator-pair shapes go when they come, as ordinary functions a user's overload joins through argument-dependent
+lookup, so `std::copy` and `std::ranges::copy` land on two names, as they are two in the standard. The split also
+keeps apart what the standard keeps apart: xstd-ints' `xstd::bit_reverse(x)` reverses the bits of an integer as
+P3104's `std::bit_reverse` does, and `xstd::ranges::bit_reverse(v)` reverses a sequence as `std::ranges::reverse`
+does. The iterator operations live in `xstd::ranges` too, as `std::ranges::advance` and its siblings do. Inside
+`namespace xstd`, an unqualified `ranges::` finds `xstd::ranges` before `std::ranges` or range-v3's `::ranges`, so
+`tools/qualified_ranges.py`, run by the Audit job, fails on a `ranges::` that names none of the three.
 
 **Which algorithms get a `bit_` form.** One whose work on packed bits is a pass over blocks rather than a walk of
 proxies: it beats a bit at a time because a block answers, moves or writes `digits` positions in one instruction,
 or, on the set reading, because a loop can hold a block an iterator cannot. That is the whole list below, and it is
 a closed list in the sense that an algorithm not on it is one of two kinds. **It reduces to one of these on
 bools**: every `false` is like every other, so `stable_sort`, `nth_element`, `partial_sort` and `ranges::sort` with
-`std::ranges::less` are all `bit_sort`, `stable_partition` is `bit_partition`, `count(v, false)` is
-`ssize(v) - bit_count(v)`, `find_if(v, std::identity())` is `bit_find(v, true)`, `fill_n` and `copy_n` are
+`std::ranges::less` are all `bit_sort`, `stable_partition` is `bit_partition`, `find_if(v, std::identity())` is
+`bit_find(v, true)`, `fill_n` and `copy_n` are
 `bit_fill` and `bit_copy` over a `subspan`, `lexicographical_compare` is `bit_lexicographical_compare_three_way(a, b)
 < 0`, and `upper_bound`, `lower_bound` and `equal_range` over a sorted sequence are `bit_partition_point` and
 `bit_find`. **Or packing gains it nothing**: an algorithm taking a predicate or a function of an element the
@@ -2353,7 +2365,7 @@ tests; the set reading's predicate algorithms are the one family still open, the
 
 | algorithm | `std::ranges` equivalent | reading | a window |
 | :--- | :--- | :--- | :--- |
-| `bit_count(r)` | `count(r, true)` | sequence | yes |
+| `bit_count(r, value)` | `count(r, value)` | sequence | yes |
 | `bit_all_of(r)` | `all_of(r, std::identity())` | sequence | yes |
 | `bit_any_of(r)` | `any_of(r, std::identity())` | sequence | yes |
 | `bit_none_of(r)` | `none_of(r, std::identity())` | sequence | yes |
@@ -2388,16 +2400,25 @@ tests; the set reading's predicate algorithms are the one family still open, the
 | `bit_set_union(s1, s2)` | range-v3's `views::set_union(s1, s2)`, as a set | set | — |
 | `bit_set_difference(s1, s2)` | range-v3's `views::set_difference(s1, s2)`, as a set | set | — |
 | `bit_set_symmetric_difference(s1, s2)` | range-v3's `views::set_symmetric_difference(s1, s2)`, as a set | set | — |
-| `bit_advance(it, n)`, `bit_advance(it, n, bound)` | `advance(it, n)`, `advance(it, n, bound)` | set | — |
-| `bit_next(it, n)`, `bit_next(it, n, bound)` | `next(it, n)`, `next(it, n, bound)` | set | — |
-| `bit_prev(it, n)`, `bit_prev(it, n, bound)` | `prev(it, n)`, `prev(it, n, bound)` | set | — |
-| `bit_distance(first, last)` | `distance(first, last)` | set | — |
+| `bit_advance(it, n)`, `bit_advance(it, n, bound)` | `advance(it, n)`, `advance(it, n, bound)` | both | yes |
+| `bit_next(it, n)`, `bit_next(it, n, bound)` | `next(it, n)`, `next(it, n, bound)` | both | yes |
+| `bit_prev(it, n)`, `bit_prev(it, n, bound)` | `prev(it, n)`, `prev(it, n, bound)` | both | yes |
+| `bit_distance(first, last)` | `distance(first, last)` | both | yes |
+| `bit_distance(r)` | `distance(r)` | both | yes |
+
+**The iterator operations dispatch on the iterator's category.** On a sequence, distance is an offset difference and
+advance an offset step, which a random-access iterator does in O(1), so the four forward to `std::ranges::advance`,
+`next`, `prev` and `distance`, bounded forms included. On a set a step is a key, so they pop and select whole blocks.
+Each asks no more of its iterator than its `std::ranges` counterpart: `bit_prev` a bidirectional one, as
+`std::ranges::prev` does. `bit_distance(r)` takes a set, or a `std::ranges::subrange` of its iterators such as
+`subrange(s.lower_bound(a), s.lower_bound(b))`: counting keys is a distance on a set and not a count, since
+`std::ranges::count(s, k)` asks how often `k` occurs, which `s.contains(k)` answers.
 
 **Free, because the counterpart has no such member.** `std::vector<bool>` has no `count`, `std::array` no `rotate`
 and `std::set` no `is_subset_of`, and a member would answer a question the counterpart's synopsis does not ask, in
 a vocabulary of its own choosing: a nullary `count()`, an `all()` taking a `bool`, a `rotate(n)` reducing its
 argument modulo the size. An algorithm takes the shape `std::ranges` already fixed, so a reader who knows
-`std::ranges::count(v, true)` knows `xstd::bit_count(v)`. The standard libraries make the same split for
+`std::ranges::count(v, true)` knows `xstd::ranges::bit_count(v, true)`. The standard libraries make the same split for
 `vector<bool>`: libc++ answers `std::count`, `std::find` and `std::fill` a word at a time through overloads on its
 `__bit_iterator`, not through members of the container. A user may not add overloads to `std::ranges`' algorithms,
 so these take the `bit_` prefix instead, and a call says which of the two it is.
@@ -2476,37 +2497,37 @@ of `k` is `bit_distance(s.begin(), s.lower_bound(k))`. The select within one blo
 
 **The second set converts.** `bit_includes`, `bit_intersects` and `bit_disjoint` take `S const& s1, std::type_identity_t<S> const& s2`:
 `S` deduces from the first argument alone, and the second converts to it. That puts a flag set's mask on the second
-side, `xstd::bit_includes(perms, fs::perms::owner_read)`, and never first ([flag-types](#flag-types)). All three answer
+side, `xstd::ranges::bit_includes(perms, fs::perms::owner_read)`, and never first ([flag-types](#flag-types)). All three answer
 at any two run-time widths ([width-is-capacity](#width-is-capacity)), and every other relation between two sets is
 spelled from them ([the-set-queries](#the-set-queries)).
 
 **The set operations return a set, and an operator spells each.** `std::ranges::set_intersection` and its three
 siblings write through an output iterator, and that form already works on these sets, element by element. What the
 blocks add is the result as a value, the shape range-v3 gives its lazy `views::set_intersection`,
-`views::set_union`, `views::set_difference` and `views::set_symmetric_difference`, so `xstd::bit_set_intersection`,
+`views::set_union`, `views::set_difference` and `views::set_symmetric_difference`, so `xstd::ranges::bit_set_intersection`,
 `bit_set_union`, `bit_set_difference` and `bit_set_symmetric_difference` take their names and return the set those
 views would hold, a block at a time. The operators `&`, `|`, `-` and `^` are their shorthand, the notation set
 theory already uses, and each algorithm returns exactly what its operator does. Only an owner has a result to hold,
 so a view, which writes through to blocks it does not own, takes neither; the second argument converts to the
-first's type, as for the queries, so `xstd::bit_set_union(perms, fs::perms::owner_read)` adds a flag.
+first's type, as for the queries, so `xstd::ranges::bit_set_union(perms, fs::perms::owner_read)` adds a flag.
 
 ### rotation-and-reversal
 
-`xstd::bit_rotate` and `xstd::bit_reverse` cross where the shifts did not, and the ceiling's two questions say why
+`xstd::ranges::bit_rotate` and `xstd::ranges::bit_reverse` cross where the shifts did not, and the ceiling's two questions say why
 ([what-a-sequence-may-add](#what-a-sequence-may-add)). A sequence of `bool` wants them: `std::ranges::rotate` and
 `std::ranges::reverse` are sequence algorithms, and over packed bits each is a pass over the blocks rather than a
 walk of proxy swaps. So each is the algorithm it packs, under its name, with its signature and its result
-([algorithms-not-members](#algorithms-not-members)). `xstd::bit_rotate(v, middle)` has the effect of
+([algorithms-not-members](#algorithms-not-members)). `xstd::ranges::bit_rotate(v, middle)` has the effect of
 `std::ranges::rotate(v, middle)`: bit *i* takes bit *(i + n) mod N* for *n = middle - v.begin()*, so a whole turn,
 `middle == v.end()`, is no turn, and it returns `{v.begin() + (v.end() - middle), v.end()}`, the range from where
-the old first bool now stands. `xstd::bit_reverse(v)` has the effect of `std::ranges::reverse(v)`: bit *i* takes bit
+the old first bool now stands. `xstd::ranges::bit_reverse(v)` has the effect of `std::ranges::reverse(v)`: bit *i* takes bit
 *N - 1 - i*, and it returns `v.end()`.
 
 [P3103R2](https://wg21.link/P3103R2) is the prior art. It gives `std::bitset` a `reverse()`, and a rotation
 as the pair `rotl` and `rotr`, after `std::rotl` and `std::rotr` in `<bit>`, which name the direction by bit
 significance: left is towards the high bit. That is the right spelling for a bit string, whose low bit is printed on
 its right, and the wrong one for a sequence, whose low index is its front. In the sequence reading the paper's
-`rotr(n)` is `xstd::bit_rotate(v, v.begin() + n)`, and its `rotl(n)` is `xstd::bit_rotate(v, v.end() - n)`, for `n`
+`rotr(n)` is `xstd::ranges::bit_rotate(v, v.begin() + n)`, and its `rotl(n)` is `xstd::ranges::bit_rotate(v, v.end() - n)`, for `n`
 up to the size. One algorithm says both, in the direction `std::rotate` already fixes, and leaves no left or right
 for a reader to map onto front and back. It is the mismatch that keeps the shift operators off the sequence reading:
 a direction named for a bit string reads backwards on a sequence.
@@ -2529,7 +2550,7 @@ libstdc++ before 16 gives a reason of its own not to forward to `std::ranges::ro
 element a closing rotation by one displaces as `auto`, which over a proxy reference is a proxy to the position
 about to be overwritten, so at a turn coprime with a width of three or more the bit that should wrap round comes
 out as a copy of its neighbour: `std::vector<bool>` and this library's sequences lose it alike, while `std::rotate`
-and libc++ do not ([GCC PR 121913](https://gcc.gnu.org/PR121913), fixed in 16 and not backported). `xstd::bit_rotate`
+and libc++ do not ([GCC PR 121913](https://gcc.gnu.org/PR121913), fixed in 16 and not backported). `xstd::ranges::bit_rotate`
 is a pass over the blocks that never asks the standard library to move a proxy, so it is exact on every library, and
 the tests build their own rotations by index for the same reason.
 
@@ -2587,7 +2608,7 @@ whole blocks; the heap one in a constant expression as `std::vector` is; the inp
   `<cmath>` functions: on `bool` each either promotes out of the type or is one of the logical operators again.
 - **Comparisons answer arrays.** `==`, `!=`, `<`, `<=`, `>` and `>=` return the array of elementwise answers, as
   `valarray`'s do, so the type is not `equality_comparable`, has no `<=>` and no `std::hash`, exactly like
-  `std::valarray`. Whole-array equality is `(v == w).min()`, or `xstd::bit_mismatch`.
+  `std::valarray`. Whole-array equality is `(v == w).min()`, or `xstd::ranges::bit_mismatch`.
 - **`apply` is asked twice.** A function of one `bool` is one of four, so `apply(func)` calls `func(false)` and
   `func(true)` once each and applies the answer a block at a time: a constant, the identity or a negation.
 - **The proxies take scalar compound assignments and no shifts.** `[template.slice.array]` and its siblings
@@ -3070,7 +3091,7 @@ leaves every member signature as it is. Position order is structural, so a compa
 rejected by the owners' template heads. The mapping comes first because the direction is defined over the order
 `to_index` preserves. Under `std::greater` the set behaves as `std::set<Key, std::greater<Key>>` specifies: `begin()`
 is the highest set position and `++` steps down, `lower_bound` is the largest key not above its argument and
-`upper_bound` the largest below it, `key_comp()` and `value_comp()` return `std::greater`, and `xstd::bit_for_each` walks
+`upper_bound` the largest below it, `key_comp()` and `value_comp()` return `std::greater`, and `xstd::ranges::bit_for_each` walks
 in that order, and against it over `std::views::reverse`. The iterator carries the direction rather than wrapping
 `std::reverse_iterator`, which would step back on every dereference; both directions end at `size()`. Equality, set
 algebra, hashing and the block exchange are unchanged, since they see the same blocks. `<=>` is
@@ -3245,7 +3266,7 @@ refines `sized_bit_index_mapping` with `M::to_block`, which takes any value of `
 holding its bits at their positions, and `M::from_block`, which reads one back; `bit_flag_mapping` models it and no
 other mapping does. Under that concept alone, `basic_bit_fixed_set` declares the members a flag type has: the
 conversion from the mask and to it, the union of a braced list and the mixed operators; through the conversion,
-`xstd::bit_includes`, `xstd::bit_intersects` and `xstd::bit_disjoint` take a mask as the other set. A set of positions or of listed enumerators has none of them, and a flag set
+`xstd::ranges::bit_includes`, `xstd::ranges::bit_intersects` and `xstd::ranges::bit_disjoint` take a mask as the other set. A set of positions or of listed enumerators has none of them, and a flag set
 over another block, `bit_fast<bit_flag_set<Mask>>` or `basic_bit_fixed_set<Mask, std::uint8_t, 16, bit_flag_mapping<Mask, 16>>`
 over two bytes, or in ascending order, has all of them.
 `examples/include/xstd/filesystem.hpp` is one line, `using perms = bit_flag_set<std::filesystem::perms, 16>;`,
@@ -3366,8 +3387,8 @@ together, with what each contributed and where this library takes it up:
 | [N2050](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2050.pdf) | 2006 | A dynamically sizeable bitset for TR2, after `boost::dynamic_bitset`, with set queries such as `is_subset_of` beside `push_back` and `resize`; libstdc++ still ships it as `std::tr2::dynamic_bitset`. | `bit_set` and `bit_vector`. The paper joins a set and a sequence in one type; here they are two readings of one storage. |
 | [N3110](https://wg21.link/n3110) | 2010 | Problems with the library's bitmask types, `ios_base::fmtflags`, `iostate`, `openmode` and the `regex_constants` flags: operators declared as members, an `operator~` that was a no-op or recursed, an underlying type that should be fixed so that `~` stays in range, and the point that the standard must not require enumerations, since [bitmask.types] allows integers and `std::bitset` too. | Flag types over an enumeration, an integer or a `std::bitset`. `~` stays within `N` on the unsigned block, and an enumeration with no fixed underlying type spells its `N`. `bit_flag_set<std::ios_base::fmtflags, 16>` is one spelling across three standard libraries. |
 | [N4202](https://wg21.link/n4202) | 2014 | *Strongly Typed Bitset*: a storage parameter `T` for `std::bitset`, `small_bitset<N>` over the least `uint_least*_t` holding `N`, `fast_bitset<N>`, and `underlying()`. | The `Block` parameter, `bit_least`, `bit_fast`, `from_blocks` and `bit_convert`. N4202 leaves the bits at or above `N` implementation-defined; here they are always zero, so `==`, hashing and `bit_cast` are exact. |
-| [P0125R0](https://wg21.link/p0125r0) | 2015 | `std::bitset::is_subset_of` and `is_superset_of`, members that may short-circuit, the names N2050 used. | `xstd::bit_includes`, `bit_intersects` and `bit_disjoint`, free functions after `std::ranges::includes`. |
-| [P3103R0](https://wg21.link/P3103R0), [R2](https://wg21.link/P3103R2) | 2024 | *More bitset operations*: `rotl`, `rotr`, `reverse`, `countl_zero(pos)` and `countr_zero(pos)` and their `one` forms, and `one()`. | `xstd::bit_rotate` and `bit_reverse`, in `std::rotate`'s direction. Iteration, `lower_bound` and `upper_bound` cover the positional counts. |
+| [P0125R0](https://wg21.link/p0125r0) | 2015 | `std::bitset::is_subset_of` and `is_superset_of`, members that may short-circuit, the names N2050 used. | `xstd::ranges::bit_includes`, `bit_intersects` and `bit_disjoint`, free functions after `std::ranges::includes`. |
+| [P3103R0](https://wg21.link/P3103R0), [R2](https://wg21.link/P3103R2) | 2024 | *More bitset operations*: `rotl`, `rotr`, `reverse`, `countl_zero(pos)` and `countr_zero(pos)` and their `one` forms, and `one()`. | `xstd::ranges::bit_rotate` and `bit_reverse`, in `std::rotate`'s direction. Iteration, `lower_bound` and `upper_bound` cover the positional counts. |
 | [P4313R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p4313r1.html) | 2026 | *Bitmask operations for enums*: `\|`, `&`, `^`, `~` and their compound forms for an enumeration annotated `[[=std::bitmask_type]]`, as operator templates in the global namespace, each returning the enumeration. | Complementary: P4313 gives the enumeration its operators, and `bit_flag_set` gives it the set reading, `contains`, `size`, iteration and the containments, which the paper leaves out. Its global-namespace operators are what this library never declares for a user's type ([the-adl-firewall](#the-adl-firewall)). |
 
 An enumeration with P4313's operators is an `xstd::bit_mask`, and `bit_flag_set<E>` takes it unchanged, where lookup
@@ -3410,10 +3431,10 @@ taking the mask as it is, beside the adaptor's member set forms, which a mask ca
 **`contains(k)` is `std::set`'s membership of one flag.** A value of several bits, or of none, is no key, so it is no
 element either: `contains` answers `false`, `count` zero, `find` `end()` and `erase` zero, and over an enumeration the
 bounds place it by the mask's order. Writing one stays `bit_flag_mapping`'s precondition, there being no single position to write. All-of
-is `xstd::bit_includes(p, m)`, any-of `xstd::bit_intersects(p, m)` and none-of `xstd::bit_disjoint(p, m)`: each takes its second argument
+is `xstd::ranges::bit_includes(p, m)`, any-of `xstd::ranges::bit_intersects(p, m)` and none-of `xstd::ranges::bit_disjoint(p, m)`: each takes its second argument
 as `std::type_identity_t` of the first's type, outside deduction, so a mask converts there and the flag type declares
 nothing of its own for them ([algorithms-not-members](#algorithms-not-members)). A mask never stands first, so
-`m ⊇ p` is `xstd::bit_includes(xfs::perms(m), p)`, the conversion written out. There is no `operator[]` and no
+`m ⊇ p` is `xstd::ranges::bit_includes(xfs::perms(m), p)`, the conversion written out. There is no `operator[]` and no
 proxy for a `bool`: a set changes one flag through `insert(k)` and `erase(k)`, as `std::set` does. There is no
 nullary `count()` either: `size()` answers it.
 
@@ -3748,7 +3769,7 @@ to throw above it is what has to give. `growing_insert` is the case: a key past 
 which is the one way `insert` on a dynamic extent can refuse ([asking-is-total](#asking-is-total)). The four
 composable checks in the test tree over `|`, `&`, `-` and `^` each build their expected value with `ranges::to`,
 which inserts, so they carry no `noexcept`, which would be a promise about a reachable exception, and the test
-factory carries none over `resize`. The inclusion check beside them, `xstd::bit_includes` asked both ways round,
+factory carries none over `resize`. The inclusion check beside them, `xstd::ranges::bit_includes` asked both ways round,
 constructs nothing and is `noexcept`. The narrower ceiling stays the blocks' own: `m_blocks.resize` and
 `m_blocks.reserve` are handed a count and answer for it, which is why `resize(max_width)` is `bad_alloc` and
 `resize(max_width + 1)` is `length_error`. `resize` takes that count **before** it writes the last block, so a
@@ -3823,8 +3844,8 @@ of them.
 **Structural**, and the reason that decides it: the invariant is not a reading's operation, so the ceiling of
 [what-a-sequence-may-add](#what-a-sequence-may-add) does not reach it. It exists to serve the storage's own
 blockwise reads -- `operator==`, `count`, `all`, `any`, `none` and `first_difference` are every one of them
-storage members that read a whole block and would have to mask without it, `xstd::bit_includes` and
-`xstd::bit_intersects` read whole blocks the same way, and `set_equal` and the orderings are built on them. Moving the restoration up would put the obligation in the adaptors and the
+storage members that read a whole block and would have to mask without it, `xstd::ranges::bit_includes` and
+`xstd::ranges::bit_intersects` read whole blocks the same way, and `set_equal` and the orderings are built on them. Moving the restoration up would put the obligation in the adaptors and the
 dependency in one storage, and a missed call would be silent. Three dirtying operations across two adaptors
 is six places to be right instead of four, to save a masked store on a one-block set.
 
@@ -3926,8 +3947,8 @@ At a static width the distinction is unobservable, every instance carrying the o
 adaptor can default `==` there and nowhere else.
 
 The **storage** answers at any two widths, and the adaptor calls it or the comparisons built on it. `set_equal`,
-`set_three_way`, `xstd::bit_includes` and `xstd::bit_intersects` each carry their own width-crossing arm, so the read operations
-in `set_adaptor`, and `xstd::bit_includes`, `xstd::bit_intersects` and `xstd::bit_disjoint` over it, are calls with no `same_width` test
+`set_three_way`, `xstd::ranges::bit_includes` and `xstd::ranges::bit_intersects` each carry their own width-crossing arm, so the read operations
+in `set_adaptor`, and `xstd::ranges::bit_includes`, `xstd::ranges::bit_intersects` and `xstd::ranges::bit_disjoint` over it, are calls with no `same_width` test
 between them -- only the four compound
 operators still ask, because they mutate. The logic belongs where the blocks and the invariant are, and putting
 it there is also what keeps the adaptors alike, where `sequence_adaptor` had nothing at all. At two run-time widths that differ, `==`,
@@ -4478,8 +4499,8 @@ view over a storage with one of a view over the same storage made const, names o
 
 ### the-set-for-each
 
-`xstd::bit_for_each(s, f)` on the set reading walks blocks where the iterator walks positions, and
-`xstd::bit_for_each(std::views::reverse(s), f)` walks them the other way. The difference is not
+`xstd::ranges::bit_for_each(s, f)` on the set reading walks blocks where the iterator walks positions, and
+`xstd::ranges::bit_for_each(std::views::reverse(s), f)` walks them the other way. The difference is not
 block-parallelism -- the functor still sees every set position, one at a time. It is where the loop's state may
 live.
 
@@ -4765,7 +4786,7 @@ class subscripts and `std::ranges::contiguous_range` does not promise that.
 
 ### the-functor-takes-a-value
 
-`xstd::bit_for_each` hands its functor a **prvalue** -- as `auto(x)`, C++23's decay-copy in the language
+`xstd::ranges::bit_for_each` hands its functor a **prvalue** -- as `auto(x)`, C++23's decay-copy in the language
 ([P0849R8](https://wg21.link/P0849R8)) -- and says so with `requires std::invocable<F&, range_value_t<R>>`, a `bool`
 on the sequence reading and the key on the set reading. That is one fix for one defect, spelled in two places because it is
 worth catching at the interface and worth being right in the body.
@@ -4809,27 +4830,27 @@ returning anything, whose answer is dropped as `std::ranges::for_each` drops it.
 
 ### the-sequence-aggregates
 
-The sequence reading counts and queries its bools through four algorithms, `xstd::bit_count`, `xstd::bit_all_of`,
-`xstd::bit_any_of` and `xstd::bit_none_of`, and compares two sequences through `xstd::bit_mismatch`
+The sequence reading counts and queries its bools through four algorithms, `xstd::ranges::bit_count`, `xstd::ranges::bit_all_of`,
+`xstd::ranges::bit_any_of` and `xstd::ranges::bit_none_of`, and compares two sequences through `xstd::ranges::bit_mismatch`
 ([algorithms-not-members](#algorithms-not-members)). Each is the `std::ranges` algorithm it is named after, over
-`true` or through `std::identity`, as [alg.count] and [alg.all.of] spell them: `bit_count(v)` is
-`std::ranges::count(v, true)` and returns its signed `range_difference_t`, where `std::bitset::count` returns a
+a value or through `std::identity`, as [alg.count] and [alg.all.of] spell them: `bit_count(v, b)` is
+`std::ranges::count(v, b)` and returns its signed `range_difference_t`, the ones popped and the zeros the size less
+the ones, where `std::bitset::count` returns a
 `size_t`, and `bit_all_of(v)` is `true` on an empty sequence, as `std::ranges::all_of` is.
 
 They are not redundant with `bit_set_view(v).size()`, which already answers a block-parallel count over the
 same storage. That view asks a *different question* -- reinterpret these bools as a set of positions and give
-me its cardinality -- which happens to return the same integer as `bit_count(v)`. Two readings over one storage is
+me its cardinality -- which happens to return the same integer as `bit_count(v, true)`. Two readings over one storage is
 the whole design, and [two-readings-disagree](#two-readings-disagree) exists to say they are not interchangeable;
 making a caller change reading to count their bools is the fault the README levels at the two containers this
 library replaces.
 
-**The questions about `false` are identities, not further algorithms**, and they hold on a window too:
+**The other questions about `false` are identities, not further algorithms**, and they hold on a window too:
 
 ```
-std::ranges::count(v, false)                 == std::ranges::ssize(v) - xstd::bit_count(v)
-std::ranges::all_of(v, std::logical_not())   == xstd::bit_none_of(v)
-std::ranges::any_of(v, std::logical_not())   == not xstd::bit_all_of(v)
-std::ranges::none_of(v, std::logical_not())  == xstd::bit_all_of(v)
+std::ranges::all_of(v, std::logical_not())   == xstd::ranges::bit_none_of(v)
+std::ranges::any_of(v, std::logical_not())   == not xstd::ranges::bit_all_of(v)
+std::ranges::none_of(v, std::logical_not())  == xstd::ranges::bit_all_of(v)
 ```
 
 Short-circuiting survives them: asking whether every bool is `false` really does stop at the first set bit, because
@@ -4839,7 +4860,7 @@ member over a whole sequence, and a masked block at a time over a window ([windo
 helper of its own rather than `not any_true`, so the storage is asked in its own blocks; `bit_block_container` spells
 `count`, `all`, `any` and `none` itself, each at the block tier.
 
-`xstd::bit_mismatch` is `bit_block_container::first_difference` plus one `countr_zero`. The storage's helper
+`xstd::ranges::bit_mismatch` is `bit_block_container::first_difference` plus one `countr_zero`. The storage's helper
 **keeps its name**: it scans low block to high, which is the *ascending* orderings' answer, where a bit
 string's order would walk the other way. Calling it
 `mismatch` on the storage would repeat the mistake an unqualified `lexicographical_compare_three_way` made
@@ -4850,7 +4871,7 @@ Measured on GCC 15.2, `-O3 -march=native`, 20% density, best of fifteen:
 
 | | 2^16 | 2^20 | 2^24 |
 |---|---|---|---|
-| `xstd::bit_count(v)` | 0.1 µs | 2.0 µs | 49.5 µs |
+| `xstd::ranges::bit_count(v, true)` | 0.1 µs | 2.0 µs | 49.5 µs |
 | `std::count` over `bit_vector` | 54.6 µs | 889 µs | 15072 µs |
 | `std::count` over `std::vector<bool>` | 45.1 µs | 702 µs | 11590 µs |
 
@@ -4870,13 +4891,13 @@ density and best of fifteen:
 | clang 18, µs | 2^16 | 2^20 | 2^24 |
 |---|---|---|---|
 | `std::count` over `std::vector<bool>`, **libc++** | 0.2 | 6.1 | 68.4 |
-| `xstd::bit_count(v)` | 0.3 | 3.7 | 72.6 |
+| `xstd::ranges::bit_count(v, true)` | 0.3 | 3.7 | 72.6 |
 | `std::count` over `std::vector<bool>`, libstdc++ | 72.3 | 1181 | 19316 |
 | `std::count` over `bit_vector` | 129 | 2122 | 33489 |
 
 282x between the two `vector<bool>` rows on identical source, and a **tie** at the top: 2^24 bits is 2 MiB and
 both run it at about 29 GiB/s, which is the memory and not the loop. So the honest claim is narrower than the
-one the first table invites -- `xstd::bit_count` beats `std::count` over a `vector<bool>` **whose library does not
+one the first table invites -- `xstd::ranges::bit_count` beats `std::count` over a `vector<bool>` **whose library does not
 specialize it**, and ties one whose library does. What the algorithm buys against libc++ is not speed but that
 the block-parallel count is a spelling a caller can name rather than a library optimization they must hope
 is present, over a storage that also answers the other two readings.
@@ -4888,7 +4909,7 @@ the padding ([padding](#padding)).
 
 ### the-sequence-for-each
 
-`xstd::bit_for_each(v, f)` on the sequence reading is the set reading's walk ([the-set-for-each](#the-set-for-each))
+`xstd::ranges::bit_for_each(v, f)` on the sequence reading is the set reading's walk ([the-set-for-each](#the-set-for-each))
 transposed: an outer loop over blocks, an inner loop over the bits of one block, so the reload that
 `operator++` must perform on every step becomes the inner loop's exit test. The functor takes what this
 reading's iterator dereferences to, a `bool`, where the set reading's takes a position. A window walks its own
@@ -5145,7 +5166,7 @@ What they have found so far, on GCC 15.2, `-O3 -march=native`, x86-64:
 - **`std::count` is slow over both, and not because libstdc++ counts words.** It reads about 1.2× to 1.3×
   slower over `bit_vector` than over `std::vector<bool>` on GCC, which looks like a specialization of
   `std::count` for `std::vector<bool>::iterator` and is not one: a word-at-a-time count is two orders of magnitude
-  ahead, not twenty percent, which is what `xstd::bit_count` measures at
+  ahead, not twenty percent, which is what `xstd::ranges::bit_count` measures at
   ([the-sequence-aggregates](#the-sequence-aggregates)). The gap is the generic path over two different proxy
   iterators, and under clang it runs the other way, ours being the vectorizable one.
 The sequence ladder's fixtures are the expensive part of a `ctest` smoke run: a 32 MiB fixture is filled a bit
@@ -5395,7 +5416,7 @@ iterator by overloading inside its own namespace, and neither `std::count` nor `
 offers a customization point a user-defined bit container could hook. What the row says is how much a
 sweep costs when it is asked through a generic algorithm.
 
-`bm_sequential_bit_count` asks the same question through `xstd::bit_count` instead: one popcount per
+`bm_sequential_bit_count` asks the same question through `xstd::ranges::bit_count` instead: one popcount per
 block, 91ns, 73ns and 74ns in those same three configurations. It does not care which library or which
 compiler, because the loop is ours either way. Level with libc++'s specialized count at 1.01x, and
 some five hundred times quicker than what libstdc++ offers for the same question. `std::vector<bool>`
@@ -5904,7 +5925,7 @@ The interface for the class template `xstd::bit_fixed_set<N>` is the coherent un
 
 1. An almost **drop-in** implementation of the full interface of `std::set<int>`.
 2. An almost complete **translation** of the [`std::bitset<N>`](http://en.cppreference.com/w/cpp/utility/bitset) member functions to the [`std::set<int>`](http://en.cppreference.com/w/cpp/container/set) naming convention.
-3. The single-pass and short-circuiting **set predicates** from [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/1_80_0/libs/dynamic_bitset/dynamic_bitset.html), as the free algorithms `xstd::bit_includes`, `xstd::bit_intersects` and `xstd::bit_disjoint`.
+3. The single-pass and short-circuiting **set predicates** from [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/1_80_0/libs/dynamic_bitset/dynamic_bitset.html), as the free algorithms `xstd::ranges::bit_includes`, `xstd::ranges::bit_intersects` and `xstd::ranges::bit_disjoint`.
 4. The bitwise operators from [`std::bitset<N>`](http://en.cppreference.com/w/cpp/utility/bitset) and [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/1_80_0/libs/dynamic_bitset/dynamic_bitset.html) reimagined as composable and data-parallel **set algorithms**.
 
 The **full** interface of `xstd::bit_fixed_set` is `constexpr`.
@@ -5965,13 +5986,13 @@ Formatting a set needs nothing beyond the standard library: `std::format` and `s
 
 ### 3 Set predicates from `boost::dynamic_bitset`
 
-The set predicates `is_subset_of`, `is_proper_subset_of` and `intersects` from `boost::dynamic_bitset` have **identical semantics** in `xstd::bit_fixed_set`, spelled through the free algorithms `xstd::bit_includes` and `xstd::bit_intersects`, named after `std::ranges::includes` and a nonempty `std::ranges::set_intersection` and taking their arguments in that order. Note that these set predicates are not present in `std::bitset`. Efficient emulation of these set predicates for `std::bitset` is not possible using **single-pass** and **short-circuiting** semantics.
+The set predicates `is_subset_of`, `is_proper_subset_of` and `intersects` from `boost::dynamic_bitset` have **identical semantics** in `xstd::bit_fixed_set`, spelled through the free algorithms `xstd::ranges::bit_includes` and `xstd::ranges::bit_intersects`, named after `std::ranges::includes` and a nonempty `std::ranges::set_intersection` and taking their arguments in that order. Note that these set predicates are not present in `std::bitset`. Efficient emulation of these set predicates for `std::bitset` is not possible using **single-pass** and **short-circuiting** semantics.
 
 | `xstd::bit_fixed_set<N>`                                    | `boost::dynamic_bitset<>`  | `std::bitset<N>`             |
 | :-----------------------                                    | :------------------------  | :---------------             |
-| `xstd::bit_includes(b, a)`                                  | `a.is_subset_of(b)`        | `(a & ~b).none()`            |
-| `xstd::bit_includes(b, a) and not xstd::bit_includes(a, b)` | `a.is_proper_subset_of(b)` | `(a & ~b).none() and a != b` |
-| `xstd::bit_intersects(a, b)`                                | `a.intersects(b)`          | `(a & b).any()`              |
+| `xstd::ranges::bit_includes(b, a)`                                  | `a.is_subset_of(b)`        | `(a & ~b).none()`            |
+| `xstd::ranges::bit_includes(b, a) and not xstd::ranges::bit_includes(a, b)` | `a.is_proper_subset_of(b)` | `(a & ~b).none() and a != b` |
+| `xstd::ranges::bit_intersects(a, b)`                                | `a.intersects(b)`          | `(a & b).any()`              |
 
 ### 4 The bitwise operators from `std::bitset` and `boost::dynamic_bitset` reimagined as set algorithms
 
@@ -5984,11 +6005,11 @@ With the exception of `operator~`, the non-member bitwise operators can be reima
 
 | `xstd::bit_fixed_set<N>`      | `std::set<int>` with the range-v3 set algorithm views                                                |
 | :----------------       | :----------------------------------------------------------------------------------------------------|
-| `xstd::bit_includes(b, a)` | `std::ranges::includes(b, a)`                                                                     |
-| <code>a &vert; b</code>, `xstd::bit_set_union(a, b)` | <code>ranges::views::set_union(a, b)                &vert; std::ranges::to&lt;std::set&gt;() </code> |
-| `a & b`, `xstd::bit_set_intersection(a, b)` | <code>ranges::views::set_intersection(a, b)         &vert; std::ranges::to&lt;std::set&gt;() </code> |
-| `a - b`, `xstd::bit_set_difference(a, b)` | <code>ranges::views::set_difference(a, b)           &vert; std::ranges::to&lt;std::set&gt;() </code> |
-| `a ^ b`, `xstd::bit_set_symmetric_difference(a, b)` | <code>ranges::views::set_symmetric_difference(a, b) &vert; std::ranges::to&lt;std::set&gt;() </code> |
+| `xstd::ranges::bit_includes(b, a)` | `std::ranges::includes(b, a)`                                                                     |
+| <code>a &vert; b</code>, `xstd::ranges::bit_set_union(a, b)` | <code>ranges::views::set_union(a, b)                &vert; std::ranges::to&lt;std::set&gt;() </code> |
+| `a & b`, `xstd::ranges::bit_set_intersection(a, b)` | <code>ranges::views::set_intersection(a, b)         &vert; std::ranges::to&lt;std::set&gt;() </code> |
+| `a - b`, `xstd::ranges::bit_set_difference(a, b)` | <code>ranges::views::set_difference(a, b)           &vert; std::ranges::to&lt;std::set&gt;() </code> |
+| `a ^ b`, `xstd::ranges::bit_set_symmetric_difference(a, b)` | <code>ranges::views::set_symmetric_difference(a, b) &vert; std::ranges::to&lt;std::set&gt;() </code> |
 
 The bitwise shift operators of `xstd::bit_fixed_set<N>` can be reimagined as set **transformations** that add or subtract a non-negative constant to all set elements, followed by **filtering** out elements that would fall outside the range `[0, N)`. This can also be formulated in a composable way for `std::set<int>`, albeit without the data-parallelism that `xstd::bit_fixed_set<N>` provides.
 
@@ -6142,7 +6163,7 @@ discussion continue; an entry leaves this section for the one describing the cod
 ([#195](https://github.com/rhalbersma/xstd-bits/issues/195)). What a string adds over a sequence is not order,
 since both compare lexicographically, but **search and concatenation**: `find`, `substr`, `starts_with`, `append`
 and `+`, which prefix codes, tries, CIDR prefixes and k-mers ask of a run of bits. It builds on the sequence
-reading's algorithms, `xstd::bit_find` among them ([algorithms-not-members](#algorithms-not-members)), and calls
+reading's algorithms, `xstd::ranges::bit_find` among them ([algorithms-not-members](#algorithms-not-members)), and calls
 its word-parallel search as an algorithm rather than owning it. The decisions already taken:
 
 - **Five names, one per column:** `bit_fixed_string<N>`, `bit_inplace_string<N>`, `bit_small_string<N>`,

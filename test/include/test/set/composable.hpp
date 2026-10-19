@@ -22,9 +22,9 @@ struct includes
         template<class X>
         auto operator()(const X& a, const X& b) const noexcept
         {
-                if constexpr (requires { xstd::bit_includes(a, b); }) {
-                        BOOST_CHECK_EQUAL(xstd::bit_includes(a, b), std::ranges::includes(a, b, a.value_comp()));
-                        BOOST_CHECK_EQUAL(xstd::bit_includes(b, a), std::ranges::includes(b, a, a.value_comp()));
+                if constexpr (requires { xstd::ranges::bit_includes(a, b); }) {
+                        BOOST_CHECK_EQUAL(xstd::ranges::bit_includes(a, b), std::ranges::includes(a, b, a.value_comp()));
+                        BOOST_CHECK_EQUAL(xstd::ranges::bit_includes(b, a), std::ranges::includes(b, a, a.value_comp()));
                 }
         }
 };

@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_SUITE(BitMove)
 namespace {
 
 template<class R, class O>
-concept movable = requires (R const& r, O out) { xstd::bit_move(r, out); };
+concept movable = requires (R const& r, O out) { xstd::ranges::bit_move(r, out); };
 
 // The algorithm and std::ranges::move from r into a striped destination over Block at an offset: bools and ends.
 template<class Block, class R>
@@ -37,7 +37,7 @@ template<class Block, class R>
         auto model        = test::algorithm::bools_of(dst);
         auto const d      = static_cast<std::ptrdiff_t>(offset);
         auto const want   = std::ranges::move(source, model.begin() + d);
-        auto const got    = xstd::bit_move(r, dst.begin() + d);
+        auto const got    = xstd::ranges::bit_move(r, dst.begin() + d);
         return got.in == std::ranges::end(r) and got.out - dst.begin() == want.out - model.begin() and test::algorithm::bools_of(dst) == model;
 }
 
@@ -65,7 +65,7 @@ template<class Block>
                         auto w     = v;
                         auto model = test::algorithm::bools_of(v);
                         std::ranges::move(model.begin() + static_cast<std::ptrdiff_t>(first), model.begin() + static_cast<std::ptrdiff_t>(first + count), model.begin() + static_cast<std::ptrdiff_t>(to));
-                        static_cast<void>(xstd::bit_move(xstd::bit_span(w).subspan(first, count), w.begin() + static_cast<std::ptrdiff_t>(to)));
+                        static_cast<void>(xstd::ranges::bit_move(xstd::bit_span(w).subspan(first, count), w.begin() + static_cast<std::ptrdiff_t>(to)));
                         wrong += static_cast<int>(test::algorithm::bools_of(w) != model);
                 }
         }
@@ -106,14 +106,14 @@ BOOST_AUTO_TEST_CASE(MovesBetweenOurSequencesAlone)
         static_assert([] -> bool {
                 auto const a = test::algorithm::patterned(xstd::bit_array<70>());
                 auto b       = xstd::bit_array<75>();
-                auto const r = xstd::bit_move(a, b.begin() + 5);
+                auto const r = xstd::ranges::bit_move(a, b.begin() + 5);
                 return r.out == b.end() and test::algorithm::bools_of(xstd::bit_span(b).subspan(5UZ)) == test::algorithm::bools_of(a);
         }());
         using A = xstd::bit_array<8>;
         static_assert(movable<A, std::ranges::iterator_t<xstd::bit_vector>> and movable<A, std::ranges::iterator_t<A>>);
         static_assert(not movable<A, std::ranges::iterator_t<A const>> and not movable<A, std::vector<bool>::iterator> and not movable<A, std::back_insert_iterator<std::vector<bool>>>);
         static_assert(not movable<std::vector<bool>, std::ranges::iterator_t<A>> and not movable<xstd::bit_fixed_set<8>, std::ranges::iterator_t<A>>);
-        static_assert(std::same_as<decltype(xstd::bit_move(A(), std::declval<std::ranges::iterator_t<A>>())), std::ranges::move_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_move(A(), std::declval<std::ranges::iterator_t<A>>())), std::ranges::move_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

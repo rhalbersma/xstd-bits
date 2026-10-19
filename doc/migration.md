@@ -99,8 +99,8 @@ auto meets = (b & other).any();
 
 auto u = s << 1;
 auto both = s & other;
-auto subset = xstd::bit_includes(other, s);
-auto meets = xstd::bit_intersects(s, other);
+auto subset = xstd::ranges::bit_includes(other, s);
+auto meets = xstd::ranges::bit_intersects(s, other);
 ```
 
 </td></tr>
@@ -111,10 +111,10 @@ auto meets = xstd::bit_intersects(s, other);
 A row combined whole is a `bit_fixed_valarray<N>`, `std::valarray<bool>` packed: `operator[]` stays, and every
 operator works element by element over two rows of one size, or a row and a `bool`. `~` is logical not, as `!` is,
 and the comparisons answer a row of bools, so `b == c` becomes `(v == w).min()`. The count and the queries are
-`xstd::bit_count`, `bit_all_of`, `bit_any_of` and `bit_none_of`, or `valarray`'s own `sum`, `min` and `max`; a
+`xstd::ranges::bit_count`, `bit_all_of`, `bit_any_of` and `bit_none_of`, or `valarray`'s own `sum`, `min` and `max`; a
 rotation is `cshift`. `std::bitset`'s shifts stay, in its sense: `v << n` moves position `i` to `i + n`, which is
 `valarray`'s `v.shift(-n)`. A row that is indexed and permuted rather than combined is a `bit_array<N>`, with
-`xstd::bit_rotate` and `xstd::bit_reverse`.
+`xstd::ranges::bit_rotate` and `xstd::ranges::bit_reverse`.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>
@@ -140,9 +140,9 @@ b.to_string();  // "11111101", position 0 last
 auto v = xstd::bit_fixed_valarray<8>();
 v[1] = true;
 v = ~v;
-xstd::bit_count(v);  // 7
-v.min();             // false, or xstd::bit_all_of(v)
-v.max();             // true, or xstd::bit_any_of(v)
+xstd::ranges::bit_count(v, true);  // 7
+v.min();             // false, or xstd::ranges::bit_all_of(v)
+v.max();             // true, or xstd::ranges::bit_any_of(v)
 v = v.cshift(-1);    // position i to i + 1
 std::format("{}", v);  // "[true, ...]", position 0 first
 ```
@@ -299,7 +299,7 @@ using perms = xstd::bit_flag_set<fs::perms, 16>;
 auto p = perms{fs::perms::owner_read, fs::perms::owner_write};
 p |= fs::perms::group_read;
 p.contains(fs::perms::owner_write);
-xstd::bit_includes(p, mask);
+xstd::ranges::bit_includes(p, mask);
 fs::permissions(path, p);  // converts to fs::perms
 ```
 
@@ -346,8 +346,8 @@ a -= Qt::AlignTop;
 a.erase(Qt::AlignLeft);
 a.insert(Qt::AlignHCenter);
 a.contains(Qt::AlignHCenter);
-xstd::bit_includes(a, Qt::AlignCenter);
-xstd::bit_intersects(a, Qt::AlignVertical_Mask);
+xstd::ranges::bit_includes(a, Qt::AlignCenter);
+xstd::ranges::bit_intersects(a, Qt::AlignVertical_Mask);
 Qt::AlignmentFlag(a);
 ```
 
@@ -359,14 +359,14 @@ Member by member:
 | `QFlags` | Flag type |
 | :-- | :-- |
 | `testFlag(f)`, `f` one bit | `contains(f)` |
-| `testFlags(m)` | `xstd::bit_includes(a, m)`, except that `testFlags(0)` asks whether `a` is empty, and `bit_includes(a, 0)` is always true |
-| `testAnyFlags(m)` | `xstd::bit_intersects(a, m)` |
+| `testFlags(m)` | `xstd::ranges::bit_includes(a, m)`, except that `testFlags(0)` asks whether `a` is empty, and `bit_includes(a, 0)` is always true |
+| `testAnyFlags(m)` | `xstd::ranges::bit_intersects(a, m)` |
 | `setFlag(f, on)`, `f` one bit | `on ? a.insert(f) : a.erase(f)` |
 | `setFlag(m, on)`, `m` several bits | `on ? a \|= m : a -= m` |
 | `toInt()` | the conversion to the mask, `Qt::AlignmentFlag(a)`, or `xstd::bit_convert<unsigned>(a)` for the word |
 
 An unscoped enumeration converts to `bool`, so `if (a & Qt::AlignLeft)` still reads as any-of, through the
-conversion to the mask. A scoped enumeration does not, and its flag type then asks `xstd::bit_intersects` or
+conversion to the mask. A scoped enumeration does not, and its flag type then asks `xstd::ranges::bit_intersects` or
 `contains` instead.
 
 ## A signed word of unsigned flags: POSIX `sa_flags`
@@ -445,8 +445,8 @@ s.insert(500);  // grows
 for (auto i : s) {
         use(i);
 }
-xstd::bit_includes(c, s);
-xstd::bit_intersects(s, c);
+xstd::ranges::bit_includes(c, s);
+xstd::ranges::bit_intersects(s, c);
 ```
 
 </td></tr>
@@ -476,7 +476,7 @@ v.push_back(true);
 v.resize(10);
 auto a = xstd::bit_convert<xstd::bit_valarray>(v);
 a = ~a;
-xstd::bit_count(a);
+xstd::ranges::bit_count(a, true);
 a &= c;
 a ^= c;
 auto n = ~a;
@@ -530,7 +530,7 @@ bits.popcount();
 auto bits = xstd::bit_vector{false, true, true, false, false};
 bits.push_back(false);
 bits.insert(bits.begin() + 2, {true, true});
-xstd::bit_count(bits);
+xstd::ranges::bit_count(bits, true);
 ```
 
 </td></tr>

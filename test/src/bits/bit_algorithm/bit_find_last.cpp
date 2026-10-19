@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_SUITE(BitFindLast)
 namespace {
 
 template<class R>
-concept findable = requires (R const& r) { xstd::bit_find_last(r, true); };
+concept findable = requires (R const& r) { xstd::ranges::bit_find_last(r, true); };
 
 // The algorithm and std::ranges::find_last on the same bools, for either value: where each subrange starts and ends.
 template<class R>
@@ -31,7 +31,7 @@ template<class R>
 {
         auto const model = std::vector<bool>(std::ranges::begin(r), std::ranges::end(r));
         return std::ranges::all_of(std::array{false, true}, [&](bool value) -> bool {
-                auto const got  = xstd::bit_find_last(r, value);
+                auto const got  = xstd::ranges::bit_find_last(r, value);
                 auto const want = std::ranges::find_last(model, value);
                 return got.begin() - std::ranges::begin(r) == want.begin() - model.begin() and got.end() == std::ranges::end(r);
         });
@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE(AnswersAsRangesFindLastDoes)
 {
         static_assert(agrees(test::algorithm::patterned(xstd::bit_array<70>())));
         static_assert(findable<xstd::bit_array<8>> and not findable<std::vector<bool>> and not findable<xstd::bit_fixed_set<8>>);
-        static_assert(std::same_as<decltype(xstd::bit_find_last(xstd::bit_array<8>(), true)), std::ranges::dangling>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_find_last(xstd::bit_array<8>(), true)), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

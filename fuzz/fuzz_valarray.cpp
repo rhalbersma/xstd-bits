@@ -59,7 +59,7 @@ auto expect_equal(fuzz::checker const& check, X const& x, model const& m)
 {
         check.expect(x.size() == m.size(), "size");
         check.expect(std::ranges::equal(x, m), "elements");
-        check.expect(xstd::bit_count(x) == std::ranges::count(m, true), "padding");
+        check.expect(xstd::ranges::bit_count(x, true) == std::ranges::count(m, true), "padding");
 }
 
 // The owner holding the model's bools, at the model's size.
@@ -382,9 +382,9 @@ auto fuzz_one(fuzz::decoder& in)
                                 check.expect(x.sum() == (n != 0), "sum");
                                 check.expect(x.min() == (n == std::ranges::ssize(m)), "min");
                                 check.expect(x.max() == (n != 0), "max");
-                                check.expect(xstd::bit_all_of(x) == (n == std::ranges::ssize(m)), "bit_all_of");
-                                check.expect(xstd::bit_any_of(x) == (n != 0), "bit_any_of");
-                                check.expect(xstd::bit_none_of(x) == (n == 0), "bit_none_of");
+                                check.expect(xstd::ranges::bit_all_of(x) == (n == std::ranges::ssize(m)), "bit_all_of");
+                                check.expect(xstd::ranges::bit_any_of(x) == (n != 0), "bit_any_of");
+                                check.expect(xstd::ranges::bit_none_of(x) == (n == 0), "bit_none_of");
                                 auto mnot = m;
                                 mnot.flip();
                                 expect_equal(check, x.apply([](bool b) -> bool { return not b; }), mnot);
