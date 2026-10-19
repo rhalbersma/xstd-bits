@@ -15,10 +15,14 @@ concurrency:
 on:
   pull_request:
     branches: [ main ]
-  # canary.yml dispatches this weekly on main, the run its README badge shows.
+  # canary.yml dispatches this nightly on main, the run its README badge shows.
   workflow_dispatch:
 
 jobs:
   # Two rungs, Apple publishing no Clang trunk; the file keeps its name because the README badge is the workflow's path.
   apple_clang:
     uses: rhalbersma/cpp-ci/.github/workflows/apple-clang.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    with:
+      # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so
+      # the nightly canary covers it, building every rung and build type on main.
+      reduce_on_pr: true

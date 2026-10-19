@@ -15,7 +15,7 @@ concurrency:
 on:
   pull_request:
     branches: [ main ]
-  # canary.yml dispatches this weekly on main, the run its README badge shows.
+  # canary.yml dispatches this nightly on main, the run its README badge shows.
   workflow_dispatch:
 
 jobs:
@@ -26,3 +26,6 @@ jobs:
       toolset: ClangCL,host=x64
       preview_toolset_prefix: "ClangCL,"
       cache_prefix: clang-cl
+      # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so
+      # the nightly canary covers it, building every rung and build type on main.
+      reduce_on_pr: true

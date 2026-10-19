@@ -15,13 +15,17 @@ concurrency:
 on:
   pull_request:
     branches: [ main ]
-  # canary.yml dispatches this weekly on main, the run its README badge shows.
+  # canary.yml dispatches this nightly on main, the run its README badge shows.
   workflow_dispatch:
 
 jobs:
-  # No inputs: every rung. The WinLibs release lookup lives in cpp-ci's install-winlibs action now.
+  # Every rung. The WinLibs release lookup lives in cpp-ci's install-winlibs action now.
   mingw:
     uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    with:
+      # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so
+      # the nightly canary covers it, building every rung and build type on main.
+      reduce_on_pr: true
 
   # The same C++26 leg as gcc.yml's, over the other libstdc++ toolchain: no leg at C++23 holds the inplace column
   # in std::inplace_vector. The qualification rung is MinGW 16, this ladder having no development rung -- WinLibs

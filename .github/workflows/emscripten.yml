@@ -15,7 +15,7 @@ concurrency:
 on:
   pull_request:
     branches: [ main ]
-  # canary.yml dispatches this weekly on main, the run its README badge shows.
+  # canary.yml dispatches this nightly on main, the run its README badge shows.
   workflow_dispatch:
 
 jobs:
