@@ -18,14 +18,11 @@
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
-#include <boost/container_hash/is_range.hpp>                 // is_range
-#include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
 #include <cstddef>                                           // size_t
-#include <functional>                                        // hash, less
+#include <functional>                                        // less
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
 #include <ranges>                                            // from_range, from_range_t
-#include <type_traits>                                       // false_type
 #include <utility>                                           // forward, move
 
 namespace xstd {
@@ -104,30 +101,5 @@ struct bits::detail::rebind<basic_bit_inplace_set<Key, Block, N, KeyMapping, Com
 };
 
 } // namespace xstd
-
-namespace boost::container_hash {
-
-// A reading with iterators says it is neither range nor tuple, so Boost hashes it as the value it is.
-template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
-struct is_range<xstd::basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>> : std::false_type
-{};
-
-template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
-struct is_tuple_like<xstd::basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>> : std::false_type
-{};
-
-} // namespace boost::container_hash
-
-// NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
-
-namespace std {
-
-template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
-struct hash<xstd::basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>> : hash<typename xstd::basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>::adaptor_type>
-{};
-
-} // namespace std
-
-// NOLINTEND(bugprone-std-namespace-modification)
 
 #endif // XSTD_BITS_BIT_SET_BIT_INPLACE_SET_HPP

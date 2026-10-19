@@ -8,6 +8,8 @@
 
 // [vector.bool.pspc], partial class template specialization vector<bool, Allocator>
 #include <xstd/bits/bit_vector/bit_vector.hpp> // IWYU pragma: export; basic_bit_vector, bit_vector
+// [vector.erasure], erasure
+#include <xstd/bits/bit_vector/erase_if.hpp> // IWYU pragma: export; erase, erase_if
 // [vector.syn], hash support
 #include <xstd/bits/bit_vector/hash.hpp> // IWYU pragma: export; hash
 // Boost.ContainerHash's traits, https://www.boost.org/libs/container_hash
