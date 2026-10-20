@@ -17,8 +17,8 @@
 
 #endif
 
-// A built-in wide enough to name, a library mode that will own it, and a <bit> that will take it.
-#if defined(__SIZEOF_INT128__) && !defined(__STRICT_ANSI__) && !defined(_MSC_VER)
+// A built-in wide enough to name, and a <bit> that takes it: libstdc++ before 16 refuses it under __STRICT_ANSI__.
+#if defined(__SIZEOF_INT128__) && !defined(_MSC_VER) && (!defined(__STRICT_ANSI__) || defined(_LIBCPP_VERSION) || (defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE >= 16))
 
 #define BENCH_HAS_UINT128
 #include <xstd/ints/cstdint/int128.hpp> // uint128

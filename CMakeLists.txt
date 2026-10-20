@@ -294,7 +294,7 @@ if(PROJECT_IS_TOP_LEVEL)
         set(CMAKE_CXX_STANDARD ${${project_option_prefix}_CXX_STANDARD})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-        # Left ON, which is CMake's default, so the matrix compiles as gnu++23 where xstd and tabula compile as c++23. Stated rather than omitted, because the reason is specific and the difference is deliberate: <bit>'s functions take std::unsigned_integral alone, and libstdc++ and libc++ carry xstd::uint128 into that concept only outside __STRICT_ANSI__. Turning extensions off would drop the widest Block from every instantiation list rather than fail, which is the worse of the two outcomes.
+        # Left ON, which is CMake's default, so the matrix compiles as gnu++23 where xstd and tabula compile as c++23. Stated rather than omitted, because the reason is specific and the difference is deliberate: <bit>'s functions take std::unsigned_integral alone, and libstdc++ before 16 carries xstd::uint128 into that concept only outside __STRICT_ANSI__, where libc++ and libstdc++ 16 always do. Turning extensions off would drop the widest Block from that one library's instantiation lists rather than fail, which is the worse of the two outcomes.
         set(CMAKE_CXX_EXTENSIONS ON)
 
         # Above both, and not inside test/: benchmark/ is configured first, so a target declared in test/ does not exist yet when the benchmarks ask for it. Both trees grade over the same two integer classes.
