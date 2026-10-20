@@ -1291,7 +1291,7 @@ the standard library already spells:
 | query | true where | spelled | named after |
 | :--- | :--- | :--- | :--- |
 | `contains(k)` | `k` is an element | member | `std::set::contains`, the predicate form of `find` |
-| `xstd::ranges::bit_includes(x, y)` | every element of `y` is one of `x`'s | algorithm | `std::ranges::includes(x, y)` |
+| `xstd::ranges::bit_includes(x, y)` | every element of `y` is one of `x`'s | algorithm | `std::ranges::includes(x, y, x.key_comp())` |
 | `xstd::ranges::bit_intersects(x, y)` | some element is in both | algorithm | `std::ranges::set_intersection`, its result nonempty |
 | `xstd::ranges::bit_disjoint(x, y)` | no element is in both | algorithm | `std::ranges::set_intersection`, its result empty |
 
@@ -2491,8 +2491,8 @@ view, or the same value over narrower blocks.
 
 **The iterator operations are rank and select.** `std::ranges::advance`, `next`, `prev` and `distance` over a set's
 iterators step one key at a time; `bit_advance(it, n)` skips whole blocks by their popcount until the block holding
-the target key, then selects within it, counting from the top when it walks down, so it costs `n / digits` blocks
-rather than `n` scans. Its bounded form stops at `bound` and answers the steps it did not take, signed as `n` is, as
+the target key, then selects within it, counting from the top when it walks down, so it reads the blocks between
+`it` and the target, `n / digits` of them where the keys are dense, rather than taking `n` steps. Its bounded form stops at `bound` and answers the steps it did not take, signed as `n` is, as
 `std::ranges::advance` does; `bit_next` and `bit_prev` are it over a copy. `bit_distance(first, last)` is a popcount
 over the whole blocks between two iterators and the masked ends, so select is `*bit_next(s.begin(), n)` and the rank
 of `k` is `bit_distance(s.begin(), s.lower_bound(k))`. The select within one block is xstd-ints' `xstd::bit_select`,
