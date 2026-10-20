@@ -7,8 +7,8 @@
 #define TEST_UINT128_HPP
 
 #include <xstd/ints/cstdint/int128.hpp> // IWYU pragma: export; uint128
-#include <concepts>                      // unsigned_integral
-#include <version>                       // _GLIBCXX_RELEASE, _LIBCPP_VERSION
+#include <concepts>                     // unsigned_integral
+#include <version>                      // _GLIBCXX_RELEASE, _LIBCPP_VERSION
 
 // Where xstd::uint128 is a builtin std::unsigned_integral, which libstdc++ before 16 denies under __STRICT_ANSI__.
 #if defined(__SIZEOF_INT128__) && !defined(_MSC_VER) && (!defined(__STRICT_ANSI__) || defined(_LIBCPP_VERSION) || (defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE >= 16))
