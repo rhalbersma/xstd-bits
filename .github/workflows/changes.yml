@@ -1,0 +1,57 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+name: Changes
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    outputs:
+      build:
+        description: >
+          'true' unless the event is a pull request whose every changed file is
+          one no compiler ladder builds; 'false' only then.
+        value: ${{ jobs.changes.outputs.build }}
+
+jobs:
+  # Whether a pull request can reach the library, its tests or its benchmarks. Every other event builds: a push to main,
+  # the schedule, a manual run and the canary check the whole tree whatever changed.
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      build: ${{ steps.diff.outputs.build }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'pull_request'
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Compare with the base
+        id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ "${EVENT}" != pull_request ]; then
+            echo "build=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          git diff --name-only "${BASE}" HEAD > "${RUNNER_TEMP}/changed"
+          cat "${RUNNER_TEMP}/changed"
+          # Paths no ladder compiles: prose, the README included, as no README example is compiled; the tools; fuzz/,
+          # which ClusterFuzzLite alone builds; the site's configuration; and the workflows that are not ladders.
+          # benchmark/ and examples/ build: the GCC ladder smoke-runs the one, and test/ compiles against the other's
+          # include/. Anything else, a new directory included, builds.
+          unbuilt='\.md$|^LICENSE_1_0\.txt$|^doc/|^tools/|^fuzz/|^mkdocs\.yml$|^\.clang-format$|^\.git-blame-ignore-revs$'
+          unbuilt="${unbuilt}"'|^\.github/workflows/(actionlint|audit|canary|cflite_batch|cflite_pr|clang-format|codeql|consumption|coverage|mutation|pages|scorecard)\.yml$'
+          if grep -qvE "${unbuilt}" "${RUNNER_TEMP}/changed"; then
+            echo "build=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "build=false" >> "${GITHUB_OUTPUT}"
+          fi
