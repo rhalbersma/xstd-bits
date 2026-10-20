@@ -13,19 +13,20 @@ concurrency:
 
 on:
   schedule:
-    - cron: '30 5 * * 1'
+    - cron: '37 3 * * *'
   workflow_dispatch:
 
 jobs:
   # Dispatched rather than called: a dispatched run is the workflow's own run on main, which its README badge shows,
-  # where a called one is filed under this workflow and leaves the badge on whatever main last ran. Weekly, so dynamic
-  # development toolchains and mutable runner images are checked even without a pull request.
+  # where a called one is filed under this workflow and leaves the badge on whatever main last ran. Nightly, as the
+  # one run of every rung and build type: a pull request builds each ladder's floor and ceiling in Debug alone, and
+  # dynamic development toolchains and mutable runner images are checked even without a pull request.
   dispatch:
     runs-on: ubuntu-24.04
     permissions:
       actions: write
     steps:
-      - name: Dispatch every workflow a README badge shows
+      - name: Dispatch the compiler ladders, the analyses and the consumption check
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}

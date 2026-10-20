@@ -395,7 +395,7 @@ The same spelling works for every other owner and set view, with `xstd::hash` in
 ## Requirements
 
 - A conforming [C++23](https://wg21.link/N4950) compiler
-- CMake 3.28 or later when using the supplied CMake project
+- CMake 3.30 or later when using the supplied CMake project
 - [xstd-ints](https://github.com/rhalbersma/xstd-ints) and [xstd-misc](https://github.com/rhalbersma/xstd-misc), fetched automatically via CMake `FetchContent` when not already installed
 - [Boost.Hash2](https://github.com/boostorg/hash2) for the hashing support
 - [Boost.Container](https://github.com/boostorg/container) for the inplace column's blocks where the standard library has no `std::inplace_vector`, and for the `ext/` column
