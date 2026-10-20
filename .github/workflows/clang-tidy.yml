@@ -18,8 +18,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  clang_tidy:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-tidy.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+  # Whether this pull request can reach what the ladders build; see changes.yml.
+  changes:
+    uses: ./.github/workflows/changes.yml
+
+  clang_tidy_ladder:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-tidy.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       # The generated per-header units, as run-clang-tidy matches them against the compile database's absolute paths. They are the one tree that cannot be named as a directory: they live in the build tree, under a path only this project's CMake knows.
       self_sufficiency_regex: ${{ github.workspace }}/build/test/header_self_sufficiency/.*
@@ -30,3 +36,16 @@ jobs:
         build/_deps/xstd-misc-src/include
         vcpkg_installed/x64-linux/include
         build/vcpkg_installed/x64-linux/include
+
+  # The name branch protection requires: green when the ladder passed, or when the pull request changes nothing it builds.
+  all:
+    name: clang_tidy / all
+    needs: [ changes, clang_tidy_ladder ]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Every leg succeeded, or none was needed
+        env:
+          BUILD: ${{ needs.changes.outputs.build }}
+          RESULT: ${{ needs.clang_tidy_ladder.result }}
+        run: test "${BUILD}" = false || test "${RESULT}" = success

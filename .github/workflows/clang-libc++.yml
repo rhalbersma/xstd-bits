@@ -15,18 +15,43 @@ concurrency:
 on:
   pull_request:
     branches: [ main ]
-  # canary.yml dispatches this weekly on main, the run its README badge shows.
+  # canary.yml dispatches this nightly on main, the run its README badge shows.
   workflow_dispatch:
 
 jobs:
+  # Whether this pull request can reach what the ladders build; see changes.yml.
+  changes:
+    uses: ./.github/workflows/changes.yml
+
   # The full ladder; the C++23 range adaptors libc++ lacks are no longer used, so all six legs pass.
-  clang_libcxx:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+  clang_libcxx_ladder:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
+    with:
+      # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so
+      # the nightly canary covers it, building every rung and build type on main.
+      reduce_on_pr: true
 
   # A release against libc++ in its fast hardening mode, the one meant for production: XSTD_BITS_ASSERT follows it on.
   hardened:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       tiers: stable
       build_types: Release
       cxx_flags: -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST
+
+  # The name branch protection requires: green when the ladder passed, or when the pull request changes nothing it builds.
+  all:
+    name: clang_libcxx / all
+    needs: [ changes, clang_libcxx_ladder ]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Every leg succeeded, or none was needed
+        env:
+          BUILD: ${{ needs.changes.outputs.build }}
+          RESULT: ${{ needs.clang_libcxx_ladder.result }}
+        run: test "${BUILD}" = false || test "${RESULT}" = success
