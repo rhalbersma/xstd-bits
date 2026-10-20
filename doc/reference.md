@@ -194,6 +194,14 @@ namespace boost::container_hash {
 }
 ```
 
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/bit_array/bit_array.hpp>` | `basic_bit_array`, `bit_array` |
+| `<xstd/bits/bit_array/to_array.hpp>` | `to_bit_array` |
+| `<xstd/bits/bit_array/tuple_element.hpp>` | `tuple_element`, `tuple_size` |
+| `<xstd/bits/bit_array/hash.hpp>` | `hash` |
+| `<xstd/bits/bit_array/container_hash.hpp>` | `is_range`, `is_tuple_like` |
+
 ### `basic_bit_array`, `bit_array`
 
 ```cpp
@@ -374,6 +382,13 @@ namespace boost::container_hash {
 }
 ```
 
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/bit_inplace_vector/bit_inplace_vector.hpp>` | `basic_bit_inplace_vector`, `bit_inplace_vector` |
+| `<xstd/bits/bit_inplace_vector/erase_if.hpp>` | `erase`, `erase_if` |
+| `<xstd/bits/bit_inplace_vector/hash.hpp>` | `hash` |
+| `<xstd/bits/bit_inplace_vector/container_hash.hpp>` | `is_range`, `is_tuple_like` |
+
 ### `basic_bit_inplace_vector`, `bit_inplace_vector`
 
 ```cpp
@@ -482,6 +497,13 @@ namespace boost::container_hash {
     struct is_tuple_like<xstd::basic_bit_vector<Block, Allocator>> : false_type {};
 }
 ```
+
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/bit_vector/bit_vector.hpp>` | `basic_bit_vector`, `bit_vector` |
+| `<xstd/bits/bit_vector/erase_if.hpp>` | `erase`, `erase_if` |
+| `<xstd/bits/bit_vector/hash.hpp>` | `hash` |
+| `<xstd/bits/bit_vector/container_hash.hpp>` | `is_range`, `is_tuple_like` |
 
 ### `basic_bit_vector`, `bit_vector`
 
@@ -644,6 +666,20 @@ namespace boost::container_hash {
     struct is_range<xstd::bit_set_view<Blocks, N>> : false_type {};
 }
 ```
+
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/bit_set/bit_set.hpp>` | `basic_bit_set`, `bit_set` |
+| `<xstd/bits/bit_set/bit_fixed_set.hpp>` | `basic_bit_fixed_set`, `bit_fixed_set` |
+| `<xstd/bits/bit_set/bit_inplace_set.hpp>` | `basic_bit_inplace_set`, `bit_inplace_set` |
+| `<xstd/bits/bit_set/bit_set_view.hpp>` | `bit_set_view` |
+| `<xstd/bits/bit_set/bit_key_mapping.hpp>` | `bit_find_mapping`, `bit_key_mapping`, `bit_range_mapping`, `enum_traits` |
+| `<xstd/bits/bit_set/bit_flag_mapping.hpp>` | `bit_flag_mapping` |
+| `<xstd/bits/bit_set/bit_enum_set.hpp>` | `bit_enum_set` |
+| `<xstd/bits/bit_set/bit_flag_set.hpp>` | `bit_flag_set` |
+| `<xstd/bits/bit_set/erase_if.hpp>` | `erase_if` |
+| `<xstd/bits/bit_set/hash.hpp>` | `hash` |
+| `<xstd/bits/bit_set/container_hash.hpp>` | `is_range`, `is_tuple_like` |
 
 ### `basic_bit_set`, `bit_set`
 
@@ -1058,6 +1094,18 @@ namespace xstd {
 }
 ```
 
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/bit_valarray/bit_valarray.hpp>` | `basic_bit_valarray`, `bit_valarray` |
+| `<xstd/bits/bit_valarray/bit_fixed_valarray.hpp>` | `basic_bit_fixed_valarray`, `bit_fixed_valarray` |
+| `<xstd/bits/bit_valarray/bit_inplace_valarray.hpp>` | `basic_bit_inplace_valarray`, `bit_inplace_valarray` |
+| `<xstd/bits/bit_valarray/bit_slice.hpp>` | `bit_slice` |
+| `<xstd/bits/bit_valarray/bit_slice_array.hpp>` | `bit_slice_array` |
+| `<xstd/bits/bit_valarray/bit_gslice.hpp>` | `bit_gslice` |
+| `<xstd/bits/bit_valarray/bit_gslice_array.hpp>` | `bit_gslice_array` |
+| `<xstd/bits/bit_valarray/bit_mask_array.hpp>` | `bit_mask_array` |
+| `<xstd/bits/bit_valarray/bit_indirect_array.hpp>` | `bit_indirect_array` |
+
 ### `basic_bit_valarray`, `bit_valarray`
 
 ```cpp
@@ -1365,6 +1413,11 @@ namespace boost::container_hash {
 }
 ```
 
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/bit_span/bit_span.hpp>` | `bit_span` |
+| `<xstd/bits/bit_span/bit_subspan.hpp>` | `bit_subspan` |
+
 ### `bit_span`
 
 ```cpp
@@ -1510,6 +1563,14 @@ namespace boost::container_hash {
     struct is_tuple_like<xstd::basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>> : false_type {};
 }
 ```
+
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/ext/boost/bit_small_vector.hpp>` | `basic_bit_small_vector`, `bit_small_vector` |
+| `<xstd/bits/bit_vector/erase_if.hpp>` | `erase`, `erase_if` |
+| `<xstd/bits/ext/boost/bit_small_valarray.hpp>` | `basic_bit_small_valarray`, `bit_small_valarray` |
+| `<xstd/bits/ext/boost/bit_small_set.hpp>` | `basic_bit_small_set`, `bit_small_set` |
+| `<xstd/bits/bit_set/erase_if.hpp>` | `erase_if` |
 
 The three readings over the small storage, `boost::container::small_vector<Block, K, Alloc>` for `K = ceil(N / D)`:
 inline up to `N` bits, and on the heap past them. `<xstd/bits.hpp>` does not include this header, so the dependency
@@ -1708,6 +1769,43 @@ namespace xstd::ranges {
     constexpr auto bit_lexicographical_compare_three_way(const R1& r1, const R2& r2) noexcept -> strong_ordering;
 }
 ```
+
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/bit_algorithm/bit_all_of.hpp>` | `bit_all_of` |
+| `<xstd/bits/bit_algorithm/bit_any_of.hpp>` | `bit_any_of` |
+| `<xstd/bits/bit_algorithm/bit_none_of.hpp>` | `bit_none_of` |
+| `<xstd/bits/bit_algorithm/bit_for_each.hpp>` | `bit_for_each` |
+| `<xstd/bits/bit_algorithm/bit_find.hpp>` | `bit_find` |
+| `<xstd/bits/bit_algorithm/bit_find_last.hpp>` | `bit_find_last` |
+| `<xstd/bits/bit_algorithm/bit_count.hpp>` | `bit_count` |
+| `<xstd/bits/bit_algorithm/bit_mismatch.hpp>` | `bit_mismatch` |
+| `<xstd/bits/bit_algorithm/bit_equal.hpp>` | `bit_equal` |
+| `<xstd/bits/bit_algorithm/bit_copy.hpp>` | `bit_copy` |
+| `<xstd/bits/bit_algorithm/bit_copy_backward.hpp>` | `bit_copy_backward` |
+| `<xstd/bits/bit_algorithm/bit_move.hpp>` | `bit_move` |
+| `<xstd/bits/bit_algorithm/bit_swap_ranges.hpp>` | `bit_swap_ranges` |
+| `<xstd/bits/bit_algorithm/bit_transform.hpp>` | `bit_transform` |
+| `<xstd/bits/bit_algorithm/bit_fill.hpp>` | `bit_fill` |
+| `<xstd/bits/bit_algorithm/bit_reverse.hpp>` | `bit_reverse` |
+| `<xstd/bits/bit_algorithm/bit_reverse_copy.hpp>` | `bit_reverse_copy` |
+| `<xstd/bits/bit_algorithm/bit_rotate.hpp>` | `bit_rotate` |
+| `<xstd/bits/bit_algorithm/bit_rotate_copy.hpp>` | `bit_rotate_copy` |
+| `<xstd/bits/bit_algorithm/bit_shift_left.hpp>` | `bit_shift_left` |
+| `<xstd/bits/bit_algorithm/bit_shift_right.hpp>` | `bit_shift_right` |
+| `<xstd/bits/bit_algorithm/bit_sort.hpp>` | `bit_sort` |
+| `<xstd/bits/bit_algorithm/bit_is_sorted.hpp>` | `bit_is_sorted` |
+| `<xstd/bits/bit_algorithm/bit_is_partitioned.hpp>` | `bit_is_partitioned` |
+| `<xstd/bits/bit_algorithm/bit_partition.hpp>` | `bit_partition` |
+| `<xstd/bits/bit_algorithm/bit_partition_point.hpp>` | `bit_partition_point` |
+| `<xstd/bits/bit_algorithm/bit_includes.hpp>` | `bit_includes` |
+| `<xstd/bits/bit_algorithm/bit_intersects.hpp>` | `bit_intersects` |
+| `<xstd/bits/bit_algorithm/bit_disjoint.hpp>` | `bit_disjoint` |
+| `<xstd/bits/bit_algorithm/bit_set_union.hpp>` | `bit_set_union` |
+| `<xstd/bits/bit_algorithm/bit_set_intersection.hpp>` | `bit_set_intersection` |
+| `<xstd/bits/bit_algorithm/bit_set_difference.hpp>` | `bit_set_difference` |
+| `<xstd/bits/bit_algorithm/bit_set_symmetric_difference.hpp>` | `bit_set_symmetric_difference` |
+| `<xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp>` | `bit_lexicographical_compare_three_way` |
 
 Each algorithm has a header of its own under `<xstd/bits/bit_algorithm/>`, named after it, and the umbrella exports
 them in the order `<algorithm>` gives their counterparts, `bit_intersects` and `bit_disjoint` beside
@@ -2056,6 +2154,13 @@ namespace xstd::ranges {
 }
 ```
 
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/bit_iterator/bit_advance.hpp>` | `bit_advance` |
+| `<xstd/bits/bit_iterator/bit_distance.hpp>` | `bit_distance` |
+| `<xstd/bits/bit_iterator/bit_next.hpp>` | `bit_next` |
+| `<xstd/bits/bit_iterator/bit_prev.hpp>` | `bit_prev` |
+
 The iterator operations over any iterator of ours, each in a header of its own under `<xstd/bits/bit_iterator/>`. A
 sequence's iterator is random access and steps by an offset, so over it each is its `std::ranges` counterpart. A
 set's iterator is bidirectional and steps a key at a time, so over it each skips whole blocks by their popcount and
@@ -2133,6 +2238,15 @@ namespace xstd {
     concept bit_convertible_to = see below;
 }
 ```
+
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/bit_concepts/bit_blocks.hpp>` | `bit_blocks` |
+| `<xstd/bits/bit_concepts/bit_index_mapping.hpp>` | `bit_index_mapping` |
+| `<xstd/bits/bit_concepts/sized_bit_index_mapping.hpp>` | `sized_bit_index_mapping` |
+| `<xstd/bits/bit_concepts/bit_mask_mapping.hpp>` | `bit_mask_mapping` |
+| `<xstd/bits/bit_concepts/bit_constructible_from.hpp>` | `bit_constructible_from` |
+| `<xstd/bits/bit_concepts/bit_convertible_to.hpp>` | `bit_convertible_to` |
 
 The umbrella exports each header below, in the three groups its comments mark. A concept whose definition names an
 exposition-only concept of the library's `detail` namespace writes `see below` there, and the bullets under it say
@@ -2343,6 +2457,16 @@ namespace xstd {
 }
 ```
 
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/bit_type_traits/bit_blocks_extent.hpp>` | `bit_blocks_extent_v` |
+| `<xstd/bits/bit_type_traits/bit_rebind.hpp>` | `bit_rebind` |
+| `<xstd/bits/bit_type_traits/bit_resize.hpp>` | `bit_resize` |
+| `<xstd/bits/bit_type_traits/bit_least.hpp>` | `bit_least`, `least_block_t` |
+| `<xstd/bits/bit_type_traits/bit_fast.hpp>` | `bit_fast`, `fast_block_t` |
+| `<xstd/bits/bit_type_traits/bit_align.hpp>` | `bit_align` |
+| `<xstd/bits/bit_type_traits/bit_underlying.hpp>` | `bit_underlying`, `underlying_block_t` |
+
 The width a storage type names, the two transformations that rebind an owner's block or width, then the choices
 made through them, in the umbrella's order. Each transformation is an alias template and is specified as
 [[meta.trans]](https://eel.is/c++draft/meta.trans) specifies one: its *Constraints*, then the type it names.
@@ -2497,6 +2621,18 @@ namespace xstd {
     class bit_digest;
 }
 ```
+
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/bit_functional/bit_equal_to.hpp>` | `bit_equal_to` |
+| `<xstd/bits/bit_functional/bit_not_equal_to.hpp>` | `bit_not_equal_to` |
+| `<xstd/bits/bit_functional/bit_greater.hpp>` | `bit_greater` |
+| `<xstd/bits/bit_functional/bit_less.hpp>` | `bit_less` |
+| `<xstd/bits/bit_functional/bit_greater_equal.hpp>` | `bit_greater_equal` |
+| `<xstd/bits/bit_functional/bit_less_equal.hpp>` | `bit_less_equal` |
+| `<xstd/bits/bit_functional/bit_compare_three_way.hpp>` | `bit_compare_three_way` |
+| `<xstd/bits/bit_functional/bit_hash.hpp>` | `bit_hash`, `bit_hash_append` |
+| `<xstd/bits/bit_functional/bit_digest.hpp>` | `bit_digest` |
 
 Each comparison and the hash has a header of its own under `<xstd/bits/bit_functional/>`, and the umbrella exports
 them in [[comparisons]](https://eel.is/c++draft/comparisons)'s order, then
@@ -2687,7 +2823,9 @@ namespace xstd {
 }
 ```
 
-The umbrella exports `<xstd/bits/bit_ranges/from_blocks.hpp>`.
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/bit_ranges/from_blocks.hpp>` | `from_blocks`, `from_blocks_t` |
 
 ### `from_blocks_t`, `from_blocks`
 
@@ -2719,7 +2857,9 @@ namespace xstd {
 }
 ```
 
-The umbrella exports `<xstd/bits/bit/bit_convert.hpp>`.
+| Header | Declares |
+| :----- | :------- |
+| `<xstd/bits/bit/bit_convert.hpp>` | `bit_convert` |
 
 ### `bit_convert`
 

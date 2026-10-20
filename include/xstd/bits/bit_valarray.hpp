@@ -7,9 +7,9 @@
 #define XSTD_BITS_BIT_VALARRAY_HPP
 
 // [template.valarray], class template valarray, beside it the fixed and inplace columns
-#include <xstd/bits/bit_valarray/bit_valarray.hpp>         // IWYU pragma: export; bit_valarray
-#include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // IWYU pragma: export; bit_fixed_valarray
-#include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp> // IWYU pragma: export; bit_inplace_valarray
+#include <xstd/bits/bit_valarray/bit_valarray.hpp>         // IWYU pragma: export; basic_bit_valarray, bit_valarray
+#include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // IWYU pragma: export; basic_bit_fixed_valarray, bit_fixed_valarray
+#include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp> // IWYU pragma: export; basic_bit_inplace_valarray, bit_inplace_valarray
 
 // [class.slice], class slice
 #include <xstd/bits/bit_valarray/bit_slice.hpp> // IWYU pragma: export; bit_slice
