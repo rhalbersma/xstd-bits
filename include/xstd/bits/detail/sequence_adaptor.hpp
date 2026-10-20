@@ -148,7 +148,7 @@ struct fixed_sizes : Members
 };
 
 // A run-time width under a capacity the type carries: the width a function, the capacity a constant.
-template<class Members, std::size_t Capacity>
+template<class Members, class Bits>
 struct inplace_sizes : Members
 {
         using Members::Members;
@@ -166,8 +166,8 @@ struct inplace_sizes : Members
         }
 
         // [inplace.vector.capacity] makes both static, and they can be constants: the capacity is the type's.
-        static constexpr std::integral_constant<std::size_t, Capacity> max_size = {};
-        static constexpr std::integral_constant<std::size_t, Capacity> capacity = {};
+        static constexpr std::integral_constant<std::size_t, std::remove_const_t<Bits>::static_capacity()> max_size = {};
+        static constexpr std::integral_constant<std::size_t, std::remove_const_t<Bits>::static_capacity()> capacity = {};
 
         [[nodiscard]] friend auto operator==(inplace_sizes const&, inplace_sizes const&) -> bool = default;
 };
@@ -225,7 +225,7 @@ using sizes_t = std::conditional_t<
         fixed_sizes<members_t<Bits, Store, W, Derived, E>, static_size<Bits, Store, W, E>()>,
         std::conditional_t<
                 can_grow<Bits, Store>() and std::remove_const_t<Bits>::has_static_capacity,
-                inplace_sizes<members_t<Bits, Store, W, Derived, E>, std::remove_const_t<Bits>::static_capacity()>,
+                inplace_sizes<members_t<Bits, Store, W, Derived, E>, Bits>,
                 run_time_sizes<members_t<Bits, Store, W, Derived, E>, Bits, Store, W>>>;
 
 } // namespace sequence
