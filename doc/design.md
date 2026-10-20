@@ -3156,13 +3156,15 @@ choices written through that pair, the block or width computed from `X`'s own:
 | `bit_align<X>` | `X`'s own | `align_up(N, digits)`, whole blocks of `X`'s block |
 | `bit_underlying<X>` | `underlying_block_t<X::key_type>`: the key's underlying type, enumeration or integer, made unsigned | `N` |
 
-`bit_rebind` and `bit_underlying` take every owner: `basic_bit_array<Block, N>`,
-`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_inplace_vector<Block, N>`,
-`basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_vector<Block, Allocator>`,
-`basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>`, and the Boost extension's
-`basic_bit_small_vector<Block, N, Alloc>` and `basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>`, short
-names included. `bit_resize`, `bit_least`, `bit_fast` and `bit_align` read or write `N`, so they take the six whose
-type carries one, the inplace and small ones changing their capacity. So `bit_rebind<std::uint8_t, bit_vector>` is
+`bit_rebind` takes every owner: `basic_bit_array<Block, N>`,
+`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_fixed_valarray<Block, N>`,
+`basic_bit_inplace_vector<Block, N>`, `basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>`,
+`basic_bit_inplace_valarray<Block, N>`, `basic_bit_vector<Block, Allocator>`,
+`basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>`, `basic_bit_valarray<Block, Allocator>`, and the Boost
+extension's `basic_bit_small_vector<Block, N, Alloc>`, `basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>`
+and `basic_bit_small_valarray<Block, N, Alloc>`, short names included. `bit_underlying` takes the four sets among
+them, the owners with a `key_type`. `bit_resize`, `bit_least`, `bit_fast` and `bit_align` read or write `N`, so they
+take the nine whose type carries one, the inplace and small ones changing their capacity. So `bit_rebind<std::uint8_t, bit_vector>` is
 `basic_bit_vector<std::uint8_t, std::allocator<std::uint8_t>>`, `bit_least<bit_fixed_set<9>>` is
 `basic_bit_fixed_set<std::size_t, std::uint16_t, 9>`, two bytes where `bit_fixed_set<9>` is eight, and
 `bit_align<bit_array<9>>` is `bit_array<64>`, whose last block carries no unused tail. A type with nothing to change,
@@ -4156,7 +4158,8 @@ has its own header under `<xstd/bits/bit_concepts/>`.
 
 - **Its two ends.** A target is any owner of either reading at any width and block width, an unsigned integer, a
   `std::array` of blocks, or a `std::bitset<N>`; never a view, which would write bits it does not own. A source is
-  any of those, or a view over a whole width; a window is neither, its position zero not being its storage's.
+  any of those, or a view, a window included: a window is read from its offset, its position zero being
+  position zero of the target.
 - **Positions.** Position `i` of the source is position `i` of the target, across the readings and across block
   widths. That is the whole contract, and the name says so: this is a conversion of positions, not a
   reinterpretation of an object.
