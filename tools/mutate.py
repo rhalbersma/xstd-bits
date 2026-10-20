@@ -114,8 +114,13 @@ class Mutant:
         target: str = ""
         detail: str = ""
         seconds: float = 0.0
-        tried: int = 0
+        passed: list[str] = field(default_factory=list)
         dependents: int = 0
+
+        @property
+        def tried(self):
+                """How many dependent targets this mutant has passed, each named in passed."""
+                return len(self.passed)
 
         @property
         def key(self):
@@ -400,18 +405,21 @@ class Worker:
                 return "survived", ""
 
         def evaluate(self, mutant, chain, cap, timeout, link_timeout):
-                """Run mutant against chain[mutant.tried:cap], so a survivor of a capped run widens where it stopped."""
+                """Run mutant against the targets of chain it has not passed until it has passed cap, so a capped survivor widens."""
                 original = (self.include / mutant.header).read_text()
                 (self.include / mutant.header).write_text(apply(mutant))
                 start = time.monotonic()
                 try:
                         verdict = ("survived", "", "")
-                        for target in chain[mutant.tried:cap]:
+                        passed = set(mutant.passed)
+                        for target in (t for t in chain if t.name not in passed):
+                                if mutant.tried >= cap:
+                                        break
                                 status, detail = self.attempt(mutant, target, timeout, link_timeout)
                                 if status != "survived":
                                         verdict = (status, target.name, detail)
                                         break
-                                mutant.tried += 1
+                                mutant.passed.append(target.name)
                         mutant.status, mutant.target, mutant.detail = verdict
                         mutant.dependents = len(chain)
                 finally:
@@ -459,15 +467,17 @@ def main():
                         record = decided.get((m.header, m.line, m.column, m.original, m.replacement))
                         if record:
                                 m.status, m.target, m.detail, m.seconds = record["status"], record["target"], record["detail"], record["seconds"]
-                                # A record from before targets were counted ran every dependent.
-                                m.tried, m.dependents = record.get("tried", -1), record.get("dependents", -1)
+                                # A record from before targets were counted ran every dependent; one that counted them without names is run again.
+                                m.passed, m.dependents = record.get("passed"), record.get("dependents", -1)
+                                if m.passed is None:
+                                        m.passed = None if record.get("tried", m.dependents) == m.dependents else []
                                 if m.status == "stillborn" and COMPILE_TIME_CHECK.search(m.detail):
                                         m.status = "killed"
                 print(f"resumed {sum(m.status != 'pending' for m in mutants)} decided mutants from {args.resume}", file=sys.stderr)
                 if args.recheck_survivors:
                         for m in mutants:
                                 if m.status == "survived":
-                                        m.status, m.target, m.detail, m.seconds, m.tried = "pending", "", "", 0.0, 0
+                                        m.status, m.target, m.detail, m.seconds, m.passed = "pending", "", "", 0.0, []
                         print(f"rechecking {sum(m.status == 'pending' for m in mutants)} survivors", file=sys.stderr)
 
         if args.list:
@@ -484,8 +494,10 @@ def main():
                 if m.status == "killed" and m.target:
                         kills[(m.header, m.target)] = kills.get((m.header, m.target), 0) + 1
         for m in mutants:
-                if m.tried < 0:
-                        m.tried = m.dependents = 0 if m.status == "pending" else len(order(m.header, targets, args.tests))
+                if m.passed is None:
+                        m.passed = [] if m.status == "pending" else [t.name for t in order(m.header, targets, args.tests)]
+                if m.dependents < 0:
+                        m.dependents = len(order(m.header, targets, args.tests))
         for m in mutants:
                 cap = min(args.max_targets or m.dependents, m.dependents)
                 if m.status == "survived" and m.tried < cap:
@@ -544,7 +556,7 @@ def main():
                                 reach = f" ({mutant.tried} of {mutant.dependents} targets)" if mutant.status == "survived" else ""
                                 print(f"{mark} {done}/{len(todo)} {mutant.header}:{mutant.line}:{mutant.column} {mutant.original!r}->{mutant.replacement!r} {mutant.seconds}s{reach}{where}", flush=True)
                                 if args.output:
-                                        args.output.write_text(json.dumps([asdict(m) for m in mutants], indent=1))
+                                        args.output.write_text(json.dumps([asdict(m) | {"tried": m.tried} for m in mutants], indent=1))
         finally:
                 shutil.rmtree(scratch, ignore_errors=True)
 
@@ -562,7 +574,7 @@ def main():
                 generated = {m.key for m in mutants}
                 stale += [f"listed as equivalent but no longer generated: {k[0]}: `{k[1]}` occurrence {k[2]} column {k[3]}: {k[4]!r} -> {k[5]!r}" for k in equivalents if k[0] in args.headers and k not in generated]
         if args.output:
-                args.output.write_text(json.dumps([asdict(m) | {"offset": m.offset, "occurrence": m.occurrence} for m in mutants], indent=1))
+                args.output.write_text(json.dumps([asdict(m) | {"tried": m.tried, "offset": m.offset, "occurrence": m.occurrence} for m in mutants], indent=1))
 
         valid = counts["killed"] + counts["survived"] + counts.get("equivalent", 0)
         score = 100.0 * (counts["killed"] + counts.get("equivalent", 0)) / valid if valid else 100.0
