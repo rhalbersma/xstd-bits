@@ -278,8 +278,9 @@ others' runs stale. CI is therefore a queue, one pull request long, across xstd-
 which draw on one account's runners.
 
 - **One run in flight across the four repositories.** Before opening a pull request, or pushing to one, check that
-  no pull request in xstd-ints, xstd-bits, xstd-misc or cpp-ci has a run queued or in progress. If one has, finish
-  the change locally and push only the branch, which runs nothing; open the pull request when the queue is empty.
+  xstd-ints, xstd-bits, xstd-misc and cpp-ci have no run queued or in progress, on a pull request or from a push to
+  `main`, as a merge's push runs take the same runners. If one has, finish the change locally and push only the
+  branch, which runs nothing; open the pull request when the queue is empty.
 - **A pull request is what merges or reverts as one.** Changes that touch the same files, or that are only tests or
   only documentation, go in one pull request rather than one per issue. A documentation-only change costs the pull
   request matrix like any other, so it rides along with the next pull request instead of going alone.
