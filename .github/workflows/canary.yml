@@ -26,7 +26,7 @@ jobs:
     permissions:
       actions: write
     steps:
-      - name: Dispatch every workflow a README badge shows
+      - name: Dispatch the compiler ladders, the analyses and the consumption check
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
