@@ -14,8 +14,7 @@ caller may ignore: postfix `++` and `--`, `insert`, `insert_range`, `emplace`, `
 `erase` and `erase_if`, the reference `push_back` and `emplace_back` return, and the `try_` and `unchecked_` doors.
 It carries it on every constructor but `basic_bit_array`'s from an `initializer_list`.
 
-This page covers the containers, the views, the algorithms and the iterator operations. The library's own terms
-are used throughout:
+The library's own terms are used throughout:
 
 - A *block* is an unsigned integer holding bits. Position `i` is bit `i % D` of block `i / D`, where `D` is the
   block's `numeric_limits<Block>::digits`.
@@ -1985,3 +1984,720 @@ As `ranges::next` and `ranges::prev` in [[range.iter.ops]](https://eel.is/c++dra
   calls them with `-n`.
 - *Returns:* `it`.
 - *Complexity:* As for `bit_advance`.
+
+## `<xstd/bits/bit_concepts.hpp>`
+
+```cpp
+namespace xstd {
+  // what holds the bits: one block, or a sized contiguous range of them
+  template<class Bits>
+    concept bit_blocks = see below;
+
+  // what a set owner asks of the mapping that places its keys in bits
+  template<class Mapping, class Key>
+    concept bit_index_mapping = see below;
+  template<class Mapping, class Key>
+    concept sized_bit_index_mapping = see below;
+  template<class Mapping, class Key>
+    concept bit_mask_mapping = see below;
+
+  // blocks an owner takes as they are, and positions converted between any two widths
+  template<class To, class Blocks>
+    concept bit_constructible_from = see below;
+  template<class From, class To>
+    concept bit_convertible_to = see below;
+}
+```
+
+The umbrella exports each header below, in the three groups its comments mark. A concept whose definition names an
+exposition-only concept of the library's `detail` namespace writes `see below` there, and the bullets under it say
+what that concept asks. The three mapping concepts are cv-transparent in `Key`, as xstd-ints's concepts are: a
+cv-qualified key is asked about as the bare one.
+
+### `bit_blocks`
+
+```cpp
+template<class Bits>
+concept bit_blocks = see below;
+```
+
+- `Bits` models it where it is either of:
+  - a *block*: a type that models xstd-ints's `unsigned_integer`, `const` or not, and is not `volatile`;
+  - a *range of blocks*: `Bits` models `ranges::sized_range` and `ranges::contiguous_range`,
+    `remove_reference_t<ranges::range_reference_t<Bits>>` is a block, and `blocks[n]` is valid for an lvalue
+    `blocks` of type `Bits` and an `n` of type `ranges::range_size_t<Bits>`. The block is asked of the reference
+    type, as `ranges::range_value_t` drops the cv.
+- A block models it: `uint8_t`, `uint64_t`, `const uint64_t`.
+- A range of blocks models it: `array<uint16_t, 3>`, `vector<size_t>`, `span<uint32_t>`, `span<const uint32_t, 2>`,
+  `inplace_vector<uint16_t, 3>` where the library provides it, and the built-in arrays `uint64_t[4]` and
+  `const uint16_t[3]`.
+- `vector<bool>` does not, nor do `deque<uint32_t>` and `list<uint32_t>`, which are not contiguous.
+- `bitset<64>`, `bit_set` and `bit_array<64>` do not: each *has* bit storage and is not bit storage.
+- `volatile uint32_t`, `const volatile uint32_t`, `span<volatile uint32_t>` and `volatile uint32_t[2]` are turned
+  away. A register's accesses must each stay one volatile access, and the block algorithms copy and merge them.
+- *Remarks:* It is the constraint on the storage `bit_set_view` and `bit_span` view and on `bit_blocks_extent_v`,
+  so a register array is turned away at the view's name rather than inside a block algorithm. An owner holds its
+  blocks by value and takes only a cv-unqualified block: `basic_bit_array<const uint32_t, 32>` is not a type.
+
+### `bit_index_mapping`
+
+```cpp
+template<class Mapping, class Key>
+concept bit_index_mapping = requires (remove_cv_t<Key> key, size_t index) {
+  { Mapping::to_index(key) } -> same_as<size_t>;
+  { Mapping::from_index(index) } -> same_as<remove_cv_t<Key>>;
+};
+```
+
+- A type models it if `to_index` preserves order, `a < b` exactly where `to_index(a) < to_index(b)`, and
+  `from_index` inverts `to_index` on the keys the mapping places.
+- `bit_key_mapping<Key>` models it for every unsigned block type `Key`.
+- `bit_range_mapping<float_round_style, round_indeterminate, 5>`, `bit_find_mapping<int, Keys>` over a sorted list
+  with gaps, `bit_flag_mapping<launch>` and `bit_flag_mapping<byte>` model it for their keys, and so does a
+  program's specialization of `bit_key_mapping` for a strong index type.
+- A mapping does not model it for a key of another type, however alike in width, signedness or header:
+  `bit_key_mapping<size_t>` for `unsigned char`, `bit_range_mapping<int, -50, 100>` for `long`,
+  `bit_flag_mapping<byte>` for `uint8_t`, and `bit_flag_mapping<filesystem::perms>` for `filesystem::perm_options`.
+- `from_index` must answer exactly `Key`: a mapping for a wider key takes a narrower one in through `to_index`, and
+  hands back a value of the wrong type.
+- `bit_key_mapping<size_t>` models it for `const size_t` and `volatile size_t`, and `bit_flag_mapping<launch>` for
+  `const volatile launch`, but `bit_key_mapping<size_t>` does not for `const unsigned char`.
+
+### `sized_bit_index_mapping`
+
+```cpp
+template<class Mapping, class Key>
+concept sized_bit_index_mapping = bit_index_mapping<Mapping, Key> and requires (remove_cv_t<Key> key) {
+  { Mapping::size } -> convertible_to<size_t>;
+  { Mapping::is_key(key) } -> same_as<bool>;
+};
+```
+
+- A type models it if it models `bit_index_mapping<Mapping, Key>`, places exactly `Mapping::size` keys at the
+  positions `0` to `size - 1`, and `is_key(k)` is whether `k` is one of them.
+- `bit_range_mapping<int, -50, 100>` and `bit_range_mapping<float_round_style, round_indeterminate, 5>` model it,
+  as do `bit_find_mapping<int, Keys>`, `bit_key_mapping` of an enumeration listed in `enum_traits`, dense or with
+  gaps, `bit_flag_mapping<launch>` and `bit_flag_mapping<byte>`, and a program's mapping that offsets a strong
+  index into a closed range.
+- `bit_key_mapping<Key>` for an unsigned `Key` does not: the identity leaves the universe open, though it says
+  which values are keys. Neither does a program's `bit_key_mapping` for a strong index that names no size.
+- A size alone does not make every value below it a key: a list of keys with gaps leaves values between them,
+  which `is_key` turns away.
+- *Remarks:* A set whose mapping models it closes its universe at `Mapping::size` positions.
+
+### `bit_mask_mapping`
+
+```cpp
+template<class Mapping, class Key>
+concept bit_mask_mapping =
+  sized_bit_index_mapping<Mapping, Key> and
+  see below and
+  requires (remove_cv_t<Key> mask, Mapping::block_type block) {
+    { Mapping::to_block(mask) } -> same_as<typename Mapping::block_type>;
+    { Mapping::from_block(block) } -> same_as<remove_cv_t<Key>>;
+  };
+```
+
+- `see below` is that `typename Mapping::block_type` models `bit_blocks` and `bit_blocks_extent_v` of it is not
+  `dynamic_extent`: one unsigned block, or a fixed number of them. It is never the signed type under an
+  enumeration such as `launch`.
+- A type models it if `to_block(mask)` holds every bit of `mask` at its position and `from_block(block)` is the
+  mask with those bits, so that every value of `Key`, one bit or several, is a set of its one-bit keys.
+- `bit_flag_mapping<byte>`, `bit_flag_mapping<byte, 2>`, `bit_flag_mapping<launch>` and
+  `bit_flag_mapping<bitset<16>>` model it: `bit_flag_mapping<byte>::to_block(byte{0x02})` is `0x02`, and
+  `from_block(0x03)` is `byte{0x03}`.
+- `bit_key_mapping<size_t>`, `bit_range_mapping<uint8_t, 0, 8>` and `bit_key_mapping` of a listed enumeration do
+  not: each ranks its values rather than reading one as a mask.
+- `bit_flag_mapping<byte>` does not for `uint8_t`, the same bits under another type, nor for `const uint8_t`; it
+  does for `const byte`, and `bit_flag_mapping<launch>` for `const volatile launch`.
+- *Remarks:* A fixed set whose mapping models it reads every value of its key as a mask and converts to and from
+  it; `bit_flag_set` is the alias over such a set.
+
+### `bit_constructible_from`
+
+```cpp
+template<class To, class Blocks>
+concept bit_constructible_from =
+  see below and
+  constructible_from<To, from_blocks_t, Blocks>;
+```
+
+- `see below` is that `remove_cvref_t<Blocks>` is bit storage a container can own: it models `bit_blocks` and
+  `regular`, and it is an unsigned integer or a range whose subscript yields `ranges::range_reference_t<Blocks>`
+  through a mutable object and `ranges::range_const_reference_t<Blocks>` through a `const` one, the alias of
+  [P2278R4](https://wg21.link/P2278R4). A storage whose `const` subscript yields a writable reference is refused.
+- A type models it if `To(from_blocks, b)` takes the blocks `b` as `To`'s bits, position `i` being bit `i` of `b`.
+- An owner's own block container at a run-time width models it: `bit_vector` and `bit_set` from `vector<size_t>`,
+  and `bit_inplace_set<100>` from its `block_container_type`.
+- Blocks holding at least a fixed width model it: `bit_fixed_set<64>` from `array<uint64_t, 1>`, and
+  `bit_array<20>` from `array<uint8_t, 3>`.
+- Another block type does not, `bit_vector` from `vector<uint8_t>`, nor does a field too narrow,
+  `bit_fixed_set<256>` from `array<uint64_t, 3>`, nor a container an inplace owner does not hold,
+  `bit_inplace_set<100>` from `array<uint64_t, 2>` and `bit_inplace_vector<100>` from `vector<size_t>`.
+- What has bit storage without being it does not: `bit_fixed_set<64>` from `bitset<64>`, and `bit_vector` from
+  `bit_set`. Each converts through `bit_convert` instead.
+- A view owns nothing to take blocks into: `bit_set_view<uint64_t>` from `uint64_t` does not model it.
+- A built-in array is read and never owned: `bit_fixed_set<64>` is constructible from `from_blocks` and a
+  `const uint32_t(&)[2]`, and `bit_constructible_from<bit_fixed_set<64>, uint64_t[1]>` is `false`.
+
+### `bit_convertible_to`
+
+```cpp
+template<class From, class To>
+concept bit_convertible_to = requires (From&& from) {
+  { bit_convert<To>(std::forward<From>(from)) } -> same_as<remove_cv_t<To>>;
+};
+```
+
+- It holds exactly where `bit_convert<To>(from)` is valid: the positions map, though a source of run-time width may
+  still throw. The source comes first, as in `convertible_to`, so `bit_convertible_to<To> auto` constrains a source.
+- A fixed width converts into one at least as wide: `bit_fixed_set<64>` to `uint64_t`, `bitset<20>` to
+  `bit_array<20>`, `array<uint8_t, 3>` to `bit_fixed_set<24>`, `bit_array<64>` to `bitset<64>`,
+  `bit_set_view<uint64_t>` to `uint64_t`, `bit_array<5>` to `uint8_t`, `bit_fixed_set<64>` to `bit_fixed_set<65>`,
+  and `uint64_t[4]` to `bit_array<256>` and `bitset<257>`.
+- A run-time width converts into a fixed one: `bit_set` to `uint64_t`, `bit_vector` to `bitset<70>` and to
+  `bit_array<64>`, `bit_inplace_set<64>` to `bit_fixed_set<10>`, and a `bit_subspan` window to `bit_array<100>`.
+- Anything converts into a run-time width: `bit_span<array<uint8_t, 3>>`, `bit_array<64>` and
+  `bit_span<vector<uint64_t>>` to `bit_vector`, `bitset<70>` to `bit_small_vector<64>`, `bit_vector` to
+  `bit_inplace_set<64>`, `uint64_t` to `bit_set`, and a window to `bit_vector`.
+- A reference or a `const` source is the conversion of the type it names: `const bit_set&` and `bit_set&&` to
+  `bit_vector`. A cv-qualified target converts as the bare one: `bit_array<64>` to `const uint64_t` and to
+  `volatile bitset<64>`, and `bit_vector` to `const bit_set`.
+- A volatile scalar converts by one read: `volatile uint32_t&` to `bit_array<32>`, and `const volatile uint64_t&` to
+  `bit_set`.
+- Narrowing one fixed width into another would truncate, and is no conversion: `bit_array<9>` to `uint8_t` or
+  `const uint8_t`, `bit_fixed_set<65>` to `uint64_t`, `uint32_t` to `bit_array<20>`, `uint64_t` to `bitset<63>`,
+  `bitset<65>` to `bit_array<64>`, and `uint64_t[4]` to `bit_array<255>` are turned away.
+- A view is read from and never written into: `uint64_t` to `bit_set_view<uint64_t>`, and `bit_vector` to
+  `bit_span<array<uint8_t, 3>>` or to a window, are turned away. So is a built-in array as a target, which no
+  function returns: `bit_array<256>`, `array<uint64_t, 4>` and `bit_vector` to `uint64_t[4]`.
+- What has no bit storage converts to nothing: `vector<bool>` to `bit_vector`, and `bit_vector` to
+  `vector<uint64_t>`.
+- Volatile storage read by more than one access is no source: `volatile bit_array<64>&`, `volatile bitset<64>&`,
+  `volatile uint32_t(&)[2]` and `volatile array<uint32_t, 2>&` are turned away.
+- With `<xstd/bits/ext/boost/dynamic_bitset.hpp>` included, `boost::dynamic_bitset<>` converts to `bit_vector` and
+  `uint64_t`, `bit_set` and `bitset<70>` to `boost::dynamic_bitset<>`, and one `boost::dynamic_bitset` into
+  another does not.
+
+## `<xstd/bits/bit_type_traits.hpp>`
+
+```cpp
+namespace xstd {
+  // the width a storage type names
+  template<bit_blocks Bits>
+    constexpr size_t bit_blocks_extent_v = see below;
+
+  // the pair that rebinds an owner's block or width
+  template<unsigned_integer Block, class Owner>
+      requires see below
+    using bit_rebind = see below;
+  template<size_t N, class Owner>
+      requires see below
+    using bit_resize = see below;
+
+  // the choices made through them
+  template<size_t N>
+    using least_block_t = see below;
+  template<class Owner>
+      requires see below
+    using bit_least = bit_rebind<least_block_t<see below>, Owner>;
+  template<size_t N>
+    using fast_block_t = see below;
+  template<class Owner>
+      requires see below
+    using bit_fast = bit_rebind<fast_block_t<see below>, Owner>;
+  template<class Owner>
+      requires see below
+    using bit_align = bit_resize<see below, Owner>;
+  template<class Key>
+      requires see below
+    using underlying_block_t = see below;
+  template<class Owner>
+      requires see below
+    using bit_underlying = bit_rebind<underlying_block_t<typename Owner::key_type>, Owner>;
+}
+```
+
+The width a storage type names, the two transformations that rebind an owner's block or width, then the choices
+made through them, in the umbrella's order. Each transformation is an alias template and is specified as
+[[meta.trans]](https://eel.is/c++draft/meta.trans) specifies one: its *Constraints*, then the type it names.
+Two phrases name what the constraints admit:
+
+- A *rebindable owner* is an owner of ours that names its block: a specialization of `basic_bit_array`,
+  `basic_bit_inplace_vector`, `basic_bit_vector`, `basic_bit_set`, `basic_bit_fixed_set`, `basic_bit_inplace_set`,
+  `basic_bit_valarray`, `basic_bit_fixed_valarray`, `basic_bit_inplace_valarray`, or of the Boost extension's
+  `basic_bit_small_vector`, `basic_bit_small_set` and `basic_bit_small_valarray`, the short names included.
+- A *resizable owner* is a rebindable owner whose type carries its width `N`: every one but `basic_bit_vector`,
+  `basic_bit_set` and `basic_bit_valarray`. For an inplace or a small owner `N` is its capacity.
+
+Every transformation is cv-transparent, as `make_unsigned` is: an `Owner` that is cv-qualified is transformed as
+`remove_cv_t<Owner>` is, and the type named carries `Owner`'s cv. A view, `bitset`, a block and a range of blocks
+own no type to transform and are turned away by the constraint, not deep inside the alias.
+
+### `bit_blocks_extent_v`
+
+- *Constraints:* `Bits` models `bit_blocks`, so a `volatile` block or range of them names no extent.
+- *Value:* For `B` = `remove_cv_t<Bits>` and `D` the `xstd::numeric_limits<Block>::digits` of its block type:
+  - `D`, where `B` is a block;
+  - `D * K`, where `B` is `array<Block, K>` or the built-in array `Block[K]`, the element's cv stripped;
+  - `D * E`, where `B` is `span<Block, E>` and `E` is not `dynamic_extent`;
+  - `dynamic_extent` otherwise, as for a `vector`, an `inplace_vector` or a `span` of dynamic extent.
+- `bit_blocks_extent_v<uint8_t>` is 8, `bit_blocks_extent_v<const uint64_t>` 64, `bit_blocks_extent_v` of
+  `array<uint16_t, 3>`, of `const array<uint16_t, 3>` and of `const uint16_t[3]` 48, of `span<const uint32_t, 2>`
+  64, and of `uint64_t[4]` 256, as of `array<uint64_t, 4>`.
+- *Remarks:* It is the default width of `bit_set_view` and `bit_span`, so `bit_set_view<span<uint32_t>>` is
+  `bit_set_view<span<uint32_t>, dynamic_extent>`, and the width the `from_blocks` deduction guides deduce.
+
+### `bit_rebind`
+
+- *Constraints:* `remove_cv_t<Owner>` is a rebindable owner. `Block` models `unsigned_integer`, so `bool` and `int`
+  are turned away.
+- *Result:* The same owner over `remove_cv_t<Block>`, every other argument kept: the width, the key, the mapping
+  and the comparison. An allocator `A` becomes `allocator_traits<A>::rebind_alloc<remove_cv_t<Block>>`.
+- `bit_rebind<uint8_t, basic_bit_array<uint64_t, 9>>` is `basic_bit_array<uint8_t, 9>`, and
+  `bit_rebind<uint32_t, basic_bit_fixed_set<size_t, uint8_t, 9, bit_key_mapping<size_t>, greater<size_t>>>` is
+  `basic_bit_fixed_set<size_t, uint32_t, 9, bit_key_mapping<size_t>, greater<size_t>>`.
+- `bit_rebind<uint8_t, bit_vector>` is `basic_bit_vector<uint8_t, allocator<uint8_t>>`, and
+  `bit_rebind<uint16_t, bit_small_vector<9>>` is
+  `basic_bit_small_vector<uint16_t, 9, boost::container::new_allocator<uint16_t>>`.
+- The owner rebound holds the same bits: `bit_rebind<uint8_t, bit_vector>` constructed from a `bit_vector`'s
+  iterators has its size and its elements, in `vector<uint8_t>` blocks.
+- `bit_rebind<const volatile uint8_t, bit_vector>` is `bit_rebind<uint8_t, bit_vector>`: a block is held by value.
+- *Remarks:* The form is that of `simd`'s `rebind_t`, the new block first.
+
+### `bit_resize`
+
+- *Constraints:* `remove_cv_t<Owner>` is a resizable owner.
+- *Result:* The same owner `N` bits wide, every other argument kept, an allocator included.
+- `bit_resize<16, basic_bit_array<uint8_t, 9>>` is `basic_bit_array<uint8_t, 16>`, `bit_resize<64, bit_fixed_set<9>>`
+  is `bit_fixed_set<64>`, `bit_resize<0, basic_bit_inplace_set<size_t, uint8_t, 9>>` is
+  `basic_bit_inplace_set<size_t, uint8_t, 0>`, and `bit_resize<128, basic_bit_small_vector<uint64_t, 9>>` is
+  `basic_bit_small_vector<uint64_t, 128, boost::container::new_allocator<uint64_t>>`.
+- `bit_vector` and `bit_set`, whose widths are run-time values, have none to change and are turned away.
+- *Remarks:* The form is that of `simd`'s `resize_t`, the new width first.
+
+### `least_block_t`, `bit_least`
+
+- `least_block_t<N>` is the narrowest fixed-width block holding `N` bits in one: `uint8_t` where `N <= 8`, `uint16_t`
+  where `N <= 16`, `uint32_t` where `N <= 32`, and `uint64_t` otherwise, of which `N` bits then take several.
+  `least_block_t<0>` is `uint8_t`.
+- `bit_least<Owner>`:
+  - *Constraints:* `remove_cv_t<Owner>` is a resizable owner, whose width picks the block.
+  - *Result:* `bit_rebind<least_block_t<N>, Owner>`, where `N` is `Owner`'s width.
+  - `bit_least<basic_bit_array<uint64_t, 9>>` is `basic_bit_array<uint16_t, 9>`, and `bit_least<bit_fixed_set<9>>`
+    is `basic_bit_fixed_set<size_t, uint16_t, 9>`. `bit_set` is turned away.
+- *Remarks:* The name is `<cstdint>`'s: `uint_least8_t` is the smallest type of at least 8 bits. `bit_enum_set` and
+  `bit_flag_set` are `bit_least` over a fixed set.
+
+### `fast_block_t`, `bit_fast`
+
+- `fast_block_t<N>` is the fastest fixed-width block of at least `N` bits in one, by the thresholds of
+  `least_block_t`: `uint_fast8_t` where `N <= 8`, `uint_fast16_t` where `N <= 16`, `uint_fast32_t` where `N <= 32`,
+  and `uint_fast64_t` otherwise.
+- `bit_fast<Owner>`:
+  - *Constraints:* `remove_cv_t<Owner>` is a resizable owner.
+  - *Result:* `bit_rebind<fast_block_t<N>, Owner>`, where `N` is `Owner`'s width.
+  - `bit_fast<basic_bit_array<uint64_t, 9>>` is `basic_bit_array<uint_fast16_t, 9>`. `bit_set` is turned away.
+- *Remarks:* The platform decides how wide each `uint_fastN_t` is, so `bit_fast` names a block and promises no size.
+
+### `bit_align`
+
+- *Constraints:* `remove_cv_t<Owner>` is a resizable owner.
+- *Result:* `bit_resize<K * D, Owner>`, where `N` is `Owner`'s width, `D` the digits of its block and `K` the
+  ⌈`N`/`D`⌉ blocks that `N` bits take: the width rounded up to whole blocks, so that no block carries an unused
+  tail. A width already whole, zero included, stays as it is.
+- `bit_align<basic_bit_array<uint8_t, 9>>` is `basic_bit_array<uint8_t, 16>`, and `bit_align` of
+  `basic_bit_array<uint8_t, 16>` and of `basic_bit_array<uint8_t, 0>` is the type itself. `bit_set` is turned away.
+- The transformations compose, and the order matters: `bit_align<bit_least<bit_fixed_set<3>>>` is
+  `basic_bit_fixed_set<size_t, uint8_t, 8>`, where `bit_least<bit_align<bit_fixed_set<3>>>` rounds to the digits
+  of `size_t` first, and is `basic_bit_fixed_set<size_t, uint64_t, 64>` where `size_t` is 64 bits.
+- *Remarks:* A fixed-width owner whose width fills its blocks is a structural type
+  ([[temp.param]](https://eel.is/c++draft/temp.param)), so `bit_align<bit_array<N>>` and
+  `bit_align<bit_fixed_set<N>>` are, at any `N`.
+
+### `underlying_block_t`, `bit_underlying`
+
+- `underlying_block_t<Key>`:
+  - *Constraints:* `Key` is an enumeration, or models xstd-ints's `integer`; its underlying type, or `Key` itself,
+    is an integral type; and xstd-ints's `make_unsigned_t` of that type models `unsigned_integer`.
+  - *Result:* `make_unsigned_t<U>`, where `U` is the enumeration's underlying type, or `Key` itself: the block a
+    field or an ABI of `Key` already uses.
+  - An enumeration on `uint32_t` gives `uint32_t`, one on `int16_t` gives `uint16_t`, and one on `char` gives
+    `unsigned char`. `underlying_block_t<int>` is `unsigned`, of `int8_t` is `uint8_t`, of `uint32_t` is `uint32_t`
+    and of `int64_t` is `uint64_t`.
+  - `bool`, `char`, `char8_t` and `wchar_t` have no such counterpart, nor has an enumeration on `bool`, and a class
+    such as `bitset<8>` is turned away.
+- `bit_underlying<Owner>`:
+  - *Constraints:* `remove_cv_t<Owner>` is a rebindable owner with a `key_type` for which `underlying_block_t` names
+    a type: a set keyed by an enumeration or an integer.
+  - *Result:* `bit_rebind<underlying_block_t<typename Owner::key_type>, Owner>`, the width kept.
+  - For a flag set at its mask's full width the result is the type itself, `bit_least` having chosen that word; for
+    `bit_fast` of it, or a narrower `bit_flag_set<E, 9>`, it is the set in `E`'s own word.
+    `bit_underlying<bit_flag_set<int, 5>>` is `basic_bit_fixed_set<int, unsigned, 5, bit_flag_mapping<int, 5>,
+    greater<int>>`, in the word an `int` field stores.
+  - The rule is by key type, not by mapping: `bit_underlying<bit_set>` is `bit_set`, and
+    `bit_underlying<bit_least<bit_fixed_set<9>>>` is `bit_fixed_set<9>`.
+  - The set's block is then the mask's representation bit for bit, so `bit_convert`, `from_blocks` and `bit_cast`
+    to and from that word agree with `to_underlying` of the mask.
+  - A sequence such as `bit_array<9>` has no key and is turned away, and so are `bit_flag_set<bitset<16>>` and a set
+    keyed by an enumeration on `bool`.
+
+## `<xstd/bits/bit_functional.hpp>`
+
+```cpp
+namespace xstd {
+  // [comparisons], comparisons
+  struct bit_equal_to;
+  struct bit_not_equal_to;
+  struct bit_greater;
+  struct bit_less;
+  struct bit_greater_equal;
+  struct bit_less_equal;
+
+  // [comparisons.three.way], class compare_three_way
+  struct bit_compare_three_way;
+
+  // [unord.hash], class template hash, beside it the digest of the same bits
+  template<hash_algorithm Hash, class Flavor, class T>
+      requires see below
+    constexpr auto bit_hash_append(Hash& h, const Flavor& f, const T& x) -> void;
+  template<hash_algorithm Hash, class Flavor, class R>
+      requires see below
+    constexpr auto bit_hash_append(Hash& h, const Flavor& f, const R& r) -> void;
+  template<class T, hash_algorithm H = boost::hash2::xxhash_64, class Flavor = boost::hash2::default_flavor>
+      requires see below
+    class bit_hash;
+  template<class T, hash_algorithm H = boost::hash2::xxh3_128, class Flavor = boost::hash2::little_endian_flavor>
+      requires see below
+    class bit_digest;
+}
+```
+
+Each comparison and the hash has a header of its own under `<xstd/bits/bit_functional/>`, and the umbrella exports
+them in [[comparisons]](https://eel.is/c++draft/comparisons)'s order, then
+[[comparisons.three.way]](https://eel.is/c++draft/comparisons.three.way), then
+[[unord.hash]](https://eel.is/c++draft/unord.hash) with the digest beside it. `hash_algorithm` is xstd-misc's. The
+comparisons are transparent and agree with the hash: what `bit_equal_to` calls equal, `bit_hash` hashes alike, and
+the orderings order equivalent exactly what it calls equal. So a `std::unordered_set<K, bit_hash<K>, bit_equal_to>`
+or a `std::set<K, bit_less>` finds a key through a view of it or through an owner over narrower blocks.
+
+### `bit_equal_to`, `bit_not_equal_to`
+
+```cpp
+struct bit_equal_to {
+  using is_transparent = void;
+
+  template<class T, class U>
+      requires requires (const T& x, const U& y) { xstd::ranges::bit_equal(x, y); }
+    constexpr auto operator()(const T& x, const U& y) const noexcept -> bool;
+};
+```
+
+As `equal_to<>` and `not_equal_to<>` in [[comparisons]](https://eel.is/c++draft/comparisons), with:
+
+- *Constraints:* `xstd::ranges::bit_equal(x, y)` is a valid expression: `T` and `U` are of one reading and one width
+  kind, as `bit_equal` admits them. The constraint is the call itself, so the two cannot drift.
+- *Returns:* `xstd::ranges::bit_equal(x, y)`, and for `bit_not_equal_to`, `not xstd::ranges::bit_equal(x, y)`.
+- `bit_fixed_set<70>{1, 65}` equals `basic_bit_fixed_set<size_t, uint8_t, 70>{1, 65}`, and `bit_vector` compares with
+  `basic_bit_vector<uint8_t>`.
+- `bit_array<8>` does not compare with `bit_vector`, nor `bit_fixed_set<8>` with `bit_set` or with `bit_array<8>`,
+  and `vector<bool>` is turned away: a static width never compares with a run-time one, which `bit_hash` keeps apart.
+
+### `bit_greater`, `bit_less`, `bit_greater_equal`, `bit_less_equal`
+
+```cpp
+struct bit_less {
+  using is_transparent = void;
+
+  template<class T, class U>
+      requires requires (const T& x, const U& y) { xstd::ranges::bit_lexicographical_compare_three_way(x, y); }
+    constexpr auto operator()(const T& x, const U& y) const noexcept -> bool;
+};
+```
+
+As `greater<>`, `less<>`, `greater_equal<>` and `less_equal<>` in [[comparisons]](https://eel.is/c++draft/comparisons),
+each of the same shape as `bit_less`, with:
+
+- *Constraints:* `xstd::ranges::bit_lexicographical_compare_three_way(x, y)` is a valid expression, which admits the
+  pairs `bit_equal_to` takes.
+- *Returns:* `is_gt(c)`, `is_lt(c)`, `is_gteq(c)` and `is_lteq(c)` respectively, where `c` is
+  `xstd::ranges::bit_lexicographical_compare_three_way(x, y)`.
+- `bit_less()(bit_fixed_set<70>{1}, basic_bit_fixed_set<size_t, uint8_t, 70>{1, 65})` is `true`, and a
+  `std::set<bit_fixed_set<100>, bit_less>` finds a key through `bit_set_view` and through `uint8_t` blocks.
+- The pairs `bit_equal_to` turns away are turned away.
+
+### `bit_compare_three_way`
+
+As `compare_three_way` in [[comparisons.three.way]](https://eel.is/c++draft/comparisons.three.way), of the same shape
+as `bit_less`, with:
+
+- *Constraints:* As for `bit_less`.
+- *Returns:* `xstd::ranges::bit_lexicographical_compare_three_way(x, y)`, a `strong_ordering`.
+- It answers `strong_ordering::equal` exactly where `bit_equal_to` answers `true`.
+
+### `bit_hash_append`
+
+- *Constraints:* `Hash` models `hash_algorithm`, and:
+  - for the first form, `T` is an owner of ours, of either reading, or a set view. A sequence view, `bit_span` or a
+    window, is turned away, as `span` has no hash, though `bit_equal` compares it with its owner;
+  - for the second, `const R` models `ranges::contiguous_range` and `ranges::sized_range`, and its value type is a
+    type the first form takes whose width the type fixes, or a built-in array or an `array` of such, nested to any
+    depth: the planes of a board game's position, as `bit_fixed_set<64>[2][6]` or a `span<const bit_fixed_set<64>>`.
+- The *bit string* of `x` is ⌈`N`/8⌉ bytes for its width `N`, byte `j` holding the positions `[8j, 8j + 8)` least
+  significant bit first and the bits past `N` zero. For a set of run-time width it stops after the byte that holds
+  the last key, so it is empty for an empty set: equal sets need not share a width.
+- *Effects:* For the first form:
+  - where the type of `x` fixes a width of zero, `boost::hash2::hash_append(h, f, '\x00')`, the one byte Hash2
+    writes for an empty `array`;
+  - otherwise, updates `h` with the bit string of `x`; then, where the width is a run-time value, an inplace
+    capacity included, calls `boost::hash2::hash_append_size(h, f, n)`, where `n` is a sequence's size in bits and a
+    set's bit string's length in bytes.
+
+  For the second form:
+  - where the type of `r` fixes a count of zero, `boost::hash2::hash_append(h, f, '\x00')`;
+  - otherwise appends each element in order, by the first form or, for a nested array, by this one; then, where the
+    type of `r` fixes no count, calls `boost::hash2::hash_append_size(h, f, ranges::size(r))`. A built-in array, an
+    `array` and a `span` of static extent fix one.
+- The block type is no part of the message, and `f` orders the bytes of the appended size alone. Under
+  `little_endian_flavor`:
+
+  | `x` | message |
+  | :-- | :-- |
+  | `basic_bit_fixed_set<size_t, uint64_t, 10>{1, 3, 5, 9}` | bytes `2A 02` |
+  | `bit_fixed_set<0>()`, `bit_array<0>()` | byte `00` |
+  | `basic_bit_vector<uint64_t>(10)`, its even positions `true` | bytes `55 01`, then the size 10 |
+  | `basic_bit_set<size_t, uint64_t>{1, 3, 5}` | byte `2A`, then the size 1 |
+  | `basic_bit_set<size_t, uint64_t>{1, 3, 64}` | bytes `0A 00 00 00 00 00 00 00 01`, then the size 9 |
+  | an empty `basic_bit_vector<uint64_t>` or `basic_bit_set<size_t, uint64_t>` | the size 0 |
+  | `array<bit_fixed_set<64>, 0>()` | byte `00` |
+
+- *Remarks:* Wherever the storage holds the bit string, a little-endian target and a block of a built-in type whose
+  value bits fill its object, the string goes in as one `update` over the storage. Elsewhere, a class-type block
+  and a constant evaluation included, the same bytes are assembled, up to 256 an `update`. A Hash2 digest does not
+  depend on how its message is split into updates, so the digest is the same either way.
+- *Remarks:* Where each element of `r` is an owner whose object is its bit string, as `bit_fixed_set<64>` in
+  `uint64_t` blocks is, and each nested `array` measures as wide as its elements, the whole range goes in as one
+  `update`. A `bit_fixed_set<50>`, eight bytes for a seven-byte string, goes in an element at a time, to the same
+  digest.
+- *Remarks:* It is usable in a constant expression.
+- Where `xstd::ranges::bit_equal(x, y)` is `true`, `x` and `y` append the same message: an owner and its view, two
+  owners over different blocks, and a run-time set at any two widths. So what compares equal hashes equal.
+
+### `bit_hash`
+
+```cpp
+template<class T, hash_algorithm H, class Flavor>
+  requires see below
+class bit_hash {
+public:
+  using is_avalanching = bool_constant<hash_algorithm_is_avalanching_v<H>>;
+  using is_transparent = void;
+
+  bit_hash() = default;
+  constexpr explicit bit_hash(uint64_t seed);
+  constexpr bit_hash(const unsigned char* p, size_t n);
+
+  template<class U>
+      requires see below
+    constexpr auto operator()(const U& v) const -> size_t;
+};
+```
+
+As xstd-misc's `hash`, with:
+
+- *Constraints:* `T` is a type `bit_hash_append` takes, by either form.
+- One algorithm, `H`, defaulted to `boost::hash2::xxhash_64` on every target, where `size_t` takes Hash2's fold of
+  its result. There is no `H32` and no `hash_type`; `is_avalanching` is read from `H`, so it is `true` under
+  xxHash and SipHash and `false` under FNV-1a.
+- `is_transparent` is declared: equal bits hash equal whatever blocks or storage hold them, so a lookup may cross
+  containers of one reading.
+- There is no specialization for a string key.
+- `operator()`:
+  - *Constraints:* `U` is `T`, or `xstd::ranges::bit_equal(x, y)` is valid for a `const T& x` and a `const U& y`;
+    and `U` is a type `bit_hash_append` takes. So `bit_hash<bit_array<64>>` does not take a `bit_span`.
+  - *Effects:* Copies the prototype to `h` and calls `bit_hash_append(h, Flavor(), v)`. The prototype is unchanged.
+  - *Returns:* `boost::hash2::get_integral_result<size_t>(h)`.
+  - `v` is appended as the `U` it is, not converted to `T`.
+- It hashes the bits, not the value as its standard model has it: no key and no count, so `bit_hash<T, H>()(x)` and
+  xstd-misc's `hash<T, H>()(x)` differ.
+- Equal bits hash equal: a `bit_fixed_set<100>` and its `bit_set_view`, the same set over `uint8_t` blocks, and a
+  `bit_vector`, a `basic_bit_small_vector<uint8_t, 9>` and a `basic_bit_inplace_vector<uint64_t, 256>` of one value.
+- Where `hash<T>` is enabled for an owner or a set view `T`, it is this hash at its defaults: `bit_hash<T>()(x)` is
+  `hash<T>()(x)`.
+
+### `bit_digest`
+
+```cpp
+template<class T, hash_algorithm H, class Flavor>
+  requires see below
+class bit_digest {
+public:
+  using result_type = typename H::result_type;
+
+  bit_digest() = default;
+  constexpr explicit bit_digest(uint64_t seed);
+  constexpr bit_digest(const unsigned char* p, size_t n);
+
+  constexpr auto operator()(const T& v) const -> result_type;
+};
+```
+
+As xstd-misc's `digest`, with:
+
+- *Constraints:* `T` is a type `bit_hash_append` takes, by either form.
+- `operator()`, *Returns:* `h.result()`, where `h` is a copy of the prototype after `bit_hash_append(h, Flavor(), v)`.
+- There is no specialization for a string key.
+- Equal bits digest equal across block types: under `fnv1a_64`, `basic_bit_fixed_set<size_t, Block, 200>{1, 64,
+  199}` digests to `0xB72B'9E62'AF48'F732` at every block type, and under `xxhash_64` to `0xF8C0'7F80'B85C'9EA1`.
+- `bit_hash<T, H, Flavor>()(x)` is `boost::hash2::get_integral_result<size_t>` of the state whose result
+  `bit_digest<T, H, Flavor>()(x)` is.
+
+## `<xstd/bits/bit_ranges.hpp>`
+
+```cpp
+namespace xstd {
+  // [ranges.syn], the from_range tag, whose counterpart for an argument's blocks is from_blocks
+  struct from_blocks_t { explicit from_blocks_t() = default; };
+  inline constexpr from_blocks_t from_blocks{};
+}
+```
+
+The umbrella exports `<xstd/bits/bit_ranges/from_blocks.hpp>`.
+
+### `from_blocks_t`, `from_blocks`
+
+As `from_range_t` and `from_range` in [[ranges.syn]](https://eel.is/c++draft/ranges.syn), with:
+
+- The tag says at the call site that an argument's blocks are read as bits, rather than as keys or elements:
+  `bit_fixed_set<32>(from_blocks, 5u)` is `{0, 2}`, the positions the value five has.
+- Its default constructor is `explicit`, so `{}` cannot stand in for the tag.
+- Every owner of ours takes it: a fixed width reads any blocks that hold at least its width, and a run-time width
+  adopts its own block container. `bit_constructible_from` names the blocks an owner takes as they are.
+- The deduction guides of `basic_bit_array` and `basic_bit_fixed_set` deduce the block and the width
+  `bit_blocks_extent_v` names, from an unsigned integer, an `array` of them or a built-in array of them, as
+  [[span.deduct]](https://eel.is/c++draft/span.deduct) takes an array's bound: `basic_bit_array(from_blocks,
+  uint16_t{...})` is `basic_bit_array<uint16_t, 16>`, and `basic_bit_fixed_set(from_blocks, array<uint8_t, 3>{...})`
+  is `basic_bit_fixed_set<size_t, uint8_t, 24>`. An empty `array` deduces width zero.
+- A signed integer or an `array` of them deduces nothing, and a run-time width takes no block of a fixed width:
+  `bit_vector` is not constructible from `from_blocks` and a `uint64_t`.
+- A type that has bit storage without being it, a `bitset<64>` or a `bit_array<64>`, is not read through the tag.
+  It converts through `bit_convert`.
+
+## `<xstd/bits/bit.hpp>`
+
+```cpp
+namespace xstd {
+  // [bit.cast], function template bit_cast, whose counterpart across bit storages is bit_convert
+  template<class To, class From>
+      requires see below
+    constexpr auto bit_convert(From&& from) noexcept(see below) -> remove_cv_t<To>;
+}
+```
+
+The umbrella exports `<xstd/bits/bit/bit_convert.hpp>`.
+
+### `bit_convert`
+
+The counterpart of `bit_cast` in [[bit.cast]](https://eel.is/c++draft/bit.cast) across bit storages: where `bit_cast`
+reinterprets an object, `bit_convert` maps positions, and position `i` of the source is position `i` of the result.
+Let `F` be `remove_cvref_t<From>` and `T` be `remove_cv_t<To>`. The constraints use these phrases:
+
+- A *fixed width* is a type that fixes in its type how many positions it has, its *width* `W`: an owner of ours
+  whose storage fixes its width, as `basic_bit_array`, `basic_bit_fixed_set` and `basic_bit_fixed_valarray` do; a
+  whole view whose storage fixes its width, `W` being the storage's, as for `bit_set_view<uint64_t>` and
+  `bit_span<array<uint8_t, 3>>`; a block, an `array` of blocks or a built-in array of blocks, `W` being their
+  `bit_blocks_extent_v`; and, on a little-endian target, `bitset<N>`, whose `W` is `N`.
+- A *fixed target* is a fixed width that is neither a view nor a built-in array.
+- A *run-time target* is an owner of ours that stores its width, a capacity included: the vectors, the run-time and
+  inplace sets and valarrays, and the Boost extension's small owners.
+- A *source* is a fixed width, an owner of ours, a whole view of ours of run-time width, or a window.
+
+The rules:
+
+| `T` | `F` | result |
+| :-- | :-- | :-- |
+| a fixed target | a fixed width of `W(F) <= W(T)` | the `W(F)` positions, the positions `[W(F), W(T))` clear |
+| a fixed target | a source that is no fixed width | its positions below `W(T)`, zero-extended; a position at or past `W(T)` throws |
+| a run-time target | a source | the source's positions at the source's width, as below |
+| a type an extension makes a target | a source the extension admits | as the extension specifies |
+
+- *Constraints:* `F` and `T` meet one of the rules, and `remove_reference_t<From>` is not `volatile` unless it is a
+  scalar type.
+- *Effects:* Where `remove_reference_t<From>` is a `volatile` scalar, reads it once and returns
+  `bit_convert<T>(static_cast<F>(from))`. Otherwise, into a run-time target:
+  - A sequence target takes the source's *width*: a sequence's size, a window's size, a fixed width's `W`, and a
+    set's universe, its whole blocks up to its `max_size()`. A set target covers that width in whole blocks of its
+    own, capped at its capacity where it has one. The positions past the source's width are clear.
+  - Where `From` is a non-`const` rvalue whose `extract()` yields a container `C`, `bit_constructible_from<T, C>`
+    holds, and `T`'s capacity, where it has one, is every bit of `C`, the blocks move: `C` is extracted into the
+    `from_blocks` constructor without copying a block, a sequence target then takes the source's width, and the
+    source is left at width zero. The extracted container's type carries its allocator, so another allocator is
+    another `C`.
+  - Otherwise the positions are copied, and the source is unchanged.
+- *Returns:* The object of type `T` holding those positions.
+- *Throws:*
+  - `overflow_error` where `T` is a fixed target, `F` is no fixed width, and a position at or past `W(T)` is set, as
+    `bitset::to_ulong` throws in [[bitset.members]](https://eel.is/c++draft/bitset.members);
+  - `bad_alloc` where `T` is an inplace sequence whose capacity is short of the source's width, or a set target
+    capped at its capacity would lose a key, which is what the target's own growth throws, before a block is
+    written;
+  - any exception the target's allocator throws.
+- *Remarks:* The exception specification is `fixed-width<T> and fixed-width<F>`: nothing throws between two fixed
+  widths, and a run-time end can allocate, refuse a capacity or throw `overflow_error`.
+- *Remarks:* It is usable in a constant expression. There the copy is made by shifts, and outside one by a single
+  copy of the bytes where both block types are built-ins without padding on a little-endian target.
+- *Remarks:* `To`'s cv is dropped, as a cast's scalar prvalue drops it. `To` is never a view, which would write bits
+  it does not own, nor a built-in array, which no function returns. A `span` of blocks lends its width rather than
+  having it, so it is neither end; a `bit_span` over it converts.
+- *Remarks:* A `bitset` is read and written through its object on the terms `bit_cast` reads one, so it converts on
+  a little-endian target only. Its `to_string()` writes position 0 last, so its text reads reversed against the
+  positions written first to last.
+- `bit_convert<uint64_t>(bit_fixed_set<64>{0, 5, 63})` is `(1ULL << 63) | (1ULL << 5) | 1`, and
+  `bit_convert<uint8_t>(bit_array<5>)` is what `to_ulong` gives for a `bitset<5>` of the same positions.
+- `bit_convert<array<uint64_t, 2>>(bit_fixed_set<100>{0, 63, 64, 99})` is `{(1ULL << 63) | 1, (1ULL << 35) | 1}`,
+  which `bit_cast` reads from the set's object too.
+- `bit_convert<bit_fixed_set<10>>(bit_set{3, 9})` holds `{3, 9}`, and `bit_convert<bit_fixed_set<10>>(bit_set{3,
+  10})` throws `overflow_error`. `bit_convert<bitset<0>>(bit_set())` converts, and `bit_set{0}` throws.
+- `bit_convert<bit_vector>(bit_set{3, 64, 129})` has the set's whole blocks as its size, 192 over 64-bit blocks, and
+  `bit_convert<bit_vector>(bit_fixed_set<100>{99})` has 100. A `bit_vector` of 70 converts to a set over 72 positions
+  in `uint8_t` blocks.
+- `bit_convert<bit_vector>(std::move(s))` for a `bit_set s` takes `s`'s blocks, and `s` is then empty; from a
+  `basic_bit_set<size_t, uint8_t>` it copies, and the source keeps its bits.
+
+## `<xstd/bits/ext/boost/dynamic_bitset.hpp>`
+
+```cpp
+namespace xstd {
+  // exported, and valid with boost::dynamic_bitset<Block, AllocatorOrContainer> at either end
+  template<class To, class From>
+      requires see below
+    constexpr auto bit_convert(From&& from) noexcept(see below) -> remove_cv_t<To>;
+}
+```
+
+`<xstd/bits.hpp>` and `<xstd/bits/ext/boost.hpp>` do not include this header, so the dependency on
+[Boost.DynamicBitset](https://www.boost.org/doc/libs/release/libs/dynamic_bitset/) is opted into by name. Including
+it is what makes the conversions valid; it declares no name of its own and exports `bit_convert`.
+
+### `bit_convert` with `boost::dynamic_bitset`
+
+As `bit_convert`, with `boost::dynamic_bitset<Block, AllocatorOrContainer>` as either end:
+
+- **As a source**, a `dynamic_bitset` is a sequence of its `size()`, of run-time width, read through
+  `boost::to_block_range`, each of its blocks landing on its own positions at any target block width:
+  - into a run-time target, as from any run-time sequence: a sequence target takes its size, a set target whole
+    blocks of its own, and an inplace target too small throws `bad_alloc`;
+  - into a fixed target, by value: zero-extended, and `overflow_error` for a position at or past the target's width.
+- **As a target**, `bit_convert<boost::dynamic_bitset<Block, AllocatorOrContainer>>(from)` takes a source of ours
+  that is an owner, a whole view or a fixed width, a `bitset` and a block among them. The result is the source's
+  width, as a sequence target takes it, written through `boost::from_block_range` in blocks of its own width.
+- A window is no source for a `dynamic_bitset`, and one `dynamic_bitset` converts into no other.
+- *Throws:* Into a `dynamic_bitset`, any exception its allocation throws. Neither direction is `noexcept`.
+- *Remarks:* Boost hands its blocks out nowhere, so both directions copy: an rvalue `dynamic_bitset` source keeps
+  its bits, and nothing is adopted even where its container is an owner's own.
+- *Remarks:* Since Boost 1.90 the container parameter converts like any other, a `small_vector` of blocks included,
+  and both directions are usable in a constant expression.
+- *Remarks:* As with `bitset`, its `to_string()` writes position 0 last.
+- A `dynamic_bitset<uint8_t>` of 13 with positions `{0, 5, 12}` converts to a `bit_vector` of 13 with them, and
+  back to an equal `dynamic_bitset<uint8_t>`. `bit_convert<boost::dynamic_bitset<>>(bit_set{3, 64, 129})` has the
+  set's whole blocks as its size, and `bit_convert<boost::dynamic_bitset<uint8_t>>(bit_array<20>())` 20.
