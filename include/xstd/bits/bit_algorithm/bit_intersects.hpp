@@ -16,7 +16,6 @@
 namespace xstd::ranges {
 
 // Whether std::ranges::set_intersection(s1, s2) would write a key, a block at a time; s2 converts to s1's type.
-// Whether std::ranges::set_intersection(s1, s2) would write a key, a block at a time; s2 converts to s1's type.
 template<bits::detail::reads_keys S>
 [[nodiscard]] constexpr auto bit_intersects(S const& s1, std::type_identity_t<S> const& s2) noexcept
         -> bool

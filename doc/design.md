@@ -124,7 +124,7 @@ this concept fails for some other clause first (`span` and `subrange` are not `r
 `vector<int>`'s elements are not unsigned integers, `vector<bool>` is not contiguous) — and the gap is not worth
 a class written only to be
 asked about ([concepts-are-tested-on-ready-made-types](#concepts-are-tested-on-ready-made-types)), so it is
-stated here from [range.refinements] rather than pinned by a test. `bit_block_container` reaches for the
+stated here from [[range.refinements]](https://eel.is/c++draft/range.refinements) rather than pinned by a test. `bit_block_container` reaches for the
 range's subscript in 140 places, `block_mask` among them, so without this the concept admits storages the class
 cannot be instantiated over — the shortfall surfacing as a hard error inside the template rather than as an
 unsatisfied constraint, which is the failure mode
@@ -135,10 +135,10 @@ over `C&`, `C const&` and an index together. They are separate requirements — 
 the other — and each list then names exactly what its own requirement uses, `c` and `n`, rather than a shared
 `r`/`c` pair in which half the names are dead in half the expressions. The index is `n` like every position in
 this library, and its type is `C::size_type` rather than a bare `std::size_t`: a contiguous block *container*
-is a container, `a[n]` is how [sequence.reqmts] spells the operation, and `size_type` is the name a container
+is a container, `a[n]` is how [[sequence.reqmts]](https://eel.is/c++draft/sequence.reqmts) spells the operation, and `size_type` is the name a container
 gives the index. `std::array`, `std::vector` and `std::inplace_vector` each name it, so the clause costs the
 three storages nothing and asks anything else for the typedef a container has. It is written without a
-`typename`, P0634 making one implicit in a requirement-parameter-list and `readability-redundant-typename`
+`typename`, [P0634](https://wg21.link/P0634) making one implicit in a requirement-parameter-list and `readability-redundant-typename`
 reporting it where it is written — which is how the first CI run of #143 failed. The quoted GCC diagnostic
 below echoes a `typename` all the same: that is GCC's printing of the parameter, not what the header says.
 
@@ -161,11 +161,11 @@ semantic requirement that no test pins is a comment.
 Naming it a *block container* follows from the same fact. A contiguous container of blocks generalizes the C array
 of blocks, and its `operator[]`, the C array's defining operation, yields a block; a concept claiming a range *is* blocks while unable to index one would be
 describing something else. The word is deliberately close to the standard's *contiguous container*
-([container.reqmts]/68) without claiming it: that term drags in the whole *Container* table — `empty()`,
+([[container.reqmts]/68](https://eel.is/c++draft/container.reqmts#68)) without claiming it: that term drags in the whole *Container* table — `empty()`,
 `max_size()`, `cbegin`/`cend`, member `swap`, seven nested typedefs — and `bit_block_container` needs
 almost none of it. At a static width it needs none; at a run-time width it needs `max_size`, `resize`,
 `push_back` and `clear`, which are *sequence* container operations, not `Container` ones. Neither path draws the
-line where [container.reqmts]/68 draws it, so the concept states its own five requirements and borrows nothing.
+line where [[container.reqmts]/68](https://eel.is/c++draft/container.reqmts#68) draws it, so the concept states its own five requirements and borrows nothing.
 
 The name says *block container*, not *storage*: what an adaptor sits on is a different question, asked by
 `bit_block_container_type` and answered by name rather than by members
@@ -209,7 +209,7 @@ wider load, vectorize, and read a block twice where once would do. So:
 ### the-const-reference
 
 The const subscript is checked against `range_const_reference_t`: the standard's where the library has it, and
-where it does not, ours — P2278R4's two aliases transcribed from the standard, in a header of their own:
+where it does not, ours — [P2278R4](https://wg21.link/P2278R4)'s two aliases transcribed from the standard, in a header of their own:
 
 ```c++
 template<std::indirectly_readable It>
@@ -219,19 +219,19 @@ template<std::ranges::range R>
 using range_const_reference_t = iter_const_reference_t<std::ranges::iterator_t<R>>;
 ```
 
-That is [const.iterators.alias] and [ranges.syn] verbatim, down to the constraints, and it is ten lines because
+That is [[const.iterators.alias]](https://eel.is/c++draft/const.iterators.alias) and [[ranges.syn]](https://eel.is/c++draft/ranges.syn) verbatim, down to the constraints, and it is ten lines because
 the paper defines the alias by a formula rather than by magic.
 
 **One header, and the `fallback` namespace is what makes the conditional safe.** The transcription above sits
 there unconditionally, and below it `detail/range_const_reference.hpp` selects
 `std::ranges::range_const_reference_t` where `__cpp_lib_ranges_as_const` says the library has the paper and
-`fallback::range_const_reference_t` where it does not. Nothing shadows anything: on a library that ships P2278
+`fallback::range_const_reference_t` where it does not. Nothing shadows anything: on a library that ships [P2278](https://wg21.link/P2278)
 both spellings exist and are separately reachable, which is exactly what lets the tests below check one against
 the other. What the check needs is that the fallback be separately *nameable*, which is the namespace; a second
 file bought nothing and is not there.
 
 The reason not to use `std::ranges::range_const_reference_t` is that a third of the matrix does not have it.
-**libc++ has implemented P2278R4 on no branch, trunk included**: `__cpp_lib_ranges_as_const` is still a
+**libc++ has implemented [P2278R4](https://wg21.link/P2278R4) on no branch, trunk included**: `__cpp_lib_ranges_as_const` is still a
 commented-out line in its `<version>`, beside `__cpp_lib_ranges_chunk` and unlike the `chunk_by` defined next to
 it, so the commenting tracks implementation rather than being a stale block. The headers are simply absent —
 `range_const_reference_t` occurs nowhere in `__ranges/concepts.h`, and `__ranges/as_const_view.h` and
@@ -241,7 +241,7 @@ first, and this is not a wait-for-the-next-rung situation: naming the standard a
 
 **A conditional is only as good as its other arm, and that is the whole argument for the transcription.** The
 obvious arms, `std::ranges::range_const_reference_t` and `range_reference_t<C const>`, ask two different
-questions: P2278 asks what `C`'s own iterator yields once const-ified, the second what a
+questions: [P2278](https://wg21.link/P2278) asks what `C`'s own iterator yields once const-ified, the second what a
 `C const` iterates. Measured, they part on exactly one thing:
 
 | storage | `range_const_reference_t<C>` | `range_reference_t<C const>` |
@@ -249,7 +249,7 @@ questions: P2278 asks what `C`'s own iterator yields once const-ified, the secon
 | `vector<Block>`, `array<Block, N>`, `inplace_vector<Block, N>` | `Block const&` | `Block const&` |
 | a regular, span-like handle | `Block const&` | `Block&` |
 
-Within `contiguous_range` that makes P2278 strictly the tighter arm, and the one thing it catches is a
+Within `contiguous_range` that makes [P2278](https://wg21.link/P2278) strictly the tighter arm, and the one thing it catches is a
 **shallow-const** blocks type: one whose `c[n]` hands back a writable `Block&` through a `C const&`, which would
 let a `bit_block_container const` be written through. That conditional would therefore have admitted such a
 storage on libc++ and refused it everywhere else — a concept meaning two things on two thirds of the matrix.
@@ -397,7 +397,7 @@ absent on libc++ ([the-two-reserved-names](#the-two-reserved-names)).
 
 **The shortfall is not an oversight.** `std::bitset` was designed to extend the **bitwise operators** to an
 arbitrary fixed width: it is a wide unsigned integer with per-bit accessors, not a container.
-[template.bitset]'s synopsis is that and nothing besides — `&=`, `|=`, `^=`, `<<=`, `>>=`, `~`, `set`, `reset`,
+[[template.bitset]](https://eel.is/c++draft/template.bitset)'s synopsis is that and nothing besides — `&=`, `|=`, `^=`, `<<=`, `>>=`, `~`, `set`, `reset`,
 `flip`, `test`, `count`, `size`, `all`, `any`, `none`, `operator[]`, and the conversions to and from strings and
 integers. No `begin`, no `end`, no search. So `find_first`, `find_next` and `find_prev` were never *missing*
 from `std::bitset`; they were never in scope. That also explains why `_Find_first` and `_Find_next` are
@@ -686,8 +686,9 @@ The run-time widths take `from_blocks` too, with a different argument: not a blo
 adopt. The constructor is `flat_set`'s container constructor under the tag -- `block_container_type` by value, moved
 in, with an allocator-extended form beside it -- and `flat_set`'s pair completes it: `extract() &&` hands out
 `block_container_type` -- the `std::vector`, `inplace_blocks` or `small_vector` of blocks -- and leaves the owner
-at width zero, and `replace(block_container_type&&)` takes one back. All three are a move and nothing else, on every
-reading's run-time-width owner and on no view, since a view has nothing of its own to hand. The static widths' tag
+at width zero, and `replace(block_container_type&&)` takes one back. All three are a move and nothing else, on the
+sequence and set readings' run-time-width owners and on no view, since a view has nothing of its own to hand; the
+valarrays take the adopting constructor alone. The static widths' tag
 constructor requires a width in the type and the adopting one a width in the object, so the two never meet.
 
 Each owner deduces through guides of its own. `basic_bit_vector(from_blocks, std::move(v))` deduces
@@ -759,7 +760,7 @@ give the same count, and the static arms that index a block directly are the one
 ### structural-at-aligned-widths
 
 `[array.overview]/4` makes `std::array<bool, N>` a structural type, usable as a non-type template argument. A
-structural class has every base and every non-static data member public and non-`mutable` ([temp.param]/7), and two
+structural class has every base and every non-static data member public and non-`mutable` ([[temp.param]/7](https://eel.is/c++draft/temp.param#7)), and two
 values name the same specialization exactly when their members do, word for word. That is only sound where every word
 pattern is a value. At a width that is not a multiple of the block's digits, the last block has unused high bits,
 and `==`, `<=>` and hashing compare whole blocks on the promise that those bits stay clear. Public blocks would let a
@@ -1075,7 +1076,7 @@ Three members are left over, and they are the three no reading can spell for its
 
 The free functions live in `xstd::bits::detail` rather than in `xstd`, and the nesting is load-bearing.
 
-Since C++20 ([temp.names]/3, P0846) an unqualified call with explicit template arguments — `shl<Block>(b, n)`,
+Since C++20 ([[temp.names]/3](https://eel.is/c++draft/temp.names#3), [P0846](https://wg21.link/P0846)) an unqualified call with explicit template arguments — `shl<Block>(b, n)`,
 or the `scan_first<Traits>(c)` this rule was written for — parses its `<` as a template argument list and then
 performs ADL **with those arguments included**, so `std` and `boost`, the associated namespaces of the types
 in play, would join the overload set. `[namespace.std]` bars *users* from adding to `std` but not
@@ -1290,7 +1291,7 @@ the standard library already spells:
 | query | true where | spelled | named after |
 | :--- | :--- | :--- | :--- |
 | `contains(k)` | `k` is an element | member | `std::set::contains`, the predicate form of `find` |
-| `xstd::ranges::bit_includes(x, y)` | every element of `y` is one of `x`'s | algorithm | `std::ranges::includes(x, y)` |
+| `xstd::ranges::bit_includes(x, y)` | every element of `y` is one of `x`'s | algorithm | `std::ranges::includes(x, y, x.key_comp())` |
 | `xstd::ranges::bit_intersects(x, y)` | some element is in both | algorithm | `std::ranges::set_intersection`, its result nonempty |
 | `xstd::ranges::bit_disjoint(x, y)` | no element is in both | algorithm | `std::ranges::set_intersection`, its result empty |
 
@@ -1793,8 +1794,8 @@ names is reached from inside the library and its tests alone.
 **The owners are classes deriving from the adaptors, not aliases over them.** Each passes itself as its adaptor's
 last argument over the `bit_block_container` its base clause spells, which `owned_bits_t` names; a second
 class over the same storage is a distinct type all the same. Each writes out its constructors in the order and
-notation of the clause it packs: [set.cons] for the three sets, less the allocator forms where the storage has
-none; [vector.bool.pspc] for `basic_bit_vector` and `basic_bit_small_vector`; [inplace.vector.overview] for
+notation of the clause it packs: [[set.cons]](https://eel.is/c++draft/set.cons) for the three sets, less the allocator forms where the storage has
+none; [[vector.bool.pspc]](https://eel.is/c++draft/vector.bool.pspc) for `basic_bit_vector` and `basic_bit_small_vector`; [[inplace.vector.overview]](https://eel.is/c++draft/inplace.vector.overview) for
 `basic_bit_inplace_vector`; and for `basic_bit_array`, `std::array` being an aggregate, the default and initializer-list
 constructors its aggregate initialization stands for. What the clause lacks and the adaptor offers -- the
 `from_blocks` doors -- follows the standard ones, each marked as not in the clause. The copy and move constructors, both assignments and the
@@ -1816,7 +1817,7 @@ leg (#228, stand-in types, one `static_assert` per case) finds three rules for t
 
 1. **A guide spells the storage as the alias does.** The return type computes the block count from the width,
    `adaptor<std::array<B, blocks_for<B>(W)>, W>`, and never names it, `adaptor<std::array<B, K>, …>`: `K` meets
-   `blocks_for<B>(N)`, which [temp.deduct.type]/5.3 makes a non-deduced context.
+   `blocks_for<B>(N)`, which [[temp.deduct.type]/5](https://eel.is/c++draft/temp.deduct.type#5).3 makes a non-deduced context.
 2. **The one-block guide carries a defaulted count.** MSVC 17 (14.44) drops a guide whose only template parameter
    is the block type when it builds the alias's guides (`C2641`, `C2976`); `template<std::unsigned_integral B,
    std::size_t K = 1>`, spelled as the array guide is, is kept.
@@ -1875,10 +1876,10 @@ it, and a view over a `bit_block_container` over `std::vector` must not be able 
 ### views-follow-their-precedent
 
 `bit_set_view` follows `std::string_view`: a value that happens not to own its bytes, so it has `==` and
-`<=>`, and its ordering is exactly `std::set`'s. As [string.view.comparison] asks, it compares with whatever
+`<=>`, and its ordering is exactly `std::set`'s. As [[string.view.comparison]](https://eel.is/c++draft/string.view.comparison) asks, it compares with whatever
 converts to it: its owner, and a view of the same bits that are not const, since both views convert from
 mutable to const bits as `std::span` does. Those are the only mixed comparisons; two owners compare only within
-their own type, as `std::array` and `std::vector` do. `bit_span` follows `std::span`, which P1085 stripped of both
+their own type, as `std::array` and `std::vector` do. `bit_span` follows `std::span`, which [P1085](https://wg21.link/P1085) stripped of both
 because "same referent" and "same contents" are both defensible readings of a handle. So `set_adaptor`
 compares and hashes whatever it owns or views, and `sequence_adaptor` compares and hashes only as an owner. The non-member copies
 — `~`, `&`, `|`, `^`, `-`, `<<`, `>>` — are the owner's alone in both readings: a copied view would write
@@ -1894,10 +1895,10 @@ the empty base to compare.
 
 The alternative is an `incomparable_base` deriving from the one empty type and deleting the two comparisons it
 brings. That works — the deleted pair takes `sequence_adaptor` exactly where the base's takes the empty type by a
-derived-to-base conversion, so it wins overload resolution by [over.ics.rank]/4.4 and the answer is ill-formed
+derived-to-base conversion, so it wins overload resolution by [[over.ics.rank]/4](https://eel.is/c++draft/over.ics.rank#4).4 and the answer is ill-formed
 rather than wrong — but it needs BOTH deletions, and neither implies the other: `<=>` rewrites the four
 relationals and never `==`; `!=` rewrites from `==` and never from `<=>`; and a defaulted `<=>` implicitly declares
-a defaulted `==` beside it ([class.compare.default]). Deleting `==` alone leaves `<`, `>`, `<=` and `>=`; deleting
+a defaulted `==` beside it ([[class.compare.default]](https://eel.is/c++draft/class.compare.default)). Deleting `==` alone leaves `<`, `>`, `<=` and `>=`; deleting
 `<=>` alone leaves `==` and `!=`. Nor can it be written where it belongs: MSVC rejects a trailing requires clause
 on a *deleted* friend (C7599) where it accepts one on a defaulted friend, so the pair cannot be constrained on
 `not is_owner` in the adaptor and has to sit in a base of its own. Two empty types upstream need none of that.
@@ -1910,7 +1911,7 @@ direct way: it is a **hard error** where the requires-expression names a concret
 on GCC and Clang — and a soft `false` only when the check reaches the type through a template parameter.
 
 Both referring adaptors opt into `std::ranges::enable_view` and `enable_borrowed_range`, the two
-specializations [range.view] and [range.range] invite for a program-defined type. The first makes
+specializations [[range.view]](https://eel.is/c++draft/range.view) and [[range.range]](https://eel.is/c++draft/range.range) invite for a program-defined type. The first makes
 `bit_set_view(x) | views::take_while(…)` take the view as it is rather than wrapping it in an `owning_view`;
 the second says what `span` says, that the iterators point at the storage and outlive the handle that made
 them, which is what lets a caller return `bit_set_view(c).begin()` from a temporary.
@@ -1918,7 +1919,7 @@ them, which is what lets a caller return `bit_set_view(c).begin()` from a tempor
 ### the-comparison-is-a-hidden-friend
 
 Both adaptors spell `operator==` as a hidden friend. A defaulted comparison need not be a member:
-[class.compare.default]/1 admits a non-static member **or a friend**, and `sequence_adaptor` defaults a
+[[class.compare.default]/1](https://eel.is/c++draft/class.compare.default#1) admits a non-static member **or a friend**, and `sequence_adaptor` defaults a
 *constrained* friend. The set reading writes both of its overloads out instead, for a reason that is about coverage rather than about comparison and is the
 last subsection here.
 
@@ -1934,7 +1935,7 @@ constructor, per standard:
 | hidden friend | yes | yes | yes | yes |
 | namespace-scope function template | **no** | **no** | **no** | **no** |
 
-The member's implicit object argument never converts, which is the C++17 asymmetry. P1185's **reversed
+The member's implicit object argument never converts, which is the C++17 asymmetry. [P1185](https://wg21.link/P1185)'s **reversed
 candidates** ended it: `u == x` now also considers `x == u`, reaching the member with the integer as the
 argument that converts, so member and friend became indistinguishable. Defaulted `==` arrived in the same
 standard, so there is no era in which the friend could be defaulted but behaved differently.
@@ -1997,7 +1998,7 @@ for alias templates ([P1814](https://wg21.link/P1814)), which Clang has had sinc
 shape -- one pinned non-type argument plus a defaulted, constrained argument depending on the first -- MSVC 17
 (VS 2022) has answered `C2976: 'xstd::bit_set_view': too few template arguments` alongside `C2641: cannot deduce
 template arguments`, 151 times over both views in `msvc` and `msvc_analyze`, Debug and Release, where MSVC 18
-(VS 2026) deduces through the same aliases. Microsoft's conformance table lists `P1814R0 CTAD for alias
+(VS 2026) deduces through the same aliases. Microsoft's conformance table lists `[P1814R0](https://wg21.link/P1814R0) CTAD for alias
 templates` as **VS 2019 16.7**, gated only by a flag this project clears at `/std:c++23`; the table describes the
 feature and not this shape of it, and a diagnostic quoted from the compiler is the better evidence. A probe (#237,
 asked in #235) that puts the two view guides back on the detail adaptors and deduces through aliases of that
@@ -2013,8 +2014,8 @@ copied through a three-line `decay_copy` helper in each of two adaptors rather t
 default argument of a constrained type-parameter, `C2061: syntax error: identifier 'integral'`, where GCC, clang,
 clang-cl and Apple clang take it, so `test/include/test/set/primitives.hpp` keeps that one `typename` under a
 `NOLINT`; it is the one site in the tree where [P0634R3](https://wg21.link/P0634R3) permits the omission, the
-remaining `typename X::value_type` sites being template arguments and functional casts, which P0634R3 does not
-reach. [msvc.yml](.github/workflows/msvc.yml) and [msvc-analyze.yml](.github/workflows/msvc-analyze.yml) carry
+remaining `typename X::value_type` sites being template arguments and functional casts, which [P0634R3](https://wg21.link/P0634R3) does not
+reach. [msvc.yml](../.github/workflows/msvc.yml) and [msvc-analyze.yml](../.github/workflows/msvc-analyze.yml) carry
 `stable,qualification,development`.
 
 That is the shape of the trade rather than a verdict on it. A rung costs whatever the vendor's oldest
@@ -2022,7 +2023,7 @@ front end cannot do, paid in workarounds that the other five toolchains carry wi
 buys is that the front end keeps building this library. Here the price is a helper and a keyword.
 
 **The constraint is the MSVC compiler, not the VS 2022 platform.** `clang_cl` passes on all three rungs, 2022
-included, because clang-cl is Clang and Clang has had P1814 since 19, so VS 2022's runner, STL and platform are
+included, because clang-cl is Clang and Clang has had [P1814](https://wg21.link/P1814) since 19, so VS 2022's runner, STL and platform are
 covered whatever the MSVC 17 front end asks.
 
 **What deriving costs is restatement, and every entry is paid.** A derived class needs its own constructors,
@@ -2032,7 +2033,7 @@ say nothing about the derived name. Each view carries all of them, the trait spe
 adaptor's through `adaptor_type` rather than restating a body. The constructors are inherited, with
 `using base_type::base_type;` and `using base_type::operator=;`; the second matters, because a derived class's
 implicit copy-assignment hides every base `operator=`, the `initializer_list` overload included. Inheriting
-constructors inherits the primary's guides as well (P2582, which GCC implements), which would tie with restated
+constructors inherits the primary's guides as well ([P2582](https://wg21.link/P2582), which GCC implements), which would tie with restated
 guides — so each view's pair is spelled on its own name, where the primary's cannot be what a consumer deduces.
 
 **The diagnostics were the other entry, and restating the constraint settles them.** An alias is transparent,
@@ -2130,7 +2131,7 @@ because bits are not addressable: the sequence iterator's two fields and a count
 view's 8. The offset is applied once, in a private `offset()` that answers zero for every other shape, so
 `begin()`, `operator[]`, `at`, `front` and `back` are written the same way for all three.
 
-The three members are [span.sub]'s, on a view and never on an owner, since `std::array` and `std::vector`
+The three members are [[span.sub]](https://eel.is/c++draft/span.sub)'s, on a view and never on an owner, since `std::array` and `std::vector`
 have no subviews either; they assert their preconditions rather than throw, and `std::dynamic_extent` is the
 to-the-end sentinel. A window is a view in `std::ranges`' sense and borrowed like `span`, and like `span` it
 neither compares nor hashes ([views-follow-their-precedent](#views-follow-their-precedent)).
@@ -2151,7 +2152,7 @@ one of its mutators constrains through the storage expression.
 
 ### static-windows
 
-`first<Count>()`, `last<Count>()` and `subspan<Offset, Count>()` are [span.sub]'s compile-time three, and they
+`first<Count>()`, `last<Count>()` and `subspan<Offset, Count>()` are [[span.sub]](https://eel.is/c++draft/span.sub)'s compile-time three, and they
 hand back `bit_subspan<Blocks, Count, N>`: a window whose width is its type's, as `std::span<T, N>`'s is. The extent is
 the adaptor's fifth parameter, defaulted to `std::dynamic_extent` so that a four-argument spelling means a dynamic
 extent, and it is the adaptor's and not the derived class's because the derived class is incomplete when the base
@@ -2160,7 +2161,7 @@ lays out its members -- which is where the count has to disappear. It does: the 
 window's 24, and `size()` is the extent.
 
 Where the type already says a request cannot fit, it is ill-formed rather than asserted: `first<21>()` over a
-view of a twenty-bit array, or `subspan<10, 11>()` over the same, fail their constraints, as [span.sub] makes
+view of a twenty-bit array, or `subspan<10, 11>()` over the same, fail their constraints, as [[span.sub]](https://eel.is/c++draft/span.sub) makes
 them fail. Over a run-time width the count is checked at run time, which is where the storage's width is known.
 The extent of `subspan<Offset>()` is what is left of a static one, and dynamic otherwise. Between extents the rule
 is `std::span`'s: a static window converts to a dynamic one implicitly, and a dynamic one to a static one only
@@ -2197,7 +2198,7 @@ One declaration gives three spellings. `A::size` is a value whose type carries `
 type and `noexcept`, and the synopsis checklists hold as written. The one observable difference is `&A::size`, which
 `[namespace.std]` does not let a program take of a standard library member in the first place. Through a parameter
 `A const& a`, `std::remove_cvref_t<decltype(a)>::size` is a constant expression on every compiler; `a.size` is one
-only under P2280, as `a.size()` on a `std::array` is.
+only under [P2280](https://wg21.link/P2280), as `a.size()` on a `std::array` is.
 
 The adaptors declare none of these members. A static data member cannot carry a `requires`-clause, and a member
 function `size()` declared in the adaptor hides a base's `size` even where its own constraints fail, so the members
@@ -2337,12 +2338,12 @@ what the prefix adds is the blocks.
 everywhere: each `std` namespace becomes the matching `xstd` one, and the name takes `bit_`. So
 `std::ranges::copy(v, out)` is `xstd::ranges::bit_copy(v, out)`. A range signature puts an algorithm in
 `xstd::ranges` even where `std::ranges` has no counterpart yet: `xstd::ranges::bit_lexicographical_compare_three_way`
-takes two ranges and answers only the ordering, the shape P2022R3 proposes for
+takes two ranges and answers only the ordering, the shape [P2022R3](https://wg21.link/P2022R3) proposes for
 `std::ranges::lexicographical_compare_three_way`, where the standard has only the iterator-pair form. `xstd` itself is where the classic
 iterator-pair shapes go when they come, as ordinary functions a user's overload joins through argument-dependent
 lookup, so `std::copy` and `std::ranges::copy` land on two names, as they are two in the standard. The split also
 keeps apart what the standard keeps apart: xstd-ints' `xstd::bit_reverse(x)` reverses the bits of an integer as
-P3104's `std::bit_reverse` does, and `xstd::ranges::bit_reverse(v)` reverses a sequence as `std::ranges::reverse`
+[P3104](https://wg21.link/P3104)'s `std::bit_reverse` does, and `xstd::ranges::bit_reverse(v)` reverses a sequence as `std::ranges::reverse`
 does. The iterator operations live in `xstd::ranges` too, as `std::ranges::advance` and its siblings do. Inside
 `namespace xstd`, an unqualified `ranges::` finds `xstd::ranges` before `std::ranges` or range-v3's `::ranges`, so
 `tools/qualified_ranges.py`, run by the Audit job, fails on a `ranges::` that names none of the three.
@@ -2490,8 +2491,8 @@ view, or the same value over narrower blocks.
 
 **The iterator operations are rank and select.** `std::ranges::advance`, `next`, `prev` and `distance` over a set's
 iterators step one key at a time; `bit_advance(it, n)` skips whole blocks by their popcount until the block holding
-the target key, then selects within it, counting from the top when it walks down, so it costs `n / digits` blocks
-rather than `n` scans. Its bounded form stops at `bound` and answers the steps it did not take, signed as `n` is, as
+the target key, then selects within it, counting from the top when it walks down, so it reads the blocks between
+`it` and the target, `n / digits` of them where the keys are dense, rather than taking `n` steps. Its bounded form stops at `bound` and answers the steps it did not take, signed as `n` is, as
 `std::ranges::advance` does; `bit_next` and `bit_prev` are it over a copy. `bit_distance(first, last)` is a popcount
 over the whole blocks between two iterators and the masked ends, so select is `*bit_next(s.begin(), n)` and the rank
 of `k` is `bit_distance(s.begin(), s.lower_bound(k))`. The select within one block is xstd-ints' `xstd::bit_select`,
@@ -2642,7 +2643,7 @@ standard, and write one position at a time, in order, so the last write to a pos
 and libstdc++ leaves a stride of zero's compound writes undone, its loop bounded by the stride times the size.
 
 **The gather and the scatter.** Each subscript runs on one of two paths. The mask path is a block at a time:
-a gather takes `xstd::bit_compress(src_k, mask_k)` of each block, P3104's PEXT, and lays it at a running output
+a gather takes `xstd::bit_compress(src_k, mask_k)` of each block, [P3104](https://wg21.link/P3104)'s PEXT, and lays it at a running output
 offset that grows by `popcount(mask_k)`, through the write side of `block_at` ([the-blit](#the-blit)); a scatter
 reads the next `popcount(mask_k)` bits at a running input offset through `block_at` and deposits them with
 `xstd::bit_expand`, PDEP, combining them with the block as the operator says: assignment keeps `d & ~m` and adds the
@@ -2668,7 +2669,7 @@ index is immutable and shared between copies, so a proxy holds its own copy and 
 `std::gslice_array` referring to a `std::gslice` can. `v[std::gslice]` builds one per subscript.
 
 **Not worse than handwritten.** The benchmark holds each subscript to three columns: `std::valarray<bool>`, this
-library, and the same algorithm written by hand over raw 64-bit words with P3104's word functions, each gather
+library, and the same algorithm written by hand over raw 64-bit words with [P3104](https://wg21.link/P3104)'s word functions, each gather
 returning a clear array of its own as `v[s]` does. A gather collects its packed bits in a register and stores each output
 block once, full: an or into memory per input block chains each update on the last store through store forwarding,
 which at stride eight, eight blocks to an output word, held it to two thirds of the handwritten loop. Where xstd-ints runs PEXT and PDEP in hardware, a full mask goes through
@@ -2760,7 +2761,7 @@ A view over blocks that belong to no container of ours takes them directly: `bit
 storage underneath is `bits::detail::borrowed_bits<Block, Extent>`, which is `bit_block_container` over a
 `std::span<Block, Extent>`, and a deduction guide on each view names it from the argument: one block is
 `std::span<Block, 1>`, a range is whatever `std::span(blocks)` deduces, which over a built-in array `Block[K]` is
-`std::span<Block, K>`, a static width, as [span.deduct] takes the bound of `T (&)[N]`. One block is taken by
+`std::span<Block, K>`, a static width, as [[span.deduct]](https://eel.is/c++draft/span.deduct) takes the bound of `T (&)[N]`. One block is taken by
 lvalue, a `bit_block_range` by lvalue or as a `borrowed_range`, so a contiguous range that does not subscript, such
 as a `std::initializer_list`, is not lent at all, and `bit_set_view(std::uint64_t{5})` and `bit_span(std::vector<std::uint32_t>{})`
 do not compile, and a `std::span` temporary does. Const blocks make const storage, and a view over const
@@ -3119,7 +3120,7 @@ fixed set, the way `flat_set` is `flat_` applied to a `set`.
 **Why `fixed` and `inplace`.** `inplace` is the standard's word for a run-time size under a compile-time
 capacity, and the qualifier takes it so that `bit_inplace_vector` is what `std::inplace_vector<bool, N>` would be.
 It names that behaviour, not one storage: `boost::container::static_vector` holds the same blocks where the
-standard library has no `std::inplace_vector`, as it held them before P0843 renamed `boost::static_vector` to
+standard library has no `std::inplace_vector`, as it held them before [P0843](https://wg21.link/P0843) renamed `boost::static_vector` to
 `std::inplace_vector`, in part because `static` is overloaded in C++. Where the standard has no word, the
 qualifier names what the user gets: `fixed` is a width fixed at compile time, and `finite` would select nothing,
 since `bit_set` is a finite set of positions too. The qualifier comes after `bit_`, as `small` does in
@@ -3155,13 +3156,15 @@ choices written through that pair, the block or width computed from `X`'s own:
 | `bit_align<X>` | `X`'s own | `align_up(N, digits)`, whole blocks of `X`'s block |
 | `bit_underlying<X>` | `underlying_block_t<X::key_type>`: the key's underlying type, enumeration or integer, made unsigned | `N` |
 
-`bit_rebind` and `bit_underlying` take every owner: `basic_bit_array<Block, N>`,
-`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_inplace_vector<Block, N>`,
-`basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_vector<Block, Allocator>`,
-`basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>`, and the Boost extension's
-`basic_bit_small_vector<Block, N, Alloc>` and `basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>`, short
-names included. `bit_resize`, `bit_least`, `bit_fast` and `bit_align` read or write `N`, so they take the six whose
-type carries one, the inplace and small ones changing their capacity. So `bit_rebind<std::uint8_t, bit_vector>` is
+`bit_rebind` takes every owner: `basic_bit_array<Block, N>`,
+`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_fixed_valarray<Block, N>`,
+`basic_bit_inplace_vector<Block, N>`, `basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>`,
+`basic_bit_inplace_valarray<Block, N>`, `basic_bit_vector<Block, Allocator>`,
+`basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>`, `basic_bit_valarray<Block, Allocator>`, and the Boost
+extension's `basic_bit_small_vector<Block, N, Alloc>`, `basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>`
+and `basic_bit_small_valarray<Block, N, Alloc>`, short names included. `bit_underlying` takes the four sets among
+them, the owners with a `key_type`. `bit_resize`, `bit_least`, `bit_fast` and `bit_align` read or write `N`, so they
+take the nine whose type carries one, the inplace and small ones changing their capacity. So `bit_rebind<std::uint8_t, bit_vector>` is
 `basic_bit_vector<std::uint8_t, std::allocator<std::uint8_t>>`, `bit_least<bit_fixed_set<9>>` is
 `basic_bit_fixed_set<std::size_t, std::uint16_t, 9>`, two bytes where `bit_fixed_set<9>` is eight, and
 `bit_align<bit_array<9>>` is `bit_array<64>`, whose last block carries no unused tail. A type with nothing to change,
@@ -3276,7 +3279,7 @@ sixteen bits rather than the twelve permissions so that `std::filesystem::perms:
 round trip; its four high bits are keys like the others.
 
 `Mask` is an enumeration, a built-in integer type or a `std::bitset<M>` of any width `M`, the three forms
-[bitmask.types]/1 allows. Its word is the enumeration's underlying type made unsigned, the integer type's unsigned
+[[bitmask.types]/1](https://eel.is/c++draft/bitmask.types#1) allows. Its word is the enumeration's underlying type made unsigned, the integer type's unsigned
 counterpart, or for a bitset the least block holding `M`, and past the widest block an array of them:
 `std::bitset<12>` is read as a `std::uint16_t`, and `std::bitset<147>` as a `std::array<std::uint64_t, 3>`. Every
 conversion between the mask and the set goes through that word, position `i` staying position `i`: a cast for an
@@ -3308,9 +3311,9 @@ every bit of that type: Qt's `WindowType` and glibc's `EPOLL_EVENTS` put a flag 
 underlying type, it is the integer's width less the sign bit, below: 31 for an `int`-based enumeration such as
 `std::launch`, exactly as for `int` itself. With no fixed underlying type there is no default, and `bit_flag_set<E>`
 does not name a type: such an enumeration's values are only those of the smallest bit-field holding its enumerators
-([dcl.enum]/8), and a flag type over more bits than that forms a value outside the enumeration on `~` or on
+([[dcl.enum]/8](https://eel.is/c++draft/dcl.enum#8)), and a flag type over more bits than that forms a value outside the enumeration on `~` or on
 iterating its high keys, which is undefined behaviour and which UBSan reports. `E{0}` is well-formed exactly where the
-underlying type is fixed ([dcl.init.list]/3.8), and that is the test. The range itself cannot be computed: Clang
+underlying type is fixed ([[dcl.init.list]/3](https://eel.is/c++draft/dcl.init.list#3).8), and that is the test. The range itself cannot be computed: Clang
 rejects an out-of-range `static_cast<E>` in a constant expression and GCC accepts it, and C++ cannot list
 enumerators. So the user writes the width, as `bit_flag_set<Qt::AlignmentFlag, 9>` for an alignment whose
 enumerators reach bit 8. libc++'s `regex_constants::syntax_option_type` and `match_flag_type`, and libstdc++'s
@@ -3320,7 +3323,7 @@ enumerators reach bit 8. libc++'s `regex_constants::syntax_option_type` and `mat
 **An integer mask keys its one-bit values, not its numbers.** `bit_flag_set<std::uint32_t>`'s keys are `1`, `2`,
 `4`, … `0x8000'0000`, exactly as an enumeration's are; it is `bit_flag_mapping`, not the key type, that decides,
 and `bit_fixed_set<N>`, keyed by the positions `0` to `N - 1` through `bit_key_mapping<std::size_t>`, is a different
-set over the same `std::size_t`. `xstd::bit_mask` admits only the unsigned integer types, but [bitmask.types]/1
+set over the same `std::size_t`. `xstd::bit_mask` admits only the unsigned integer types, but [[bitmask.types]/1](https://eel.is/c++draft/bitmask.types#1)
 says "an integer type" without a sign, and an implementation picks one: the flag type also takes a signed `Mask`,
 and keeps its sign bit out of the universe. `N` is at most
 `std::numeric_limits<Mask>::digits`, which counts no sign bit, and defaults to it: 31 for `int`, 7 for
@@ -3341,7 +3344,7 @@ and a position comparator in place of `std::less` and `std::greater`. The one re
 with glibc's `SA_RESETHAND` at `0x80000000`, is an `unsigned` constant stored in an `int` field: the word is `int`,
 the flags are `unsigned`, and `bit_flag_set<unsigned>` keys it, with a cast on each side of the field.
 
-The standard's own bitmask types are the case in point. [ios.base] declares `fmtflags`, `iostate` and `openmode`
+The standard's own bitmask types are the case in point. [[ios.base]](https://eel.is/c++draft/ios.base) declares `fmtflags`, `iostate` and `openmode`
 as bitmask types and leaves the rest to the implementation: libstdc++ makes each an unscoped enumeration with no
 fixed underlying type and the operators overloaded, libc++ `unsigned int`, and MSVC `int`, its constants of an
 unscoped enumeration beside it. libstdc++'s enumerations take no default width, so the spelling for all three is
@@ -3353,7 +3356,7 @@ written against the stream carries over with only the variable's type changed:
    `xfs::perms p = fs::status(path).permissions();`, and ours flow out, `fs::permissions(path, p)`. The converting
    constructor takes any value of the mask, so a composite such as `fs::perms::owner_all` is an ordinary argument,
    and a braced list is the union of its values: `{m}` is the conversion from `m`, and `{a, b}` of two one-bit
-   values is the set of both, which is what [set.cons] makes of it too.
+   values is the set of both, which is what [[set.cons]](https://eel.is/c++draft/set.cons) makes of it too.
 2. **The mask's constants are the flag type's.** `fs::perms::owner_read | p` is a flag type, so the standard's
    spelling carries over unchanged and no constant is written twice. This is the split Qt's `QFlags<Enum>` makes, a
    set type over the enumeration that names its values, where Rust's `bitflags`, Python's `enum.Flag` and Swift's
@@ -3361,7 +3364,7 @@ written against the stream carries over with only the variable's type changed:
 3. **The set reading.** Iteration yields the one-bit values, highest first; `contains`, `insert`, `erase`, `find`,
    the bounds, `rbegin`, `clear`, `swap`, the hash and `max_size()`, which is `N`, come with the adaptor.
 
-The flag type is itself an `xstd::bit_mask`, a [bitmask.types] type with `~`, `|`, `&`, `^` and their compound
+The flag type is itself an `xstd::bit_mask`, a [[bitmask.types]](https://eel.is/c++draft/bitmask.types) type with `~`, `|`, `&`, `^` and their compound
 forms closed over it, which the tests assert of each instantiation.
 
 Other libraries offer one of an enum set or a flag type, seldom both:
@@ -3369,7 +3372,7 @@ Other libraries offer one of an enum set or a flag type, seldom both:
 | Library | Enum set | Flag type | Element | Iterates? |
 |---|---|---|---|---|
 | xstd-bits | `bit_enum_set<E>`, keyed by rank | `bit_flag_set<Mask, N>`, over an enumeration, an integer or a `std::bitset` | the mask's one-bit values | both iterate |
-| C++ standard | — (`std::bitset<N>` is indexed, not keyed) | bitmask types ([bitmask.types]: `fs::perms`, `ios_base::fmtflags`) | — | no |
+| C++ standard | — (`std::bitset<N>` is indexed, not keyed) | bitmask types ([[bitmask.types]](https://eel.is/c++draft/bitmask.types): `fs::perms`, `ios_base::fmtflags`) | — | no |
 | Qt | — | `QFlags<Enum>` | `Enum` | no |
 | Chromium `base` | `EnumSet<E, Min, Max>` | — | — | yes |
 | Rust | `enumset` crate | `bitflags` crate | `Self` | yes |
@@ -3387,17 +3390,17 @@ together, with what each contributed and where this library takes it up:
 | Paper | Year | What it proposed | Where this library meets it |
 | :-- | :-- | :-- | :-- |
 | [N2050](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2050.pdf) | 2006 | A dynamically sizeable bitset for TR2, after `boost::dynamic_bitset`, with set queries such as `is_subset_of` beside `push_back` and `resize`; libstdc++ still ships it as `std::tr2::dynamic_bitset`. | `bit_set` and `bit_vector`. The paper joins a set and a sequence in one type; here they are two readings of one storage. |
-| [N3110](https://wg21.link/n3110) | 2010 | Problems with the library's bitmask types, `ios_base::fmtflags`, `iostate`, `openmode` and the `regex_constants` flags: operators declared as members, an `operator~` that was a no-op or recursed, an underlying type that should be fixed so that `~` stays in range, and the point that the standard must not require enumerations, since [bitmask.types] allows integers and `std::bitset` too. | Flag types over an enumeration, an integer or a `std::bitset`. `~` stays within `N` on the unsigned block, and an enumeration with no fixed underlying type spells its `N`. `bit_flag_set<std::ios_base::fmtflags, 16>` is one spelling across three standard libraries. |
-| [N4202](https://wg21.link/n4202) | 2014 | *Strongly Typed Bitset*: a storage parameter `T` for `std::bitset`, `small_bitset<N>` over the least `uint_least*_t` holding `N`, `fast_bitset<N>`, and `underlying()`. | The `Block` parameter, `bit_least`, `bit_fast`, `from_blocks` and `bit_convert`. N4202 leaves the bits at or above `N` implementation-defined; here they are always zero, so `==`, hashing and `bit_cast` are exact. |
-| [P0125R0](https://wg21.link/p0125r0) | 2015 | `std::bitset::is_subset_of` and `is_superset_of`, members that may short-circuit, the names N2050 used. | `xstd::ranges::bit_includes`, `bit_intersects` and `bit_disjoint`, free functions after `std::ranges::includes`. |
+| [N3110](https://wg21.link/n3110) | 2010 | Problems with the library's bitmask types, `ios_base::fmtflags`, `iostate`, `openmode` and the `regex_constants` flags: operators declared as members, an `operator~` that was a no-op or recursed, an underlying type that should be fixed so that `~` stays in range, and the point that the standard must not require enumerations, since [[bitmask.types]](https://eel.is/c++draft/bitmask.types) allows integers and `std::bitset` too. | Flag types over an enumeration, an integer or a `std::bitset`. `~` stays within `N` on the unsigned block, and an enumeration with no fixed underlying type spells its `N`. `bit_flag_set<std::ios_base::fmtflags, 16>` is one spelling across three standard libraries. |
+| [N4202](https://wg21.link/n4202) | 2014 | *Strongly Typed Bitset*: a storage parameter `T` for `std::bitset`, `small_bitset<N>` over the least `uint_least*_t` holding `N`, `fast_bitset<N>`, and `underlying()`. | The `Block` parameter, `bit_least`, `bit_fast`, `from_blocks` and `bit_convert`. [N4202](https://wg21.link/N4202) leaves the bits at or above `N` implementation-defined; here they are always zero, so `==`, hashing and `bit_cast` are exact. |
+| [P0125R0](https://wg21.link/p0125r0) | 2015 | `std::bitset::is_subset_of` and `is_superset_of`, members that may short-circuit, the names [N2050](https://wg21.link/N2050) used. | `xstd::ranges::bit_includes`, `bit_intersects` and `bit_disjoint`, free functions after `std::ranges::includes`. |
 | [P3103R0](https://wg21.link/P3103R0), [R2](https://wg21.link/P3103R2) | 2024 | *More bitset operations*: `rotl`, `rotr`, `reverse`, `countl_zero(pos)` and `countr_zero(pos)` and their `one` forms, and `one()`. | `xstd::ranges::bit_rotate` and `bit_reverse`, in `std::rotate`'s direction. Iteration, `lower_bound` and `upper_bound` cover the positional counts. |
-| [P4313R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p4313r1.html) | 2026 | *Bitmask operations for enums*: `\|`, `&`, `^`, `~` and their compound forms for an enumeration annotated `[[=std::bitmask_type]]`, as operator templates in the global namespace, each returning the enumeration. | Complementary: P4313 gives the enumeration its operators, and `bit_flag_set` gives it the set reading, `contains`, `size`, iteration and the containments, which the paper leaves out. Its global-namespace operators are what this library never declares for a user's type ([the-adl-firewall](#the-adl-firewall)). |
+| [P4313R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p4313r1.html) | 2026 | *Bitmask operations for enums*: `\|`, `&`, `^`, `~` and their compound forms for an enumeration annotated `[[=std::bitmask_type]]`, as operator templates in the global namespace, each returning the enumeration. | Complementary: [P4313](https://wg21.link/P4313) gives the enumeration its operators, and `bit_flag_set` gives it the set reading, `contains`, `size`, iteration and the containments, which the paper leaves out. Its global-namespace operators are what this library never declares for a user's type ([the-adl-firewall](#the-adl-firewall)). |
 
-An enumeration with P4313's operators is an `xstd::bit_mask`, and `bit_flag_set<E>` takes it unchanged, where lookup
+An enumeration with [P4313](https://wg21.link/P4313)'s operators is an `xstd::bit_mask`, and `bit_flag_set<E>` takes it unchanged, where lookup
 finds the operators. `xstd::bit_mask` is a concept in `namespace xstd`, so its `a | b` sees what unqualified lookup
 finds at the concept's definition and what argument-dependent lookup finds at the use. An enumeration in the global
 namespace brings the global operators in by ADL; one in a named namespace finds them only if they were declared
-before the concept, since ADL never searches the global namespace for it. P4313R1 puts the operators in the global
+before the concept, since ADL never searches the global namespace for it. [P4313R1](https://wg21.link/P4313R1) puts the operators in the global
 namespace and says nothing about an enumeration declared in a named one, so including `<bitmask>` after the xstd
 headers would leave such an enumeration with operators its own callers find and no flag type. The tests emulate the
 annotation with a trait and pin all three cases: global, named with the operators first, and named with them last.
@@ -3465,7 +3468,7 @@ Where it is not drop-in:
 A `bit_sequence<C>` naming the sequence owner by the storage its blocks sit in -- `bit_sequence<std::uint64_t>`
 for `basic_bit_array<std::uint64_t, 64>` -- is how itsy_bitsy's `bit_sequence<Container>` spells a sequence. As an
 alias over a trait nothing deduces through it (`C` sits in a nested-name-specifier, a non-deduced context by
-[temp.deduct.type]/5.1), and it gives the storage spelling to one reading of two. No public name here
+[[temp.deduct.type]/5](https://eel.is/c++draft/temp.deduct.type#5).1), and it gives the storage spelling to one reading of two. No public name here
 spells a reading by its storage: every owner is named by its block and width, as `basic_bit_array<std::uint64_t, 64>`
 is, and the storage is its base clause's business ([the-container-adaptor](#the-container-adaptor)).
 
@@ -3570,7 +3573,7 @@ throws `std::bad_alloc`. Over `no_blocks` the set would carry paths of its own t
 its padded equality and its bulk operators across two widths, each a branch no test can reach. The set's left shift takes an arm there, for the same reason the vector's ordering does: with no element
 to hold, the rest of the body is a branch no test can take.
 
-P0843 declined to repeat `vector<bool>`, so `std::inplace_vector<bool, N>` holds real `bool`s and is a model
+[P0843](https://wg21.link/P0843) declined to repeat `vector<bool>`, so `std::inplace_vector<bool, N>` holds real `bool`s and is a model
 only up to its reference. The `[inplace.vector]` clauses assert each declaration on it first where the standard
 library has it, exactly as the `[vector]` ones do ([the-sequence-contract](#the-sequence-contract)); what the
 packing adds, `hash`, is under `test/src/spec/xstd/inplace_vector/`.
@@ -4093,7 +4096,7 @@ hidden friends; the shifts and `~` sit at namespace scope beside `&`, `|`, `^` a
 The rule is **hide where hiding is free, and never where it widens**, with `friend` doing two separable jobs.
 
 Only `==` and `<=>` need friendship for what it says: a defaulted `==` may be a member or a friend and nothing
-else ([class.compare.default]/1), and `<=>` reads the storage. `swap`, the shifts and `~` need no access at
+else ([[class.compare.default]/1](https://eel.is/c++draft/class.compare.default#1)), and `<=>` reads the storage. `swap`, the shifts and `~` need no access at
 all -- their bodies are `x.swap(y)`, `nrv <<= pos`, `nrv.flip()`, every one of them public -- and the standard's
 own free `swap` is a namespace-scope template for exactly that reason. `swap` is a friend anyway.
 
@@ -4118,7 +4121,7 @@ templates beside `&`, `|`, `^` and `-`, which is where `set_adaptor` has its who
 `std::vector` and `std::set` spell `==`, `<=>` and `swap` as namespace-scope templates; here all three are
 hidden friends.
 
-`==` is forced: **it is defaulted** where it can be, and [class.compare.default]/1 admits a defaulted comparison
+`==` is forced: **it is defaulted** where it can be, and [[class.compare.default]/1](https://eel.is/c++draft/class.compare.default#1) admits a defaulted comparison
 only as a non-static member or a friend. A namespace-scope template cannot be defaulted at all. The standard
 containers hand-write theirs, which is what leaves them free to put it at namespace scope; wanting `= default` is
 what takes that option away here, and it is a want worth having -- the storage is the one member, and a
@@ -4155,7 +4158,8 @@ has its own header under `<xstd/bits/bit_concepts/>`.
 
 - **Its two ends.** A target is any owner of either reading at any width and block width, an unsigned integer, a
   `std::array` of blocks, or a `std::bitset<N>`; never a view, which would write bits it does not own. A source is
-  any of those, or a view over a whole width; a window is neither, its position zero not being its storage's.
+  any of those, or a view, a window included: a window is read from its offset, its position zero being
+  position zero of the target.
 - **Positions.** Position `i` of the source is position `i` of the target, across the readings and across block
   widths. That is the whole contract, and the name says so: this is a conversion of positions, not a
   reinterpretation of an object.
@@ -4794,7 +4798,7 @@ on the sequence reading and the key on the set reading. That is one fix for one 
 worth catching at the interface and worth being right in the body.
 
 It is spelled through a three-line `decay_copy` helper beside the walks, because MSVC 2022 does not implement
-P0849R8 and the stable rung is on the matrix ([the-views-are-the-adaptors](#the-views-are-the-adaptors)). Without
+[P0849R8](https://wg21.link/P0849R8) and the stable rung is on the matrix ([the-views-are-the-adaptors](#the-views-are-the-adaptors)). Without
 that rung `auto(x)` would do, the paper's own spelling, which clang-tidy has nothing to say about. The other way
 round it -- `T{x}` -- reads to clang-tidy as a cast to the type it already has, so it is not the alternative.
 
@@ -4835,7 +4839,7 @@ returning anything, whose answer is dropped as `std::ranges::for_each` drops it.
 The sequence reading counts and queries its bools through four algorithms, `xstd::ranges::bit_count`, `xstd::ranges::bit_all_of`,
 `xstd::ranges::bit_any_of` and `xstd::ranges::bit_none_of`, and compares two sequences through `xstd::ranges::bit_mismatch`
 ([algorithms-not-members](#algorithms-not-members)). Each is the `std::ranges` algorithm it is named after, over
-a value or through `std::identity`, as [alg.count] and [alg.all.of] spell them: `bit_count(v, b)` is
+a value or through `std::identity`, as [[alg.count]](https://eel.is/c++draft/alg.count) and [[alg.all.of]](https://eel.is/c++draft/alg.all.of) spell them: `bit_count(v, b)` is
 `std::ranges::count(v, b)` and returns its signed `range_difference_t`, the ones popped and the zeros the size less
 the ones, where `std::bitset::count` returns a
 `size_t`, and `bit_all_of(v)` is `true` on an empty sequence, as `std::ranges::all_of` is.
@@ -5032,7 +5036,7 @@ the two customization points consistent with each other. The standard library it
 `formatter<pair>` lives in `<format>`, because `<format>` is allowed to know about `<utility>` and `<utility>`
 must not depend on `<format>` -- but the arrow only points that way for types the standard owns. For ours it
 cannot: `<format>` will never know about a proxy of ours, so the proxy is the only place the specialization
-can go without a separate header to remember. Nothing here waits on P3070R0: what a formatter needs is the
+can go without a separate header to remember. Nothing here waits on [P3070R0](https://wg21.link/P3070R0): what a formatter needs is the
 proxy's formattability, and that is ours to give. #20 records the other half of the
 argument, which this library is the worked example of: a proxy nested inside its container cannot be named by
 either hook, because the template arguments will not deduce through
@@ -5292,7 +5296,7 @@ Four findings are suppressed because the checker cannot see what makes them righ
 An eighth is the reverse case, and the one to be careful with: **the check is right about the language and
 wrong about the compilers.** `readability-redundant-typename` on clang-tidy 22 asks for the `typename` to go
 from `std::same_as<typename std::remove_const_t<Bits>::block_type, Block>` in `blit_source`'s partial
-specialization. P0634 made `typename` optional only in listed contexts, and a **template argument is not one of
+specialization. [P0634](https://wg21.link/P0634) made `typename` optional only in listed contexts, and a **template argument is not one of
 them** — GCC 14 rejects the elision outright, *type/value mismatch at argument 1*. An alias-declaration **is**
 on the list, so the block type is named through one and the template argument is a simple-template-id that
 needs no `typename` and trips no check. The same pattern already names `allocator_of` in
@@ -5301,7 +5305,7 @@ needs no `typename` and trips no check. The same pattern already names `allocato
 The same check, from the other side, is simply right. On the set reading's
 checklist it asked for the `typename` to go from five **parameter-declarations** -- the
 `typename C::value_type const* first` and `... last` of `set_size_t` and `set_size_t_allocator`, and the
-`[](typename C::key_type)` that `erase_if` is handed -- and a parameter-declaration IS on P0634's list, which
+`[](typename C::key_type)` that `erase_if` is handed -- and a parameter-declaration IS on [P0634](https://wg21.link/P0634)'s list, which
 is why the parameters beside them already omitted it. It flagged those five and left
 `std::initializer_list<typename C::value_type>` and `std::same_as<typename C::size_type>` alone on the very
 same lines: the rule above, drawn by the checker itself. Template argument, the keyword stays; parameter
@@ -5329,7 +5333,7 @@ The `tuple_element` half of that same check IS taken, and the asymmetry is the p
 alias template and substituting into one is transparent, so its failure stays in the immediate context and the
 requirement still answers false. The concept therefore reads `typename std::tuple_element_t<0, C>;`, keeping
 the `typename` -- a type-requirement needs it, and an alias-template specialization is a *type-name* under
-[expr.prim.req.type], which is the half of the fix-it that would otherwise have left a bare type standing
+[[expr.prim.req.type]](https://eel.is/c++draft/expr.prim.req.type), which is the half of the fix-it that would otherwise have left a bare type standing
 where only an expression may. Half of one check's advice was worth taking and half of it was not, and nothing
 short of running both tells you which half.
 
@@ -5496,14 +5500,14 @@ bracket assertions in `test/src/bits/detail/format.cpp` are what pins this.
 
 ### The try-doors return what the draft spells
 
-P3981R0 changed `try_push_back` and `try_emplace_back` to return `optional<reference>` once P2988R12's
-`optional<T&>` was adopted; libstdc++ 16 still returns the pointer P0843R14 gave them. The checklist
+[P3981R0](https://wg21.link/P3981R0) changed `try_push_back` and `try_emplace_back` to return `optional<reference>` once [P2988R12](https://wg21.link/P2988R12)'s
+`optional<T&>` was adopted; libstdc++ 16 still returns the pointer [P0843R14](https://wg21.link/P0843R14) gave them. The checklist
 asks the model for the name, and `TheTryDoorsReturnTheOptionalReferenceTheDraftSpells` asks the
 packing for the signature the draft spells.
 
-**There is no `try_append_range`, on purpose.** P0843R14 gave `inplace_vector` a third try-door that
-appended as many elements as fit and returned an iterator to the first one left over. P3981R0 proposed
-to return a `borrowed_subrange_t` instead, and the LEWG discussion of that change led to P4022R0
+**There is no `try_append_range`, on purpose.** [P0843R14](https://wg21.link/P0843R14) gave `inplace_vector` a third try-door that
+appended as many elements as fit and returned an iterator to the first one left over. [P3981R0](https://wg21.link/P3981R0) proposed
+to return a `borrowed_subrange_t` instead, and the LEWG discussion of that change led to [P4022R0](https://wg21.link/P4022R0)
 (Revzin, Wakely, Kamiński, February 2026), which removes the member from C++26 altogether. Its two
 reasons are the ones any packing would inherit. A partial insertion is neither a success nor a failure,
 so the `try_` name promises a contract the function does not keep. And a returned `subrange` converts
@@ -5511,7 +5515,7 @@ to `bool` the opposite way round from the `optional<reference>` of the other two
 something was left over, not that the call succeeded. The paper defers the design to C++29.
 
 The current draft has no `try_append_range`, so the inplace owners have none either. libstdc++ 16
-still ships P0843R14's version, and the suite asks it of no implementation, the model included.
+still ships [P0843R14](https://wg21.link/P0843R14)'s version, and the suite asks it of no implementation, the model included.
 When C++29 settles what the member means, it is added here and tested in the same change.
 
 ### Why a checklist spells `tuple_size<C>::value`
@@ -5620,7 +5624,7 @@ container's and it converts through them.
 
 ### Two places where the coverage gate decides the layout
 
-`front()` and `back()` are both preconditions in [sequence.reqmts], and `back()`'s is the one that
+`front()` and `back()` are both preconditions in [[sequence.reqmts]](https://eel.is/c++draft/sequence.reqmts), and `back()`'s is the one that
 subtracts: on an empty sequence `offset() + size() - 1UZ` wraps, and the reference handed back names a
 position no storage has. Each assert is spelled over four lines rather than one, because gcovr
 excludes an assert by a pattern anchored at the start of a line.
@@ -5855,7 +5859,7 @@ Looking at the above code, the following four ingredients are necessary to imple
 
 1. **Bidirectional iterators** `begin` and `end` in the `set`'s own namespace (to work with range-`for` and the `<ranges>` library);
 2. **Constructors** taking a pair of iterators or a range (in order for `std::ranges::to` to construct a `set`);
-3. A **nested type** `key_type` (in order for `std::format` to use `{}` delimiters: [format.range.fmtkind] picks `range_format::set` for a range that has one);
+3. A **nested type** `key_type` (in order for `std::format` to use `{}` delimiters: [[format.range.fmtkind]](https://eel.is/c++draft/format.range.fmtkind) picks `range_format::set` for a range that has one);
 4. A **member function** `erase` to remove elements (for other applications: the rest of a `set`'s interface).
 
 `xstd::bit_fixed_set<N>` implements all four of the above requirements. Note that Visual C++ support is finicky at the moment because its `<ranges>` implementation cannot (yet) handle the `xstd::bit_fixed_set<N>` proxy iterators and proxy references correctly.
@@ -6173,7 +6177,7 @@ its word-parallel search as an algorithm rather than owning it. The decisions al
   is always windowed, because `remove_prefix` and `remove_suffix` change the view in place; an owned one never is.
   The iterator and reference are member templates of the adaptor over the character type, as the other readings
   nest theirs ([the-adl-firewall](#the-adl-firewall)), and an owner and its view have distinct iterator types.
-- **Character 0 is position 0**, the least significant bit of block 0, which is N0128's orientation and the
+- **Character 0 is position 0**, the least significant bit of block 0, which is [N0128](http://www.open-std.org/Jtc1/sc22/wg21/docs/papers/1992/WG21%201992/X3J16_92-0051%20WG21_N0128.pdf)'s orientation and the
   storage's one layout. Strings of different lengths share position 0, so `starts_with` and `<=>` stay
   block-wise, and `push_back` and `append` work at the high end as a sequence's do. The cost is at the interop
   boundary: a string converted from a `std::bitset` reads reversed against its `to_string()`, which the
@@ -6199,7 +6203,7 @@ its word-parallel search as an algorithm rather than owning it. The decisions al
   taking characters throws `std::invalid_argument` outside the symbols, as `std::bitset` does, and is explicit, as
   `std::bitset`'s string constructor is. Parsing packs eight characters per step, the mirror of a block-wise
   `to_string()`, and `bit_string(t).to_string() == t` for every valid `t`.
-- **`bit_fixed_string<N>` follows P3094's `std::basic_fixed_string`**, still in LEWG for C++29 and audited against
+- **`bit_fixed_string<N>` follows [P3094](https://wg21.link/P3094)'s `std::basic_fixed_string`**, still in LEWG for C++29 and audited against
   its latest revision: structural, the length-preserving half of the interface, static `integral_constant` size
   members ([constant-sizes](#constant-sizes)), `+` giving `N + M`, and `bit_convert` to and from `bit_array<N>`.
   The search members and the default constructor, all `'0'`, are recorded as departures with reasons.
@@ -6208,7 +6212,7 @@ its word-parallel search as an algorithm rather than owning it. The decisions al
   `xstd::bit_search<"1011">(text)` a compile-time pattern without a suffix.
 - **`[string.capacity]` decides capacity in every column**, not the sequence row's inplace rules: the inplace string
   throws `std::length_error` past `N`, as `boost::static_string<N>` does, and has no `try_` or `unchecked_` doors.
-  `+` on two inplace strings returns `bit_inplace_string<N + M>`, as Boost, Folly and P3094 all do, and never
+  `+` on two inplace strings returns `bit_inplace_string<N + M>`, as Boost, Folly and [P3094](https://wg21.link/P3094) all do, and never
   throws; `+=` and `append` keep the capacity. A smaller capacity converts implicitly and a larger one explicitly,
   checked. The small and dynamic strings keep `std::string`'s `+`.
 - **Declined:** `c_str` and `data`, a bit having no address and two symbols no terminator;
@@ -6430,7 +6434,7 @@ per guarded member, each run breaking that member's precondition. A `SIGABRT` ha
 pass, through `std::_Exit`, because CTest's `WILL_FAIL` inverts an exit code but not a crash. Two CI legs build the
 whole suite as a release against a hardened library, libstdc++ with `_GLIBCXX_ASSERTIONS` and libc++ in its fast
 mode, so the macro is also exercised where the library, not the command line, turned it on. The mechanism is an
-interim one: under P2900 the same predicate is a `pre`, and hardening is the enforce semantic
+interim one: under [P2900](https://wg21.link/P2900) the same predicate is a `pre`, and hardening is the enforce semantic
 ([preconditions-as-contracts](#preconditions-as-contracts)).
 
 ### preconditions-as-contracts
@@ -6440,10 +6444,10 @@ The precondition doctrine is the storage's cheapest contract, widened by the cal
 mechanism is about ninety `assert`s, nearly half of them in `detail/bit_block_container.hpp` and most of the rest
 in the sequence and set adaptors ([#193](https://github.com/rhalbersma/xstd-bits/issues/193)). An `assert` states
 that something held, not that a caller owed it, which is the one distinction the doctrine turns on, and `NDEBUG`
-is one switch over a translation unit where the doctrine assigns costs per layer. A P2900 precondition says it on
+is one switch over a translation unit where the doctrine assigns costs per layer. A [P2900](https://wg21.link/P2900) precondition says it on
 the declaration, where a caller reads it, and its evaluation semantics are chosen per build.
 
-It waits on P2900's availability across the ladders, measured with dates, and may well conclude "not yet". Three
+It waits on [P2900](https://wg21.link/P2900)'s availability across the ladders, measured with dates, and may well conclude "not yet". Three
 questions are to be decided before any syntax: whether a partial migration, two vocabularies for one doctrine,
 is worse than none, and so whether a mechanism that degrades to `assert` is wanted; the C++23 floor, since the
 library compiles as C++23 and contracts in the interface move it; and what the checked build is for, legibility
@@ -6454,12 +6458,12 @@ exclusion for a contract annotation as it has one for an assert at the start of 
 
 ### the-bit-infrastructure-thesis
 
-`std::bitset` was proposed in N0075, November 1991, three years before the STL entered the draft, so it was
+`std::bitset` was proposed in [N0075](http://www.open-std.org/Jtc1/sc22/wg21/docs/papers/1991/WG21%201991/X3J16_91-0142%20WG21_N0075.pdf), November 1991, three years before the STL entered the draft, so it was
 designed before containers, iterators and algorithms had a vocabulary
 ([#192](https://github.com/rhalbersma/xstd-bits/issues/192)). It has no iterators and is no range, no
 `value_type`, no allocator, no block parameter and no resize; its set reading exists only as the vendor
 extensions `_Find_first` and `_Find_next`; and `test` throws where `operator[]` is undefined. The committee
-patches it a paper at a time, P2417R2's `constexpr`, P2697R1's `basic_string_view` constructor, LWG 4294's `charT`
+patches it a paper at a time, [P2417R2](https://wg21.link/P2417R2)'s `constexpr`, [P2697R1](https://wg21.link/P2697R1)'s `basic_string_view` constructor, LWG 4294's `charT`
 constraints, which is why the yardstick here is the working draft.
 
 The thesis is **bit infrastructure, containers and algorithms, in the vocabulary of the current draft, without a

@@ -268,7 +268,7 @@ for (auto i : v) {
 </td></tr>
 </table>
 
-## Enumeration flags: `std::filesystem::perms` and other [bitmask.types]
+## Enumeration flags: `std::filesystem::perms` and other [[bitmask.types]](https://eel.is/c++draft/bitmask.types)
 
 `bit_flag_set<Mask, N>` is the set of the mask's one-bit values. It converts implicitly from and to the mask, so
 the constants and the functions that take the mask stay as they are; what changes is the type of the variable.

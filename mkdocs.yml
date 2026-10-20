@@ -1,0 +1,60 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+# The documentation site, built by the pages workflow from the README and doc/. tools/mkdocs_hooks.py serves the
+# README as the index and points each relative link at its page, or at its file on GitHub where the site has none.
+
+site_name: xstd-bits
+site_description: Your standard library for bit twiddling
+site_url: https://rhalbersma.github.io/xstd-bits/
+repo_url: https://github.com/rhalbersma/xstd-bits
+repo_name: rhalbersma/xstd-bits
+edit_uri: ""
+copyright: Copyright Rein Halbersma 2014-2026, under the Boost Software License, Version 1.0
+
+docs_dir: doc
+exclude_docs: |
+  audit/
+
+hooks:
+  - tools/mkdocs_hooks.py
+
+nav:
+  - Overview: index.md
+  - Reference: reference.md
+  - Design: design.md
+  - Migration: migration.md
+  - Mutation testing: mutation.md
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - navigation.top
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+
+validation:
+  links:
+    anchors: warn
+    unrecognized_links: warn
