@@ -6,9 +6,10 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_SORT_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_SORT_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // count_true, first_position, writable_bools
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <ranges>                                       // borrowed_iterator_t, end, size
+#include <xstd/bits/bit_algorithm/detail/count.hpp>    // count_true
+#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // first_position, writable_bools
+#include <xstd/bits/detail/ownership.hpp>              // storage_access
+#include <ranges>                                      // borrowed_iterator_t, end, size
 
 namespace xstd::ranges {
 

@@ -6,9 +6,9 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_DISJOINT_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_DISJOINT_HPP
 
-#include <xstd/bits/bit_algorithm/bit_intersects.hpp>   // bit_intersects
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // reads_keys
-#include <type_traits>                                  // type_identity_t
+#include <xstd/bits/bit_algorithm/bit_intersects.hpp> // bit_intersects
+#include <xstd/bits/detail/ownership.hpp>             // reads_keys
+#include <type_traits>                                // type_identity_t
 
 namespace xstd::ranges {
 

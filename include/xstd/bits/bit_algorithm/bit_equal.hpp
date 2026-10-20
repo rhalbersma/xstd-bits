@@ -6,8 +6,9 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_EQUAL_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_EQUAL_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // comparable_readings, reads_keys
-#include <xstd/bits/bit_algorithm/detail/compare.hpp>   // equal_bools, equal_keys
+#include <xstd/bits/bit_algorithm/detail/comparable.hpp> // comparable_readings
+#include <xstd/bits/bit_algorithm/detail/compare.hpp>    // equal_bools, equal_keys
+#include <xstd/bits/detail/ownership.hpp>                // reads_keys
 
 namespace xstd::ranges {
 

@@ -8,7 +8,7 @@
 
 #include <concepts>    // derived_from, same_as
 #include <cstddef>     // size_t
-#include <type_traits> // conditional_t, is_const_v, is_volatile_v, remove_const_t
+#include <type_traits> // conditional_t, is_const_v, is_volatile_v, remove_const_t, remove_cvref_t
 
 namespace xstd::bits::detail {
 
@@ -129,6 +129,14 @@ concept owner_of =
         owner_reading<Owner, R> and
         std::same_as<typename owned_storage<std::remove_const_t<Owner>>::bits_type, std::remove_const_t<Bits>> and
         (std::is_const_v<Bits> or not std::is_const_v<Owner>);
+
+// A container or view of this library that reads its blocks as bools.
+template<class R>
+concept reads_bools = reads<std::remove_cvref_t<R>, sequence_reading_tag>;
+
+// One that reads them as keys.
+template<class R>
+concept reads_keys = reads<std::remove_cvref_t<R>, set_reading_tag>;
 
 } // namespace xstd::bits::detail
 

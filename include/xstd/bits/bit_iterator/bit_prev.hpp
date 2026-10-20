@@ -6,9 +6,9 @@
 #ifndef XSTD_BITS_BIT_ITERATOR_BIT_PREV_HPP
 #define XSTD_BITS_BIT_ITERATOR_BIT_PREV_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // bit_iterator
-#include <xstd/bits/bit_iterator/bit_advance.hpp>       // bit_advance
-#include <iterator>                                     // bidirectional_iterator, iter_difference_t
+#include <xstd/bits/bit_iterator/bit_advance.hpp>     // bit_advance
+#include <xstd/bits/bit_iterator/detail/concepts.hpp> // bit_iterator
+#include <iterator>                                   // bidirectional_iterator, iter_difference_t
 
 namespace xstd::ranges {
 

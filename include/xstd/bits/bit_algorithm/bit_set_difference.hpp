@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_SET_DIFFERENCE_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_SET_DIFFERENCE_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // reads_keys
-#include <concepts>                                     // same_as
-#include <type_traits>                                  // type_identity_t
-#include <utility>                                      // declval
+#include <xstd/bits/detail/ownership.hpp> // reads_keys
+#include <concepts>                       // same_as
+#include <type_traits>                    // type_identity_t
+#include <utility>                        // declval
 
 namespace xstd::ranges {
 
