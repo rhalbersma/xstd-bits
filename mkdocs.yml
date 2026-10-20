@@ -7,7 +7,7 @@
 # README as the index and points each relative link at its page, or at its file on GitHub where the site has none.
 
 site_name: xstd-bits
-site_description: Your standard library for bit twiddling
+site_description: Bitwise extensions to the C++ Standard Library
 site_url: https://rhalbersma.github.io/xstd-bits/
 repo_url: https://github.com/rhalbersma/xstd-bits
 repo_name: rhalbersma/xstd-bits
