@@ -14,7 +14,8 @@ caller may ignore: postfix `++` and `--`, `insert`, `insert_range`, `emplace`, `
 `erase` and `erase_if`, the reference `push_back` and `emplace_back` return, and the `try_` and `unchecked_` doors.
 It carries it on every constructor but `basic_bit_array`'s from an `initializer_list`.
 
-This part covers the containers and the views. The library's own terms are used throughout:
+This page covers the containers, the views, the algorithms and the iterator operations. The library's own terms
+are used throughout:
 
 - A *block* is an unsigned integer holding bits. Position `i` is bit `i % D` of block `i / D`, where `D` is the
   block's `numeric_limits<Block>::digits`.
@@ -1437,3 +1438,550 @@ As `basic_bit_valarray`, over the small storage, with:
 - `bit_small_valarray<N>` holds its bools in `size_t` blocks, inline up to `N` of them, and `Alloc` defaults to
   Boost's own. Past the inline capacity the blocks move to the heap, and the elements stay what they were.
 - A `const` subscript gathers into a `basic_bit_small_valarray` of the same parameters.
+
+## `<xstd/bits/bit_algorithm.hpp>`
+
+```cpp
+namespace xstd::ranges {
+  // [alg.nonmodifying], non-modifying sequence operations
+  // [alg.all.of], all of
+  template<see below R>
+    constexpr auto bit_all_of(const R& r) noexcept -> bool;
+
+  // [alg.any.of], any of
+  template<see below R>
+    constexpr auto bit_any_of(const R& r) noexcept -> bool;
+
+  // [alg.none.of], none of
+  template<see below R>
+    constexpr auto bit_none_of(const R& r) noexcept -> bool;
+
+  // [alg.foreach], for each
+  template<class R, class F>
+      requires see below
+    constexpr auto bit_for_each(R&& r, F f) -> ranges::for_each_result<ranges::borrowed_iterator_t<R>, F>;
+  template<class R, class F>
+      requires see below
+    constexpr auto bit_for_each(R&& r, F f) -> ranges::for_each_result<ranges::borrowed_iterator_t<R>, F>;
+
+  // [alg.find], find
+  template<see below R>
+    constexpr auto bit_find(R&& r, bool value) noexcept -> ranges::borrowed_iterator_t<R>;
+
+  // [alg.find.last], find last
+  template<see below R>
+    constexpr auto bit_find_last(R&& r, bool value) noexcept -> ranges::borrowed_subrange_t<R>;
+
+  // [alg.count], count
+  template<see below R>
+    constexpr auto bit_count(const R& r, bool value) noexcept -> ranges::range_difference_t<const R>;
+
+  // [mismatch], mismatch
+  template<class R1, class R2>
+      requires see below
+    constexpr auto bit_mismatch(R1&& r1, R2&& r2) noexcept
+      -> ranges::mismatch_result<ranges::borrowed_iterator_t<R1>, ranges::borrowed_iterator_t<R2>>;
+
+  // [alg.equal], equal
+  template<class R1, class R2>
+      requires see below
+    constexpr auto bit_equal(const R1& r1, const R2& r2) noexcept -> bool;
+
+  // [alg.modifying.operations], mutating sequence operations
+  // [alg.copy], copy
+  template<see below R, see below O>
+    constexpr auto bit_copy(R&& r, O out) noexcept -> ranges::copy_result<ranges::borrowed_iterator_t<R>, O>;
+  template<see below R, see below O>
+    constexpr auto bit_copy_backward(R&& r, O out_last) noexcept
+      -> ranges::copy_backward_result<ranges::borrowed_iterator_t<R>, O>;
+
+  // [alg.move], move
+  template<see below R, see below O>
+    constexpr auto bit_move(R&& r, O out) noexcept -> ranges::move_result<ranges::borrowed_iterator_t<R>, O>;
+
+  // [alg.swap], swap
+  template<see below R1, see below R2>
+    constexpr auto bit_swap_ranges(R1&& r1, R2&& r2) noexcept
+      -> ranges::swap_ranges_result<ranges::borrowed_iterator_t<R1>, ranges::borrowed_iterator_t<R2>>;
+
+  // [alg.transform], transform
+  template<see below R, see below O, see below F>
+    constexpr auto bit_transform(R&& r, O out, F f)
+      -> ranges::unary_transform_result<ranges::borrowed_iterator_t<R>, O>;
+  template<see below R1, see below R2, see below O, see below F>
+    constexpr auto bit_transform(R1&& r1, R2&& r2, O out, F f)
+      -> ranges::binary_transform_result<ranges::borrowed_iterator_t<R1>, ranges::borrowed_iterator_t<R2>, O>;
+
+  // [alg.fill], fill
+  template<see below R>
+    constexpr auto bit_fill(R&& r, bool value) noexcept -> ranges::borrowed_iterator_t<R>;
+
+  // [alg.reverse], reverse
+  template<see below R>
+      requires see below
+    constexpr auto bit_reverse(R&& r) noexcept -> ranges::borrowed_iterator_t<R>;
+  template<see below R, see below O>
+    constexpr auto bit_reverse_copy(R&& r, O out) noexcept
+      -> ranges::reverse_copy_result<ranges::borrowed_iterator_t<R>, O>;
+
+  // [alg.rotate], rotate
+  template<see below R>
+      requires see below
+    constexpr auto bit_rotate(R&& r, ranges::iterator_t<R> middle) noexcept -> ranges::borrowed_subrange_t<R>;
+  template<see below R, see below O>
+    constexpr auto bit_rotate_copy(R&& r, ranges::iterator_t<R> middle, O out) noexcept
+      -> ranges::rotate_copy_result<ranges::borrowed_iterator_t<R>, O>;
+
+  // [alg.shift], shift
+  template<see below R>
+      requires see below
+    constexpr auto bit_shift_left(R&& r, ranges::range_difference_t<R> n) noexcept
+      -> ranges::borrowed_subrange_t<R>;
+  template<see below R>
+      requires see below
+    constexpr auto bit_shift_right(R&& r, ranges::range_difference_t<R> n) noexcept
+      -> ranges::borrowed_subrange_t<R>;
+
+  // [alg.sorting], sorting and related operations
+  template<see below R>
+    constexpr auto bit_sort(R&& r) noexcept -> ranges::borrowed_iterator_t<R>;
+  template<see below R>
+    constexpr auto bit_is_sorted(const R& r) noexcept -> bool;
+
+  // [alg.partitions], partitions
+  template<see below R>
+    constexpr auto bit_is_partitioned(const R& r) noexcept -> bool;
+  template<see below R>
+    constexpr auto bit_partition(R&& r) noexcept -> ranges::borrowed_subrange_t<R>;
+  template<see below R>
+    constexpr auto bit_partition_point(R&& r) noexcept -> ranges::borrowed_iterator_t<R>;
+
+  // [includes], includes, with intersects and disjoint beside it
+  template<see below S>
+    constexpr auto bit_includes(const S& s1, const type_identity_t<S>& s2) noexcept -> bool;
+  template<see below S>
+    constexpr auto bit_intersects(const S& s1, const type_identity_t<S>& s2) noexcept -> bool;
+  template<see below S>
+    constexpr auto bit_disjoint(const S& s1, const type_identity_t<S>& s2) noexcept -> bool;
+
+  // [alg.set.operations], set operations, each returning the set
+  template<see below S>
+      requires requires (const S& s) { { s | s } -> same_as<S>; }
+    constexpr auto bit_set_union(const S& s1, const type_identity_t<S>& s2) noexcept(see below) -> S;
+  template<see below S>
+      requires requires (const S& s) { { s & s } -> same_as<S>; }
+    constexpr auto bit_set_intersection(const S& s1, const type_identity_t<S>& s2) noexcept(see below) -> S;
+  template<see below S>
+      requires requires (const S& s) { { s - s } -> same_as<S>; }
+    constexpr auto bit_set_difference(const S& s1, const type_identity_t<S>& s2) noexcept(see below) -> S;
+  template<see below S>
+      requires requires (const S& s) { { s ^ s } -> same_as<S>; }
+    constexpr auto bit_set_symmetric_difference(const S& s1, const type_identity_t<S>& s2) noexcept(see below) -> S;
+
+  // [alg.three.way], three-way comparison algorithms
+  template<class R1, class R2>
+      requires see below
+    constexpr auto bit_lexicographical_compare_three_way(const R1& r1, const R2& r2) noexcept -> strong_ordering;
+}
+```
+
+Each algorithm has a header of its own under `<xstd/bits/bit_algorithm/>`, named after it, and the umbrella exports
+them in the order `<algorithm>` gives their counterparts, `bit_intersects` and `bit_disjoint` beside
+`bit_includes`. Each is specified as the `std::ranges` algorithm it is named after, *with* what the packing changes.
+What every one of them changes is stated here once:
+
+- **No function object but the caller's.** None takes a projection. Where the counterpart takes a predicate it is
+  `identity()`, so `bit_all_of(r)` is `ranges::all_of(r, identity())`; where it takes a comparison it is
+  `ranges::less`, so `bit_sort(r)` is `ranges::sort(r)`; a value searched, counted or filled is a `bool`. Only
+  `bit_for_each` and `bit_transform` take a function, and the set operations return a set where
+  [[alg.set.operations]](https://eel.is/c++draft/alg.set.operations) writes through an output iterator.
+- **Ranges of ours alone.** The constraints admit the library's own owners, views and iterators, whose blocks the
+  algorithm reads, and nothing else: `vector<bool>`, `set<size_t>` and their iterators are turned away, as is a
+  sequence where a set is asked for and a set where a sequence is. The `std::ranges` algorithms run over those and
+  over ours alike.
+- **A block at a time.** Complexity is counted in block operations, each a read, write or popcount of one block. `N`
+  is the size of the range, `D` the digits of its block, and O(`N`/`D`) means at most a constant times
+  ⌈`N`/`D`⌉ + 1.
+- **The counterpart's results.** Each returns the type its counterpart returns, so the iterator into an rvalue owner
+  is `ranges::dangling`. Every algorithm that calls no function of the caller's is `noexcept`; `bit_for_each` and
+  `bit_transform` throw what their function throws, and a set operation is `noexcept` where its operator is.
+
+The constraints are exposition-only concepts in the code, written below as these phrases:
+
+- A *sequence of ours* is an owner or a view of the sequence reading, the valarray reading included:
+  `basic_bit_array`, `basic_bit_inplace_vector`, `basic_bit_vector`, `basic_bit_small_vector`, the valarrays,
+  `bit_span` and `bit_subspan`, `const` or not. A *whole sequence* is one that is not a window.
+- A sequence is *writable* where its storage is reached as writable: an owner that is not `const`, or a view of bits
+  that are not `const`, whatever the view's own `const`.
+- A *set of ours* is an owner or a view of the set reading: `basic_bit_set`, `basic_bit_fixed_set`,
+  `basic_bit_inplace_set`, `basic_bit_small_set`, `bit_set_view` and the aliases over them.
+- An *output iterator of ours* is an iterator of a sequence of ours that is `indirectly_writable<O, bool>`, a
+  view's or a window's included: `iterator`, never `const_iterator`.
+
+### `bit_all_of`, `bit_any_of`, `bit_none_of`
+
+As `ranges::all_of`, `ranges::any_of` and `ranges::none_of` in
+[[alg.all.of]](https://eel.is/c++draft/alg.all.of), [[alg.any.of]](https://eel.is/c++draft/alg.any.of) and
+[[alg.none.of]](https://eel.is/c++draft/alg.none.of), over `identity()`, with:
+
+- *Constraints:* `R` is a sequence of ours, a window included.
+- *Returns:* Whether every, some or no position of `r` is `true`: `true`, `false` and `true` on an empty sequence.
+- *Complexity:* O(`N`/`D`). A whole sequence asks its storage; a window asks the blocks it covers, its end blocks
+  masked to its own positions.
+
+### `bit_for_each`
+
+As `ranges::for_each` in [[alg.foreach]](https://eel.is/c++draft/alg.foreach), with:
+
+- *Constraints:* `invocable<F&, ranges::range_value_t<R>>` is modeled, and:
+  - for the first form, `R` is a sequence or a set of ours, a window included;
+  - for the second, `remove_cvref_t<R>` is `ranges::reverse_view<V>`, where `V` is a view of ours or a
+    `ranges::ref_view` of an owner of ours: what `views::reverse` makes of a view or of an lvalue owner.
+- *Effects:* Calls `f` with each element by value, a `bool` or a key, in the order `r` iterates. The second form
+  walks the range under the `reverse_view` against its order, so `bit_for_each(views::reverse(r), f)` is
+  `ranges::for_each(views::reverse(r), f)`.
+- *Returns:* `{ranges::end(r), std::move(f)}`.
+- *Complexity:* Exactly `ranges::distance(r)` applications of `f`, and one load per block. A set's keys come from
+  each block lowest first or highest first, as the set and the direction order them.
+- A functor that takes the element as a non-`const` lvalue reference is turned away, and of a functor overloaded on
+  value category the overload taking an rvalue is the one called.
+- A functor returning `bool` is called on every element, its answer ignored, as `ranges::for_each` calls it.
+
+### `bit_find`, `bit_find_last`
+
+As `ranges::find` and `ranges::find_last` in [[alg.find]](https://eel.is/c++draft/alg.find) and
+[[alg.find.last]](https://eel.is/c++draft/alg.find.last), with:
+
+- *Constraints:* `R` is a sequence of ours, a window included.
+- *Returns:* For `bit_find`, `ranges::begin(r) + i`, where `i` is the first position holding `value`, or
+  `ranges::size(r)` where none does. For `bit_find_last`, `{ranges::begin(r) + i, ranges::end(r)}`, where `i` is
+  the last such position, or `{ranges::end(r), ranges::end(r)}` where none is.
+- *Complexity:* O(`N`/`D`). `bit_find` reads up from the first block and `bit_find_last` down from the last, each
+  stopping at the block that holds the answer. A search for `false` reads the blocks complemented, at the same cost.
+
+### `bit_count`
+
+As `ranges::count` in [[alg.count]](https://eel.is/c++draft/alg.count), with:
+
+- *Constraints:* `R` is a sequence of ours, a window included.
+- *Returns:* The number of positions of `r` holding `value`, as `ranges::range_difference_t<const R>`, signed as
+  `ranges::count`'s result is: the ones popcounted, and the zeros as `ranges::size(r)` less the ones.
+- *Complexity:* O(`N`/`D`) popcounts. The padding of the last block is never counted.
+
+### `bit_mismatch`
+
+As `ranges::mismatch` in [[mismatch]](https://eel.is/c++draft/mismatch), with:
+
+- *Constraints:* `R1` is a sequence of ours, and `remove_cvref_t<R1>` and `remove_cvref_t<R2>` are the same type:
+  `bit_array<8>` and `bit_array<9>` are turned away.
+- *Effects:* Two whole sequences whose storage compares its blocks are compared a block at a time, at two run-time
+  sizes as well, stopping at the shorter's end, so set bits in the longer where the shorter has padding do not
+  count. Two windows are compared by `ranges::mismatch(r1, r2)` itself.
+- *Complexity:* O(min(`N1`, `N2`)/`D`) for two whole sequences; for two windows, `ranges::mismatch`'s.
+
+### `bit_equal`
+
+As `ranges::equal` in [[alg.equal]](https://eel.is/c++draft/alg.equal), with:
+
+- *Constraints:* `R1` and `R2` are of one reading and one width kind:
+  - both sequences of ours, or both sets of ours with the same `key_type`, `key_mapping_type` and `key_compare`;
+  - the width their types fix, a window's extent where it has one and otherwise its storage's, is the same, or both
+    widths are run-time values.
+
+  So `bit_array<8>` compares with `basic_bit_array<uint8_t, 8>` and `bit_vector` with `basic_bit_vector<uint8_t>`,
+  and `bit_array<8>` does not compare with `bit_vector`, with `bit_array<9>` or with `bit_fixed_set<8>`, nor
+  `bit_fixed_set<8>` with `bit_set` or with a set of the same keys under `greater<>`.
+- *Returns:* `ranges::equal(r1, r2)` over the elements in iteration order: for two sequences, whether the sizes and
+  every position agree; for two sets, whether they hold the same keys, at any two widths.
+- *Complexity:* Two whole operands over one storage type compare their own blocks, in O(`N`/`D`). Any other pair
+  compares 64-bit words assembled from each side's blocks at each side's offset, in O(`N1`/`D1` + `N2`/`D2`).
+- *Remarks:* The constraints admit exactly the pairs `bit_hash` hashes alike where their values are equal, so what
+  compares equal hashes equal. `bit_equal_to` is the transparent comparison over it.
+- A capacity of zero against a run-time width that holds bools compares their sizes.
+
+### `bit_copy`, `bit_copy_backward`, `bit_move`
+
+As `ranges::copy` and `ranges::copy_backward` in [[alg.copy]](https://eel.is/c++draft/alg.copy), and `ranges::move`
+in [[alg.move]](https://eel.is/c++draft/alg.move), with:
+
+- *Constraints:* `R` is a sequence of ours, a window included, and `O` is an output iterator of ours.
+- *Preconditions:* Where the destination lies in the blocks `r` reads, `out`, or for `bit_copy_backward` `out_last`,
+  is not in `(ranges::begin(r), ranges::end(r))`. These are [[alg.copy]](https://eel.is/c++draft/alg.copy)'s,
+  except that a destination exactly on its source is admitted.
+- *Effects:* The `N` positions of `r` are written a block of the destination at a time: lowest first for `bit_copy`
+  and `bit_move`, highest first for `bit_copy_backward`. Source and destination may sit at any offsets in storages
+  of different block types; the source's bits are assembled from its own blocks where the two differ, and each
+  destination block is written under the mask of the positions that remain, so no position outside the destination
+  range changes. Moving a `bool` is copying it.
+- *Complexity:* O(`N`/`D`), where `D` is the digits of the narrower of the two blocks.
+
+### `bit_swap_ranges`
+
+As `ranges::swap_ranges` in [[alg.swap]](https://eel.is/c++draft/alg.swap), with:
+
+- *Constraints:* `R1` and `R2` are writable sequences of ours, windows included.
+- *Effects:* Exchanges the first `M` = min(`ranges::size(r1)`, `ranges::size(r2)`) positions of the two, a block of
+  the narrower block type at a time, at any two offsets.
+- *Complexity:* O(`M`/`D`), where `D` is the digits of the narrower block.
+
+### `bit_transform`
+
+As `ranges::transform` in [[alg.transform]](https://eel.is/c++draft/alg.transform), with:
+
+- *Constraints:* `R`, or `R1` and `R2`, are sequences of ours, windows included; `O` is an output iterator of ours;
+  `invocable<F&, bool>`, or `invocable<F&, bool, bool>`, is modeled and its result converts to `bool`. A function
+  taking `bool&`, or answering a `string`, is turned away.
+- *Effects:* The unary form calls `f(false)` and `f(true)` once each; the binary form calls `f` once at each of the
+  four pairs. The answers make a truth table that is applied as one block expression, a block of the destination at
+  a time as `bit_copy` writes it: for the unary form `(x & T) | (~x & U)`, where `T` and `U` are all ones or all
+  zeros as `f(true)` and `f(false)` answer. The binary form goes as far as the shorter input. `out` may be
+  `ranges::begin(r1)`, as [[alg.transform]](https://eel.is/c++draft/alg.transform) allows.
+- *Complexity:* Exactly two applications of `f` for the unary form and four for the binary, whatever `N`, an empty
+  input included; O(`N`/`D`) block operations.
+- *Remarks:* The positions written are those `ranges::transform` writes; a function with side effects sees two or
+  four calls where `ranges::transform` makes one per element.
+
+### `bit_fill`
+
+As `ranges::fill` in [[alg.fill]](https://eel.is/c++draft/alg.fill), with:
+
+- *Constraints:* `R` is a writable sequence of ours, a window included.
+- *Effects:* A whole sequence fills every block of its storage; a window sets its own positions, its end blocks
+  masked, and leaves every other position as it was.
+- *Complexity:* O(`N`/`D`).
+
+### `bit_reverse`
+
+As `ranges::reverse` in [[alg.reverse]](https://eel.is/c++draft/alg.reverse), with:
+
+- *Constraints:* `R` is a whole sequence of ours whose storage is writable: an owner that is not `const`, or a whole
+  view of bits that are not `const`. A window, which shares its end blocks with positions outside it, is turned
+  away.
+- *Effects:* Position `i` takes position `N - 1 - i`: the blocks in reverse order, each block's bits reversed, and
+  the padding, which then lies at the bottom, shifted out. The padding stays clear.
+- *Returns:* `ranges::end(r)`.
+- *Complexity:* O(`N`/`D`), without allocating.
+
+### `bit_reverse_copy`
+
+As `ranges::reverse_copy` in [[alg.reverse]](https://eel.is/c++draft/alg.reverse), with:
+
+- *Constraints:* As for `bit_copy`.
+- *Effects:* Each block of the destination is read from the top of `r`, its bits reversed, and written as `bit_copy`
+  writes it.
+- *Complexity:* As for `bit_copy`.
+
+### `bit_rotate`
+
+As `ranges::rotate` in [[alg.rotate]](https://eel.is/c++draft/alg.rotate), with:
+
+- *Constraints:* As for `bit_reverse`.
+- *Preconditions:* `middle` is in `[ranges::begin(r), ranges::end(r)]`, checked by an `assert`.
+- *Effects:* Position `i` takes position (`i` + `m`) mod `N`, for `m = middle - ranges::begin(r)`, so a whole turn
+  is no turn. The blocks rotate by whole blocks, then a funnel shift moves the remaining bits across each boundary.
+- *Returns:* `{ranges::begin(r) + (ranges::end(r) - middle), ranges::end(r)}`.
+- *Complexity:* O(`N`/`D`), without allocating.
+- *Remarks:* It moves no proxy through the standard library, so it is exact over proxy references where libstdc++'s
+  `ranges::rotate` before version 16 is not ([GCC PR 121913](https://gcc.gnu.org/PR121913)). The `rotr(n)` of
+  [P3103R2](https://wg21.link/P3103R2) is `bit_rotate(v, v.begin() + n)`, and its `rotl(n)` is
+  `bit_rotate(v, v.end() - n)`.
+
+### `bit_rotate_copy`
+
+As `ranges::rotate_copy` in [[alg.rotate]](https://eel.is/c++draft/alg.rotate), with:
+
+- *Constraints:* As for `bit_copy`.
+- *Preconditions:* `middle` is in `[ranges::begin(r), ranges::end(r)]`, checked by an `assert`.
+- *Effects:* Copies `[middle, ranges::end(r))` and then `[ranges::begin(r), middle)`, each as `bit_copy` does.
+- *Complexity:* As for `bit_copy`.
+
+### `bit_shift_left`, `bit_shift_right`
+
+As `ranges::shift_left` and `ranges::shift_right` in [[alg.shift]](https://eel.is/c++draft/alg.shift), with:
+
+- *Constraints:* As for `bit_reverse`.
+- *Preconditions:* `0 <= n`, checked by an `assert`.
+- *Effects:* None where `n == 0` or `n >= N`. Otherwise `bit_shift_left` moves position `i + n` to `i`, and
+  `bit_shift_right` position `i` to `i + n`, for every `i < N - n`. The `n` positions vacated are `false`, where
+  [[alg.shift]](https://eel.is/c++draft/alg.shift) leaves them valid but unspecified.
+- *Returns:* As [[alg.shift]](https://eel.is/c++draft/alg.shift): for `bit_shift_left`,
+  `{ranges::begin(r), ranges::begin(r) + (N - n)}` where `n < N` and `{ranges::begin(r), ranges::begin(r)}`
+  otherwise; for `bit_shift_right`, `{ranges::begin(r) + n, ranges::end(r)}` where `n < N` and
+  `{ranges::end(r), ranges::end(r)}` otherwise.
+- *Complexity:* O(`N`/`D`).
+- *Remarks:* A sequence's front is a bit string's low end, so `bit_shift_left` is the storage's `>>=` and
+  `bit_shift_right` its `<<=`.
+
+### `bit_sort`
+
+As `ranges::sort` in [[alg.sorting]](https://eel.is/c++draft/alg.sorting), `false` ordered before `true`, with:
+
+- *Constraints:* `R` is a writable sequence of ours, a window included.
+- *Effects:* Counts the `k` positions that are `true`, then sets the first `N - k` positions `false` and the last `k`
+  `true`. Every `false` is like every other, so the result is `ranges::stable_sort`'s too.
+- *Complexity:* O(`N`/`D`).
+
+### `bit_is_sorted`, `bit_is_partitioned`
+
+As `ranges::is_sorted` in [[alg.sorting]](https://eel.is/c++draft/alg.sorting) and `ranges::is_partitioned` in
+[[alg.partitions]](https://eel.is/c++draft/alg.partitions), over `identity()`, with:
+
+- *Constraints:* `R` is a sequence of ours, a window included.
+- *Returns:* For `bit_is_sorted`, whether no `false` follows the first `true`; for `bit_is_partitioned`, whether no
+  `true` follows the first `false`.
+- *Complexity:* O(`N`/`D`): two searches, the second from where the first stopped.
+
+### `bit_partition`
+
+As `ranges::partition` in [[alg.partitions]](https://eel.is/c++draft/alg.partitions), over `identity()`, with:
+
+- *Constraints:* `R` is a writable sequence of ours, a window included.
+- *Effects:* Counts the `k` positions that are `true`, then sets the first `k` positions `true` and the rest
+  `false`.
+- *Returns:* `{ranges::begin(r) + k, ranges::end(r)}`.
+- *Complexity:* O(`N`/`D`).
+
+### `bit_partition_point`
+
+As `ranges::partition_point` in [[alg.partitions]](https://eel.is/c++draft/alg.partitions), over `identity()`, with:
+
+- *Constraints:* `R` is a sequence of ours, a window included.
+- *Preconditions:* `r` is partitioned, as [[alg.partitions]](https://eel.is/c++draft/alg.partitions) requires.
+- *Returns:* `ranges::begin(r) + i`, where `i` is the first position that is `false`, or `ranges::size(r)`.
+- *Complexity:* O(`i`/`D`): a search up to the block holding the first `false`, where
+  [[alg.partitions]](https://eel.is/c++draft/alg.partitions) bisects.
+
+### `bit_includes`, `bit_intersects`, `bit_disjoint`
+
+As `ranges::includes` in [[includes]](https://eel.is/c++draft/includes), and as whether `ranges::set_intersection`
+in [[set.intersection]](https://eel.is/c++draft/set.intersection) would write a key, or none, with:
+
+- *Constraints:* `S` is a set of ours, a view included. The second parameter is `const type_identity_t<S>&`, so `S`
+  deduces from `s1` alone and `s2` converts to it: a flag set takes a flag second,
+  `bit_includes(perms, fs::perms::owner_read)`, and `bit_fixed_set<8>` with `bit_fixed_set<9>` is turned away.
+- *Returns:*
+  - `bit_includes`: whether every key of `s2` is a key of `s1`, as `ranges::includes(s1, s2, s1.key_comp())`;
+  - `bit_intersects`: whether some key is a key of both;
+  - `bit_disjoint`: `not bit_intersects(s1, s2)`.
+- *Complexity:* O(`K`), where `K` is the number of blocks of the wider. The blocks both storages hold are compared
+  pairwise, and `bit_includes` also asks whether `s2` holds a key in the blocks above `s1`'s. A width of zero
+  fixed in the type is answered without a block: `true` for `bit_includes`, `false` for `bit_intersects`.
+- They answer at any two run-time widths.
+- *Remarks:* `x` is a subset of `y` where `bit_includes(y, x)`, and a proper one where `not bit_includes(x, y)` as
+  well; every other relation between two sets is spelled from these three.
+
+### `bit_set_union`, `bit_set_intersection`, `bit_set_difference`, `bit_set_symmetric_difference`
+
+As `ranges::set_union`, `ranges::set_intersection`, `ranges::set_difference` and
+`ranges::set_symmetric_difference` in [[set.union]](https://eel.is/c++draft/set.union),
+[[set.intersection]](https://eel.is/c++draft/set.intersection),
+[[set.difference]](https://eel.is/c++draft/set.difference) and
+[[set.symmetric.difference]](https://eel.is/c++draft/set.symmetric.difference), returning the set rather than
+writing through an output iterator, with:
+
+- *Constraints:* `S` is a set of ours whose operator `|`, `&`, `-` or `^` respectively answers an `S`: an owner. A
+  view, which has no result to hold, is turned away. `s2` converts to `S`, as for `bit_includes`.
+- *Returns:* `s1 | s2`, `s1 & s2`, `s1 - s2` and `s1 ^ s2`: the set that
+  [range-v3](https://github.com/ericniebler/range-v3)'s `views::set_union(s1, s2, s1.key_comp())` and its siblings
+  would hold, of the first argument's type, whatever widths held the keys.
+- *Complexity:* That of the operator.
+- *Remarks:* The exception specification is `noexcept(declval<const S&>() | declval<const S&>())`, with the
+  operator each one calls.
+
+### `bit_lexicographical_compare_three_way`
+
+As `lexicographical_compare_three_way` in [[alg.three.way]](https://eel.is/c++draft/alg.three.way), over two ranges
+rather than two iterator pairs, the shape [P2022R3](https://wg21.link/P2022R3) proposes for
+`ranges::lexicographical_compare_three_way`, with:
+
+- *Constraints:* As for `bit_equal`.
+- *Returns:* `lexicographical_compare_three_way(ranges::begin(r1), ranges::end(r1), ranges::begin(r2),
+  ranges::end(r2))`, a `strong_ordering`. Over two sequences, `false` precedes `true` and a prefix precedes the
+  longer sequence. Over two sets it is `set`'s order, the keys compared lexicographically in iteration order:
+  ascending keys position by position, and descending ones as their masks compared as numbers.
+- *Complexity:* As for `bit_equal`.
+- *Remarks:* `lexicographical_compare(r1, r2)` is `bit_lexicographical_compare_three_way(r1, r2) < 0`.
+
+## `<xstd/bits/bit_iterator.hpp>`
+
+```cpp
+namespace xstd::ranges {
+  // [range.iter.ops], range iterator operations
+  template<see below I>
+    constexpr auto bit_advance(I& it, iter_difference_t<I> n) noexcept -> void;
+  template<see below I>
+    constexpr auto bit_advance(I& it, iter_difference_t<I> n, I bound) noexcept -> iter_difference_t<I>;
+
+  template<see below I>
+    constexpr auto bit_distance(I first, I last) noexcept -> iter_difference_t<I>;
+  template<ranges::common_range R>
+      requires see below
+    constexpr auto bit_distance(R&& r) noexcept -> ranges::range_difference_t<R>;
+
+  template<see below I>
+    constexpr auto bit_next(I it, iter_difference_t<I> n) noexcept -> I;
+  template<see below I>
+    constexpr auto bit_next(I it, iter_difference_t<I> n, I bound) noexcept -> I;
+
+  template<see below I>
+      requires bidirectional_iterator<I>
+    constexpr auto bit_prev(I it, iter_difference_t<I> n) noexcept -> I;
+  template<see below I>
+      requires bidirectional_iterator<I>
+    constexpr auto bit_prev(I it, iter_difference_t<I> n, I bound) noexcept -> I;
+}
+```
+
+The iterator operations over any iterator of ours, each in a header of its own under `<xstd/bits/bit_iterator/>`. A
+sequence's iterator is random access and steps by an offset, so over it each is its `std::ranges` counterpart. A
+set's iterator is bidirectional and steps a key at a time, so over it each skips whole blocks by their popcount and
+selects within the block that holds its target: select is `*bit_next(s.begin(), n)`, and the rank of `k` is
+`bit_distance(s.begin(), s.lower_bound(k))`.
+
+An *iterator of ours* is an iterator of a sequence or a set of ours, `const` or not, a view's or a window's
+included; `vector<bool>::iterator` and `set<size_t>::iterator` are turned away. Only the forms that take a count are
+provided: there is no `bit_advance(it, bound)`, `bit_next(it)`, `bit_next(it, bound)` or `bit_prev(it)`.
+
+### `bit_advance`
+
+As `ranges::advance` in [[range.iter.ops]](https://eel.is/c++draft/range.iter.ops), with:
+
+- *Constraints:* `I` is an iterator of ours.
+- *Preconditions:* As [[range.iter.ops]](https://eel.is/c++draft/range.iter.ops)'s. For the first form over a set,
+  the `n` keys are there to step over, checked by an `assert`.
+- *Effects:* Over a sequence, `ranges::advance(it, n)` and `ranges::advance(it, n, bound)`. Over a set, moves `it`
+  `n` keys on in the set's order, or `-n` back, skipping whole blocks by their popcount and selecting the key within
+  the block that holds it, from the block's top where the walk goes down; the second form stops at `bound`.
+- *Returns:* For the second form, the steps not taken, with the sign of `n`, as `ranges::advance(it, n, bound)`
+  answers them.
+- *Complexity:* Constant over a sequence. Over a set, linear in the number of blocks between `it` and where it
+  stops, rather than one step per key.
+- A view's iterators step over the keys it views, its owner's or lent blocks, and an empty set's `begin()` is its
+  `end()`.
+
+### `bit_distance`
+
+As `ranges::distance` in [[range.iter.ops]](https://eel.is/c++draft/range.iter.ops), with:
+
+- *Constraints:* For the first form, `I` is an iterator of ours. For the second, `R` models `ranges::common_range`
+  and its iterator is an iterator of ours.
+- *Preconditions:* `[first, last)` denotes a range.
+- *Returns:* For the first form, `ranges::distance(first, last)` over a sequence, and over a set the number of keys
+  in `[first, last)`. For the second, `ranges::distance(r)` where `R` models `ranges::sized_range`, as a set does,
+  and otherwise `bit_distance(ranges::begin(r), ranges::end(r))`: so
+  `bit_distance(subrange(s.lower_bound(a), s.lower_bound(b)))` counts the keys in `[a, b)`.
+- *Complexity:* Constant over a sequence and over a sized range. Over a set's iterators, linear in the number of
+  blocks between them: a popcount of the whole blocks and of the masked ends.
+- *Remarks:* Counting a set's keys is a distance and not a count: `ranges::count(s, k)` asks how often `k` occurs,
+  which `s.contains(k)` answers.
+
+### `bit_next`, `bit_prev`
+
+As `ranges::next` and `ranges::prev` in [[range.iter.ops]](https://eel.is/c++draft/range.iter.ops), with:
+
+- *Constraints:* `I` is an iterator of ours, and for `bit_prev` it models `bidirectional_iterator`, as
+  `ranges::prev` asks.
+- *Effects:* `bit_next` calls `bit_advance(it, n)`, or `bit_advance(it, n, bound)`, on its copy `it`; `bit_prev`
+  calls them with `-n`.
+- *Returns:* `it`.
+- *Complexity:* As for `bit_advance`.
