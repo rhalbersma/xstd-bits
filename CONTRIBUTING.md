@@ -227,6 +227,8 @@ The names to tick under branch protection, exactly as GitHub reports them:
 
 Codecov posts two more, `codecov/project` and `codecov/patch`, which carry the same 100% bar for the whole tree and for the diff.
 
+Each ladder's required `all` is this repository's own job, carrying the name beside the shared ladder it waits for. On a pull request, [`changes.yml`](.github/workflows/changes.yml) first compares the diff with the paths no ladder builds: prose, the README included, since no README example is compiled; `doc/`; `tools/`; `fuzz/`, which ClusterFuzzLite alone builds; `mkdocs.yml`; and the workflows that are not ladders. `benchmark/` and `examples/` are not among them: the GCC ladder smoke-runs the one, and `test/` compiles against the other's `include/`. When every changed file is one of those, the ladder is skipped and its gate passes; any other file, a new directory included, runs the ladder, reduced for a compiler ladder as above, and the gate passes only if every leg did. Any other event, a manual run and the canary's nightly dispatch among them, always builds. The names under branch protection do not change.
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under the [Boost Software License, Version 1.0](LICENSE_1_0.txt), the same license that covers the rest of this repository.

@@ -19,8 +19,14 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Whether this pull request can reach what the ladders build; see changes.yml.
+  changes:
+    uses: ./.github/workflows/changes.yml
+
   # Every rung, and the rungs move with cpp-ci rather than with a local matrix. The one ladder that builds the benchmark tree, now that XSTD_BITS_BUILD_BENCHMARKS is off by default. Its Release legs run the smoke test benchmark/CMakeLists.txt registers -- --benchmark_min_time=1x, that it runs rather than what it costs -- so the benchmarks keep compiling and executing against the current API without every other leg paying to build them.
-  gcc:
+  gcc_ladder:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       cmake_args: -DXSTD_BITS_BUILD_BENCHMARKS=ON
@@ -40,6 +46,8 @@ jobs:
   # to std::inplace_vector, or to anything else this column leans on, while it is still a change. The stable rung
   # stays out -- GCC 15 has no such header, so it would configure and then test static_vector a second time.
   gcc_cxx26:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       tiers: qualification,development
@@ -47,6 +55,8 @@ jobs:
 
   # 32-bit x86: a 32-bit size_t, 4-byte alignment for 64-bit integers, and no __int128. One rung in Debug, since what is under test is the target.
   i686:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       arch: x86
@@ -56,8 +66,23 @@ jobs:
   # A release against libstdc++ with _GLIBCXX_ASSERTIONS, as several distributions build: NDEBUG turns assert off, and
   # the hardened library turns XSTD_BITS_ASSERT back on, so std::vector<bool> and bit_vector trap on the same misuse.
   hardened:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       tiers: stable
       build_types: Release
       cxx_flags: -D_GLIBCXX_ASSERTIONS
+
+  # The name branch protection requires: green when the ladder passed, or when the pull request changes nothing it builds.
+  all:
+    name: gcc / all
+    needs: [ changes, gcc_ladder ]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Every leg succeeded, or none was needed
+        env:
+          BUILD: ${{ needs.changes.outputs.build }}
+          RESULT: ${{ needs.gcc_ladder.result }}
+        run: test "${BUILD}" = false || test "${RESULT}" = success
