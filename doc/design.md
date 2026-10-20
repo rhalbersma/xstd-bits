@@ -686,8 +686,9 @@ The run-time widths take `from_blocks` too, with a different argument: not a blo
 adopt. The constructor is `flat_set`'s container constructor under the tag -- `block_container_type` by value, moved
 in, with an allocator-extended form beside it -- and `flat_set`'s pair completes it: `extract() &&` hands out
 `block_container_type` -- the `std::vector`, `inplace_blocks` or `small_vector` of blocks -- and leaves the owner
-at width zero, and `replace(block_container_type&&)` takes one back. All three are a move and nothing else, on every
-reading's run-time-width owner and on no view, since a view has nothing of its own to hand. The static widths' tag
+at width zero, and `replace(block_container_type&&)` takes one back. All three are a move and nothing else, on the
+sequence and set readings' run-time-width owners and on no view, since a view has nothing of its own to hand; the
+valarrays take the adopting constructor alone. The static widths' tag
 constructor requires a width in the type and the adopting one a width in the object, so the two never meet.
 
 Each owner deduces through guides of its own. `basic_bit_vector(from_blocks, std::move(v))` deduces

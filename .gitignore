@@ -9,3 +9,6 @@
 # Written into the source tree by the Coverage workflow and by a local gcovr run.
 /coverage.txt
 /coverage.xml
+
+# Written beside a script by Python whenever the script is imported or compiled.
+__pycache__/
