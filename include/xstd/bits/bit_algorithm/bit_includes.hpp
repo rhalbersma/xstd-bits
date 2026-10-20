@@ -16,7 +16,6 @@
 namespace xstd::ranges {
 
 // std::ranges::includes(s1, s2), a block at a time; s2 converts to s1's type, as a flag does to its flag set.
-// std::ranges::includes(s1, s2), a block at a time; s2 converts to s1's type, as a flag does to its flag set.
 template<bits::detail::reads_keys S>
 [[nodiscard]] constexpr auto bit_includes(S const& s1, std::type_identity_t<S> const& s2) noexcept
         -> bool
