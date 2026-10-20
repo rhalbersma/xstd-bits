@@ -21,7 +21,7 @@ on:
 jobs:
   # All three rungs. C2976 went when the views became class templates with their own deduction guides, and the two workarounds the rung had paid for -- decay_copy in place of auto(x), one typename on a constrained parameter -- are back, so MSVC 17 builds this again.
   msvc:
-    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       tiers: stable,qualification,development
       # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so

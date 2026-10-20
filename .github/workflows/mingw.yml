@@ -21,7 +21,7 @@ on:
 jobs:
   # Every rung. The WinLibs release lookup lives in cpp-ci's install-winlibs action now.
   mingw:
-    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so
       # the nightly canary covers it, building every rung and build type on main.
@@ -31,7 +31,7 @@ jobs:
   # in std::inplace_vector. The qualification rung is MinGW 16, this ladder having no development rung -- WinLibs
   # publishes no snapshot.
   mingw_cxx26:
-    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       tiers: qualification
       cmake_args: -DXSTD_BITS_CXX_STANDARD=26

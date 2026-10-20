@@ -21,7 +21,7 @@ on:
 jobs:
   # Every rung. The libc++ leg is its own workflow now; what is left here is the libstdc++ side.
   clang:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    uses: rhalbersma/cpp-ci/.github/workflows/clang.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so
       # the nightly canary covers it, building every rung and build type on main.

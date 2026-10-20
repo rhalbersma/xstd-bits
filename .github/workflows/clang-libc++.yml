@@ -21,7 +21,7 @@ on:
 jobs:
   # The full ladder; the C++23 range adaptors libc++ lacks are no longer used, so all six legs pass.
   clang_libcxx:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so
       # the nightly canary covers it, building every rung and build type on main.
@@ -29,7 +29,7 @@ jobs:
 
   # A release against libc++ in its fast hardening mode, the one meant for production: XSTD_BITS_ASSERT follows it on.
   hardened:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       tiers: stable
       build_types: Release

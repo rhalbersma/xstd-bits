@@ -21,7 +21,7 @@ on:
 jobs:
   # Every rung, and the rungs move with cpp-ci rather than with a local matrix. The one ladder that builds the benchmark tree, now that XSTD_BITS_BUILD_BENCHMARKS is off by default. Its Release legs run the smoke test benchmark/CMakeLists.txt registers -- --benchmark_min_time=1x, that it runs rather than what it costs -- so the benchmarks keep compiling and executing against the current API without every other leg paying to build them.
   gcc:
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       cmake_args: -DXSTD_BITS_BUILD_BENCHMARKS=ON
       # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so
@@ -40,14 +40,14 @@ jobs:
   # to std::inplace_vector, or to anything else this column leans on, while it is still a change. The stable rung
   # stays out -- GCC 15 has no such header, so it would configure and then test static_vector a second time.
   gcc_cxx26:
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       tiers: qualification,development
       cmake_args: -DXSTD_BITS_CXX_STANDARD=26
 
   # 32-bit x86: a 32-bit size_t, 4-byte alignment for 64-bit integers, and no __int128. One rung in Debug, since what is under test is the target.
   i686:
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       arch: x86
       tiers: stable
@@ -56,7 +56,7 @@ jobs:
   # A release against libstdc++ with _GLIBCXX_ASSERTIONS, as several distributions build: NDEBUG turns assert off, and
   # the hardened library turns XSTD_BITS_ASSERT back on, so std::vector<bool> and bit_vector trap on the same misuse.
   hardened:
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
     with:
       tiers: stable
       build_types: Release
