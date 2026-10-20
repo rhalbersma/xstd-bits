@@ -1,4 +1,6 @@
-# `bit_distance`
+# `<xstd/bits/bit_iterator/bit_distance.hpp>`
+
+## `bit_distance`
 
 As `ranges::distance` in [[range.iter.ops]](https://eel.is/c++draft/range.iter.ops), with:
 

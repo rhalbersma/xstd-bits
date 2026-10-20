@@ -1,4 +1,6 @@
-# `bit_key_mapping`, `bit_range_mapping`, `bit_find_mapping`, `enum_traits`
+# `<xstd/bits/bit_set/bit_key_mapping.hpp>`
+
+## `bit_key_mapping`, `bit_range_mapping`, `bit_find_mapping`, `enum_traits`
 
 ```cpp
 template<class Key, Key First, size_t N>

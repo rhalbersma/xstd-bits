@@ -1,4 +1,6 @@
-# `from_blocks_t`, `from_blocks`
+# `<xstd/bits/bit_ranges/from_blocks.hpp>`
+
+## `from_blocks_t`, `from_blocks`
 
 As `from_range_t` and `from_range` in [[ranges.syn]](https://eel.is/c++draft/ranges.syn), with:
 

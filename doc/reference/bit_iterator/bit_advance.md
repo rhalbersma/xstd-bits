@@ -1,4 +1,6 @@
-# `bit_advance`
+# `<xstd/bits/bit_iterator/bit_advance.hpp>`
+
+## `bit_advance`
 
 As `ranges::advance` in [[range.iter.ops]](https://eel.is/c++draft/range.iter.ops), with:
 

@@ -1,4 +1,6 @@
-# `basic_bit_set`, `bit_set`
+# `<xstd/bits/bit_set/bit_set.hpp>`
+
+## `basic_bit_set`, `bit_set`
 
 ```cpp
 template<class Key, unsigned_integer Block, bit_index_mapping<Key> KeyMapping, see below Compare, class Allocator>

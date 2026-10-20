@@ -1,4 +1,6 @@
-# `bit_blocks_extent_v`
+# `<xstd/bits/bit_type_traits/bit_blocks_extent.hpp>`
+
+## `bit_blocks_extent_v`
 
 - *Constraints:* `Bits` models `bit_blocks`, so a `volatile` block or range of them names no extent.
 - *Value:* For `B` = `remove_cv_t<Bits>` and `D` the `xstd::numeric_limits<Block>::digits` of its block type:

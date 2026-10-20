@@ -1,4 +1,6 @@
-# `basic_bit_fixed_set`, `bit_fixed_set`
+# `<xstd/bits/bit_set/bit_fixed_set.hpp>`
+
+## `basic_bit_fixed_set`, `bit_fixed_set`
 
 ```cpp
 template<class Key, unsigned_integer Block, size_t N, bit_index_mapping<Key> KeyMapping, see below Compare>

@@ -1,4 +1,6 @@
-# `bit_convertible_to`
+# `<xstd/bits/bit_concepts/bit_convertible_to.hpp>`
+
+## `bit_convertible_to`
 
 ```cpp
 template<class From, class To>

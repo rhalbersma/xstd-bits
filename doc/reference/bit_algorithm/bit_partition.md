@@ -1,4 +1,6 @@
-# `bit_partition`
+# `<xstd/bits/bit_algorithm/bit_partition.hpp>`
+
+## `bit_partition`
 
 As `ranges::partition` in [[alg.partitions]](https://eel.is/c++draft/alg.partitions), over `identity()`, with:
 

@@ -1,4 +1,6 @@
-# `bit_includes`, `bit_intersects`, `bit_disjoint`
+# `<xstd/bits/bit_algorithm/bit_includes.hpp>`, `<xstd/bits/bit_algorithm/bit_intersects.hpp>`, `<xstd/bits/bit_algorithm/bit_disjoint.hpp>`
+
+## `bit_includes`, `bit_intersects`, `bit_disjoint`
 
 As `ranges::includes` in [[includes]](https://eel.is/c++draft/includes), and as whether `ranges::set_intersection`
 in [[set.intersection]](https://eel.is/c++draft/set.intersection) would write a key, or none, with:

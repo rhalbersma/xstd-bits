@@ -1,4 +1,6 @@
-# `bit_flag_mapping`
+# `<xstd/bits/bit_set/bit_flag_mapping.hpp>`
+
+## `bit_flag_mapping`
 
 ```cpp
 template<class Key, size_t N = see below>

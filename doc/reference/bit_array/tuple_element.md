@@ -1,4 +1,6 @@
-# `tuple_size`, `tuple_element`, `get`
+# `<xstd/bits/bit_array/tuple_element.hpp>`
+
+## `tuple_size`, `tuple_element`, `get`
 
 - As [[array.tuple]](https://eel.is/c++draft/array.tuple), with:
 - `tuple_size<basic_bit_array<Block, N>>` is `integral_constant<size_t, N>`.

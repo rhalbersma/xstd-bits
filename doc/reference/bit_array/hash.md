@@ -1,4 +1,6 @@
-# `hash`, `is_range`, `is_tuple_like`
+# `<xstd/bits/bit_array/hash.hpp>`, `<xstd/bits/bit_array/container_hash.hpp>`
+
+## `hash`, `is_range`, `is_tuple_like`
 
 - `hash<basic_bit_array<Block, N>>`: `operator()` is `noexcept` and returns
   `xstd::bit_hash<T, boost::hash2::xxhash_64>()(x)`, the hash of the bits. `array<bool, N>` has no hash; this one

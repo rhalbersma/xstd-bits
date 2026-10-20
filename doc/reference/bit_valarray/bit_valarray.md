@@ -1,4 +1,6 @@
-# `basic_bit_valarray`, `bit_valarray`
+# `<xstd/bits/bit_valarray/bit_valarray.hpp>`
+
+## `basic_bit_valarray`, `bit_valarray`
 
 ```cpp
 template<unsigned_integer Block, class Allocator>

@@ -1,4 +1,6 @@
-# `bit_set_view`
+# `<xstd/bits/bit_set/bit_set_view.hpp>`
+
+## `bit_set_view`
 
 ```cpp
 template<bit_blocks Blocks, size_t N>

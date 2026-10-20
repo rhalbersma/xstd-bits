@@ -1,4 +1,6 @@
-# `bit_fill`
+# `<xstd/bits/bit_algorithm/bit_fill.hpp>`
+
+## `bit_fill`
 
 As `ranges::fill` in [[alg.fill]](https://eel.is/c++draft/alg.fill), with:
 

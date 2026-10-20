@@ -1,4 +1,6 @@
-# `underlying_block_t`, `bit_underlying`
+# `<xstd/bits/bit_type_traits/bit_underlying.hpp>`
+
+## `underlying_block_t`, `bit_underlying`
 
 - `underlying_block_t<Key>`:
   - *Constraints:* `Key` is an enumeration, or models xstd-ints's `integer`; its underlying type, or `Key` itself,

@@ -1,4 +1,6 @@
-# `bit_align`
+# `<xstd/bits/bit_type_traits/bit_align.hpp>`
+
+## `bit_align`
 
 - *Constraints:* `remove_cv_t<Owner>` is a resizable owner.
 - *Result:* `bit_resize<K * D, Owner>`, where `N` is `Owner`'s width, `D` the digits of its block and `K` the

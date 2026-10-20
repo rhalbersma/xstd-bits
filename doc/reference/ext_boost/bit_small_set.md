@@ -1,4 +1,6 @@
-# `basic_bit_small_set`, `bit_small_set`
+# `<xstd/bits/ext/boost/bit_small_set.hpp>`
+
+## `basic_bit_small_set`, `bit_small_set`
 
 As `basic_bit_set`, over the small storage, with:
 

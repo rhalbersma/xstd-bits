@@ -46,11 +46,11 @@ namespace boost::container_hash {
 
 | Header | Declares |
 | :----- | :------- |
-| `<xstd/bits/ext/boost/bit_small_vector.hpp>` | `basic_bit_small_vector`, `bit_small_vector` |
-| `<xstd/bits/bit_vector/erase_if.hpp>` | `erase`, `erase_if` |
-| `<xstd/bits/ext/boost/bit_small_valarray.hpp>` | `basic_bit_small_valarray`, `bit_small_valarray` |
-| `<xstd/bits/ext/boost/bit_small_set.hpp>` | `basic_bit_small_set`, `bit_small_set` |
-| `<xstd/bits/bit_set/erase_if.hpp>` | `erase_if` |
+| [`<xstd/bits/ext/boost/bit_small_vector.hpp>`](bit_small_vector.md) | `basic_bit_small_vector`, `bit_small_vector` |
+| [`<xstd/bits/bit_vector/erase_if.hpp>`](../bit_vector/erase_if.md) | `erase`, `erase_if` |
+| [`<xstd/bits/ext/boost/bit_small_valarray.hpp>`](bit_small_valarray.md) | `basic_bit_small_valarray`, `bit_small_valarray` |
+| [`<xstd/bits/ext/boost/bit_small_set.hpp>`](bit_small_set.md) | `basic_bit_small_set`, `bit_small_set` |
+| [`<xstd/bits/bit_set/erase_if.hpp>`](../bit_set/erase_if.md) | `erase_if` |
 
 The three readings over the small storage, `boost::container::small_vector<Block, K, Alloc>` for `K = ceil(N / D)`:
 inline up to `N` bits, and on the heap past them. `<xstd/bits.hpp>` does not include this header, so the dependency

@@ -1,4 +1,6 @@
-# `bit_gslice`
+# `<xstd/bits/bit_valarray/bit_gslice.hpp>`
+
+## `bit_gslice`
 
 ```cpp
 class bit_gslice {

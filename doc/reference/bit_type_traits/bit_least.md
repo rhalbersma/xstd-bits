@@ -1,4 +1,6 @@
-# `least_block_t`, `bit_least`
+# `<xstd/bits/bit_type_traits/bit_least.hpp>`
+
+## `least_block_t`, `bit_least`
 
 - `least_block_t<N>` is the narrowest fixed-width block holding `N` bits in one: `uint8_t` where `N <= 8`, `uint16_t`
   where `N <= 16`, `uint32_t` where `N <= 32`, and `uint64_t` otherwise, of which `N` bits then take several.

@@ -1,4 +1,6 @@
-# `bit_for_each`
+# `<xstd/bits/bit_algorithm/bit_for_each.hpp>`
+
+## `bit_for_each`
 
 As `ranges::for_each` in [[alg.foreach]](https://eel.is/c++draft/alg.foreach), with:
 

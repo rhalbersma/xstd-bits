@@ -1,4 +1,6 @@
-# `fast_block_t`, `bit_fast`
+# `<xstd/bits/bit_type_traits/bit_fast.hpp>`
+
+## `fast_block_t`, `bit_fast`
 
 - `fast_block_t<N>` is the fastest fixed-width block of at least `N` bits in one, by the thresholds of
   `least_block_t`: `uint_fast8_t` where `N <= 8`, `uint_fast16_t` where `N <= 16`, `uint_fast32_t` where `N <= 32`,

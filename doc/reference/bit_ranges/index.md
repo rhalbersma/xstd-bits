@@ -10,4 +10,4 @@ namespace xstd {
 
 | Header | Declares |
 | :----- | :------- |
-| `<xstd/bits/bit_ranges/from_blocks.hpp>` | `from_blocks`, `from_blocks_t` |
+| [`<xstd/bits/bit_ranges/from_blocks.hpp>`](from_blocks.md) | `from_blocks`, `from_blocks_t` |

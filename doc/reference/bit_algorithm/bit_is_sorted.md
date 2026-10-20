@@ -1,4 +1,6 @@
-# `bit_is_sorted`, `bit_is_partitioned`
+# `<xstd/bits/bit_algorithm/bit_is_sorted.hpp>`, `<xstd/bits/bit_algorithm/bit_is_partitioned.hpp>`
+
+## `bit_is_sorted`, `bit_is_partitioned`
 
 As `ranges::is_sorted` in [[alg.sorting]](https://eel.is/c++draft/alg.sorting) and `ranges::is_partitioned` in
 [[alg.partitions]](https://eel.is/c++draft/alg.partitions), over `identity()`, with:

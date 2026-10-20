@@ -1,4 +1,6 @@
-# `bit_transform`
+# `<xstd/bits/bit_algorithm/bit_transform.hpp>`
+
+## `bit_transform`
 
 As `ranges::transform` in [[alg.transform]](https://eel.is/c++draft/alg.transform), with:
 

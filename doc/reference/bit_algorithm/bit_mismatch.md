@@ -1,4 +1,6 @@
-# `bit_mismatch`
+# `<xstd/bits/bit_algorithm/bit_mismatch.hpp>`
+
+## `bit_mismatch`
 
 As `ranges::mismatch` in [[mismatch]](https://eel.is/c++draft/mismatch), with:
 

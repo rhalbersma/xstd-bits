@@ -1,4 +1,6 @@
-# `bit_count`
+# `<xstd/bits/bit_algorithm/bit_count.hpp>`
+
+## `bit_count`
 
 As `ranges::count` in [[alg.count]](https://eel.is/c++draft/alg.count), with:
 

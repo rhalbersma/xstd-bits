@@ -1,4 +1,6 @@
-# `basic_bit_vector`, `bit_vector`
+# `<xstd/bits/bit_vector/bit_vector.hpp>`
+
+## `basic_bit_vector`, `bit_vector`
 
 ```cpp
 template<unsigned_integer Block, class Allocator>

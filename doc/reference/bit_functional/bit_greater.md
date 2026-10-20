@@ -1,4 +1,6 @@
-# `bit_greater`, `bit_less`, `bit_greater_equal`, `bit_less_equal`
+# `<xstd/bits/bit_functional/bit_greater.hpp>`, `<xstd/bits/bit_functional/bit_less.hpp>`, `<xstd/bits/bit_functional/bit_greater_equal.hpp>`, `<xstd/bits/bit_functional/bit_less_equal.hpp>`
+
+## `bit_greater`, `bit_less`, `bit_greater_equal`, `bit_less_equal`
 
 ```cpp
 struct bit_less {

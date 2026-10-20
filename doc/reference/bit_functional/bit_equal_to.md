@@ -1,4 +1,6 @@
-# `bit_equal_to`, `bit_not_equal_to`
+# `<xstd/bits/bit_functional/bit_equal_to.hpp>`, `<xstd/bits/bit_functional/bit_not_equal_to.hpp>`
+
+## `bit_equal_to`, `bit_not_equal_to`
 
 ```cpp
 struct bit_equal_to {

@@ -1,4 +1,6 @@
-# `bit_slice_array`, `bit_gslice_array`, `bit_mask_array`, `bit_indirect_array`
+# `<xstd/bits/bit_valarray/bit_slice_array.hpp>`, `<xstd/bits/bit_valarray/bit_gslice_array.hpp>`, `<xstd/bits/bit_valarray/bit_mask_array.hpp>`, `<xstd/bits/bit_valarray/bit_indirect_array.hpp>`
+
+## `bit_slice_array`, `bit_gslice_array`, `bit_mask_array`, `bit_indirect_array`
 
 ```cpp
 template<unsigned_integer Block>

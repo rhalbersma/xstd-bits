@@ -1,4 +1,6 @@
-# `bit_blocks`
+# `<xstd/bits/bit_concepts/bit_blocks.hpp>`
+
+## `bit_blocks`
 
 ```cpp
 template<class Bits>

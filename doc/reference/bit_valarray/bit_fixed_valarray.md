@@ -1,4 +1,6 @@
-# `basic_bit_fixed_valarray`, `bit_fixed_valarray`
+# `<xstd/bits/bit_valarray/bit_fixed_valarray.hpp>`
+
+## `basic_bit_fixed_valarray`, `bit_fixed_valarray`
 
 ```cpp
 template<unsigned_integer Block, size_t N>

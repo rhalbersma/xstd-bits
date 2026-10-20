@@ -11,4 +11,4 @@ namespace xstd {
 
 | Header | Declares |
 | :----- | :------- |
-| `<xstd/bits/bit/bit_convert.hpp>` | `bit_convert` |
+| [`<xstd/bits/bit/bit_convert.hpp>`](bit_convert.md) | `bit_convert` |

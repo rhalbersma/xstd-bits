@@ -1,4 +1,6 @@
-# `bit_convert`
+# `<xstd/bits/bit/bit_convert.hpp>`
+
+## `bit_convert`
 
 The counterpart of `bit_cast` in [[bit.cast]](https://eel.is/c++draft/bit.cast) across bit storages: where `bit_cast`
 reinterprets an object, `bit_convert` maps positions, and position `i` of the source is position `i` of the result.

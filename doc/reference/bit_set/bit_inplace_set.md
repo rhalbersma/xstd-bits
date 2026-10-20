@@ -1,4 +1,6 @@
-# `basic_bit_inplace_set`, `bit_inplace_set`
+# `<xstd/bits/bit_set/bit_inplace_set.hpp>`
+
+## `basic_bit_inplace_set`, `bit_inplace_set`
 
 ```cpp
 template<class Key, unsigned_integer Block, size_t N, bit_index_mapping<Key> KeyMapping, see below Compare>

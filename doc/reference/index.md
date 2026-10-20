@@ -29,6 +29,24 @@ Each container answers a standard counterpart's synopsis, and is specified as th
 packing changes. Members named `adaptor_type`, `adapted_type`, `derived_type`, `reads_as`, `owns_storage`,
 `is_windowed` and `static_extent` answer the library's own traits and are not specified here.
 
+Each umbrella has a page of its own, with its synopsis and its headers, and each header a page beneath it:
+
+- [`<xstd/bits/bit_array.hpp>`](bit_array/index.md)
+- [`<xstd/bits/bit_inplace_vector.hpp>`](bit_inplace_vector/index.md)
+- [`<xstd/bits/bit_vector.hpp>`](bit_vector/index.md)
+- [`<xstd/bits/bit_set.hpp>`](bit_set/index.md)
+- [`<xstd/bits/bit_valarray.hpp>`](bit_valarray/index.md)
+- [`<xstd/bits/bit_span.hpp>`](bit_span/index.md)
+- [`<xstd/bits/ext/boost.hpp>`](ext_boost/index.md)
+- [`<xstd/bits/bit_algorithm.hpp>`](bit_algorithm/index.md)
+- [`<xstd/bits/bit_iterator.hpp>`](bit_iterator/index.md)
+- [`<xstd/bits/bit_concepts.hpp>`](bit_concepts/index.md)
+- [`<xstd/bits/bit_type_traits.hpp>`](bit_type_traits/index.md)
+- [`<xstd/bits/bit_functional.hpp>`](bit_functional/index.md)
+- [`<xstd/bits/bit_ranges.hpp>`](bit_ranges/index.md)
+- [`<xstd/bits/bit.hpp>`](bit/index.md)
+- [`<xstd/bits/ext/boost/dynamic_bitset.hpp>`](ext_boost_dynamic_bitset/index.md)
+
 ## Relation to the standard library
 
 Each entity is one of five kinds, as across the xstd libraries:

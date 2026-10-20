@@ -1,4 +1,6 @@
-# `bit_reverse`
+# `<xstd/bits/bit_algorithm/bit_reverse.hpp>`
+
+## `bit_reverse`
 
 As `ranges::reverse` in [[alg.reverse]](https://eel.is/c++draft/alg.reverse), with:
 

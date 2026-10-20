@@ -1,4 +1,6 @@
-# `bit_rebind`
+# `<xstd/bits/bit_type_traits/bit_rebind.hpp>`
+
+## `bit_rebind`
 
 - *Constraints:* `remove_cv_t<Owner>` is a rebindable owner. `Block` models `unsigned_integer`, so `bool` and `int`
   are turned away.

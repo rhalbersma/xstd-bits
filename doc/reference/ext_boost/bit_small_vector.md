@@ -1,4 +1,6 @@
-# `basic_bit_small_vector`, `bit_small_vector`
+# `<xstd/bits/ext/boost/bit_small_vector.hpp>`
+
+## `basic_bit_small_vector`, `bit_small_vector`
 
 ```cpp
 template<unsigned_integer Block, size_t N, class Alloc>

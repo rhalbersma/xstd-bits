@@ -1,4 +1,6 @@
-# `bit_digest`
+# `<xstd/bits/bit_functional/bit_digest.hpp>`
+
+## `bit_digest`
 
 ```cpp
 template<class T, hash_algorithm H, class Flavor>

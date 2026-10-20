@@ -1,4 +1,6 @@
-# `bit_reverse_copy`
+# `<xstd/bits/bit_algorithm/bit_reverse_copy.hpp>`
+
+## `bit_reverse_copy`
 
 As `ranges::reverse_copy` in [[alg.reverse]](https://eel.is/c++draft/alg.reverse), with:
 

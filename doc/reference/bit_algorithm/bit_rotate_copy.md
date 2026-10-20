@@ -1,4 +1,6 @@
-# `bit_rotate_copy`
+# `<xstd/bits/bit_algorithm/bit_rotate_copy.hpp>`
+
+## `bit_rotate_copy`
 
 As `ranges::rotate_copy` in [[alg.rotate]](https://eel.is/c++draft/alg.rotate), with:
 

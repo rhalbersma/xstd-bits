@@ -1,4 +1,6 @@
-# `erase_if`
+# `<xstd/bits/bit_set/erase_if.hpp>`
+
+## `erase_if`
 
 - As [[set.erasure]](https://eel.is/c++draft/set.erasure), over every set of this header.
 - *Returns:* the number of keys removed.

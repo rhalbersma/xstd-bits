@@ -1,4 +1,6 @@
-# `basic_bit_inplace_valarray`, `bit_inplace_valarray`
+# `<xstd/bits/bit_valarray/bit_inplace_valarray.hpp>`
+
+## `basic_bit_inplace_valarray`, `bit_inplace_valarray`
 
 As `basic_bit_valarray`, at a size within a capacity of `N`, with:
 

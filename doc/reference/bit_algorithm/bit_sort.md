@@ -1,4 +1,6 @@
-# `bit_sort`
+# `<xstd/bits/bit_algorithm/bit_sort.hpp>`
+
+## `bit_sort`
 
 As `ranges::sort` in [[alg.sorting]](https://eel.is/c++draft/alg.sorting), `false` ordered before `true`, with:
 

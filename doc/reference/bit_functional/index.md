@@ -31,15 +31,15 @@ namespace xstd {
 
 | Header | Declares |
 | :----- | :------- |
-| `<xstd/bits/bit_functional/bit_equal_to.hpp>` | `bit_equal_to` |
-| `<xstd/bits/bit_functional/bit_not_equal_to.hpp>` | `bit_not_equal_to` |
-| `<xstd/bits/bit_functional/bit_greater.hpp>` | `bit_greater` |
-| `<xstd/bits/bit_functional/bit_less.hpp>` | `bit_less` |
-| `<xstd/bits/bit_functional/bit_greater_equal.hpp>` | `bit_greater_equal` |
-| `<xstd/bits/bit_functional/bit_less_equal.hpp>` | `bit_less_equal` |
-| `<xstd/bits/bit_functional/bit_compare_three_way.hpp>` | `bit_compare_three_way` |
-| `<xstd/bits/bit_functional/bit_hash.hpp>` | `bit_hash`, `bit_hash_append` |
-| `<xstd/bits/bit_functional/bit_digest.hpp>` | `bit_digest` |
+| [`<xstd/bits/bit_functional/bit_equal_to.hpp>`](bit_equal_to.md) | `bit_equal_to` |
+| [`<xstd/bits/bit_functional/bit_not_equal_to.hpp>`](bit_equal_to.md) | `bit_not_equal_to` |
+| [`<xstd/bits/bit_functional/bit_greater.hpp>`](bit_greater.md) | `bit_greater` |
+| [`<xstd/bits/bit_functional/bit_less.hpp>`](bit_greater.md) | `bit_less` |
+| [`<xstd/bits/bit_functional/bit_greater_equal.hpp>`](bit_greater.md) | `bit_greater_equal` |
+| [`<xstd/bits/bit_functional/bit_less_equal.hpp>`](bit_greater.md) | `bit_less_equal` |
+| [`<xstd/bits/bit_functional/bit_compare_three_way.hpp>`](bit_compare_three_way.md) | `bit_compare_three_way` |
+| [`<xstd/bits/bit_functional/bit_hash.hpp>`](bit_hash.md) | `bit_hash`, `bit_hash_append` |
+| [`<xstd/bits/bit_functional/bit_digest.hpp>`](bit_digest.md) | `bit_digest` |
 
 Each comparison and the hash has a header of its own under `<xstd/bits/bit_functional/>`, and the umbrella exports
 them in [[comparisons]](https://eel.is/c++draft/comparisons)'s order, then

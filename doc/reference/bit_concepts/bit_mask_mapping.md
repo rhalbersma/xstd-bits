@@ -1,4 +1,6 @@
-# `bit_mask_mapping`
+# `<xstd/bits/bit_concepts/bit_mask_mapping.hpp>`
+
+## `bit_mask_mapping`
 
 ```cpp
 template<class Mapping, class Key>

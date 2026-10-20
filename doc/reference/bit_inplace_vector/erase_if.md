@@ -1,4 +1,6 @@
-# `erase`, `erase_if`
+# `<xstd/bits/bit_inplace_vector/erase_if.hpp>`
+
+## `erase`, `erase_if`
 
 - As [[inplace.vector.erasure]](https://eel.is/c++draft/inplace.vector.erasure), with:
 - *Constraints:* `c` is an owner of the sequence reading whose width grows, so `c.erase(c.cbegin(), c.cend())` is

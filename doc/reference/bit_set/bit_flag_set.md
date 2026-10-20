@@ -1,4 +1,6 @@
-# `bit_flag_set`
+# `<xstd/bits/bit_set/bit_flag_set.hpp>`
+
+## `bit_flag_set`
 
 - `bit_flag_set<Mask, N>` is the set of a bitmask type's one-bit values below `N`:
   `basic_bit_fixed_set<Mask, least_block_t<N>, N, bit_flag_mapping<Mask, N>, greater<Mask>>`.

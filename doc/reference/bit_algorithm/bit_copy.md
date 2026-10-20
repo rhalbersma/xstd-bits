@@ -1,4 +1,6 @@
-# `bit_copy`, `bit_copy_backward`, `bit_move`
+# `<xstd/bits/bit_algorithm/bit_copy.hpp>`, `<xstd/bits/bit_algorithm/bit_copy_backward.hpp>`, `<xstd/bits/bit_algorithm/bit_move.hpp>`
+
+## `bit_copy`, `bit_copy_backward`, `bit_move`
 
 As `ranges::copy` and `ranges::copy_backward` in [[alg.copy]](https://eel.is/c++draft/alg.copy), and `ranges::move`
 in [[alg.move]](https://eel.is/c++draft/alg.move), with:

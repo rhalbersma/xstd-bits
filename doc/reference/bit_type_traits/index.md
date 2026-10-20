@@ -39,13 +39,13 @@ namespace xstd {
 
 | Header | Declares |
 | :----- | :------- |
-| `<xstd/bits/bit_type_traits/bit_blocks_extent.hpp>` | `bit_blocks_extent_v` |
-| `<xstd/bits/bit_type_traits/bit_rebind.hpp>` | `bit_rebind` |
-| `<xstd/bits/bit_type_traits/bit_resize.hpp>` | `bit_resize` |
-| `<xstd/bits/bit_type_traits/bit_least.hpp>` | `bit_least`, `least_block_t` |
-| `<xstd/bits/bit_type_traits/bit_fast.hpp>` | `bit_fast`, `fast_block_t` |
-| `<xstd/bits/bit_type_traits/bit_align.hpp>` | `bit_align` |
-| `<xstd/bits/bit_type_traits/bit_underlying.hpp>` | `bit_underlying`, `underlying_block_t` |
+| [`<xstd/bits/bit_type_traits/bit_blocks_extent.hpp>`](bit_blocks_extent.md) | `bit_blocks_extent_v` |
+| [`<xstd/bits/bit_type_traits/bit_rebind.hpp>`](bit_rebind.md) | `bit_rebind` |
+| [`<xstd/bits/bit_type_traits/bit_resize.hpp>`](bit_resize.md) | `bit_resize` |
+| [`<xstd/bits/bit_type_traits/bit_least.hpp>`](bit_least.md) | `bit_least`, `least_block_t` |
+| [`<xstd/bits/bit_type_traits/bit_fast.hpp>`](bit_fast.md) | `bit_fast`, `fast_block_t` |
+| [`<xstd/bits/bit_type_traits/bit_align.hpp>`](bit_align.md) | `bit_align` |
+| [`<xstd/bits/bit_type_traits/bit_underlying.hpp>`](bit_underlying.md) | `bit_underlying`, `underlying_block_t` |
 
 The width a storage type names, the two transformations that rebind an owner's block or width, then the choices
 made through them, in the umbrella's order. Each transformation is an alias template and is specified as

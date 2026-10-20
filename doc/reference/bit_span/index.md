@@ -35,5 +35,5 @@ namespace boost::container_hash {
 
 | Header | Declares |
 | :----- | :------- |
-| `<xstd/bits/bit_span/bit_span.hpp>` | `bit_span` |
-| `<xstd/bits/bit_span/bit_subspan.hpp>` | `bit_subspan` |
+| [`<xstd/bits/bit_span/bit_span.hpp>`](bit_span.md) | `bit_span` |
+| [`<xstd/bits/bit_span/bit_subspan.hpp>`](bit_subspan.md) | `bit_subspan` |

@@ -1,4 +1,6 @@
-# `bit_set_union`, `bit_set_intersection`, `bit_set_difference`, `bit_set_symmetric_difference`
+# `<xstd/bits/bit_algorithm/bit_set_union.hpp>`, `<xstd/bits/bit_algorithm/bit_set_intersection.hpp>`, `<xstd/bits/bit_algorithm/bit_set_difference.hpp>`, `<xstd/bits/bit_algorithm/bit_set_symmetric_difference.hpp>`
+
+## `bit_set_union`, `bit_set_intersection`, `bit_set_difference`, `bit_set_symmetric_difference`
 
 As `ranges::set_union`, `ranges::set_intersection`, `ranges::set_difference` and
 `ranges::set_symmetric_difference` in [[set.union]](https://eel.is/c++draft/set.union),

@@ -1,4 +1,6 @@
-# `bit_next`, `bit_prev`
+# `<xstd/bits/bit_iterator/bit_next.hpp>`, `<xstd/bits/bit_iterator/bit_prev.hpp>`
+
+## `bit_next`, `bit_prev`
 
 As `ranges::next` and `ranges::prev` in [[range.iter.ops]](https://eel.is/c++draft/range.iter.ops), with:
 

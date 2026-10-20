@@ -1,4 +1,6 @@
-# `sized_bit_index_mapping`
+# `<xstd/bits/bit_concepts/sized_bit_index_mapping.hpp>`
+
+## `sized_bit_index_mapping`
 
 ```cpp
 template<class Mapping, class Key>

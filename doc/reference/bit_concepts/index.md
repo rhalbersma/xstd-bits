@@ -24,12 +24,12 @@ namespace xstd {
 
 | Header | Declares |
 | :----- | :------- |
-| `<xstd/bits/bit_concepts/bit_blocks.hpp>` | `bit_blocks` |
-| `<xstd/bits/bit_concepts/bit_index_mapping.hpp>` | `bit_index_mapping` |
-| `<xstd/bits/bit_concepts/sized_bit_index_mapping.hpp>` | `sized_bit_index_mapping` |
-| `<xstd/bits/bit_concepts/bit_mask_mapping.hpp>` | `bit_mask_mapping` |
-| `<xstd/bits/bit_concepts/bit_constructible_from.hpp>` | `bit_constructible_from` |
-| `<xstd/bits/bit_concepts/bit_convertible_to.hpp>` | `bit_convertible_to` |
+| [`<xstd/bits/bit_concepts/bit_blocks.hpp>`](bit_blocks.md) | `bit_blocks` |
+| [`<xstd/bits/bit_concepts/bit_index_mapping.hpp>`](bit_index_mapping.md) | `bit_index_mapping` |
+| [`<xstd/bits/bit_concepts/sized_bit_index_mapping.hpp>`](sized_bit_index_mapping.md) | `sized_bit_index_mapping` |
+| [`<xstd/bits/bit_concepts/bit_mask_mapping.hpp>`](bit_mask_mapping.md) | `bit_mask_mapping` |
+| [`<xstd/bits/bit_concepts/bit_constructible_from.hpp>`](bit_constructible_from.md) | `bit_constructible_from` |
+| [`<xstd/bits/bit_concepts/bit_convertible_to.hpp>`](bit_convertible_to.md) | `bit_convertible_to` |
 
 The umbrella exports each header below, in the three groups its comments mark. A concept whose definition names an
 exposition-only concept of the library's `detail` namespace writes `see below` there, and the bullets under it say

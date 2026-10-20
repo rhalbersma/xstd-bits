@@ -33,7 +33,7 @@ namespace boost::container_hash {
 
 | Header | Declares |
 | :----- | :------- |
-| `<xstd/bits/bit_inplace_vector/bit_inplace_vector.hpp>` | `basic_bit_inplace_vector`, `bit_inplace_vector` |
-| `<xstd/bits/bit_inplace_vector/erase_if.hpp>` | `erase`, `erase_if` |
-| `<xstd/bits/bit_inplace_vector/hash.hpp>` | `hash` |
-| `<xstd/bits/bit_inplace_vector/container_hash.hpp>` | `is_range`, `is_tuple_like` |
+| [`<xstd/bits/bit_inplace_vector/bit_inplace_vector.hpp>`](bit_inplace_vector.md) | `basic_bit_inplace_vector`, `bit_inplace_vector` |
+| [`<xstd/bits/bit_inplace_vector/erase_if.hpp>`](erase_if.md) | `erase`, `erase_if` |
+| [`<xstd/bits/bit_inplace_vector/hash.hpp>`](hash.md) | `hash` |
+| [`<xstd/bits/bit_inplace_vector/container_hash.hpp>`](hash.md) | `is_range`, `is_tuple_like` |

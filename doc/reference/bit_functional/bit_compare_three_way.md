@@ -1,4 +1,6 @@
-# `bit_compare_three_way`
+# `<xstd/bits/bit_functional/bit_compare_three_way.hpp>`
+
+## `bit_compare_three_way`
 
 As `compare_three_way` in [[comparisons.three.way]](https://eel.is/c++draft/comparisons.three.way), of the same shape
 as `bit_less`, with:

@@ -1,4 +1,6 @@
-# `basic_bit_array`, `bit_array`
+# `<xstd/bits/bit_array/bit_array.hpp>`
+
+## `basic_bit_array`, `bit_array`
 
 ```cpp
 template<unsigned_integer Block, size_t N>

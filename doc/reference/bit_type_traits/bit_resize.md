@@ -1,4 +1,6 @@
-# `bit_resize`
+# `<xstd/bits/bit_type_traits/bit_resize.hpp>`
+
+## `bit_resize`
 
 - *Constraints:* `remove_cv_t<Owner>` is a resizable owner.
 - *Result:* The same owner `N` bits wide, every other argument kept, an allocator included.

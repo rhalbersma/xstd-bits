@@ -1,4 +1,6 @@
-# `bit_subspan`
+# `<xstd/bits/bit_span/bit_subspan.hpp>`
+
+## `bit_subspan`
 
 ```cpp
 template<bit_blocks Blocks, size_t Extent, size_t N>

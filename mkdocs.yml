@@ -25,114 +25,135 @@ nav:
   - Overview: index.md
   - Reference:
     - reference/index.md
-    - "&lt;xstd/bits/bit_array.hpp&gt;":
+    - bit_array.hpp:
       - reference/bit_array/index.md
-      - basic_bit_array, bit_array: reference/bit_array/basic_bit_array.md
-      - to_bit_array: reference/bit_array/to_bit_array.md
-      - tuple_size, tuple_element, get: reference/bit_array/tuple_size.md
-      - hash, is_range, is_tuple_like: reference/bit_array/hash.md
-    - "&lt;xstd/bits/bit_inplace_vector.hpp&gt;":
+      - bit_array.hpp: reference/bit_array/bit_array.md
+      - to_array.hpp: reference/bit_array/to_array.md
+      - tuple_element.hpp: reference/bit_array/tuple_element.md
+      - hash.hpp: reference/bit_array/hash.md
+      - container_hash.hpp: /xstd-bits/reference/bit_array/hash/
+    - bit_inplace_vector.hpp:
       - reference/bit_inplace_vector/index.md
-      - basic_bit_inplace_vector, bit_inplace_vector: reference/bit_inplace_vector/basic_bit_inplace_vector.md
-      - erase, erase_if: reference/bit_inplace_vector/erase.md
-      - hash, is_range, is_tuple_like: reference/bit_inplace_vector/hash.md
-    - "&lt;xstd/bits/bit_vector.hpp&gt;":
+      - bit_inplace_vector.hpp: reference/bit_inplace_vector/bit_inplace_vector.md
+      - erase_if.hpp: reference/bit_inplace_vector/erase_if.md
+      - hash.hpp: reference/bit_inplace_vector/hash.md
+      - container_hash.hpp: /xstd-bits/reference/bit_inplace_vector/hash/
+    - bit_vector.hpp:
       - reference/bit_vector/index.md
-      - basic_bit_vector, bit_vector: reference/bit_vector/basic_bit_vector.md
-      - erase, erase_if: reference/bit_vector/erase.md
-      - hash, is_range, is_tuple_like: reference/bit_vector/hash.md
-    - "&lt;xstd/bits/bit_set.hpp&gt;":
+      - bit_vector.hpp: reference/bit_vector/bit_vector.md
+      - erase_if.hpp: reference/bit_vector/erase_if.md
+      - hash.hpp: reference/bit_vector/hash.md
+      - container_hash.hpp: /xstd-bits/reference/bit_vector/hash/
+    - bit_set.hpp:
       - reference/bit_set/index.md
-      - basic_bit_set, bit_set: reference/bit_set/basic_bit_set.md
-      - basic_bit_fixed_set, bit_fixed_set: reference/bit_set/basic_bit_fixed_set.md
-      - basic_bit_inplace_set, bit_inplace_set: reference/bit_set/basic_bit_inplace_set.md
-      - bit_set_view: reference/bit_set/bit_set_view.md
-      - bit_key_mapping, bit_range_mapping, bit_find_mapping, enum_traits: reference/bit_set/bit_key_mapping.md
-      - bit_flag_mapping: reference/bit_set/bit_flag_mapping.md
-      - bit_enum_set: reference/bit_set/bit_enum_set.md
-      - bit_flag_set: reference/bit_set/bit_flag_set.md
-      - erase_if: reference/bit_set/erase_if.md
-      - hash, is_range, is_tuple_like: reference/bit_set/hash.md
-    - "&lt;xstd/bits/bit_valarray.hpp&gt;":
+      - bit_set.hpp: reference/bit_set/bit_set.md
+      - bit_fixed_set.hpp: reference/bit_set/bit_fixed_set.md
+      - bit_inplace_set.hpp: reference/bit_set/bit_inplace_set.md
+      - bit_set_view.hpp: reference/bit_set/bit_set_view.md
+      - bit_key_mapping.hpp: reference/bit_set/bit_key_mapping.md
+      - bit_flag_mapping.hpp: reference/bit_set/bit_flag_mapping.md
+      - bit_enum_set.hpp: reference/bit_set/bit_enum_set.md
+      - bit_flag_set.hpp: reference/bit_set/bit_flag_set.md
+      - erase_if.hpp: reference/bit_set/erase_if.md
+      - hash.hpp: reference/bit_set/hash.md
+      - container_hash.hpp: /xstd-bits/reference/bit_set/hash/
+    - bit_valarray.hpp:
       - reference/bit_valarray/index.md
-      - basic_bit_valarray, bit_valarray: reference/bit_valarray/basic_bit_valarray.md
-      - basic_bit_fixed_valarray, bit_fixed_valarray: reference/bit_valarray/basic_bit_fixed_valarray.md
-      - basic_bit_inplace_valarray, bit_inplace_valarray: reference/bit_valarray/basic_bit_inplace_valarray.md
-      - bit_slice: reference/bit_valarray/bit_slice.md
-      - bit_gslice: reference/bit_valarray/bit_gslice.md
-      - bit_slice_array, bit_gslice_array, bit_mask_array, bit_indirect_array: reference/bit_valarray/bit_slice_array.md
-    - "&lt;xstd/bits/bit_span.hpp&gt;":
+      - bit_valarray.hpp: reference/bit_valarray/bit_valarray.md
+      - bit_fixed_valarray.hpp: reference/bit_valarray/bit_fixed_valarray.md
+      - bit_inplace_valarray.hpp: reference/bit_valarray/bit_inplace_valarray.md
+      - bit_slice.hpp: reference/bit_valarray/bit_slice.md
+      - bit_slice_array.hpp: reference/bit_valarray/bit_slice_array.md
+      - bit_gslice.hpp: reference/bit_valarray/bit_gslice.md
+      - bit_gslice_array.hpp: /xstd-bits/reference/bit_valarray/bit_slice_array/
+      - bit_mask_array.hpp: /xstd-bits/reference/bit_valarray/bit_slice_array/
+      - bit_indirect_array.hpp: /xstd-bits/reference/bit_valarray/bit_slice_array/
+    - bit_span.hpp:
       - reference/bit_span/index.md
-      - bit_span: reference/bit_span/bit_span.md
-      - bit_subspan: reference/bit_span/bit_subspan.md
-    - "&lt;xstd/bits/ext/boost.hpp&gt;":
+      - bit_span.hpp: reference/bit_span/bit_span.md
+      - bit_subspan.hpp: reference/bit_span/bit_subspan.md
+    - ext/boost.hpp:
       - reference/ext_boost/index.md
-      - basic_bit_small_vector, bit_small_vector: reference/ext_boost/basic_bit_small_vector.md
-      - basic_bit_small_set, bit_small_set: reference/ext_boost/basic_bit_small_set.md
-      - basic_bit_small_valarray, bit_small_valarray: reference/ext_boost/basic_bit_small_valarray.md
-    - "&lt;xstd/bits/bit_algorithm.hpp&gt;":
+      - ext/boost/bit_small_vector.hpp: reference/ext_boost/bit_small_vector.md
+      - ext/boost/bit_small_valarray.hpp: reference/ext_boost/bit_small_valarray.md
+      - ext/boost/bit_small_set.hpp: reference/ext_boost/bit_small_set.md
+    - bit_algorithm.hpp:
       - reference/bit_algorithm/index.md
-      - bit_all_of, bit_any_of, bit_none_of: reference/bit_algorithm/bit_all_of.md
-      - bit_for_each: reference/bit_algorithm/bit_for_each.md
-      - bit_find, bit_find_last: reference/bit_algorithm/bit_find.md
-      - bit_count: reference/bit_algorithm/bit_count.md
-      - bit_mismatch: reference/bit_algorithm/bit_mismatch.md
-      - bit_equal: reference/bit_algorithm/bit_equal.md
-      - bit_copy, bit_copy_backward, bit_move: reference/bit_algorithm/bit_copy.md
-      - bit_swap_ranges: reference/bit_algorithm/bit_swap_ranges.md
-      - bit_transform: reference/bit_algorithm/bit_transform.md
-      - bit_fill: reference/bit_algorithm/bit_fill.md
-      - bit_reverse: reference/bit_algorithm/bit_reverse.md
-      - bit_reverse_copy: reference/bit_algorithm/bit_reverse_copy.md
-      - bit_rotate: reference/bit_algorithm/bit_rotate.md
-      - bit_rotate_copy: reference/bit_algorithm/bit_rotate_copy.md
-      - bit_shift_left, bit_shift_right: reference/bit_algorithm/bit_shift_left.md
-      - bit_sort: reference/bit_algorithm/bit_sort.md
-      - bit_is_sorted, bit_is_partitioned: reference/bit_algorithm/bit_is_sorted.md
-      - bit_partition: reference/bit_algorithm/bit_partition.md
-      - bit_partition_point: reference/bit_algorithm/bit_partition_point.md
-      - bit_includes, bit_intersects, bit_disjoint: reference/bit_algorithm/bit_includes.md
-      - bit_set_union, bit_set_intersection, bit_set_difference, bit_set_symmetric_difference: reference/bit_algorithm/bit_set_union.md
-      - bit_lexicographical_compare_three_way: reference/bit_algorithm/bit_lexicographical_compare_three_way.md
-    - "&lt;xstd/bits/bit_iterator.hpp&gt;":
+      - bit_all_of.hpp: reference/bit_algorithm/bit_all_of.md
+      - bit_any_of.hpp: /xstd-bits/reference/bit_algorithm/bit_all_of/
+      - bit_none_of.hpp: /xstd-bits/reference/bit_algorithm/bit_all_of/
+      - bit_for_each.hpp: reference/bit_algorithm/bit_for_each.md
+      - bit_find.hpp: reference/bit_algorithm/bit_find.md
+      - bit_find_last.hpp: /xstd-bits/reference/bit_algorithm/bit_find/
+      - bit_count.hpp: reference/bit_algorithm/bit_count.md
+      - bit_mismatch.hpp: reference/bit_algorithm/bit_mismatch.md
+      - bit_equal.hpp: reference/bit_algorithm/bit_equal.md
+      - bit_copy.hpp: reference/bit_algorithm/bit_copy.md
+      - bit_copy_backward.hpp: /xstd-bits/reference/bit_algorithm/bit_copy/
+      - bit_move.hpp: /xstd-bits/reference/bit_algorithm/bit_copy/
+      - bit_swap_ranges.hpp: reference/bit_algorithm/bit_swap_ranges.md
+      - bit_transform.hpp: reference/bit_algorithm/bit_transform.md
+      - bit_fill.hpp: reference/bit_algorithm/bit_fill.md
+      - bit_reverse.hpp: reference/bit_algorithm/bit_reverse.md
+      - bit_reverse_copy.hpp: reference/bit_algorithm/bit_reverse_copy.md
+      - bit_rotate.hpp: reference/bit_algorithm/bit_rotate.md
+      - bit_rotate_copy.hpp: reference/bit_algorithm/bit_rotate_copy.md
+      - bit_shift_left.hpp: reference/bit_algorithm/bit_shift_left.md
+      - bit_shift_right.hpp: /xstd-bits/reference/bit_algorithm/bit_shift_left/
+      - bit_sort.hpp: reference/bit_algorithm/bit_sort.md
+      - bit_is_sorted.hpp: reference/bit_algorithm/bit_is_sorted.md
+      - bit_is_partitioned.hpp: /xstd-bits/reference/bit_algorithm/bit_is_sorted/
+      - bit_partition.hpp: reference/bit_algorithm/bit_partition.md
+      - bit_partition_point.hpp: reference/bit_algorithm/bit_partition_point.md
+      - bit_includes.hpp: reference/bit_algorithm/bit_includes.md
+      - bit_intersects.hpp: /xstd-bits/reference/bit_algorithm/bit_includes/
+      - bit_disjoint.hpp: /xstd-bits/reference/bit_algorithm/bit_includes/
+      - bit_set_union.hpp: reference/bit_algorithm/bit_set_union.md
+      - bit_set_intersection.hpp: /xstd-bits/reference/bit_algorithm/bit_set_union/
+      - bit_set_difference.hpp: /xstd-bits/reference/bit_algorithm/bit_set_union/
+      - bit_set_symmetric_difference.hpp: /xstd-bits/reference/bit_algorithm/bit_set_union/
+      - bit_lexicographical_compare_three_way.hpp: reference/bit_algorithm/bit_lexicographical_compare_three_way.md
+    - bit_iterator.hpp:
       - reference/bit_iterator/index.md
-      - bit_advance: reference/bit_iterator/bit_advance.md
-      - bit_distance: reference/bit_iterator/bit_distance.md
-      - bit_next, bit_prev: reference/bit_iterator/bit_next.md
-    - "&lt;xstd/bits/bit_concepts.hpp&gt;":
+      - bit_advance.hpp: reference/bit_iterator/bit_advance.md
+      - bit_distance.hpp: reference/bit_iterator/bit_distance.md
+      - bit_next.hpp: reference/bit_iterator/bit_next.md
+      - bit_prev.hpp: /xstd-bits/reference/bit_iterator/bit_next/
+    - bit_concepts.hpp:
       - reference/bit_concepts/index.md
-      - bit_blocks: reference/bit_concepts/bit_blocks.md
-      - bit_index_mapping: reference/bit_concepts/bit_index_mapping.md
-      - sized_bit_index_mapping: reference/bit_concepts/sized_bit_index_mapping.md
-      - bit_mask_mapping: reference/bit_concepts/bit_mask_mapping.md
-      - bit_constructible_from: reference/bit_concepts/bit_constructible_from.md
-      - bit_convertible_to: reference/bit_concepts/bit_convertible_to.md
-    - "&lt;xstd/bits/bit_type_traits.hpp&gt;":
+      - bit_blocks.hpp: reference/bit_concepts/bit_blocks.md
+      - bit_index_mapping.hpp: reference/bit_concepts/bit_index_mapping.md
+      - sized_bit_index_mapping.hpp: reference/bit_concepts/sized_bit_index_mapping.md
+      - bit_mask_mapping.hpp: reference/bit_concepts/bit_mask_mapping.md
+      - bit_constructible_from.hpp: reference/bit_concepts/bit_constructible_from.md
+      - bit_convertible_to.hpp: reference/bit_concepts/bit_convertible_to.md
+    - bit_type_traits.hpp:
       - reference/bit_type_traits/index.md
-      - bit_blocks_extent_v: reference/bit_type_traits/bit_blocks_extent_v.md
-      - bit_rebind: reference/bit_type_traits/bit_rebind.md
-      - bit_resize: reference/bit_type_traits/bit_resize.md
-      - least_block_t, bit_least: reference/bit_type_traits/least_block_t.md
-      - fast_block_t, bit_fast: reference/bit_type_traits/fast_block_t.md
-      - bit_align: reference/bit_type_traits/bit_align.md
-      - underlying_block_t, bit_underlying: reference/bit_type_traits/underlying_block_t.md
-    - "&lt;xstd/bits/bit_functional.hpp&gt;":
+      - bit_blocks_extent.hpp: reference/bit_type_traits/bit_blocks_extent.md
+      - bit_rebind.hpp: reference/bit_type_traits/bit_rebind.md
+      - bit_resize.hpp: reference/bit_type_traits/bit_resize.md
+      - bit_least.hpp: reference/bit_type_traits/bit_least.md
+      - bit_fast.hpp: reference/bit_type_traits/bit_fast.md
+      - bit_align.hpp: reference/bit_type_traits/bit_align.md
+      - bit_underlying.hpp: reference/bit_type_traits/bit_underlying.md
+    - bit_functional.hpp:
       - reference/bit_functional/index.md
-      - bit_equal_to, bit_not_equal_to: reference/bit_functional/bit_equal_to.md
-      - bit_greater, bit_less, bit_greater_equal, bit_less_equal: reference/bit_functional/bit_greater.md
-      - bit_compare_three_way: reference/bit_functional/bit_compare_three_way.md
-      - bit_hash_append: reference/bit_functional/bit_hash_append.md
-      - bit_hash: reference/bit_functional/bit_hash.md
-      - bit_digest: reference/bit_functional/bit_digest.md
-    - "&lt;xstd/bits/bit_ranges.hpp&gt;":
+      - bit_equal_to.hpp: reference/bit_functional/bit_equal_to.md
+      - bit_not_equal_to.hpp: /xstd-bits/reference/bit_functional/bit_equal_to/
+      - bit_greater.hpp: reference/bit_functional/bit_greater.md
+      - bit_less.hpp: /xstd-bits/reference/bit_functional/bit_greater/
+      - bit_greater_equal.hpp: /xstd-bits/reference/bit_functional/bit_greater/
+      - bit_less_equal.hpp: /xstd-bits/reference/bit_functional/bit_greater/
+      - bit_compare_three_way.hpp: reference/bit_functional/bit_compare_three_way.md
+      - bit_hash.hpp: reference/bit_functional/bit_hash.md
+      - bit_digest.hpp: reference/bit_functional/bit_digest.md
+    - bit_ranges.hpp:
       - reference/bit_ranges/index.md
-      - from_blocks_t, from_blocks: reference/bit_ranges/from_blocks_t.md
-    - "&lt;xstd/bits/bit.hpp&gt;":
+      - from_blocks.hpp: reference/bit_ranges/from_blocks.md
+    - bit.hpp:
       - reference/bit/index.md
-      - bit_convert: reference/bit/bit_convert.md
-    - "&lt;xstd/bits/ext/boost/dynamic_bitset.hpp&gt;":
-      - reference/ext_boost_dynamic_bitset/index.md
-      - bit_convert with boost::dynamic_bitset: reference/ext_boost_dynamic_bitset/bit_convert.md
+      - bit_convert.hpp: reference/bit/bit_convert.md
+    - ext/boost/dynamic_bitset.hpp: reference/ext_boost_dynamic_bitset/index.md
   - Design: design.md
   - Migration: migration.md
   - Mutation testing: mutation.md

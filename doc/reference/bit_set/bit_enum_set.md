@@ -1,4 +1,6 @@
-# `bit_enum_set`
+# `<xstd/bits/bit_set/bit_enum_set.hpp>`
+
+## `bit_enum_set`
 
 - `bit_enum_set<Enum>` is the fixed set of an enumeration's keys, one bit each in the smallest block that holds them:
   `basic_bit_fixed_set<Enum, least_block_t<S>, S, bit_key_mapping<Enum>>` for `S = bit_key_mapping<Enum>::size`.

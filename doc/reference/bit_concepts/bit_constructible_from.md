@@ -1,4 +1,6 @@
-# `bit_constructible_from`
+# `<xstd/bits/bit_concepts/bit_constructible_from.hpp>`
+
+## `bit_constructible_from`
 
 ```cpp
 template<class To, class Blocks>

@@ -1,4 +1,6 @@
-# `bit_equal`
+# `<xstd/bits/bit_algorithm/bit_equal.hpp>`
+
+## `bit_equal`
 
 As `ranges::equal` in [[alg.equal]](https://eel.is/c++draft/alg.equal), with:
 

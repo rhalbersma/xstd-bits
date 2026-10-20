@@ -1,4 +1,6 @@
-# `basic_bit_small_valarray`, `bit_small_valarray`
+# `<xstd/bits/ext/boost/bit_small_valarray.hpp>`
+
+## `basic_bit_small_valarray`, `bit_small_valarray`
 
 As `basic_bit_valarray`, over the small storage, with:
 

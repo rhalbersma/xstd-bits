@@ -40,8 +40,8 @@ namespace boost::container_hash {
 
 | Header | Declares |
 | :----- | :------- |
-| `<xstd/bits/bit_array/bit_array.hpp>` | `basic_bit_array`, `bit_array` |
-| `<xstd/bits/bit_array/to_array.hpp>` | `to_bit_array` |
-| `<xstd/bits/bit_array/tuple_element.hpp>` | `tuple_element`, `tuple_size` |
-| `<xstd/bits/bit_array/hash.hpp>` | `hash` |
-| `<xstd/bits/bit_array/container_hash.hpp>` | `is_range`, `is_tuple_like` |
+| [`<xstd/bits/bit_array/bit_array.hpp>`](bit_array.md) | `basic_bit_array`, `bit_array` |
+| [`<xstd/bits/bit_array/to_array.hpp>`](to_array.md) | `to_bit_array` |
+| [`<xstd/bits/bit_array/tuple_element.hpp>`](tuple_element.md) | `tuple_element`, `tuple_size` |
+| [`<xstd/bits/bit_array/hash.hpp>`](hash.md) | `hash` |
+| [`<xstd/bits/bit_array/container_hash.hpp>`](hash.md) | `is_range`, `is_tuple_like` |

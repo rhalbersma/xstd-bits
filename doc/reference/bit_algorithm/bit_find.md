@@ -1,4 +1,6 @@
-# `bit_find`, `bit_find_last`
+# `<xstd/bits/bit_algorithm/bit_find.hpp>`, `<xstd/bits/bit_algorithm/bit_find_last.hpp>`
+
+## `bit_find`, `bit_find_last`
 
 As `ranges::find` and `ranges::find_last` in [[alg.find]](https://eel.is/c++draft/alg.find) and
 [[alg.find.last]](https://eel.is/c++draft/alg.find.last), with:

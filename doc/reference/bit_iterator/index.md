@@ -30,10 +30,10 @@ namespace xstd::ranges {
 
 | Header | Declares |
 | :----- | :------- |
-| `<xstd/bits/bit_iterator/bit_advance.hpp>` | `bit_advance` |
-| `<xstd/bits/bit_iterator/bit_distance.hpp>` | `bit_distance` |
-| `<xstd/bits/bit_iterator/bit_next.hpp>` | `bit_next` |
-| `<xstd/bits/bit_iterator/bit_prev.hpp>` | `bit_prev` |
+| [`<xstd/bits/bit_iterator/bit_advance.hpp>`](bit_advance.md) | `bit_advance` |
+| [`<xstd/bits/bit_iterator/bit_distance.hpp>`](bit_distance.md) | `bit_distance` |
+| [`<xstd/bits/bit_iterator/bit_next.hpp>`](bit_next.md) | `bit_next` |
+| [`<xstd/bits/bit_iterator/bit_prev.hpp>`](bit_next.md) | `bit_prev` |
 
 The iterator operations over any iterator of ours, each in a header of its own under `<xstd/bits/bit_iterator/>`. A
 sequence's iterator is random access and steps by an offset, so over it each is its `std::ranges` counterpart. A

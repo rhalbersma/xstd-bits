@@ -1,4 +1,6 @@
-# `bit_all_of`, `bit_any_of`, `bit_none_of`
+# `<xstd/bits/bit_algorithm/bit_all_of.hpp>`, `<xstd/bits/bit_algorithm/bit_any_of.hpp>`, `<xstd/bits/bit_algorithm/bit_none_of.hpp>`
+
+## `bit_all_of`, `bit_any_of`, `bit_none_of`
 
 As `ranges::all_of`, `ranges::any_of` and `ranges::none_of` in
 [[alg.all.of]](https://eel.is/c++draft/alg.all.of), [[alg.any.of]](https://eel.is/c++draft/alg.any.of) and

@@ -1,4 +1,6 @@
-# `bit_shift_left`, `bit_shift_right`
+# `<xstd/bits/bit_algorithm/bit_shift_left.hpp>`, `<xstd/bits/bit_algorithm/bit_shift_right.hpp>`
+
+## `bit_shift_left`, `bit_shift_right`
 
 As `ranges::shift_left` and `ranges::shift_right` in [[alg.shift]](https://eel.is/c++draft/alg.shift), with:
 

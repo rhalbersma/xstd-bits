@@ -1,4 +1,6 @@
-# `basic_bit_inplace_vector`, `bit_inplace_vector`
+# `<xstd/bits/bit_inplace_vector/bit_inplace_vector.hpp>`
+
+## `basic_bit_inplace_vector`, `bit_inplace_vector`
 
 ```cpp
 template<unsigned_integer Block, size_t N>

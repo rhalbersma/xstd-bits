@@ -1,4 +1,6 @@
-# `bit_swap_ranges`
+# `<xstd/bits/bit_algorithm/bit_swap_ranges.hpp>`
+
+## `bit_swap_ranges`
 
 As `ranges::swap_ranges` in [[alg.swap]](https://eel.is/c++draft/alg.swap), with:
 

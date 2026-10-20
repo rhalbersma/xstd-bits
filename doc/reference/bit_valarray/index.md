@@ -39,12 +39,12 @@ namespace xstd {
 
 | Header | Declares |
 | :----- | :------- |
-| `<xstd/bits/bit_valarray/bit_valarray.hpp>` | `basic_bit_valarray`, `bit_valarray` |
-| `<xstd/bits/bit_valarray/bit_fixed_valarray.hpp>` | `basic_bit_fixed_valarray`, `bit_fixed_valarray` |
-| `<xstd/bits/bit_valarray/bit_inplace_valarray.hpp>` | `basic_bit_inplace_valarray`, `bit_inplace_valarray` |
-| `<xstd/bits/bit_valarray/bit_slice.hpp>` | `bit_slice` |
-| `<xstd/bits/bit_valarray/bit_slice_array.hpp>` | `bit_slice_array` |
-| `<xstd/bits/bit_valarray/bit_gslice.hpp>` | `bit_gslice` |
-| `<xstd/bits/bit_valarray/bit_gslice_array.hpp>` | `bit_gslice_array` |
-| `<xstd/bits/bit_valarray/bit_mask_array.hpp>` | `bit_mask_array` |
-| `<xstd/bits/bit_valarray/bit_indirect_array.hpp>` | `bit_indirect_array` |
+| [`<xstd/bits/bit_valarray/bit_valarray.hpp>`](bit_valarray.md) | `basic_bit_valarray`, `bit_valarray` |
+| [`<xstd/bits/bit_valarray/bit_fixed_valarray.hpp>`](bit_fixed_valarray.md) | `basic_bit_fixed_valarray`, `bit_fixed_valarray` |
+| [`<xstd/bits/bit_valarray/bit_inplace_valarray.hpp>`](bit_inplace_valarray.md) | `basic_bit_inplace_valarray`, `bit_inplace_valarray` |
+| [`<xstd/bits/bit_valarray/bit_slice.hpp>`](bit_slice.md) | `bit_slice` |
+| [`<xstd/bits/bit_valarray/bit_slice_array.hpp>`](bit_slice_array.md) | `bit_slice_array` |
+| [`<xstd/bits/bit_valarray/bit_gslice.hpp>`](bit_gslice.md) | `bit_gslice` |
+| [`<xstd/bits/bit_valarray/bit_gslice_array.hpp>`](bit_slice_array.md) | `bit_gslice_array` |
+| [`<xstd/bits/bit_valarray/bit_mask_array.hpp>`](bit_slice_array.md) | `bit_mask_array` |
+| [`<xstd/bits/bit_valarray/bit_indirect_array.hpp>`](bit_slice_array.md) | `bit_indirect_array` |

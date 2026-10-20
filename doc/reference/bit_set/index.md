@@ -88,14 +88,14 @@ namespace boost::container_hash {
 
 | Header | Declares |
 | :----- | :------- |
-| `<xstd/bits/bit_set/bit_set.hpp>` | `basic_bit_set`, `bit_set` |
-| `<xstd/bits/bit_set/bit_fixed_set.hpp>` | `basic_bit_fixed_set`, `bit_fixed_set` |
-| `<xstd/bits/bit_set/bit_inplace_set.hpp>` | `basic_bit_inplace_set`, `bit_inplace_set` |
-| `<xstd/bits/bit_set/bit_set_view.hpp>` | `bit_set_view` |
-| `<xstd/bits/bit_set/bit_key_mapping.hpp>` | `bit_find_mapping`, `bit_key_mapping`, `bit_range_mapping`, `enum_traits` |
-| `<xstd/bits/bit_set/bit_flag_mapping.hpp>` | `bit_flag_mapping` |
-| `<xstd/bits/bit_set/bit_enum_set.hpp>` | `bit_enum_set` |
-| `<xstd/bits/bit_set/bit_flag_set.hpp>` | `bit_flag_set` |
-| `<xstd/bits/bit_set/erase_if.hpp>` | `erase_if` |
-| `<xstd/bits/bit_set/hash.hpp>` | `hash` |
-| `<xstd/bits/bit_set/container_hash.hpp>` | `is_range`, `is_tuple_like` |
+| [`<xstd/bits/bit_set/bit_set.hpp>`](bit_set.md) | `basic_bit_set`, `bit_set` |
+| [`<xstd/bits/bit_set/bit_fixed_set.hpp>`](bit_fixed_set.md) | `basic_bit_fixed_set`, `bit_fixed_set` |
+| [`<xstd/bits/bit_set/bit_inplace_set.hpp>`](bit_inplace_set.md) | `basic_bit_inplace_set`, `bit_inplace_set` |
+| [`<xstd/bits/bit_set/bit_set_view.hpp>`](bit_set_view.md) | `bit_set_view` |
+| [`<xstd/bits/bit_set/bit_key_mapping.hpp>`](bit_key_mapping.md) | `bit_find_mapping`, `bit_key_mapping`, `bit_range_mapping`, `enum_traits` |
+| [`<xstd/bits/bit_set/bit_flag_mapping.hpp>`](bit_flag_mapping.md) | `bit_flag_mapping` |
+| [`<xstd/bits/bit_set/bit_enum_set.hpp>`](bit_enum_set.md) | `bit_enum_set` |
+| [`<xstd/bits/bit_set/bit_flag_set.hpp>`](bit_flag_set.md) | `bit_flag_set` |
+| [`<xstd/bits/bit_set/erase_if.hpp>`](erase_if.md) | `erase_if` |
+| [`<xstd/bits/bit_set/hash.hpp>`](hash.md) | `hash` |
+| [`<xstd/bits/bit_set/container_hash.hpp>`](hash.md) | `is_range`, `is_tuple_like` |

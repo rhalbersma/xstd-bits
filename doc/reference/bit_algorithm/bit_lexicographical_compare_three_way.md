@@ -1,4 +1,6 @@
-# `bit_lexicographical_compare_three_way`
+# `<xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp>`
+
+## `bit_lexicographical_compare_three_way`
 
 As `lexicographical_compare_three_way` in [[alg.three.way]](https://eel.is/c++draft/alg.three.way), over two ranges
 rather than two iterator pairs, the shape [P2022R3](https://wg21.link/P2022R3) proposes for
