@@ -361,6 +361,12 @@ def order(header, targets, only, kills=None):
         return sorted(dependents, key=lambda t: (t.name != own, -caught.get((header, t.name), 0), not (kin and f".{kin}." in t.name), len(t.headers), t.name))
 
 
+def passed_in(mutant, chain):
+        """How many targets of chain mutant has passed."""
+        names = {t.name for t in chain}
+        return sum(name in names for name in mutant.passed)
+
+
 class Worker:
         """A private copy of include/ and a scratch directory for objects and executables."""
 
@@ -405,21 +411,23 @@ class Worker:
                 return "survived", ""
 
         def evaluate(self, mutant, chain, cap, timeout, link_timeout):
-                """Run mutant against the targets of chain it has not passed until it has passed cap, so a capped survivor widens."""
+                """Run mutant against the targets of chain it has not passed until it has passed cap of them, so a capped survivor widens."""
                 original = (self.include / mutant.header).read_text()
                 (self.include / mutant.header).write_text(apply(mutant))
                 start = time.monotonic()
                 try:
                         verdict = ("survived", "", "")
                         passed = set(mutant.passed)
+                        reached = passed_in(mutant, chain)
                         for target in (t for t in chain if t.name not in passed):
-                                if mutant.tried >= cap:
+                                if reached >= cap:
                                         break
                                 status, detail = self.attempt(mutant, target, timeout, link_timeout)
                                 if status != "survived":
                                         verdict = (status, target.name, detail)
                                         break
                                 mutant.passed.append(target.name)
+                                reached += 1
                         mutant.status, mutant.target, mutant.detail = verdict
                         mutant.dependents = len(chain)
                 finally:
@@ -498,21 +506,22 @@ def main():
                         m.passed = [] if m.status == "pending" else [t.name for t in order(m.header, targets, args.tests)]
                 if m.dependents < 0:
                         m.dependents = len(order(m.header, targets, args.tests))
-        for m in mutants:
-                cap = min(args.max_targets or m.dependents, m.dependents)
-                if m.status == "survived" and m.tried < cap:
-                        m.status = "pending"
-        widening = sum(m.status == "pending" and m.tried > 0 for m in mutants)
-        if widening:
-                print(f"widening {widening} survivors of a capped run", file=sys.stderr)
         for header in args.headers:
-                if not any(m.header == header and m.status == "pending" for m in mutants):
-                        continue
                 chain = order(header, targets, args.tests, kills)
                 if not chain:
                         print(f"error: no test target depends on {header}", file=sys.stderr)
                         return 2
                 chains[header] = chain
+        # A survivor widens over this run's chain: targets it passed under another --tests count for nothing here.
+        for m in mutants:
+                chain = chains.get(m.header, [])
+                if m.status == "survived" and passed_in(m, chain) < min(args.max_targets or len(chain), len(chain)):
+                        m.status = "pending"
+        widening = sum(m.status == "pending" and m.tried > 0 for m in mutants)
+        if widening:
+                print(f"widening {widening} survivors of a capped run", file=sys.stderr)
+        chains = {h: c for h, c in chains.items() if any(m.header == h and m.status == "pending" for m in mutants)}
+        for header, chain in chains.items():
                 print(f"{header}: {len(chain)} dependent targets, first {chain[0].name}", file=sys.stderr)
 
         for chain in chains.values():
@@ -553,7 +562,7 @@ def main():
                                 counts[mutant.status] += 1
                                 mark = {"killed": ".", "survived": "S", "stillborn": "x"}[mutant.status]
                                 where = f" [{mutant.target}: {mutant.detail}]" if mutant.status != "survived" and mutant.detail else ""
-                                reach = f" ({mutant.tried} of {mutant.dependents} targets)" if mutant.status == "survived" else ""
+                                reach = f" ({passed_in(mutant, chains[mutant.header])} of {mutant.dependents} targets)" if mutant.status == "survived" else ""
                                 print(f"{mark} {done}/{len(todo)} {mutant.header}:{mutant.line}:{mutant.column} {mutant.original!r}->{mutant.replacement!r} {mutant.seconds}s{reach}{where}", flush=True)
                                 if args.output:
                                         args.output.write_text(json.dumps([asdict(m) | {"tried": m.tried} for m in mutants], indent=1))
