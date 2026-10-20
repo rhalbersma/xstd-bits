@@ -17,6 +17,7 @@ copyright: Copyright Rein Halbersma 2014-2026, under the Boost Software License,
 docs_dir: doc
 exclude_docs: |
   audit/
+  mutation.md
 
 hooks:
   - tools/mkdocs_hooks.py
@@ -156,7 +157,6 @@ nav:
     - ext/boost/dynamic_bitset.hpp: reference/ext_boost_dynamic_bitset/index.md
   - Design: design.md
   - Migration: migration.md
-  - Mutation testing: mutation.md
 
 theme:
   name: material
