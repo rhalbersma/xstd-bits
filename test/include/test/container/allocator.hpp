@@ -202,11 +202,22 @@ template<class Op>
         return ended;
 }
 
-// What a valid object answers after a failed operation: iterators agreeing with its size, an equal copy, and a clear.
+// What a valid object answers after a failed operation: a size its capacity holds, iterators agreeing, a copy, a clear.
 template<class X>
 [[nodiscard]] auto is_valid(X& x)
         -> bool
 {
+        // [vector.capacity]'s invariant, read first: a size past the capacity makes the copy below read past the end.
+        auto const fits = [&] -> bool {
+                if constexpr (requires { x.capacity(); }) {
+                        return x.size() <= x.capacity();
+                } else {
+                        return true;
+                }
+        }();
+        if (not fits) {
+                return false;
+        }
         auto const copies = X(x) == x;
         auto const counts = [&] -> bool {
                 if constexpr (requires { std::ranges::distance(x); }) {

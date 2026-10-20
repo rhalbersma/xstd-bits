@@ -11,6 +11,7 @@
 #include <xstd/bits/bit_vector.hpp>               // bit_vector
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                              // any_of
+#include <cstddef>                                // size_t
 #include <cstdint>                                // uint8_t
 #include <functional>                             // identity
 #include <vector>                                 // vector
@@ -55,12 +56,16 @@ BOOST_AUTO_TEST_CASE(AgreesWithRangesOverOwnersAndViews)
 // A window asks its own positions alone, at every offset and length across two narrow blocks, full or patterned.
 BOOST_AUTO_TEST_CASE(AWindowAsksItsOwnPositions)
 {
-        auto full = xstd::basic_bit_array<std::uint8_t, 21>();
-        full.fill(true);
-        auto wrong = 0;
-        for (auto const& a : {test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), full}) {
-                test::algorithm::for_each_window(xstd::bit_span(a), [&](auto const& w) -> void { wrong += static_cast<int>(not agrees(w)); });
-        }
+        auto wrong      = 0;
+        auto const asks = [&]<std::size_t N>(xstd::basic_bit_array<std::uint8_t, N> full) -> void {
+                full.fill(true);
+                for (auto const& a : {test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, N>()), full}) {
+                        test::algorithm::for_each_window(xstd::bit_span(a), [&](auto const& w) -> void { wrong += static_cast<int>(not agrees(w)); });
+                }
+        };
+        // Width 21 ends no window on a block boundary; width 16 ends many there, the last on the storage's own end.
+        asks(xstd::basic_bit_array<std::uint8_t, 21>());
+        asks(xstd::basic_bit_array<std::uint8_t, 16>());
         BOOST_CHECK_EQUAL(wrong, 0);
 }
 

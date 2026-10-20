@@ -324,6 +324,34 @@ BOOST_AUTO_TEST_CASE(InsertingWithinCapacityAllocatesNothing)
         }
 }
 
+// A copy into storage already as wide as the source reuses it, so with every allocation refused it still completes.
+BOOST_AUTO_TEST_CASE(CopyingWithinCapacityAllocatesNothing)
+{
+        using X      = xstd::basic_bit_vector<std::uint8_t, test::container::propagating<std::uint8_t>>;
+        auto book    = test::container::ledger();
+        auto x       = X(16UZ, test::container::ledger_allocator<X>(book));
+        auto const y = X(16UZ, true, test::container::ledger_allocator<X>(book));
+        book.budget  = 0;
+        x            = y;
+        book.budget  = -1;
+        BOOST_CHECK_EQUAL(book.refusals, 0);
+        BOOST_CHECK(x == y);
+}
+
+// Equal allocators that do not propagate on move still let a move take the blocks whole, allocating nothing.
+BOOST_AUTO_TEST_CASE(MovingUnderEqualAllocatorsAllocatesNothing)
+{
+        using X     = xstd::basic_bit_vector<std::uint8_t, test::container::non_propagating<std::uint8_t>>;
+        auto book   = test::container::ledger();
+        auto x      = X(test::container::ledger_allocator<X>(book));
+        auto y      = X(1000UZ, true, test::container::ledger_allocator<X>(book));
+        book.budget = 0;
+        x           = std::move(y);
+        book.budget = -1;
+        BOOST_CHECK_EQUAL(book.refusals, 0);
+        BOOST_CHECK(x == X(1000UZ, true));
+}
+
 // Inserting at the end grows as push_back does, geometrically, so n insertions make O(log n) allocations.
 BOOST_AUTO_TEST_CASE(InsertingAtTheEndGrowsGeometrically)
 {

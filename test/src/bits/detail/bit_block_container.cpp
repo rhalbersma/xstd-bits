@@ -1411,6 +1411,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheTwoCeilingsAreComputedHereAndKeptAbove, Block, 
         BOOST_CHECK_EQUAL(V::check_addressable_width(V::max_addressable_width), V::max_addressable_width);
         BOOST_CHECK_THROW((void)V::check_addressable_width(V::max_addressable_width + 1UZ), std::length_error);
         BOOST_CHECK_THROW((void)V::check_addressable_width(top), std::length_error);
+
+        // And the set reading's: the widest width whole blocks hold and a size_t counts is admitted, one more is not.
+        BOOST_CHECK_EQUAL(V::check_width(V::max_width), V::max_width);
+        BOOST_CHECK_THROW((void)V::check_width(V::max_width + 1UZ), std::length_error);
 }
 
 // The saturating sum every growth computes, and the block count it reaches, said at compile time.
