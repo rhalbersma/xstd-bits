@@ -484,6 +484,18 @@ The `Web` row runs one Emscripten release on the stable rung, in Debug: wasm32 u
 
 Every leg above passes. The library no longer uses the C++23 range adaptors libc++ has not implemented (`views::cartesian_product`, `views::adjacent`, `views::pairwise_transform`, `views::stride`), and the tests probe for `<flat_set>` rather than assuming it, so the `Clang | libc++` and `Apple Clang` rows and the `Clang-CL` VS 2022 legs build and run like the rest.
 
+Beyond the compilers, CI holds coverage at 100%, consumes the library through `find_package`, `add_subdirectory` and
+`FetchContent`, runs the sanitizers, analyzes the code with Clang-Tidy, MSVC's `/analyze` and CodeQL, and builds the
+documentation site:
+
+[![Coverage](https://codecov.io/gh/rhalbersma/xstd-bits/branch/main/graph/badge.svg)](https://codecov.io/gh/rhalbersma/xstd-bits)
+[![Consumption](https://github.com/rhalbersma/xstd-bits/actions/workflows/consumption.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/consumption.yml)
+[![Sanitizers](https://github.com/rhalbersma/xstd-bits/actions/workflows/sanitizers.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/sanitizers.yml)
+[![Clang-Tidy](https://github.com/rhalbersma/xstd-bits/actions/workflows/clang-tidy.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/clang-tidy.yml)
+[![MSVC-Analyze](https://github.com/rhalbersma/xstd-bits/actions/workflows/msvc-analyze.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/msvc-analyze.yml)
+[![CodeQL](https://github.com/rhalbersma/xstd-bits/actions/workflows/codeql.yml/badge.svg)](https://github.com/rhalbersma/xstd-bits/actions/workflows/codeql.yml)
+[![Documentation](https://github.com/rhalbersma/xstd-bits/actions/workflows/pages.yml/badge.svg)](https://rhalbersma.github.io/xstd-bits/)
+
 ## License
 
 
