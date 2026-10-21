@@ -6,15 +6,15 @@
 #ifndef XSTD_BITS_BIT_ITERATOR_DETAIL_SELECT_HPP
 #define XSTD_BITS_BIT_ITERATOR_DETAIL_SELECT_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // descends
-#include <xstd/bits/detail/intrinsic.hpp>               // popcount
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <xstd/bits/detail/shift.hpp>                   // partial_block_mask
-#include <xstd/ints/bit/bit_select.hpp>                 // bit_select
-#include <cassert>                                      // assert
-#include <cstddef>                                      // ptrdiff_t, size_t
-#include <iterator>                                     // iter_difference_t, iter_reference_t
-#include <ranges>                                       // iota
+#include <xstd/bits/detail/intrinsic.hpp> // popcount
+#include <xstd/bits/detail/key_order.hpp> // descends
+#include <xstd/bits/detail/ownership.hpp> // storage_access
+#include <xstd/bits/detail/shift.hpp>     // partial_block_mask
+#include <xstd/ints/bit/bit_select.hpp>   // bit_select
+#include <cassert>                        // assert
+#include <cstddef>                        // ptrdiff_t, size_t
+#include <iterator>                       // iter_difference_t, iter_reference_t
+#include <ranges>                         // iota
 
 namespace xstd::bits::detail {
 

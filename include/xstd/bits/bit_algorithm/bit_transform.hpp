@@ -6,13 +6,14 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_TRANSFORM_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_TRANSFORM_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // bool_output_iterator, first_position, reads_bools
-#include <xstd/bits/bit_algorithm/detail/blit.hpp>      // binary_table, bool_function, read_block, unary_table, write_up
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <algorithm>                                    // binary_transform_result, min, unary_transform_result
-#include <cstddef>                                      // ptrdiff_t, size_t
-#include <ranges>                                       // begin, borrowed_iterator_t, end, size
-#include <type_traits>                                  // remove_cvref_t
+#include <xstd/bits/bit_algorithm/detail/blit.hpp>     // binary_table, bool_function, read_block, unary_table, write_up
+#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // first_position
+#include <xstd/bits/bit_iterator/detail/concepts.hpp>  // bool_output_iterator
+#include <xstd/bits/detail/ownership.hpp>              // reads_bools, storage_access
+#include <algorithm>                                   // binary_transform_result, min, unary_transform_result
+#include <cstddef>                                     // ptrdiff_t, size_t
+#include <ranges>                                      // begin, borrowed_iterator_t, end, size
+#include <type_traits>                                 // remove_cvref_t
 
 namespace xstd::ranges {
 

@@ -6,9 +6,9 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_FILL_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_FILL_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // first_position, whole_sequence, writable_bools
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <ranges>                                       // borrowed_iterator_t, end, size
+#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // first_position, whole_sequence, writable_bools
+#include <xstd/bits/detail/ownership.hpp>              // storage_access
+#include <ranges>                                      // borrowed_iterator_t, end, size
 
 namespace xstd::ranges {
 

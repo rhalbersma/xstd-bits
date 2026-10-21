@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_IS_SORTED_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_IS_SORTED_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // first_position, reads_bools
-#include <xstd/bits/bit_algorithm/detail/find.hpp>      // find_value
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <ranges>                                       // size
+#include <xstd/bits/bit_algorithm/detail/find.hpp>     // find_value
+#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // first_position
+#include <xstd/bits/detail/ownership.hpp>              // reads_bools, storage_access
+#include <ranges>                                      // size
 
 namespace xstd::ranges {
 

@@ -8,7 +8,7 @@
 
 #include <xstd/bits/bit_type_traits/bit_least.hpp>      // least_block_t
 #include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
-#include <xstd/bits/detail/bit_layout.hpp>              // bit_bytes, bytes_bits
+#include <xstd/bits/detail/bit_layout.hpp>              // bit_bytes, bits_per_byte, byte_count, bytes_bits, container_source
 #include <xstd/bits/detail/intrinsic.hpp>               // countr_zero, popcount
 #include <xstd/bits/detail/ordinal.hpp>                 // ordinal_t
 #include <xstd/bits/detail/shift.hpp>                   // shl
@@ -22,6 +22,7 @@
 #include <cstddef>                                      // size_t
 #include <iterator>                                     // ranges::distance
 #include <limits>                                       // numeric_limits
+#include <ranges>                                       // views::iota
 #include <type_traits>                                  // conditional_t, is_enum_v, type_identity
 
 // The word a flag type's mask is read and written as: an enumeration's or an integer's unsigned type, or a bitset's.
@@ -77,14 +78,43 @@ inline constexpr auto default_flag_width_v = flag_width_v<Mask>;
 template<class Mask>
 concept flag_enumeration = std::is_enum_v<Mask> and requires (Mask a, Mask b) { a | b; };
 
+// A bitset's positions as bytes, least first, read by value where its object bytes are not in that order.
+template<std::size_t M>
+[[nodiscard]] constexpr auto bitset_bytes(std::bitset<M> const& mask) noexcept
+        -> std::array<unsigned char, byte_count<M>>
+{
+        auto bytes = std::array<unsigned char, byte_count<M>>();
+        for (auto const i : std::views::iota(0UZ, M)) {
+                if (mask[i]) {
+                        auto& byte = bytes[i / bits_per_byte];
+                        byte       = static_cast<unsigned char>(static_cast<unsigned>(byte) | (1U << (i % bits_per_byte)));
+                }
+        }
+        return bytes;
+}
+
+// Bytes of positions back into a bitset by value, position by position.
+template<std::size_t M>
+[[nodiscard]] constexpr auto bytes_bitset(std::array<unsigned char, byte_count<M>> const& bytes) noexcept
+        -> std::bitset<M>
+{
+        auto mask = std::bitset<M>();
+        for (auto const i : std::views::iota(0UZ, M)) {
+                mask[i] = ((static_cast<unsigned>(bytes[i / bits_per_byte]) >> (i % bits_per_byte)) & 1U) != 0U;
+        }
+        return mask;
+}
+
 template<flag_mask Mask>
 [[nodiscard]] constexpr auto to_block(Mask const& mask) noexcept
         -> flag_block_t<Mask>
 {
         if constexpr (std::is_enum_v<Mask> or xstd::integer<Mask>) {
                 return static_cast<flag_block_t<Mask>>(mask);
-        } else {
+        } else if constexpr (container_source<Mask, flag_width_v<Mask>>) {
                 return bytes_bits<flag_block_t<Mask>, flag_width_v<Mask>>(bit_bytes<flag_width_v<Mask>>(mask));
+        } else {
+                return bytes_bits<flag_block_t<Mask>, flag_width_v<Mask>>(bitset_bytes(mask));
         }
 }
 
@@ -95,8 +125,10 @@ template<flag_mask Mask>
 {
         if constexpr (std::is_enum_v<Mask> or xstd::integer<Mask>) {
                 return static_cast<Mask>(block);
-        } else {
+        } else if constexpr (container_source<Mask, flag_width_v<Mask>>) {
                 return bytes_bits<Mask, flag_width_v<Mask>>(bit_bytes<flag_width_v<Mask>>(block));
+        } else {
+                return bytes_bitset<flag_width_v<Mask>>(bit_bytes<flag_width_v<Mask>>(block));
         }
 }
 
