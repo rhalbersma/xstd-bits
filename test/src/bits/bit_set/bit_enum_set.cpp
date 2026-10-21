@@ -14,7 +14,7 @@
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping, bit_range_mapping, enum_traits
 #include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set
 #include <xstd/bits/bit_type_traits/bit_least.hpp>  // bit_least
-#include <xstd/misc/concepts.hpp>                   // proxy_iterator, proxy_reference
+#include <xstd/misc/concepts.hpp>                   // proxy_reference, proxy_semi_iterator, proxy_semi_reference
 #include <xstd/misc/utility/to_underlying.hpp>      // to_underlying
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                // max, min, ranges::equal, ranges::includes
@@ -433,17 +433,18 @@ BOOST_AUTO_TEST_CASE(AnEnumSetFormatsItsEnumeratorsByName)
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_enum_set<piece>()), "{}");
 }
 
-// The element proxy is a proxy reference, so the qualified to_underlying reads the key through it in either order.
-BOOST_AUTO_TEST_CASE(ToUnderlyingReadsTheKeyThroughTheProxy)
+// The element proxy is read-only, so it is a semi-proxy for the key, and to_underlying reads the key it converts to.
+BOOST_AUTO_TEST_CASE(ToUnderlyingReadsTheKeyTheProxyConvertsTo)
 {
         using test::set::piece;
         using underlying = std::underlying_type_t<piece>;
-        static_assert(xstd::proxy_iterator<std::ranges::iterator_t<xstd::bit_enum_set<piece>>>);
-        static_assert(xstd::proxy_reference<std::ranges::range_reference_t<xstd::bit_enum_set<piece>>>);
-        static_assert(std::same_as<decltype(xstd::to_underlying(*xstd::bit_enum_set<piece>().begin())), underlying>);
+        using reference  = std::ranges::range_reference_t<xstd::bit_enum_set<piece>>;
+        static_assert(xstd::proxy_semi_iterator<std::ranges::iterator_t<xstd::bit_enum_set<piece>>>);
+        static_assert(xstd::proxy_semi_reference<reference, piece>);
+        static_assert(not xstd::proxy_reference<reference>);
         static_assert([] -> underlying {
                 auto const s = xstd::bit_enum_set<piece>{piece::king};
-                return xstd::to_underlying(*s.begin());
+                return xstd::to_underlying(static_cast<piece>(*s.begin()));
         }() == xstd::to_underlying(piece::king));
 
         auto const keys = std::vector{piece::pawn, piece::bishop, piece::king};
@@ -453,20 +454,20 @@ BOOST_AUTO_TEST_CASE(ToUnderlyingReadsTheKeyThroughTheProxy)
         }
         auto const ascending = xstd::bit_enum_set<piece>{piece::king, piece::pawn, piece::bishop};
         auto seen            = std::vector<underlying>();
-        for (auto const key : ascending) {
+        for (piece const key : ascending) {
                 seen.push_back(xstd::to_underlying(key));
         }
         BOOST_CHECK(seen == expected);
 
         auto const descending = descending_set<piece>{piece::king, piece::pawn, piece::bishop};
         seen.clear();
-        for (auto const key : descending) {
+        for (piece const key : descending) {
                 seen.push_back(xstd::to_underlying(key));
         }
         BOOST_CHECK(std::ranges::equal(seen, expected | std::views::reverse));
 
-        // A std::size_t key's proxy and a sequence's bool proxy have no underlying value to give.
-        static_assert(takes_to_underlying<std::ranges::range_reference_t<xstd::bit_enum_set<piece>>>);
+        // No proxy here is passed as it is: an enum key's is read-only, a std::size_t key's and a bool's have no enum.
+        static_assert(not takes_to_underlying<reference>);
         static_assert(not takes_to_underlying<std::ranges::range_reference_t<xstd::bit_fixed_set<8>>>);
         static_assert(not takes_to_underlying<std::ranges::range_reference_t<xstd::bit_array<8>>>);
 }
