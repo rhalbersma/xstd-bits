@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_BIT_ITERATOR_BIT_DISTANCE_HPP
 #define XSTD_BITS_BIT_ITERATOR_BIT_DISTANCE_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // bit_iterator
-#include <xstd/bits/bit_iterator/detail/select.hpp>     // keys_between
-#include <iterator>                                     // iter_difference_t, random_access_iterator, ranges::distance
-#include <ranges>                                       // begin, common_range, end, iterator_t, range_difference_t, sized_range
+#include <xstd/bits/bit_iterator/detail/concepts.hpp> // bit_iterator
+#include <xstd/bits/bit_iterator/detail/select.hpp>   // keys_between
+#include <iterator>                                   // iter_difference_t, random_access_iterator, ranges::distance
+#include <ranges>                                     // begin, common_range, end, iterator_t, range_difference_t, sized_range
 
 namespace xstd::ranges {
 

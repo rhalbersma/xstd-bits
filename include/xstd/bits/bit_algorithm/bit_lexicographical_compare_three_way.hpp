@@ -6,9 +6,10 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_LEXICOGRAPHICAL_COMPARE_THREE_WAY_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_LEXICOGRAPHICAL_COMPARE_THREE_WAY_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // comparable_readings, reads_keys
-#include <xstd/bits/bit_algorithm/detail/compare.hpp>   // three_way_bools, three_way_keys
-#include <compare>                                      // strong_ordering
+#include <xstd/bits/bit_algorithm/detail/comparable.hpp> // comparable_readings
+#include <xstd/bits/bit_algorithm/detail/compare.hpp>    // three_way_bools, three_way_keys
+#include <xstd/bits/detail/ownership.hpp>                // reads_keys
+#include <compare>                                       // strong_ordering
 
 namespace xstd::ranges {
 

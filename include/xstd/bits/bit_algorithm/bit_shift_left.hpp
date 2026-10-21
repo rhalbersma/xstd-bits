@@ -6,11 +6,11 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_SHIFT_LEFT_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_SHIFT_LEFT_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // whole_sequence
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <cassert>                                      // assert
-#include <cstddef>                                      // size_t
-#include <ranges>                                       // begin, borrowed_subrange_t, end, range_difference_t
+#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // whole_sequence
+#include <xstd/bits/detail/ownership.hpp>              // storage_access
+#include <cassert>                                     // assert
+#include <cstddef>                                     // size_t
+#include <ranges>                                      // begin, borrowed_subrange_t, end, range_difference_t
 
 namespace xstd::ranges {
 

@@ -6,11 +6,11 @@
 #ifndef XSTD_BITS_BIT_ITERATOR_BIT_ADVANCE_HPP
 #define XSTD_BITS_BIT_ITERATOR_BIT_ADVANCE_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // bit_iterator
-#include <xstd/bits/bit_iterator/detail/select.hpp>     // advance_keys, first_key_position
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <cassert>                                      // assert
-#include <iterator>                                     // iter_difference_t, random_access_iterator, ranges::advance
+#include <xstd/bits/bit_iterator/detail/concepts.hpp> // bit_iterator
+#include <xstd/bits/bit_iterator/detail/select.hpp>   // advance_keys, first_key_position
+#include <xstd/bits/detail/ownership.hpp>             // storage_access
+#include <cassert>                                    // assert
+#include <iterator>                                   // iter_difference_t, random_access_iterator, ranges::advance
 
 namespace xstd::ranges {
 

@@ -10,7 +10,7 @@
 #include <xstd/bits/bit_ranges/from_blocks.hpp>               // from_blocks
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>                // basic_bit_fixed_set
 #include <xstd/bits/bit_set/bit_flag_mapping.hpp>             // bit_flag_mapping
-#include <xstd/bits/bit_set/detail/flag_block.hpp>            // full_range_mask
+#include <xstd/bits/bit_set/detail/flag_block.hpp>            // bitset_bytes, bytes_bitset, full_range_mask
 #include <boost/test/unit_test.hpp>                           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                          // ranges::equal
 #include <array>                                              // array
@@ -332,6 +332,23 @@ BOOST_AUTO_TEST_CASE(OnlyAFixedUnderlyingTypeGivesADefaultWidth)
         static_assert(not has_default_width<std::ios_base::fmtflags> and not has_default_width<std::ios_base::iostate> and not has_default_width<std::ios_base::openmode>);
 #endif
         BOOST_CHECK(true);
+}
+
+// Read by value, a bitset gives the bytes its positions spell on either byte order, and takes the same bytes back.
+BOOST_AUTO_TEST_CASE(ABitsetReadByValueSpellsItsPositions)
+{
+        constexpr auto narrow = std::bitset<16>(0x8001U);
+        static_assert(xstd::bits::detail::bitset_bytes(narrow) == std::array<unsigned char, 2>{0x01U, 0x80U});
+        static_assert(xstd::bits::detail::bytes_bitset<16>(xstd::bits::detail::bitset_bytes(narrow)) == narrow);
+
+        auto wide = std::bitset<147>();
+        wide.set(0).set(9).set(146);
+        auto expected = std::array<unsigned char, 19>();
+        expected[0]   = 0x01U;
+        expected[1]   = 0x02U;
+        expected[18]  = 0x04U;
+        BOOST_CHECK(xstd::bits::detail::bitset_bytes(wide) == expected);
+        BOOST_CHECK(xstd::bits::detail::bytes_bitset<147>(expected) == wide);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

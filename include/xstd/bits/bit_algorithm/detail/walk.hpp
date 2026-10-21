@@ -6,16 +6,17 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_WALK_HPP
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_WALK_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // descends, first_position, reads_keys
-#include <xstd/bits/detail/intrinsic.hpp>               // countl_zero, countr_zero
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <xstd/bits/detail/shift.hpp>                   // shl, shr
-#include <xstd/misc/concepts/specialization_of.hpp>     // specialization_of
-#include <algorithm>                                    // min
-#include <cstddef>                                      // size_t
-#include <ranges>                                       // iota, ref_view, reverse_view, size
-#include <type_traits>                                  // remove_cvref_t
-#include <utility>                                      // declval
+#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // first_position
+#include <xstd/bits/detail/intrinsic.hpp>              // countl_zero, countr_zero
+#include <xstd/bits/detail/key_order.hpp>              // descends
+#include <xstd/bits/detail/ownership.hpp>              // reads_keys, storage_access
+#include <xstd/bits/detail/shift.hpp>                  // shl, shr
+#include <xstd/misc/concepts/specialization_of.hpp>    // specialization_of
+#include <algorithm>                                   // min
+#include <cstddef>                                     // size_t
+#include <ranges>                                      // iota, ref_view, reverse_view, size
+#include <type_traits>                                 // remove_cvref_t
+#include <utility>                                     // declval
 
 namespace xstd::bits::detail {
 

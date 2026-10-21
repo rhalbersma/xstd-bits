@@ -6,7 +6,8 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_ALL_OF_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_ALL_OF_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // all_true, reads_bools
+#include <xstd/bits/bit_algorithm/detail/count.hpp> // all_true
+#include <xstd/bits/detail/ownership.hpp>           // reads_bools
 
 namespace xstd::ranges {
 
