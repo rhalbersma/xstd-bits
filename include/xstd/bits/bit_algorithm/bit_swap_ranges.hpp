@@ -6,12 +6,12 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_SWAP_RANGES_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_SWAP_RANGES_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // first_position, writable_bools
-#include <xstd/bits/bit_algorithm/detail/blit.hpp>      // swap_bools
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <algorithm>                                    // min, swap_ranges_result
-#include <cstddef>                                      // ptrdiff_t
-#include <ranges>                                       // begin, borrowed_iterator_t, size
+#include <xstd/bits/bit_algorithm/detail/blit.hpp>     // swap_bools
+#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // first_position, writable_bools
+#include <xstd/bits/detail/ownership.hpp>              // storage_access
+#include <algorithm>                                   // min, swap_ranges_result
+#include <cstddef>                                     // ptrdiff_t
+#include <ranges>                                      // begin, borrowed_iterator_t, size
 
 namespace xstd::ranges {
 

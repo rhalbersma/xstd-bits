@@ -4860,7 +4860,7 @@ std::ranges::none_of(v, std::logical_not())  == xstd::ranges::bit_all_of(v)
 ```
 
 Short-circuiting survives them: asking whether every bool is `false` really does stop at the first set bit, because
-it *is* `bit_none_of`. So there are four helpers in `bit_algorithm/detail/algorithm.hpp` -- `count_true`, `any_true`, `all_true`,
+it *is* `bit_none_of`. So there are four helpers in `bit_algorithm/detail/count.hpp` -- `count_true`, `any_true`, `all_true`,
 `none_true` -- and the algorithms are spelled over those, each helper choosing its tier once: the storage's own
 member over a whole sequence, and a masked block at a time over a window ([windows](#windows)). `none_true` is a
 helper of its own rather than `not any_true`, so the storage is asked in its own blocks; `bit_block_container` spells

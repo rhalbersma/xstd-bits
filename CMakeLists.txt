@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.30)
 project(
     xstd-bits
     VERSION 0.1.0
-    DESCRIPTION "Bit-packed C++ containers and views modelling their standard counterparts, with the bit-parallel operations packing makes possible"
+    DESCRIPTION "Bitwise extensions to the C++ Standard Library"
     # Spelled out: project()'s own arguments expand before it sets PROJECT_NAME, so ${PROJECT_NAME} here is empty.
     HOMEPAGE_URL https://github.com/rhalbersma/xstd-bits
     LANGUAGES CXX
@@ -81,8 +81,12 @@ target_sources(
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
         include/xstd/bits/bit_algorithm/detail/blit.hpp
+        include/xstd/bits/bit_algorithm/detail/comparable.hpp
         include/xstd/bits/bit_algorithm/detail/compare.hpp
+        include/xstd/bits/bit_algorithm/detail/count.hpp
         include/xstd/bits/bit_algorithm/detail/find.hpp
+        include/xstd/bits/bit_algorithm/detail/mismatch.hpp
+        include/xstd/bits/bit_algorithm/detail/sequence.hpp
         include/xstd/bits/bit_algorithm/detail/walk.hpp
         include/xstd/bits/bit_algorithm/bit_all_of.hpp
         include/xstd/bits/bit_algorithm/bit_any_of.hpp
@@ -154,6 +158,7 @@ target_sources(
         include/xstd/bits/bit_iterator/bit_distance.hpp
         include/xstd/bits/bit_iterator/bit_next.hpp
         include/xstd/bits/bit_iterator/bit_prev.hpp
+        include/xstd/bits/bit_iterator/detail/concepts.hpp
         include/xstd/bits/bit_iterator/detail/select.hpp
         include/xstd/bits/bit_ranges.hpp
         include/xstd/bits/bit_ranges/from_blocks.hpp
@@ -196,7 +201,6 @@ target_sources(
         include/xstd/bits/bit_vector/hash.hpp
         include/xstd/bits/bit_vector/container_hash.hpp
         include/xstd/bits/detail/adapted_bits.hpp
-        include/xstd/bits/bit_algorithm/detail/algorithm.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
         include/xstd/bits/detail/assert.hpp
         include/xstd/bits/detail/inplace_blocks.hpp
@@ -231,6 +235,7 @@ target_sources(
         include/xstd/bits/detail/non_volatile.hpp
         include/xstd/bits/detail/num_blocks.hpp
         include/xstd/bits/detail/owner_members.hpp
+        include/xstd/bits/detail/key_order.hpp
         include/xstd/bits/detail/ownership.hpp
         include/xstd/bits/detail/rebind.hpp
 )
