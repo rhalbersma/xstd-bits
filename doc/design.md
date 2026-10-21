@@ -612,7 +612,10 @@ The way in is a tagged constructor, not a static member, because a static member
 can be deduced through it, and because a constructor is what `emplace_back` and the other in-place constructions
 reach. The tag is `std::from_range`'s twin -- `xstd::from_blocks_t`,
 an explicitly defaulted constructor, and the object `xstd::from_blocks` -- because the job is the same one: saying at
-the call site which reading of the argument is meant. `basic_bit_array(xstd::from_blocks, board)` is
+the call site which reading of the argument is meant. itsy_bitsy's `bit_sequence` spells the same door `std::in_place`,
+which every standard type taking it reads as constructing the *contained value*: `bit_fixed_set<32>(std::in_place, 5u)`
+would read as the set `{5}` where the storage reading gives `{0, 2}`, and a tag that forwards any arguments to the
+storage's constructor gives the guides nothing to deduce a width from. `basic_bit_array(xstd::from_blocks, board)` is
 `basic_bit_array<std::uint64_t, 64>`, and `basic_bit_fixed_set(xstd::from_blocks, blocks)` over a
 `std::array<std::uint8_t, 3>` is `basic_bit_fixed_set<std::size_t, std::uint8_t, 24>`: the guides deduce the block type and the
 width, with `std::size_t` as the key, from an unsigned integer, a `std::array` of them or a built-in array of them, the

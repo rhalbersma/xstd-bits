@@ -173,5 +173,7 @@ in another language where that counterpart shares its purpose. A container that 
   Hinnant, Vinnie Falco, John Bytheway), [Boost.Hash2](https://github.com/boostorg/hash2) and
   [Boost.ContainerHash](https://www.boost.org/doc/libs/release/libs/container_hash/).
 - **`from_blocks`:** [P1206R7](https://wg21.link/p1206r7), *Conversions from ranges to containers* (Corentin
-  Jabot, Eric Niebler, Casey Carter), whose `from_range` tag it mirrors.
+  Jabot, Eric Niebler, Casey Carter), whose `from_range` tag it mirrors. itsy_bitsy's
+  [`bit_sequence`](https://github.com/ThePhD/itsy_bitsy/blob/d5b6bf9509bb2dff6235452d427f0b1c349d5f8b/include/itsy/bit_sequence.hpp)
+  takes its storage through `std::in_place` instead.
 - **`bit_convert`:** [P0476R2](https://wg21.link/p0476r2), *Bit-casting object representations* (JF Bastien).
