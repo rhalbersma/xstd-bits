@@ -19,9 +19,9 @@ As `bit_convert`, with `boost::dynamic_bitset<Block, AllocatorOrContainer>` as e
 
 - **As a source**, a `dynamic_bitset` is a sequence of its `size()`, of run-time width, read through
   `boost::to_block_range`, each of its blocks landing on its own positions at any target block width:
-  - into a run-time target, as from any run-time sequence: a sequence target takes its size, a set target whole
-    blocks of its own, and an inplace target too small throws `bad_alloc`;
-  - into a fixed target, by value: zero-extended, and `overflow_error` for a position at or past the target's width.
+    - into a run-time target, as from any run-time sequence: a sequence target takes its size, a set target whole
+      blocks of its own, and an inplace target too small throws `bad_alloc`;
+    - into a fixed target, by value: zero-extended, and `overflow_error` for a position at or past the target's width.
 - **As a target**, `bit_convert<boost::dynamic_bitset<Block, AllocatorOrContainer>>(from)` takes a source of ours
   that is an owner, a whole view or a fixed width, a `bitset` and a block among them. The result is the source's
   width, as a sequence target takes it, written through `boost::from_block_range` in blocks of its own width.

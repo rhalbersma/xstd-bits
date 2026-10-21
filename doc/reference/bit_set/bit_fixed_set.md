@@ -57,11 +57,11 @@ As `basic_bit_set`, with:
 - It is a structural type exactly where `N` fills its blocks, as `bit_align<bit_fixed_set<N>>` does at any `N`.
 - **The mask members**, present only where `bit_mask_mapping<KeyMapping, Key>` holds, which reads every value of
   `Key` as the block of its one-bit keys:
-  - The constructor from a mask is implicit and sets the keys whose bits the mask has. *Preconditions:* the mask has
-    no bit at or above `N`.
-  - The conversion to `Key` is implicit and returns the mask with this set's keys.
-  - The `initializer_list` constructor is the union of its values, and `noexcept`.
-  - `&`, `|`, `^` and `-` take a mask on either side, and `&=`, `|=`, `^=` and `-=` one on the right, each over
-    the mask's exact type. `&` and `-` with the mask on the right are total, the mask's bits at or above `N` meeting
-    nothing; the others have the constructor's precondition. `set == mask` is total, and false for a mask with a bit
-    at or above `N`.
+    - The constructor from a mask is implicit and sets the keys whose bits the mask has. *Preconditions:* the mask has
+      no bit at or above `N`.
+    - The conversion to `Key` is implicit and returns the mask with this set's keys.
+    - The `initializer_list` constructor is the union of its values, and `noexcept`.
+    - `&`, `|`, `^` and `-` take a mask on either side, and `&=`, `|=`, `^=` and `-=` one on the right, each over
+      the mask's exact type. `&` and `-` with the mask on the right are total, the mask's bits at or above `N` meeting
+      nothing; the others have the constructor's precondition. `set == mask` is total, and false for a mask with a bit
+      at or above `N`.

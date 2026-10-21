@@ -29,23 +29,23 @@ The rules:
   scalar type.
 - *Effects:* Where `remove_reference_t<From>` is a `volatile` scalar, reads it once and returns
   `bit_convert<T>(static_cast<F>(from))`. Otherwise, into a run-time target:
-  - A sequence target takes the source's *width*: a sequence's size, a window's size, a fixed width's `W`, and a
-    set's universe, its whole blocks up to its `max_size()`. A set target covers that width in whole blocks of its
-    own, capped at its capacity where it has one. The positions past the source's width are clear.
-  - Where `From` is a non-`const` rvalue whose `extract()` yields a container `C`, `bit_constructible_from<T, C>`
-    holds, and `T`'s capacity, where it has one, is every bit of `C`, the blocks move: `C` is extracted into the
-    `from_blocks` constructor without copying a block, a sequence target then takes the source's width, and the
-    source is left at width zero. The extracted container's type carries its allocator, so another allocator is
-    another `C`.
-  - Otherwise the positions are copied, and the source is unchanged.
+    - A sequence target takes the source's *width*: a sequence's size, a window's size, a fixed width's `W`, and a
+      set's universe, its whole blocks up to its `max_size()`. A set target covers that width in whole blocks of its
+      own, capped at its capacity where it has one. The positions past the source's width are clear.
+    - Where `From` is a non-`const` rvalue whose `extract()` yields a container `C`, `bit_constructible_from<T, C>`
+      holds, and `T`'s capacity, where it has one, is every bit of `C`, the blocks move: `C` is extracted into the
+      `from_blocks` constructor without copying a block, a sequence target then takes the source's width, and the
+      source is left at width zero. The extracted container's type carries its allocator, so another allocator is
+      another `C`.
+    - Otherwise the positions are copied, and the source is unchanged.
 - *Returns:* The object of type `T` holding those positions.
 - *Throws:*
-  - `overflow_error` where `T` is a fixed target, `F` is no fixed width, and a position at or past `W(T)` is set, as
-    `bitset::to_ulong` throws in [[bitset.members]](https://eel.is/c++draft/bitset.members);
-  - `bad_alloc` where `T` is an inplace sequence whose capacity is short of the source's width, or a set target
-    capped at its capacity would lose a key, which is what the target's own growth throws, before a block is
-    written;
-  - any exception the target's allocator throws.
+    - `overflow_error` where `T` is a fixed target, `F` is no fixed width, and a position at or past `W(T)` is set, as
+      `bitset::to_ulong` throws in [[bitset.members]](https://eel.is/c++draft/bitset.members);
+    - `bad_alloc` where `T` is an inplace sequence whose capacity is short of the source's width, or a set target
+      capped at its capacity would lose a key, which is what the target's own growth throws, before a block is
+      written;
+    - any exception the target's allocator throws.
 - *Remarks:* The exception specification is `fixed-width<T> and fixed-width<F>`: nothing throws between two fixed
   widths, and a run-time end can allocate, refuse a capacity or throw `overflow_error`.
 - *Remarks:* It is usable in a constant expression. There the copy is made by shifts, and outside one by a single
