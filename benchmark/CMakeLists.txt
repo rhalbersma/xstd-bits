@@ -30,6 +30,7 @@ set(cxx_compile_options_warnings
         -Wno-lifetime-safety-intra-tu-suggestions             # Clang trunk (23-SVN); suggests [[clang::lifetimebound]] across xstd::bits::detail::bidirectional_bit_iterator - not yet acted on
         -Wno-lifetime-safety-intra-tu-constructor-suggestions # ditto, for constructors
         -Wno-lifetime-safety-invalidation                     # ditto; false positive on a.clear() in test/include/set/primitives.hpp treating the container itself as invalidated
+        -Wno-lifetime-safety-experimental-invalidation        # ditto, the name trunk gives it from 2026-10-21
         -Wno-lifetime-safety-experimental-field-origin-escape # Clang trunk (24-SVN); indirect_selection::index() returns a lambda over the indices its array refers to, as [template.indirect.array] specifies
         -Wno-experimental-lifetime-safety-field-origin-escape # ditto, the name trunk gave it before 2026-10-21
         -Wno-c++98-compat
