@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/endian.hpp>                                    // IWYU pragma: keep; TEST_BYTES_ARE_POSITIONS
 #include <test/set/lookup.hpp>                                // lookup_mismatches
 #include <test/set/order_isomorphism.hpp>                     // is_order_isomorphism
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp>        // bit_mask_mapping
@@ -229,7 +230,12 @@ BOOST_AUTO_TEST_CASE(AWideBitsetRanksAtItsBitsPosition)
         static_assert(std::same_as<xstd::bit_flag_mapping<std::bitset<100>>::block_type, std::array<std::uint64_t, 2>>);
         static_assert(xstd::sized_bit_index_mapping<mapping, wide> and xstd::bit_mask_mapping<mapping, wide>);
         static_assert(mapping::to_index(wide().set(146)) == 146UZ and mapping::from_index(64UZ) == wide().set(64));
+#ifdef TEST_BYTES_ARE_POSITIONS
         static_assert(test::set::is_order_isomorphism<mapping, wide>());
+#else
+        // Read by value, position by position, the whole order outruns Clang's constant-evaluation step limit.
+        BOOST_CHECK((test::set::is_order_isomorphism<mapping, wide>()));
+#endif
         for (auto const i : std::views::iota(0UZ, mapping::size)) {
                 BOOST_CHECK_EQUAL(mapping::to_index(mapping::from_index(i)), i);
                 BOOST_CHECK(mapping::from_index(i) == wide().set(i));
