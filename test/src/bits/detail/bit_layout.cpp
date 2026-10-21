@@ -36,6 +36,61 @@ struct raw
         [[nodiscard]] friend auto operator==(raw const&, raw const&) noexcept -> bool = default;
 };
 
+// The second family reads an object's bytes as its positions, which they are only on a little-endian target.
+constexpr auto bytes_are_positions = std::endian::native == std::endian::little;
+
+template<std::size_t N>
+auto check_each_position_lights_one_byte()
+        -> void
+{
+        for (auto const i : std::views::iota(0UZ, N)) {
+                auto bs = std::bitset<N>();
+                bs.set(i);
+                auto const bytes = detail::bit_bytes<N>(bs);
+                for (auto const j : std::views::iota(0UZ, bytes.size())) {
+                        BOOST_CHECK(bytes[j] == (j == i / 8UZ ? static_cast<unsigned char>(1U << (i % 8UZ)) : 0U));
+                }
+        }
+}
+
+// A foreign field of bits at a width that is not a whole number of bytes, so the last byte is a partial one.
+template<class Field>
+auto check_foreign_field_crosses()
+        -> void
+{
+        constexpr auto N = 100UZ;
+
+        constexpr auto field  = Field(0x0F1E'2D3C'4B5A'6978ULL);
+        constexpr auto folded = detail::bit_bytes<N>(field);
+        auto const copied     = detail::bit_bytes<N>(field);
+        BOOST_CHECK(copied == folded);
+
+        constexpr auto back_folded = detail::bytes_bits<Field, N>(folded);
+        auto const back_copied     = detail::bytes_bits<Field, N>(folded);
+        BOOST_CHECK(back_copied == back_folded);
+        BOOST_CHECK(back_copied == field);
+}
+
+// Plain blocks at 100 bits cross as their first 13 bytes, and the 3 bytes past those come back zero.
+template<class Blocks>
+auto check_plain_blocks_cross()
+        -> void
+{
+        constexpr auto N    = 100UZ;
+        constexpr auto ones = ~0ULL;
+        constexpr auto kept = Blocks{.lo = ones, .hi = 0xFF'FFFF'FFFFULL};
+
+        constexpr auto blocks = Blocks{.lo = ones, .hi = ones};
+        constexpr auto folded = detail::bit_bytes<N>(blocks);
+        auto const copied     = detail::bit_bytes<N>(blocks);
+        BOOST_CHECK(copied == folded);
+
+        constexpr auto back_folded = detail::bytes_bits<Blocks, N>(folded);
+        auto const back_copied     = detail::bytes_bits<Blocks, N>(folded);
+        static_assert(back_folded == kept);
+        BOOST_CHECK(back_copied == kept);
+}
+
 } // namespace
 
 // An unsigned integer is its own layout: bit n of the value is 2^n by the language, whatever the byte order.
@@ -54,18 +109,18 @@ BOOST_AUTO_TEST_CASE(AnUnsignedIntegerIsItsOwnLayout)
         static_assert(not detail::fixed_blocks_source<bool, 1UZ>);
 }
 
-// The other family is read as its bytes wherever its object has room for the width, as std::bit_cast trusts it.
+// The other family is read as its bytes wherever its object has room for the width and is little-endian.
 BOOST_AUTO_TEST_CASE(AFieldOfBitsIsReadWhereItsObjectHasRoom)
 {
-        static_assert(detail::container_source<std::bitset<1UZ>, 1UZ>);
-        static_assert(detail::container_source<std::bitset<32UZ>, 32UZ>); // the MSVC STL's narrow block type
-        static_assert(detail::container_source<std::bitset<33UZ>, 33UZ>); // and its wide one
-        static_assert(detail::container_source<std::bitset<200UZ>, 200UZ>);
-        static_assert(detail::container_source<std::bitset<1UZ << 16UZ>, 1UZ << 16UZ>);
+        static_assert(detail::container_source<std::bitset<1UZ>, 1UZ> == bytes_are_positions);
+        static_assert(detail::container_source<std::bitset<32UZ>, 32UZ> == bytes_are_positions); // the MSVC STL's narrow block type
+        static_assert(detail::container_source<std::bitset<33UZ>, 33UZ> == bytes_are_positions); // and its wide one
+        static_assert(detail::container_source<std::bitset<200UZ>, 200UZ> == bytes_are_positions);
+        static_assert(detail::container_source<std::bitset<1UZ << 16UZ>, 1UZ << 16UZ> == bytes_are_positions);
 
         // Nothing is asked of its members, so plain blocks with room for the width are a field of bits too.
-        static_assert(detail::container_source<raw, 100UZ>);
-        static_assert(detail::bit_layout<raw, 128UZ>);
+        static_assert(detail::container_source<raw, 100UZ> == bytes_are_positions);
+        static_assert(detail::bit_layout<raw, 128UZ> == bytes_are_positions);
 }
 
 // Neither family: a heap container is not its own bits, and a width the object cannot hold is not a conversion.
@@ -97,9 +152,11 @@ BOOST_AUTO_TEST_CASE(TheTwoDirectionsAreEachOthersInverse)
         for (auto i = 0UZ; i < 200UZ; i += 3UZ) {
                 wide.set(i);
         }
-        BOOST_CHECK((round_trips.template operator()<std::bitset<200UZ>, 200UZ>(wide)));
-        BOOST_CHECK((round_trips.template operator()<std::bitset<200UZ>, 200UZ>(std::bitset<200UZ>())));
-        BOOST_CHECK((round_trips.template operator()<std::bitset<200UZ>, 200UZ>(std::bitset<200UZ>().flip())));
+        if constexpr (bytes_are_positions) {
+                BOOST_CHECK((round_trips.template operator()<std::bitset<200UZ>, 200UZ>(wide)));
+                BOOST_CHECK((round_trips.template operator()<std::bitset<200UZ>, 200UZ>(std::bitset<200UZ>())));
+                BOOST_CHECK((round_trips.template operator()<std::bitset<200UZ>, 200UZ>(std::bitset<200UZ>().flip())));
+        }
 
         // The integer family, at a width that fills the type and one that does not.
         BOOST_CHECK((round_trips.template operator()<std::uint64_t, 64UZ>(0xDEADBEEFCAFEF00DULL)));
@@ -107,21 +164,19 @@ BOOST_AUTO_TEST_CASE(TheTwoDirectionsAreEachOthersInverse)
         BOOST_CHECK((round_trips.template operator()<std::uint8_t, 8UZ>(static_cast<std::uint8_t>(0xA5U))));
 
         // Zero width, which has no byte to exchange and round trips all the same.
-        BOOST_CHECK((round_trips.template operator()<std::bitset<0UZ>, 0UZ>(std::bitset<0UZ>())));
+        if constexpr (bytes_are_positions) {
+                BOOST_CHECK((round_trips.template operator()<std::bitset<0UZ>, 0UZ>(std::bitset<0UZ>())));
+        }
         static_assert(detail::byte_count<0UZ> == 0UZ);
 }
 
 // The byte view is the whole object and nothing besides, refusing a reordered block and a big-endian target both.
 BOOST_AUTO_TEST_CASE(OnePositionLightsOneBitOfOneByte)
 {
-        constexpr auto N = 200UZ;
-        for (auto const i : std::views::iota(0UZ, N)) {
-                auto bs = std::bitset<N>();
-                bs.set(i);
-                auto const bytes = detail::bit_bytes<N>(bs);
-                for (auto const j : std::views::iota(0UZ, bytes.size())) {
-                        BOOST_CHECK(bytes[j] == (j == i / 8UZ ? static_cast<unsigned char>(1U << (i % 8UZ)) : 0U));
-                }
+        if constexpr (bytes_are_positions) {
+                check_each_position_lights_one_byte<200UZ>();
+        } else {
+                BOOST_CHECK((not detail::container_source<std::bitset<200UZ>, 200UZ>));
         }
 }
 
@@ -159,7 +214,7 @@ BOOST_AUTO_TEST_CASE(ASequenceOfBlocksStatesItsLayoutToo)
         // A built-in array is read as its std::array; signed blocks state no layout, so theirs is their object bytes.
         static_assert(detail::fixed_blocks_source<four_blocks, 256UZ> and not detail::fixed_blocks_source<four_blocks, 257UZ>);
         static_assert(detail::bit_layout<four_blocks, 256UZ> and not detail::bit_layout<four_blocks, 257UZ>);
-        static_assert(not detail::fixed_blocks_source<four_ints, 64UZ> and detail::container_source<four_ints, 64UZ>);
+        static_assert(not detail::fixed_blocks_source<four_ints, 64UZ> and detail::container_source<four_ints, 64UZ> == bytes_are_positions);
         static_assert([] -> bool {
                 four_blocks const blocks = {0x0123'4567'89AB'CDEFULL, 0x0ULL, 0x1ULL, 0x8000'0000'0000'0000ULL};
                 auto const same          = std::array<std::uint64_t, 4>{0x0123'4567'89AB'CDEFULL, 0x0ULL, 0x1ULL, 0x8000'0000'0000'0000ULL};
@@ -247,37 +302,10 @@ BOOST_AUTO_TEST_CASE(TheCopyAndTheShiftsAgree)
                 BOOST_CHECK_EQUAL(back_copied, value);
         }
 
-        // A foreign field of bits at a width that is not a whole number of bytes, so the last byte is a partial one.
-        {
-                constexpr auto N = 100UZ;
-                using Field      = std::bitset<N>;
-
-                constexpr auto field  = Field(0x0F1E'2D3C'4B5A'6978ULL);
-                constexpr auto folded = detail::bit_bytes<N>(field);
-                auto const copied     = detail::bit_bytes<N>(field);
-                BOOST_CHECK(copied == folded);
-
-                constexpr auto back_folded = detail::bytes_bits<Field, N>(folded);
-                auto const back_copied     = detail::bytes_bits<Field, N>(folded);
-                BOOST_CHECK(back_copied == back_folded);
-                BOOST_CHECK(back_copied == field);
-        }
-
-        // Plain blocks at 100 bits cross as their first 13 bytes, and the 3 bytes past those come back zero.
-        {
-                constexpr auto N    = 100UZ;
-                constexpr auto ones = ~0ULL;
-                constexpr auto kept = raw{.lo = ones, .hi = 0xFF'FFFF'FFFFULL};
-
-                constexpr auto blocks = raw{.lo = ones, .hi = ones};
-                constexpr auto folded = detail::bit_bytes<N>(blocks);
-                auto const copied     = detail::bit_bytes<N>(blocks);
-                BOOST_CHECK(copied == folded);
-
-                constexpr auto back_folded = detail::bytes_bits<raw, N>(folded);
-                auto const back_copied     = detail::bytes_bits<raw, N>(folded);
-                static_assert(back_folded == kept);
-                BOOST_CHECK(back_copied == kept);
+        // A foreign field and plain blocks, which cross as their object bytes.
+        if constexpr (bytes_are_positions) {
+                check_foreign_field_crosses<std::bitset<100UZ>>();
+                check_plain_blocks_cross<raw>();
         }
 }
 
