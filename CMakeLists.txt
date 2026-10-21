@@ -299,8 +299,23 @@ if(PROJECT_IS_TOP_LEVEL)
         set(CMAKE_CXX_STANDARD ${${project_option_prefix}_CXX_STANDARD})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-        # Left ON, which is CMake's default, so the matrix compiles as gnu++23 where xstd and tabula compile as c++23. Stated rather than omitted, because the reason is specific and the difference is deliberate: <bit>'s functions take std::unsigned_integral alone, and libstdc++ and libc++ carry xstd::uint128 into that concept only outside __STRICT_ANSI__. Turning extensions off would drop the widest Block from every instantiation list rather than fail, which is the worse of the two outcomes.
-        set(CMAKE_CXX_EXTENSIONS ON)
+        # Strict, as xstd and tabula compile, except where strict mode would drop the widest Block: <bit>'s functions take std::unsigned_integral alone, and libstdc++ before 16 carries unsigned __int128 into that concept only outside __STRICT_ANSI__, where libc++ and libstdc++ 16 always do. The question is asked of the toolchain rather than of a version number, so a clang on libstdc++ 15 gets the answer that standard library gives, and MSVC and 32-bit targets, which have no unsigned __int128 to lose, stay strict.
+        set(CMAKE_CXX_EXTENSIONS OFF)
+        include(CheckCXXSourceCompiles)
+        check_cxx_source_compiles([[
+            #include <concepts>
+            #if !defined(__SIZEOF_INT128__) || defined(_MSC_VER)
+            #error "no unsigned __int128 to lose"
+            #endif
+            static_assert(not std::unsigned_integral<unsigned __int128>);
+            auto main() -> int { return 0; }
+        ]] ${project_option_prefix}_STRICT_DROPS_UINT128)
+        if(${project_option_prefix}_STRICT_DROPS_UINT128)
+            set(CMAKE_CXX_EXTENSIONS ON)
+            message(STATUS "Tests and benchmarks compile as gnu++${CMAKE_CXX_STANDARD}: strict mode drops unsigned __int128 from std::unsigned_integral here")
+        else()
+            message(STATUS "Tests and benchmarks compile as c++${CMAKE_CXX_STANDARD}")
+        endif()
 
         # Above both, and not inside test/: benchmark/ is configured first, so a target declared in test/ does not exist yet when the benchmarks ask for it. Both trees grade over the same two integer classes.
         include(${CMAKE_CURRENT_LIST_DIR}/cmake/int128.cmake)
