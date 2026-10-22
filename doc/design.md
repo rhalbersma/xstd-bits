@@ -2698,9 +2698,12 @@ should reach the library, it belongs in the interface, as a selection type with 
 `bit_gslice` carries a shape a `std::gslice` cannot; none is added without a workload that needs it.
 
 The two permutations come from xstd-ints, which runs BMI2 where the target has it fast and portable kernels
-elsewhere, choosing at compile time. Neither is public here: no `std::ranges` algorithm packs selected elements, so
-there is no signature for an `xstd::bit_compress` over this library's ranges to borrow
-([algorithms-not-members](#algorithms-not-members)), and the block-range kernels stay in `detail`, under the proxies.
+elsewhere, choosing at compile time. They are public as [[bit.permute]](https://eel.is/c++draft/bit.permute) has them,
+not as a ranges algorithm, since no `std::ranges` algorithm packs selected elements: `xstd::bit_compress(x, m)` and
+`xstd::bit_expand(x, m)` over two owners of one type, the type in and the type out as `bit_compress(T, T) -> T` is,
+over the same block kernels. An integer form packs into a register for a table's index and builds no owner, so two
+`bit_fixed_set<64>` compile to one `pext`. The valarray subscript is the same operation in `valarray`'s notation,
+its gather sized to what it selects where `bit_compress` keeps the source's width.
 
 `std::slice`, `std::gslice` and `std::valarray<std::size_t>` have no `constexpr` constructor, so a mask's subscripts
 and a `bit_slice`'s are the ones that run in a constant expression; they do, on the fixed and inplace arrays.

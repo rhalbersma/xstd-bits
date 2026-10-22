@@ -129,7 +129,9 @@ target_sources(
         include/xstd/bits/bit_array/hash.hpp
         include/xstd/bits/bit_array/container_hash.hpp
         include/xstd/bits/bit.hpp
+        include/xstd/bits/bit/bit_compress.hpp
         include/xstd/bits/bit/bit_convert.hpp
+        include/xstd/bits/bit/bit_expand.hpp
         include/xstd/bits/bit_concepts.hpp
         include/xstd/bits/bit_concepts/bit_blocks.hpp
         include/xstd/bits/bit_concepts/bit_constructible_from.hpp
@@ -221,6 +223,7 @@ target_sources(
         include/xstd/bits/ext/boost/detail/dynamic_bitset.hpp
         include/xstd/bits/detail/bit_layout.hpp
         include/xstd/bits/bit/detail/bit_convertible.hpp
+        include/xstd/bits/bit/detail/bit_permute.hpp
         include/xstd/bits/detail/bit_blocks_capacity.hpp
         include/xstd/bits/detail/bit_block_range.hpp
         include/xstd/bits/detail/owned_bit_blocks.hpp
