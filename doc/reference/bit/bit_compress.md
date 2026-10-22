@@ -66,6 +66,8 @@ nothing.
 - `bit_compress(bit_set{1, 500}, bit_set{1, 2, 3, 500, 900})` is `bit_set{0, 3}`.
 - For a valarray `v` and a mask `m` of its size, `bit_compress(v, m)` packs what `std::as_const(v)[m]` gathers, at
   `v`'s width rather than at `p`.
+- The word operation first came before WG21 as [N3864](https://wg21.link/n3864)'s `extract_bits_right` in 2014, which
+  its instruction table maps to PEXT, and the working draft has it from [P3104](https://wg21.link/P3104).
 
 ### See also
 

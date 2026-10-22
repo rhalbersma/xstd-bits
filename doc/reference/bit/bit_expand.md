@@ -54,6 +54,8 @@ are `noexcept` for a fixed width.
 - A magic or PEXT table is filled by walking the subsets of a mask:
   `for (auto i = 0; i < 1 << mask.size(); ++i) { auto const occupancy = xstd::bit_expand(std::uint64_t(i), mask); }`.
 - `bit_expand(std::uint64_t{0b101}, bit_fixed_set<192>{100, 120, 150})` is `bit_fixed_set<192>{100, 150}`.
+- The word operation first came before WG21 as [N3864](https://wg21.link/n3864)'s `deposit_bits_right` in 2014, which
+  its instruction table maps to PDEP, and the working draft has it from [P3104](https://wg21.link/P3104).
 
 ### See also
 
