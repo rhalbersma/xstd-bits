@@ -1,12 +1,20 @@
 # Migrating to xstd-bits
 
-A move to xstd-bits serves one or more of four goals: a class interface where code has only raw integers,
-enumerations and flags; a focused interface where `std::bitset` and `boost::dynamic_bitset` offer a hybrid of every
-reading; space-optimized containers in place of the standard's containers of `bool` and `std::size_t`; and
-speed-optimized algorithms over them. Where the code changes, a section shows how as a *Tony Table*, the
-before-and-after form WG21 papers use: what the code says today on the left, what it says here on the right. Every
-right-hand column compiles and runs against the library with GCC 15 and Clang 22, and so does every left-hand one
-except itsy_bitsy's, whose last release no longer builds with either.
+A move to xstd-bits serves one or more of four goals, each with its own payoff:
+
+1. **A class interface where none existed**, over raw integers, enumerations and flags, gives type safety and
+   expressiveness: the keys keep their own types, and the shifts and masks become named members.
+2. **A focused interface in place of a hybrid one**, where `std::bitset` and `boost::dynamic_bitset` offer every
+   reading at once, gives focus: the type says which reading the code means.
+3. **A space-optimized container**, in place of the standard's containers of `bool` and `std::size_t`, spends a bit
+   per position.
+4. **A speed-optimized algorithm** over those containers works a block at a time, which turns the space optimization
+   into a time optimization too.
+
+Where the code changes, a section shows how as a *Tony Table*, the before-and-after form WG21 papers use: what the
+code says today on the left, what it says here on the right. Every right-hand column compiles and runs against the
+library with GCC 15 and Clang 22, and so does every left-hand one except itsy_bitsy's, whose last release no longer
+builds with either.
 
 ## A class interface where none existed
 
@@ -680,6 +688,12 @@ needs a section: the type changes and the code around it stays, as each answers 
   positions as `std::bitset`'s do, where `valarray<bool>`'s shift each element's value.
 
 ## A speed-optimized algorithm
+
+Packing pays in time only where the algorithms are adapted to it. Howard Hinnant measured as much in
+[On `vector<bool>`](https://howardhinnant.github.io/onvectorbool.html) (2012): over 100,000 positions, a
+word-at-a-time `find`, `count`, `fill`, `copy`, `swap_ranges`, `rotate` and `equal` ran from 1.7 times (`rotate`) to
+about 75 times (`find`) as fast as over an array of `bool`, and the same algorithms a bit at a time up to 38 times as slow
+(`fill`). `xstd::ranges` adapts each of them.
 
 On a packed sequence a `std::ranges` algorithm still compiles, and visits one proxy at a time. Its counterpart in
 `xstd::ranges` carries a `bit_` prefix and works a block at a time, in O(`N`/`D`) for `D` bits per block, over any
