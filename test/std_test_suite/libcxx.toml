@@ -1,0 +1,11 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+# libc++'s tests of std::vector<bool>, the one container its suite writes against a proxy reference, read against
+# bit_vector.
+[libcxx]
+take = [{ path = "libcxx/test/std/containers/sequences/vector.bool" }]
+include = ["xstd/bits/bit_vector.hpp"]
+rewrite = [{ from = "std::vector<bool>", to = "xstd::bit_vector" }]
