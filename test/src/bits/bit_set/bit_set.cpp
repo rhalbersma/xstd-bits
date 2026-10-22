@@ -32,6 +32,7 @@
 #include <memory>                                     // allocator
 #include <ranges>                                     // equal, iota, reverse, to
 #include <set>                                        // set
+#include <span>                                       // dynamic_extent
 #include <type_traits>                                // is_constructible_v
 #include <utility>                                    // move
 #include <vector>                                     // vector

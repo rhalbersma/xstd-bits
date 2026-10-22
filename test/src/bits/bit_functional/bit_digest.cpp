@@ -19,6 +19,7 @@
 #include <cstddef>                                 // size_t
 #include <cstdint>                                 // uint64_t, uint8_t
 #include <tuple>                                   // tuple
+#include <vector>                                  // vector
 
 BOOST_AUTO_TEST_SUITE(BitDigest)
 

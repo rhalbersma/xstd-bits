@@ -14,6 +14,8 @@
 #include <limits>                   // numeric_limits
 #include <memory>                   // allocator
 #include <ranges>                   // bidirectional_range, random_access_range
+#include <span>                     // dynamic_extent
+#include <vector>                   // vector
 
 namespace {
 

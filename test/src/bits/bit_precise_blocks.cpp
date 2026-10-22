@@ -17,6 +17,7 @@
 #include <ranges>                              // iota
 #include <tuple>                               // tuple
 #include <type_traits>                         // integral_constant
+#include <vector>                              // vector
 
 BOOST_AUTO_TEST_SUITE(BitPreciseBlocks)
 

@@ -25,6 +25,7 @@
 #include <functional>                               // less
 #include <memory>                                   // allocator
 #include <memory_resource>                          // new_delete_resource, polymorphic_allocator, unsynchronized_pool_resource
+#include <span>                                     // dynamic_extent
 #include <tuple>                                    // tuple
 #include <type_traits>                              // is_constructible_v, is_nothrow_constructible_v
 #include <utility>                                  // move

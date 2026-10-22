@@ -39,6 +39,7 @@
 #include <limits>                                      // numeric_limits
 #include <ranges>                                      // bidirectional_range, from_range, iota, ranges::to, transform
 #include <set>                                         // set
+#include <span>                                        // dynamic_extent
 #include <stdexcept>                                   // length_error, out_of_range
 #include <tuple>                                       // tuple, tuple_cat
 #include <type_traits>                                 // underlying_type_t

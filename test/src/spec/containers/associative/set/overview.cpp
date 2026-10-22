@@ -19,7 +19,9 @@
 #include <iterator>                              // bidirectional_iterator, distance
 #include <ranges>                                // bidirectional_range, iota
 #include <set>                                   // IWYU pragma: keep; set
+#include <span>                                  // dynamic_extent
 #include <utility>                               // cmp_equal, pair
+#include <vector>                                // vector
 #include <version>                               // IWYU pragma: keep; __cpp_lib_constexpr_set
 
 BOOST_AUTO_TEST_SUITE(Spec)

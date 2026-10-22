@@ -33,6 +33,7 @@
 #include <set>                                      // set
 #include <type_traits>                              // is_assignable_v, is_constructible_v, is_convertible_v, is_trivially_destructible_v
 #include <utility>                                  // cmp_equal, declval
+#include <vector>                                   // vector
 
 namespace {
 

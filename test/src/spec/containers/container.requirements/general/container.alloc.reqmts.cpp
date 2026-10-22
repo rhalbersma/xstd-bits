@@ -31,6 +31,7 @@
 #include <ranges>                                   // from_range, iota
 #include <scoped_allocator>                         // scoped_allocator_adaptor
 #include <set>                                      // pmr::set, set
+#include <span>                                     // dynamic_extent
 #include <tuple>                                    // tuple, tuple_cat
 #include <type_traits>                              // is_constructible_v, is_nothrow_constructible_v
 #include <utility>                                  // declval, move

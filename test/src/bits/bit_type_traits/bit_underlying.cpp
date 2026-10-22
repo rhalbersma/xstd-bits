@@ -21,8 +21,10 @@
 #include <cstddef>                                      // size_t
 #include <cstdint>                                      // int16_t, int64_t, int8_t, uint16_t, uint32_t, uint64_t, uint8_t
 #include <functional>                                   // greater
+#include <span>                                         // dynamic_extent
 #include <type_traits>                                  // is_same_v
 #include <utility>                                      // to_underlying
+#include <vector>                                       // vector
 
 // Named rather than unnamed, as a concept reads these operators and the mapping without calling them.
 namespace wire {

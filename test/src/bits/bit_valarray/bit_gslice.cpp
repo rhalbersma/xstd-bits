@@ -13,6 +13,7 @@
 #include <cstddef>                                       // size_t
 #include <cstdint>                                       // uint8_t
 #include <valarray>                                      // valarray
+#include <vector>                                        // vector
 
 BOOST_AUTO_TEST_SUITE(BitGslice)
 

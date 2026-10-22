@@ -14,6 +14,7 @@
 #include <memory_resource>          // polymorphic_allocator
 #include <ranges>                   // range_value_t
 #include <scoped_allocator>         // scoped_allocator_adaptor
+#include <span>                     // dynamic_extent
 #include <type_traits>              // is_nothrow_copy_assignable_v, is_nothrow_copy_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, is_trivially_copyable_v
 #include <utility>                  // declval, move, swap
 #include <vector>                   // vector

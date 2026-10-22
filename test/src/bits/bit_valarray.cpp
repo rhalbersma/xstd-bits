@@ -9,6 +9,7 @@
 #include <cstddef>                    // size_t
 #include <utility>                    // declval
 #include <valarray>                   // gslice, slice, valarray
+#include <vector>                     // vector
 
 BOOST_AUTO_TEST_SUITE(Valarray)
 
