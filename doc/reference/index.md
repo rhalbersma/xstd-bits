@@ -63,8 +63,9 @@ templates extend, and the templates that choose a container's block type, storag
 standard has no word for, are new.
 
 The Counterpart column leads with the clause of the working draft each entity answers, then says how it extends or
-generalizes what that clause specifies. The rows follow the draft's order of those clauses, and a row with no
-counterpart sits beside its nearest kin, citing the kin's clause where one is shared.
+generalizes what that clause specifies. The rows follow the draft's order of those clauses, and the names within a
+row the draft's order of their counterparts. A row with no counterpart sits beside its nearest kin, citing the kin's
+clause where one is shared.
 
 <div class="relation" markdown>
 
@@ -72,10 +73,10 @@ counterpart sits beside its nearest kin, citing the kin's clause where one is sh
 | :-- | :-- | :-- |
 | `bit_flag_set` | Generalizes | [[bitmask.types]](https://eel.is/c++draft/bitmask.types) as the set of a bitmask type's one-bit values |
 | `bit_enum_set` | New | none: the standard has no set of an enumeration's values |
-| `fast_block_t`<br>`least_block_t` | Generalizes | [[cstdint.syn]](https://eel.is/c++draft/cstdint.syn) chosen by a width rather than named by one |
+| `least_block_t`<br>`fast_block_t` | Generalizes | [[cstdint.syn]](https://eel.is/c++draft/cstdint.syn) chosen by a width rather than named by one |
 | `bit_blocks`<br>`bit_constructible_from`<br>`bit_convertible_to`<br>`bit_index_mapping`<br>`bit_mask_mapping`<br>`sized_bit_index_mapping` | New | none |
 | `bit_align`<br>`bit_blocks_extent_v`<br>`bit_fast`<br>`bit_least`<br>`bit_underlying`<br>`underlying_block_t` | New | none |
-| `bit_compare_three_way`<br>`bit_equal_to`<br>`bit_greater`<br>`bit_greater_equal`<br>`bit_less`<br>`bit_less_equal`<br>`bit_not_equal_to` | Generalizes | [[comparisons.three.way]](https://eel.is/c++draft/comparisons.three.way) [[range.cmp]](https://eel.is/c++draft/range.cmp) across block types and storages |
+| `bit_compare_three_way`<br>`bit_equal_to`<br>`bit_not_equal_to`<br>`bit_greater`<br>`bit_less`<br>`bit_greater_equal`<br>`bit_less_equal` | Generalizes | [[comparisons.three.way]](https://eel.is/c++draft/comparisons.three.way) [[range.cmp]](https://eel.is/c++draft/range.cmp) across block types and storages |
 | `hash` | Extends | [[unord.hash]](https://eel.is/c++draft/unord.hash) specializations for every owner but the valarrays, and for the set view |
 | `bit_hash` | Generalizes | [[unord.hash]](https://eel.is/c++draft/unord.hash) of the packed bits rather than the model's value, under a Boost.Hash2 algorithm the caller names |
 | `bit_hash_append` | New | none in the standard: a Boost.Hash2 `hash_append`, after [N3980](https://wg21.link/n3980) |
@@ -86,7 +87,7 @@ counterpart sits beside its nearest kin, citing the kin's clause where one is sh
 | `bit_array` | Generalizes | [[array]](https://eel.is/c++draft/array) of `bool`, packed |
 | `basic_bit_array` | New | [[array]](https://eel.is/c++draft/array) customizing the block type |
 | `to_bit_array` | Generalizes | [[array.creation]](https://eel.is/c++draft/array.creation) returning a `bit_array` |
-| `get`<br>`tuple_element`<br>`tuple_size` | Extends | [[array.tuple]](https://eel.is/c++draft/array.tuple) specializations and an overload for `basic_bit_array` |
+| `tuple_size`<br>`tuple_element`<br>`get` | Extends | [[array.tuple]](https://eel.is/c++draft/array.tuple) specializations and an overload for `basic_bit_array` |
 | `erase`<br>`erase_if` | Generalizes | [[vector.erasure]](https://eel.is/c++draft/vector.erasure) [[inplace.vector.erasure]](https://eel.is/c++draft/inplace.vector.erasure) [[set.erasure]](https://eel.is/c++draft/set.erasure) for the packed sequences and sets |
 | `bit_vector` | Generalizes | [[vector.bool]](https://eel.is/c++draft/vector.bool) packed into blocks, which `vector<bool>` leaves to the implementation |
 | `basic_bit_vector`<br>`basic_bit_small_vector`<br>`bit_small_vector` | New | [[vector.bool]](https://eel.is/c++draft/vector.bool) customizing the block type, the storage and the allocator; the small storage is inline up to a capacity and on the heap past it, through Boost.Container's `small_vector` |
@@ -99,12 +100,12 @@ counterpart sits beside its nearest kin, citing the kin's clause where one is sh
 | `bit_span` | Generalizes | [[views.span]](https://eel.is/c++draft/views.span) over blocks read as a sequence of `bool` |
 | `bit_subspan` | Generalizes | [[span.sub]](https://eel.is/c++draft/span.sub) at any bit offset |
 | `bit_advance`<br>`bit_distance`<br>`bit_next`<br>`bit_prev` | Generalizes | [[range.iter.ops]](https://eel.is/c++draft/range.iter.ops) a block at a time over a set |
-| `from_blocks`<br>`from_blocks_t` | Generalizes | [[ranges.syn]](https://eel.is/c++draft/ranges.syn) from [P1206R7](https://wg21.link/p1206r7): reading an argument's blocks as bits, where `from_range` reads its elements as values |
-| `bit_all_of`<br>`bit_any_of`<br>`bit_count`<br>`bit_equal`<br>`bit_find`<br>`bit_find_last`<br>`bit_for_each`<br>`bit_mismatch`<br>`bit_none_of` | Generalizes | [[alg.nonmodifying]](https://eel.is/c++draft/alg.nonmodifying) a block at a time, without the projections and predicates a range of bits has no use for |
-| `bit_copy`<br>`bit_copy_backward`<br>`bit_fill`<br>`bit_move`<br>`bit_reverse`<br>`bit_reverse_copy`<br>`bit_rotate`<br>`bit_rotate_copy`<br>`bit_shift_left`<br>`bit_shift_right`<br>`bit_swap_ranges`<br>`bit_transform` | Generalizes | [[alg.modifying.operations]](https://eel.is/c++draft/alg.modifying.operations) a block at a time, without the projections a range of bits has no use for |
-| `bit_is_partitioned`<br>`bit_is_sorted`<br>`bit_partition`<br>`bit_partition_point`<br>`bit_sort` | Generalizes | [[alg.sorting]](https://eel.is/c++draft/alg.sorting) a block at a time, without the projections, predicates and comparators a range of bits has no use for |
-| `bit_includes`<br>`bit_set_difference`<br>`bit_set_intersection`<br>`bit_set_symmetric_difference`<br>`bit_set_union` | Generalizes | [[alg.set.operations]](https://eel.is/c++draft/alg.set.operations) returning a set where the standard writes through an output iterator |
-| `bit_disjoint`<br>`bit_intersects` | New | [[alg.set.operations]](https://eel.is/c++draft/alg.set.operations) none: the standard has no test of whether two sets share an element |
+| `from_blocks_t`<br>`from_blocks` | Generalizes | [[ranges.syn]](https://eel.is/c++draft/ranges.syn) from [P1206R7](https://wg21.link/p1206r7): reading an argument's blocks as bits, where `from_range` reads its elements as values |
+| `bit_all_of`<br>`bit_any_of`<br>`bit_none_of`<br>`bit_for_each`<br>`bit_find`<br>`bit_find_last`<br>`bit_count`<br>`bit_mismatch`<br>`bit_equal` | Generalizes | [[alg.nonmodifying]](https://eel.is/c++draft/alg.nonmodifying) a block at a time, without the projections and predicates a range of bits has no use for |
+| `bit_copy`<br>`bit_copy_backward`<br>`bit_move`<br>`bit_swap_ranges`<br>`bit_transform`<br>`bit_fill`<br>`bit_reverse`<br>`bit_reverse_copy`<br>`bit_rotate`<br>`bit_rotate_copy`<br>`bit_shift_left`<br>`bit_shift_right` | Generalizes | [[alg.modifying.operations]](https://eel.is/c++draft/alg.modifying.operations) a block at a time, without the projections a range of bits has no use for |
+| `bit_sort`<br>`bit_is_sorted`<br>`bit_is_partitioned`<br>`bit_partition`<br>`bit_partition_point` | Generalizes | [[alg.sorting]](https://eel.is/c++draft/alg.sorting) a block at a time, without the projections, predicates and comparators a range of bits has no use for |
+| `bit_includes`<br>`bit_set_union`<br>`bit_set_intersection`<br>`bit_set_difference`<br>`bit_set_symmetric_difference` | Generalizes | [[alg.set.operations]](https://eel.is/c++draft/alg.set.operations) returning a set where the standard writes through an output iterator |
+| `bit_intersects`<br>`bit_disjoint` | New | [[alg.set.operations]](https://eel.is/c++draft/alg.set.operations) none: the standard has no test of whether two sets share an element |
 | `bit_lexicographical_compare_three_way` | Proposed | [[alg.three.way]](https://eel.is/c++draft/alg.three.way) over two ranges, as [P2022R3](https://wg21.link/p2022r3) proposes `ranges::lexicographical_compare_three_way` |
 | `bit_valarray`<br>`bit_slice`<br>`bit_slice_array`<br>`bit_gslice`<br>`bit_gslice_array`<br>`bit_mask_array`<br>`bit_indirect_array` | Generalizes | [[numarray]](https://eel.is/c++draft/numarray) of `bool`, packed, with the slices and helper arrays that select from it |
 | `basic_bit_valarray`<br>`basic_bit_fixed_valarray`<br>`basic_bit_inplace_valarray`<br>`basic_bit_small_valarray`<br>`bit_fixed_valarray`<br>`bit_inplace_valarray`<br>`bit_small_valarray` | New | [[numarray]](https://eel.is/c++draft/numarray) customizing the block type, the storage and the allocator: at a fixed width, within an inline capacity, or small |
