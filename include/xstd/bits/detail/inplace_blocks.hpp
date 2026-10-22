@@ -6,12 +6,13 @@
 #ifndef XSTD_BITS_DETAIL_INPLACE_BLOCKS_HPP
 #define XSTD_BITS_DETAIL_INPLACE_BLOCKS_HPP
 
-#include <xstd/bits/detail/non_volatile.hpp> // non_volatile
-#include <cstddef>                           // size_t
-#include <iterator>                          // input_iterator
-#include <new>                               // bad_alloc
-#include <type_traits>                       // conditional_t, is_const_v, is_empty_v, remove_reference_t
-#include <version>                           // IWYU pragma: keep; __cpp_lib_inplace_vector
+#include <xstd/bits/bit_type_traits/bit_storage_rebind.hpp> // bit_storage_rebind
+#include <xstd/bits/detail/non_volatile.hpp>                // non_volatile
+#include <cstddef>                                          // size_t
+#include <iterator>                                         // input_iterator
+#include <new>                                              // bad_alloc
+#include <type_traits>                                      // conditional_t, is_const_v, is_empty_v, remove_reference_t
+#include <version>                                          // IWYU pragma: keep; __cpp_lib_inplace_vector
 
 namespace xstd::bits::detail {
 
@@ -145,5 +146,34 @@ template<class Block, std::size_t K>
 using inplace_blocks_for = std::conditional_t<K == 0UZ and not std::is_empty_v<inplace_blocks<Block, 0>>, no_blocks<Block>, inplace_blocks<Block, K>>;
 
 } // namespace xstd::bits::detail
+
+namespace xstd {
+
+// Another count of blocks goes back through inplace_blocks_for, so nought is the empty no_blocks wherever it is the owner's.
+template<class Block>
+struct bit_storage_rebind<bits::detail::no_blocks<Block>>
+{
+        static constexpr std::size_t block_count = 0UZ;
+
+        template<class OtherBlock>
+        using with_block = bits::detail::no_blocks<OtherBlock>;
+
+        template<std::size_t L>
+        using with_block_count = bits::detail::inplace_blocks_for<Block, L>;
+};
+
+template<class Block, std::size_t K>
+struct bit_storage_rebind<bits::detail::inplace_blocks<Block, K>>
+{
+        static constexpr std::size_t block_count = K;
+
+        template<class OtherBlock>
+        using with_block = bits::detail::inplace_blocks<OtherBlock, K>;
+
+        template<std::size_t L>
+        using with_block_count = bits::detail::inplace_blocks_for<Block, L>;
+};
+
+} // namespace xstd
 
 #endif // XSTD_BITS_DETAIL_INPLACE_BLOCKS_HPP
