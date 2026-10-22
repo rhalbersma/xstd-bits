@@ -141,6 +141,8 @@ Three specializations of the fixed set cover the keys a set most often holds:
 
 The block is a separate and later choice. Every name above holds `std::size_t` blocks. `bit_least<X>` and `bit_fast<X>` take the smallest and the fastest block that holds the width, and `bit_align<X>` rounds the width up to whole blocks; `bit_rebind<Block, X>` names any block outright.
 
+So is the storage. `basic_bit_vector`, `basic_bit_set` and `basic_bit_valarray` take any `bit_storage` as `std::flat_set` takes its container: a `std::pmr::vector` over an arena, Boost's `small_vector`, or a contiguous container of your own. The inplace and small names above are two such storages, and a cap in bits keeps an inline storage to an exact width.
+
 ### Each one is the packing of a standard container, and speaks that container's vocabulary
 
 The relationship is the one `std::flat_set` has to `std::set`: **a different representation under the same interface**, departing from it only where the representation forces a departure. `xstd::bit_vector` answers `std::vector<bool>`'s synopsis line for line, less its two `flip()`s and its deprecated static `swap`; `xstd::bit_array<N>` answers `std::array<bool, N>`'s, `xstd::bit_inplace_vector<N>` answers `std::inplace_vector<bool, N>`'s, and the three sets answer `std::set<std::size_t>`'s. Each is held to its counterpart by a checklist that spells that counterpart's synopsis out as a `requires`-expression and is asserted **on the counterpart first**, so a line the model itself cannot answer can never be asked of the packing.
@@ -203,8 +205,8 @@ The Boost extensions sit apart, under `<xstd/bits/ext/>`. The umbrellas are:
 | `<xstd/bits/bit_span.hpp>` | `bit_span` and `bit_subspan`, the sequence reading of bits another object holds, whole or from any bit offset. |
 | `<xstd/bits/bit_algorithm.hpp>` | The `std::ranges` algorithms over bits, a block at a time, and the tests of whether two sets intersect or are disjoint. |
 | `<xstd/bits/bit_iterator.hpp>` | `bit_advance`, `bit_distance`, `bit_next` and `bit_prev`, an offset step on a sequence and select and rank on a set. |
-| `<xstd/bits/bit_concepts.hpp>` | What holds bits, what a set asks of its key mapping, and what an owner takes as blocks or converts. |
-| `<xstd/bits/bit_type_traits.hpp>` | The transformations that give an owner another block or width, and the blocks they choose. |
+| `<xstd/bits/bit_concepts.hpp>` | What holds bits and what an owner takes as its storage, what a set asks of its key mapping, and what an owner takes as blocks or converts. |
+| `<xstd/bits/bit_type_traits.hpp>` | How a storage rebinds, the transformations that give an owner another block or width, and the blocks they choose. |
 | `<xstd/bits/bit_functional.hpp>` | The comparisons across block types and storages, and the hash and digest of the bits. |
 | `<xstd/bits/bit_ranges.hpp>` | `from_blocks`, the tag that reads an argument's blocks as bits. |
 | `<xstd/bits/bit.hpp>` | `bit_convert`, the positions of any bit storage into any other, at any two widths. |

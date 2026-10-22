@@ -44,8 +44,6 @@ class basic_bit_set : public bits::detail::set_adaptor<bits::detail::set_bits_t<
         static_assert(width == std::dynamic_extent or bits::detail::set::admits_width<KeyMapping, Key, width>);
 
         // An allocator argument where the storage has an allocator, and no overload taking one where it has none.
-        static constexpr bool is_allocator_aware = bits::detail::allocator_aware<Blocks>;
-
         using allocator_param = bits::detail::allocator_param_t<Blocks>;
 
 public:
@@ -60,8 +58,9 @@ public:
                 : base_type()
         {}
 
-        [[nodiscard]] constexpr basic_bit_set(key_compare const& /* comp */, allocator_param const& a) noexcept(std::is_nothrow_constructible_v<base_type, allocator_param const&>)
-                requires is_allocator_aware
+        // [allocator.requirements.general] forbids an allocator copy to throw, and empty blocks allocate nothing.
+        [[nodiscard]] constexpr basic_bit_set(key_compare const& /* comp */, allocator_param const& a) noexcept
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(a)
         {}
 
@@ -71,7 +70,7 @@ public:
         {}
 
         template<std::input_iterator InputIterator>
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
         [[nodiscard]] constexpr basic_bit_set(InputIterator first, InputIterator last, key_compare const& /* comp */, allocator_param const& a)
                 : base_type(first, last, a)
         {}
@@ -82,23 +81,23 @@ public:
         {}
 
         template<xstd::container_compatible_range<value_type> R>
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
         [[nodiscard]] constexpr basic_bit_set(std::from_range_t, R&& rg, key_compare const& /* comp */, allocator_param const& a)
                 : base_type(std::from_range, std::forward<R>(rg), a)
         {}
 
-        [[nodiscard]] constexpr explicit basic_bit_set(allocator_param const& a) noexcept(std::is_nothrow_constructible_v<base_type, allocator_param const&>)
-                requires is_allocator_aware
+        [[nodiscard]] constexpr explicit basic_bit_set(allocator_param const& a) noexcept
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(a)
         {}
 
         [[nodiscard]] constexpr basic_bit_set(basic_bit_set const& x, allocator_param const& a)
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(x, a)
         {}
 
         [[nodiscard]] constexpr basic_bit_set(basic_bit_set&& x, allocator_param const& a)
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(std::move(x), a)
         {}
 
@@ -107,24 +106,24 @@ public:
         {}
 
         [[nodiscard]] constexpr basic_bit_set(std::initializer_list<value_type> il, key_compare const& /* comp */, allocator_param const& a)
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(il, a)
         {}
 
         template<std::input_iterator InputIterator>
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
         [[nodiscard]] constexpr basic_bit_set(InputIterator first, InputIterator last, allocator_param const& a)
                 : base_type(first, last, a)
         {}
 
         template<xstd::container_compatible_range<value_type> R>
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
         [[nodiscard]] constexpr basic_bit_set(std::from_range_t, R&& rg, allocator_param const& a)
                 : base_type(std::from_range, std::forward<R>(rg), a)
         {}
 
         [[nodiscard]] constexpr basic_bit_set(std::initializer_list<value_type> il, allocator_param const& a)
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(il, a)
         {}
 
@@ -134,7 +133,7 @@ public:
         {}
 
         [[nodiscard]] constexpr basic_bit_set(from_blocks_t, block_container_type blocks, allocator_param const& a)
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(from_blocks, std::move(blocks), a)
         {}
 

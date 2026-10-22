@@ -2,9 +2,11 @@
 
 ```cpp
 namespace xstd {
-  // the width a storage type names
+  // the width a storage type names, and how a storage rebinds
   template<bit_blocks Bits>
     constexpr size_t bit_blocks_extent_v = see below;
+  template<class Blocks>
+    struct bit_storage_rebind;
 
   // the pair that rebinds an owner's block or width
   template<unsigned_integer Block, class Owner>
@@ -40,6 +42,7 @@ namespace xstd {
 | Header | Declares |
 | :----- | :------- |
 | [`<xstd/bits/bit_type_traits/bit_blocks_extent.hpp>`](bit_blocks_extent.md) | `bit_blocks_extent_v` |
+| [`<xstd/bits/bit_type_traits/bit_storage_rebind.hpp>`](bit_storage_rebind.md) | `bit_storage_rebind` |
 | [`<xstd/bits/bit_type_traits/bit_rebind.hpp>`](bit_rebind.md) | `bit_rebind` |
 | [`<xstd/bits/bit_type_traits/bit_resize.hpp>`](bit_resize.md) | `bit_resize` |
 | [`<xstd/bits/bit_type_traits/bit_least.hpp>`](bit_least.md) | `bit_least`, `least_block_t` |
@@ -53,11 +56,12 @@ made through them, in the umbrella's order. Each transformation is an alias temp
 Two phrases name what the constraints admit:
 
 - A *rebindable owner* is an owner of ours that names its block: a specialization of `basic_bit_array`,
-  `basic_bit_inplace_vector`, `basic_bit_vector`, `basic_bit_set`, `basic_bit_fixed_set`, `basic_bit_inplace_set`,
-  `basic_bit_valarray`, `basic_bit_fixed_valarray`, `basic_bit_inplace_valarray`, or of the Boost extension's
-  `basic_bit_small_vector`, `basic_bit_small_set` and `basic_bit_small_valarray`, the short names included.
-- A *resizable owner* is a rebindable owner whose type carries its width `N`: every one but `basic_bit_vector`,
-  `basic_bit_set` and `basic_bit_valarray`. For an inplace or a small owner `N` is its capacity.
+  `basic_bit_fixed_set` or `basic_bit_fixed_valarray`, or of `basic_bit_vector`, `basic_bit_set` or
+  `basic_bit_valarray` over a storage with a `bit_storage_rebind`, the inplace and small aliases and the short names
+  included.
+- A *resizable owner* is a rebindable owner whose type carries its width: a fixed width, a cap `N`, or a storage whose
+  `bit_storage_rebind` counts its blocks, the width then the bits they hold. For an inplace owner the width is its
+  capacity, and for a small one the bits its inline blocks hold.
 
 Every transformation is cv-transparent, as `make_unsigned` is: an `Owner` that is cv-qualified is transformed as
 `remove_cv_t<Owner>` is, and the type named carries `Owner`'s cv. A view, `bitset`, a block and a range of blocks

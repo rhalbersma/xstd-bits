@@ -544,7 +544,7 @@ bitsy::bit_sequence<std::vector<std::uint32_t>> bits(std::in_place, std::move(wo
 </td><td>
 
 ```cpp
-auto bits = xstd::basic_bit_vector<std::uint32_t>(xstd::from_blocks, std::vector<std::uint32_t>{0xff00ff00, 0xff00ff00});
+auto bits = xstd::basic_bit_vector(xstd::from_blocks, std::vector<std::uint32_t>{0xff00ff00, 0xff00ff00});
 ```
 
 </td></tr>

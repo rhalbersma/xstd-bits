@@ -36,8 +36,6 @@ class basic_bit_vector : public bits::detail::sequence_adaptor<bits::detail::bit
         using base_type = bits::detail::sequence_adaptor<bits::detail::bit_block_container<Blocks, bits::detail::storage_width_v<Blocks, N>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_vector<Blocks, N>>;
 
         // An allocator argument where the storage has an allocator, and no overload taking one where it has none.
-        static constexpr bool is_allocator_aware = bits::detail::allocator_aware<Blocks>;
-
         using allocator_param = bits::detail::allocator_param_t<Blocks>;
 
 public:
@@ -47,8 +45,9 @@ public:
         // [vector.bool.pspc]'s constructors, in its order, each beside its allocator-extended form.
         [[nodiscard]] basic_bit_vector() = default;
 
-        [[nodiscard]] constexpr explicit basic_bit_vector(allocator_param const& a) noexcept(std::is_nothrow_constructible_v<base_type, allocator_param const&>)
-                requires is_allocator_aware
+        // [allocator.requirements.general] forbids an allocator copy to throw, and empty blocks allocate nothing.
+        [[nodiscard]] constexpr explicit basic_bit_vector(allocator_param const& a) noexcept
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(a)
         {}
 
@@ -57,7 +56,7 @@ public:
         {}
 
         [[nodiscard]] constexpr explicit basic_bit_vector(size_type n, allocator_param const& a)
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(n, a)
         {}
 
@@ -66,7 +65,7 @@ public:
         {}
 
         [[nodiscard]] constexpr basic_bit_vector(size_type n, bool const& value, allocator_param const& a)
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(n, value, a)
         {}
 
@@ -76,7 +75,7 @@ public:
         {}
 
         template<std::input_iterator InputIterator>
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
         [[nodiscard]] constexpr basic_bit_vector(InputIterator first, InputIterator last, allocator_param const& a)
                 : base_type(first, last, a)
         {}
@@ -87,18 +86,18 @@ public:
         {}
 
         template<xstd::container_compatible_range<bool> R>
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
         [[nodiscard]] constexpr basic_bit_vector(std::from_range_t, R&& rg, allocator_param const& a)
                 : base_type(std::from_range, std::forward<R>(rg), a)
         {}
 
         [[nodiscard]] constexpr basic_bit_vector(basic_bit_vector const& x, allocator_param const& a)
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(x, a)
         {}
 
         [[nodiscard]] constexpr basic_bit_vector(basic_bit_vector&& x, allocator_param const& a)
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(std::move(x), a)
         {}
 
@@ -107,7 +106,7 @@ public:
         {}
 
         [[nodiscard]] constexpr basic_bit_vector(std::initializer_list<bool> il, allocator_param const& a)
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(il, a)
         {}
 
@@ -117,7 +116,7 @@ public:
         {}
 
         [[nodiscard]] constexpr basic_bit_vector(from_blocks_t, block_container_type blocks, allocator_param const& a)
-                requires is_allocator_aware
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(from_blocks, std::move(blocks), a)
         {}
 

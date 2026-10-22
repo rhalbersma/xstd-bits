@@ -29,6 +29,9 @@ namespace {
 template<class Blocks>
 using with_byte_blocks = xstd::bit_storage_rebind<Blocks>::template with_block<std::uint8_t>;
 
+template<class Blocks>
+concept counts_blocks = requires { xstd::bit_storage_rebind<Blocks>::block_count; };
+
 } // namespace
 
 // A sequence over an allocator takes the allocator along, rebound as std::allocator_traits rebinds it.
@@ -57,7 +60,7 @@ BOOST_AUTO_TEST_CASE(ACountOfBlocksIsKeptAndChanged)
 // A heap of blocks counts none in its type, so it has no count to change.
 BOOST_AUTO_TEST_CASE(AHeapOfBlocksHasNoCount)
 {
-        static_assert(not requires { xstd::bit_storage_rebind<std::vector<std::uint64_t>>::block_count; });
+        static_assert(not counts_blocks<std::vector<std::uint64_t>>);
         BOOST_CHECK(true);
 }
 

@@ -5,41 +5,31 @@
 ```cpp
 template<unsigned_integer Block, size_t N>
   requires see below
-class basic_bit_inplace_vector {
-public:
-  // types as basic_bit_array's, with
-  using block_container_type = see below;
+using basic_bit_inplace_vector = basic_bit_vector<see below, N>;
 
-  // construct: [inplace.vector.cons]'s, with
-  constexpr basic_bit_inplace_vector(from_blocks_t, block_container_type blocks) noexcept;
+template<size_t N>
+using bit_inplace_vector = basic_bit_inplace_vector<size_t, N>;
 
-  // capacity
-  static constexpr integral_constant<size_t, N> max_size = {};
-  static constexpr integral_constant<size_t, N> capacity = {};
-  static constexpr auto reserve(size_type n) -> void;
-  static constexpr auto shrink_to_fit() noexcept -> void;
-
-  // block exchange
-  constexpr auto replace(block_container_type&& blocks) noexcept(see below) -> void;
-  constexpr auto extract() && noexcept(see below) -> block_container_type;
-
-  friend constexpr auto swap(basic_bit_inplace_vector& x, basic_bit_inplace_vector& y)
-    noexcept(noexcept(x.swap(y))) -> void;
-};
-
-template<unsigned_integer Block, size_t K>
-  basic_bit_inplace_vector(from_blocks_t, see below) -> basic_bit_inplace_vector<Block, bit_blocks_extent_v<Block> * K>;
+// what basic_bit_vector has over a storage of constant capacity
+// capacity
+static constexpr integral_constant<size_t, N> max_size = {};
+static constexpr integral_constant<size_t, N> capacity = {};
+static constexpr auto reserve(size_type n) -> void;
+static constexpr auto shrink_to_fit() noexcept -> void;
 ```
 
 As [[inplace.vector]](https://eel.is/c++draft/inplace.vector) for `inplace_vector<bool, N>`, with:
 
 - `bit_inplace_vector<N>` holds up to `N` bits in `size_t` blocks, and `basic_bit_inplace_vector<Block, N>` in
-  `Block`s. The requires-clause admits a cv-unqualified `Block` whose digits are a power of two and at least
-  `unsigned char`'s. `N` is the capacity exactly, even where the last block has room for more.
-- `block_container_type` is `inplace_vector<Block, K>` where the standard library has `<inplace_vector>`, and
+  `Block`s, a [`basic_bit_vector`](../bit_vector/bit_vector.md) over them capped at `N`. The requires-clause admits a
+  cv-unqualified `Block` whose digits are a power of two and at least `unsigned char`'s. `N` is the capacity exactly,
+  even where the last block has room for more.
+- The storage is `inplace_vector<Block, K>` where the standard library has `<inplace_vector>`, and
   `boost::container::static_vector<Block, K>` elsewhere, for `K = ceil(N / D)`. At `K == 0`, where that type is not
   empty, it is an empty type of the library's own, so `bit_inplace_vector<0>` is an empty type, as
   [[inplace.vector.overview]](https://eel.is/c++draft/inplace.vector.overview) makes `inplace_vector<T, 0>`.
+- An alias deduces nothing, so blocks adopted whole are deduced through `basic_bit_vector`:
+  `basic_bit_vector(from_blocks, blocks)` over `K` inline blocks is `basic_bit_inplace_vector<Block, K * D>`.
 - The reference, the iterator and the departures they force are `basic_bit_array`'s: no `data()`, `pointer` names
   `void`.
 - *Capacity:* `capacity` and `max_size` are constants of the type, called as
@@ -55,7 +45,7 @@ As [[inplace.vector]](https://eel.is/c++draft/inplace.vector) for `inplace_vecto
   what it appended before the exception leaves, so it has no effects, as
   [[inplace.vector.modifiers]](https://eel.is/c++draft/inplace.vector.modifiers) asks.
 - *`from_blocks` constructor:* *Effects:* Moves `blocks` in. Every bit is a position, so `size()` is
-  `blocks.size() * D`. *Preconditions:* `blocks.size() * D <= N`. The guide deduces the capacity the blocks hold.
+  `blocks.size() * D`. *Preconditions:* `blocks.size() * D <= N`.
 - *`replace`:* *Effects:* Moves `blocks` in, `size()` becoming `blocks.size() * D`. *Preconditions:* as the
   constructor's.
 - *`extract`:* *Returns:* the blocks, moved out, the unused bits of the last one clear. *Postconditions:*

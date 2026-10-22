@@ -17,11 +17,12 @@
 #include <tuple>                                   // tuple
 #include <utility>                                 // declval
 #include <valarray>                                // slice
+#include <vector>                                  // vector
 
 BOOST_AUTO_TEST_SUITE(BitValarray)
 
 template<class... Blocks>
-auto valarrays(std::tuple<Blocks...>) -> std::tuple<xstd::basic_bit_valarray<Blocks>...>;
+auto valarrays(std::tuple<Blocks...>) -> std::tuple<xstd::basic_bit_valarray<std::vector<Blocks>>...>;
 
 // Every block the library takes, each over a heap.
 using Types = decltype(valarrays(std::declval<test::all_block_types>()));

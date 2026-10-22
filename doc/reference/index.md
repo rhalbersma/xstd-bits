@@ -76,6 +76,7 @@ clause where one is shared.
 | `least_block_t`<br>`fast_block_t` | Generalizes | [[cstdint.syn]](https://eel.is/c++draft/cstdint.syn) chosen by a width rather than named by one |
 | `bit_blocks`<br>`bit_constructible_from`<br>`bit_convertible_to`<br>`bit_index_mapping`<br>`bit_mask_mapping`<br>`sized_bit_index_mapping` | New | none |
 | `bit_align`<br>`bit_blocks_extent_v`<br>`bit_fast`<br>`bit_least`<br>`bit_underlying`<br>`underlying_block_t` | New | none |
+| `bit_storage_rebind` | New | [[allocator.traits.types]](https://eel.is/c++draft/allocator.traits.types) as `rebind_alloc` rebinds an allocator, for a storage's block and its count of blocks |
 | `bit_compare_three_way`<br>`bit_equal_to`<br>`bit_not_equal_to`<br>`bit_greater`<br>`bit_less`<br>`bit_greater_equal`<br>`bit_less_equal` | Generalizes | [[comparisons.three.way]](https://eel.is/c++draft/comparisons.three.way) [[range.cmp]](https://eel.is/c++draft/range.cmp) across block types and storages |
 | `hash` | Extends | [[unord.hash]](https://eel.is/c++draft/unord.hash) specializations for every owner but the valarrays, and for the set view |
 | `bit_hash` | Generalizes | [[unord.hash]](https://eel.is/c++draft/unord.hash) of the packed bits rather than the model's value, under a Boost.Hash2 algorithm the caller names |
@@ -90,13 +91,14 @@ clause where one is shared.
 | `tuple_size`<br>`tuple_element`<br>`get` | Extends | [[array.tuple]](https://eel.is/c++draft/array.tuple) specializations and an overload for `basic_bit_array` |
 | `erase`<br>`erase_if` | Generalizes | [[vector.erasure]](https://eel.is/c++draft/vector.erasure) [[inplace.vector.erasure]](https://eel.is/c++draft/inplace.vector.erasure) [[set.erasure]](https://eel.is/c++draft/set.erasure) for the packed sequences and sets |
 | `bit_vector` | Generalizes | [[vector.bool]](https://eel.is/c++draft/vector.bool) packed into blocks, which `vector<bool>` leaves to the implementation |
-| `basic_bit_vector`<br>`basic_bit_small_vector`<br>`bit_small_vector` | New | [[vector.bool]](https://eel.is/c++draft/vector.bool) customizing the block type, the storage and the allocator; the small storage is inline up to a capacity and on the heap past it, through Boost.Container's `small_vector` |
+| `basic_bit_vector`<br>`basic_bit_small_vector`<br>`bit_small_vector` | New | [[vector.bool]](https://eel.is/c++draft/vector.bool) customizing the storage, and with it the block type and the allocator, and capping the width; the small storage is inline up to a capacity and on the heap past it, through Boost.Container's `small_vector` |
 | `bit_inplace_vector` | Generalizes | [[inplace.vector]](https://eel.is/c++draft/inplace.vector) of `bool`, packed |
-| `basic_bit_inplace_vector` | New | [[inplace.vector]](https://eel.is/c++draft/inplace.vector) customizing the block type |
+| `basic_bit_inplace_vector` | New | [[inplace.vector]](https://eel.is/c++draft/inplace.vector) customizing the block type, as `basic_bit_vector` over inline blocks |
 | `bit_set` | Generalizes | [[set]](https://eel.is/c++draft/set) of positions, one bit per possible key, packed into blocks |
-| `basic_bit_set`<br>`basic_bit_fixed_set`<br>`basic_bit_inplace_set`<br>`basic_bit_small_set`<br>`bit_fixed_set`<br>`bit_inplace_set`<br>`bit_small_set` | New | [[set]](https://eel.is/c++draft/set) customizing the block type, the key mapping, the storage and the allocator: at a fixed width, within an inline capacity, or small |
+| `basic_bit_set`<br>`basic_bit_fixed_set`<br>`basic_bit_inplace_set`<br>`basic_bit_small_set`<br>`bit_fixed_set`<br>`bit_inplace_set`<br>`bit_small_set` | New | [[set]](https://eel.is/c++draft/set) customizing the key mapping and the storage, and with it the block type and the allocator: at a fixed width, within an inline capacity, or small |
 | `bit_set_view` | New | none: no standard view reads a range as a set |
 | `bit_find_mapping`<br>`bit_flag_mapping`<br>`bit_key_mapping`<br>`bit_range_mapping`<br>`enum_traits` | New | none; `bit_key_mapping` is specialized per key as `char_traits` is, [[char.traits]](https://eel.is/c++draft/char.traits) |
+| `bit_storage` | New | [[flat.set.overview]](https://eel.is/c++draft/flat.set.overview) as `flat_set` constrains its `KeyContainer`, for the blocks an owner keeps |
 | `bit_span` | Generalizes | [[views.span]](https://eel.is/c++draft/views.span) over blocks read as a sequence of `bool` |
 | `bit_subspan` | Generalizes | [[span.sub]](https://eel.is/c++draft/span.sub) at any bit offset |
 | `bit_advance`<br>`bit_distance`<br>`bit_next`<br>`bit_prev` | Generalizes | [[range.iter.ops]](https://eel.is/c++draft/range.iter.ops) a block at a time over a set |
@@ -108,7 +110,7 @@ clause where one is shared.
 | `bit_intersects`<br>`bit_disjoint` | New | [[alg.set.operations]](https://eel.is/c++draft/alg.set.operations) none: the standard has no test of whether two sets share an element |
 | `bit_lexicographical_compare_three_way` | Proposed | [[alg.three.way]](https://eel.is/c++draft/alg.three.way) over two ranges, as [P2022R3](https://wg21.link/p2022r3) proposes `ranges::lexicographical_compare_three_way` |
 | `bit_valarray`<br>`bit_slice`<br>`bit_slice_array`<br>`bit_gslice`<br>`bit_gslice_array`<br>`bit_mask_array`<br>`bit_indirect_array` | Generalizes | [[numarray]](https://eel.is/c++draft/numarray) of `bool`, packed, with the slices and helper arrays that select from it |
-| `basic_bit_valarray`<br>`basic_bit_fixed_valarray`<br>`basic_bit_inplace_valarray`<br>`basic_bit_small_valarray`<br>`bit_fixed_valarray`<br>`bit_inplace_valarray`<br>`bit_small_valarray` | New | [[numarray]](https://eel.is/c++draft/numarray) customizing the block type, the storage and the allocator: at a fixed width, within an inline capacity, or small |
+| `basic_bit_valarray`<br>`basic_bit_fixed_valarray`<br>`basic_bit_inplace_valarray`<br>`basic_bit_small_valarray`<br>`bit_fixed_valarray`<br>`bit_inplace_valarray`<br>`bit_small_valarray` | New | [[numarray]](https://eel.is/c++draft/numarray) customizing the storage, and with it the block type and the allocator: at a fixed width, within an inline capacity, or small |
 | `bit_rebind`<br>`bit_resize` | Generalizes | [[simd.traits]](https://eel.is/c++draft/simd.traits) from [P1928R15](https://wg21.link/p1928r15), for owners rather than `simd` types |
 
 </div>

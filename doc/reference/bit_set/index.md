@@ -3,11 +3,11 @@
 ```cpp
 namespace xstd {
   // [set], class template set
-  template<class Key, unsigned_integer Block, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>,
-           see below Compare = less<Key>, class Allocator = allocator<Block>>
+  template<class Key, bit_storage Blocks = vector<size_t>, size_t N = dynamic_extent,
+           bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, see below Compare = less<Key>>
       requires see below
     class basic_bit_set;
-  using bit_set = basic_bit_set<size_t, size_t>;
+  using bit_set = basic_bit_set<size_t>;
 
   // the fixed-width and inplace-capacity sets
   template<class Key, unsigned_integer Block, size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>,
@@ -19,7 +19,7 @@ namespace xstd {
   template<class Key, unsigned_integer Block, size_t N, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>,
            see below Compare = less<Key>>
       requires see below
-    class basic_bit_inplace_set;
+    using basic_bit_inplace_set = basic_bit_set<Key, see below, N, KeyMapping, Compare>;
   template<size_t N>
     using bit_inplace_set = basic_bit_inplace_set<size_t, size_t, N>;
 
@@ -58,29 +58,23 @@ namespace xstd {
 }
 
 namespace std {
-  template<class Key, class Block, class KeyMapping, class Compare, class Allocator>
-    struct hash<xstd::basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>>;
+  template<class Key, class Blocks, size_t N, class KeyMapping, class Compare>
+    struct hash<xstd::basic_bit_set<Key, Blocks, N, KeyMapping, Compare>>;
   template<class Key, class Block, size_t N, class KeyMapping, class Compare>
     struct hash<xstd::basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>>;
-  template<class Key, class Block, size_t N, class KeyMapping, class Compare>
-    struct hash<xstd::basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>>;
   template<class Blocks, size_t N>
     struct hash<xstd::bit_set_view<Blocks, N>>;
 }
 
 namespace boost::container_hash {
-  template<class Key, class Block, class KeyMapping, class Compare, class Allocator>
-    struct is_range<xstd::basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>> : false_type {};
-  template<class Key, class Block, class KeyMapping, class Compare, class Allocator>
-    struct is_tuple_like<xstd::basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>> : false_type {};
+  template<class Key, class Blocks, size_t N, class KeyMapping, class Compare>
+    struct is_range<xstd::basic_bit_set<Key, Blocks, N, KeyMapping, Compare>> : false_type {};
+  template<class Key, class Blocks, size_t N, class KeyMapping, class Compare>
+    struct is_tuple_like<xstd::basic_bit_set<Key, Blocks, N, KeyMapping, Compare>> : false_type {};
   template<class Key, class Block, size_t N, class KeyMapping, class Compare>
     struct is_range<xstd::basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>> : false_type {};
   template<class Key, class Block, size_t N, class KeyMapping, class Compare>
     struct is_tuple_like<xstd::basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>> : false_type {};
-  template<class Key, class Block, size_t N, class KeyMapping, class Compare>
-    struct is_range<xstd::basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>> : false_type {};
-  template<class Key, class Block, size_t N, class KeyMapping, class Compare>
-    struct is_tuple_like<xstd::basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>> : false_type {};
   template<class Blocks, size_t N>
     struct is_range<xstd::bit_set_view<Blocks, N>> : false_type {};
 }

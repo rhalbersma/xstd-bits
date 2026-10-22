@@ -3,10 +3,10 @@
 ```cpp
 namespace xstd {
   // [vector.bool.pspc], partial class template specialization vector<bool, Allocator>
-  template<unsigned_integer Block, class Allocator = allocator<Block>>
+  template<bit_storage Blocks = vector<size_t>, size_t N = dynamic_extent>
       requires see below
     class basic_bit_vector;
-  using bit_vector = basic_bit_vector<size_t>;
+  using bit_vector = basic_bit_vector<>;
 
   // [vector.erasure], erasure
   template<class U = bool>
@@ -16,15 +16,15 @@ namespace xstd {
 }
 
 namespace std {
-  template<class Block, class Allocator>
-    struct hash<xstd::basic_bit_vector<Block, Allocator>>;
+  template<class Blocks, size_t N>
+    struct hash<xstd::basic_bit_vector<Blocks, N>>;
 }
 
 namespace boost::container_hash {
-  template<class Block, class Allocator>
-    struct is_range<xstd::basic_bit_vector<Block, Allocator>> : false_type {};
-  template<class Block, class Allocator>
-    struct is_tuple_like<xstd::basic_bit_vector<Block, Allocator>> : false_type {};
+  template<class Blocks, size_t N>
+    struct is_range<xstd::basic_bit_vector<Blocks, N>> : false_type {};
+  template<class Blocks, size_t N>
+    struct is_tuple_like<xstd::basic_bit_vector<Blocks, N>> : false_type {};
 }
 ```
 
