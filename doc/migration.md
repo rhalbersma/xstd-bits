@@ -1,27 +1,290 @@
 # Migrating to xstd-bits
 
-A move to xstd-bits serves one of three goals: a packed representation of a standard container, a focused interface
-where `std::bitset` and `boost::dynamic_bitset` offer every reading at once, or a class interface over raw integers,
-enumerations and flags. A section covers each source whose interface differs, as a *Tony Table*, the before-and-after form WG21
-papers use: what the code says today on the left, what it says here on the right. Every right-hand column compiles
-and runs against the library with GCC 15 and Clang 22, and so does every left-hand one except itsy_bitsy's, whose
-last release no longer builds with either.
+A move to xstd-bits serves one or more of four goals: a class interface where code has only raw integers,
+enumerations and flags; a focused interface where `std::bitset` and `boost::dynamic_bitset` offer a hybrid of every
+reading; space-optimized containers in place of the standard's containers of `bool` and `std::size_t`; and
+speed-optimized algorithms over them. Where the code changes, a section shows how as a *Tony Table*, the
+before-and-after form WG21 papers use: what the code says today on the left, what it says here on the right. Every
+right-hand column compiles and runs against the library with GCC 15 and Clang 22, and so does every left-hand one
+except itsy_bitsy's, whose last release no longer builds with either.
 
-## A packed representation
+## A class interface where none existed
 
-`std::array<bool, N>`, `std::inplace_vector<bool, N>` and `std::valarray<bool>` spend a byte per position and
-`std::set<std::size_t>` a node per key; `bit_array<N>`, `bit_inplace_vector<N>`, `bit_valarray` and `bit_set` spend a
-bit. `std::vector<bool>` is packed already, and `bit_vector` is that packing under a vector's name. None of these
-needs a section: the type changes and the code around it stays, as each answers its counterpart's synopsis
-([README](../README.md#which-one-do-i-want)), with these exceptions:
+Code that keeps bits in an integer spells them as positions, enumerators or flags, and works them with shifts and
+masks; the class takes the keys the code already has, and the shifts and masks become its members:
 
-- `[vector.bool]`'s `flip()` and deprecated static `swap` are left out, and so is `array`'s and `inplace_vector`'s
-  `data()`, which a packed bit has no address for.
-- `bit_valarray` has no arithmetic, so `+`, `*` and the rest stop compiling. Two operators compile and change
-  meaning: `~` is logical not, where `valarray<bool>`'s promotes and answers all `true`, and `<<` and `>>` move
-  positions as `std::bitset`'s do, where `valarray<bool>`'s shift each element's value.
+- **positions in a word**: `bit_fixed_set<N>` for a word of its own, or `bit_array<N>` where the word is a row of
+  `bool`; `bit_set_view` for one kept where it is.
+- **an enumeration's keys**: `bit_enum_set<Enum>`.
+- **a bitmask type's flags**: `bit_flag_set<Mask, N>`, for the standard library's
+  [[bitmask.types]](https://eel.is/c++draft/bitmask.types) and for other libraries' flags, such as Qt's `QFlags` and
+  POSIX's `sa_flags`.
 
-## A focused interface
+### A bitboard or a flag word
+
+A word whose bits are positions, as a chess engine's bitboard or a flag word, becomes a `bit_fixed_set<64>`. The
+shift-and-mask primitives become `insert`, `erase` and `contains`, `std::popcount` becomes `size`, and the
+`w &= w - 1` loop over `std::countr_zero` becomes a range-for, lowest position first. The set's shifts translate its
+keys as the word's do, and `&`, `|` and `^` stay. A word read as a row of `bool`, indexed, rotated or reversed, is a
+`bit_array<64>` instead.
+
+<table>
+<tr><th>Before</th><th>After</th></tr>
+<tr><td>
+
+```cpp
+std::uint64_t bb = 0;
+bb |= std::uint64_t{1} << sq;
+bb &= ~(std::uint64_t{1} << sq);
+(bb >> sq) & 1;
+std::popcount(bb);
+for (auto x = bb; x != 0; x &= x - 1) {
+        use(std::countr_zero(x));
+}
+auto north = bb << 8;
+auto both = bb & other;
+```
+
+</td><td>
+
+```cpp
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>
+
+auto bb = xstd::bit_fixed_set<64>();
+bb.insert(sq);
+bb.erase(sq);
+bb.contains(sq);
+bb.size();
+for (auto i : bb) {
+        use(i);
+}
+auto north = bb << 8;
+auto both = bb & other;
+```
+
+</td></tr>
+</table>
+
+Kept where it is, in a struct or an ABI, the word takes the set's interface in place through a view.
+
+<table>
+<tr><th>Before</th><th>After</th></tr>
+<tr><td>
+
+```cpp
+std::uint64_t w = 0;
+w |= std::uint64_t{1} << 5;
+w &= ~(std::uint64_t{1} << 5);
+(w >> 9) & 1;
+std::popcount(w);
+for (auto x = w; x != 0; x &= x - 1) {
+        use(std::countr_zero(x));
+}
+```
+
+</td><td>
+
+```cpp
+#include <xstd/bits/bit_set/bit_set_view.hpp>
+
+auto v = xstd::bit_set_view(w);  // w stays where it is
+v.insert(5);
+v.erase(5);
+v.contains(9);
+v.size();
+for (auto i : v) {
+        use(i);
+}
+```
+
+</td></tr>
+</table>
+
+### An enumeration's keys
+
+`bit_enum_set<Enum>` is the set of an enumeration's enumerators, one bit each in the smallest unsigned type that holds
+them, as Java's `EnumSet` is. An enumeration that ends in a `count` enumerator needs nothing more; another lists its
+values in a specialization of `xstd::enum_traits`. The shifts by `std::to_underlying` go, and iteration yields the
+keys in the enumeration's own type.
+
+<table>
+<tr><th>Before</th><th>After</th></tr>
+<tr><td>
+
+```cpp
+enum class weekday { mon, tue, wed, thu, fri, sat, sun, count };
+
+auto days = 0U;
+days |= 1U << std::to_underlying(weekday::sat);
+days &= ~(1U << std::to_underlying(weekday::sat));
+(days >> std::to_underlying(weekday::sun)) & 1U;
+std::popcount(days);
+for (auto x = days; x != 0; x &= x - 1) {
+        use(static_cast<weekday>(std::countr_zero(x)));
+}
+```
+
+</td><td>
+
+```cpp
+#include <xstd/bits/bit_set/bit_enum_set.hpp>
+
+auto days = xstd::bit_enum_set<weekday>();  // one byte
+days.insert(weekday::sat);
+days.erase(weekday::sat);
+days.contains(weekday::sun);
+days.size();
+for (auto d : days) {
+        use(d);
+}
+```
+
+</td></tr>
+</table>
+
+### Enumeration flags: `std::filesystem::perms` and other [[bitmask.types]](https://eel.is/c++draft/bitmask.types)
+
+`bit_flag_set<Mask, N>` is the set of the mask's one-bit values. It converts implicitly from and to the mask, so
+the constants and the functions that take the mask stay as they are; what changes is the type of the variable.
+Iteration yields the flags from the highest down.
+
+<table>
+<tr><th>Before</th><th>After</th></tr>
+<tr><td>
+
+```cpp
+namespace fs = std::filesystem;
+
+auto p = fs::perms::owner_read | fs::perms::owner_write;
+p |= fs::perms::group_read;
+(p & fs::perms::owner_write) != fs::perms::none;
+(p & mask) == mask;
+fs::permissions(path, p);
+```
+
+</td><td>
+
+```cpp
+#include <xstd/bits/bit_algorithm.hpp>
+#include <xstd/bits/bit_set/bit_flag_set.hpp>
+
+using perms = xstd::bit_flag_set<fs::perms, 16>;
+
+auto p = perms{fs::perms::owner_read, fs::perms::owner_write};
+p |= fs::perms::group_read;
+p.contains(fs::perms::owner_write);
+xstd::ranges::bit_includes(p, mask);
+fs::permissions(path, p);  // converts to fs::perms
+```
+
+</td></tr>
+</table>
+
+### Qt's `QFlags`
+
+`QFlags<Enum>` wraps an enumeration of one-bit values; `bit_flag_set` over the same enumeration replaces it, keyed on
+the flags themselves. It takes the enumeration although `Qt::AlignLeft | Qt::AlignTop` is a `QFlags` rather than an
+`Qt::AlignmentFlag`: a flag type accepts any enumeration whose `|` compiles, whatever it returns. `Qt::AlignmentFlag`
+has no fixed underlying type, so its values are only those of the nine-bit field its enumerators need, and the width
+is written out: with a wider one, `~a` would form a value the enumeration cannot hold.
+
+<table>
+<tr><th>Before</th><th>After</th></tr>
+<tr><td>
+
+```cpp
+#include <QtCore/QFlags>
+
+Qt::Alignment a = Qt::AlignLeft | Qt::AlignTop;
+a |= Qt::AlignBottom;
+a &= ~Qt::AlignTop;
+a.setFlag(Qt::AlignLeft, false);
+a.setFlag(Qt::AlignHCenter);
+a.testFlag(Qt::AlignHCenter);
+a.testFlags(Qt::AlignCenter);
+a.testAnyFlags(Qt::AlignVertical_Mask);
+a.toInt();
+```
+
+</td><td>
+
+```cpp
+#include <xstd/bits/bit_algorithm.hpp>
+#include <xstd/bits/bit_set/bit_flag_set.hpp>
+
+using Alignment = xstd::bit_flag_set<Qt::AlignmentFlag, 9>;
+
+auto a = Alignment{Qt::AlignLeft, Qt::AlignTop};
+a |= Qt::AlignBottom;
+a -= Qt::AlignTop;
+a.erase(Qt::AlignLeft);
+a.insert(Qt::AlignHCenter);
+a.contains(Qt::AlignHCenter);
+xstd::ranges::bit_includes(a, Qt::AlignCenter);
+xstd::ranges::bit_intersects(a, Qt::AlignVertical_Mask);
+Qt::AlignmentFlag(a);
+```
+
+</td></tr>
+</table>
+
+Member by member:
+
+| `QFlags` | Flag type |
+| :-- | :-- |
+| `testFlag(f)`, `f` one bit | `contains(f)` |
+| `testFlags(m)` | `xstd::ranges::bit_includes(a, m)`, except that `testFlags(0)` asks whether `a` is empty, and `bit_includes(a, 0)` is always true |
+| `testAnyFlags(m)` | `xstd::ranges::bit_intersects(a, m)` |
+| `setFlag(f, on)`, `f` one bit | `on ? a.insert(f) : a.erase(f)` |
+| `setFlag(m, on)`, `m` several bits | `on ? a \|= m : a -= m` |
+| `toInt()` | the conversion to the mask, `Qt::AlignmentFlag(a)`, or `xstd::bit_convert<unsigned>(a)` for the word |
+
+An unscoped enumeration converts to `bool`, so `if (a & Qt::AlignLeft)` still reads as any-of, through the
+conversion to the mask. A scoped enumeration does not, and its flag type then asks `xstd::ranges::bit_intersects` or
+`contains` instead.
+
+### A signed word of unsigned flags: POSIX `sa_flags`
+
+A flag type keeps a signed word's sign bit out of its universe, so a flag that sits there needs the word's unsigned
+type. glibc's `SA_RESETHAND` is `0x80000000`, an `unsigned` constant, stored in `struct sigaction`'s `int sa_flags`.
+The word is `int`, the flags are `unsigned`: key on `unsigned`, and cast once on each side of the field. Iteration
+is then `std::set<unsigned, std::greater<unsigned>>`'s, `SA_RESETHAND` first.
+
+<table>
+<tr><th>Before</th><th>After</th></tr>
+<tr><td>
+
+```cpp
+#include <signal.h>
+
+struct sigaction sa{};
+sa.sa_flags = SA_RESTART | SA_RESETHAND;
+sa.sa_flags |= SA_NODEFER;
+(sa.sa_flags & SA_RESETHAND) != 0;
+```
+
+</td><td>
+
+```cpp
+#include <xstd/bits/bit_set/bit_flag_set.hpp>
+#include <signal.h>
+
+using sa_flags = xstd::bit_flag_set<unsigned>;
+
+auto f = sa_flags{SA_RESTART, SA_RESETHAND};
+f |= SA_NODEFER;
+f.contains(SA_RESETHAND);
+sa.sa_flags = static_cast<int>(unsigned(f));
+auto g = sa_flags(static_cast<unsigned>(sa.sa_flags));
+```
+
+</td></tr>
+</table>
+
+`xstd::bit_flag_set<int>{SA_RESETHAND}` does not compile on glibc: the constant narrows into `int`. A run-time value
+with the sign bit set fails the flag type's assertion on the way in.
+
+## A focused interface in place of a hybrid one
 
 `std::bitset` and `boost::dynamic_bitset` each offer three readings at once; here the type says which, at
 `std::bitset<N>`'s fixed width or `boost::dynamic_bitset`'s run-time one:
@@ -401,278 +664,58 @@ view[17] = true;
 
 </td></tr>
 </table>
-## A class interface over raw integers, enumerations and flags
 
-Code that keeps bits in an integer spells them as positions, enumerators or flags, and works them with shifts and
-masks; the class takes the keys the code already has, and the shifts and masks become its members:
+## A space-optimized container
 
-- **positions in a word**: `bit_fixed_set<N>` for a word of its own, or `bit_array<N>` where the word is a row of
-  `bool`; `bit_set_view` for one kept where it is.
-- **an enumeration's keys**: `bit_enum_set<Enum>`.
-- **a bitmask type's flags**: `bit_flag_set<Mask, N>`, for the standard library's
-  [[bitmask.types]](https://eel.is/c++draft/bitmask.types) and for other libraries' flags, such as Qt's `QFlags` and
-  POSIX's `sa_flags`.
+`std::array<bool, N>`, `std::inplace_vector<bool, N>` and `std::valarray<bool>` spend a byte per position and
+`std::set<std::size_t>` a node per key; `bit_array<N>`, `bit_inplace_vector<N>`, `bit_valarray` and `bit_set` spend a
+bit. `std::vector<bool>` is packed already, and `bit_vector` is that packing under a vector's name. None of these
+needs a section: the type changes and the code around it stays, as each answers its counterpart's synopsis
+([README](../README.md#which-one-do-i-want)), with these exceptions:
 
-### A bitboard or a flag word
+- `[vector.bool]`'s `flip()` and deprecated static `swap` are left out, and so is `array`'s and `inplace_vector`'s
+  `data()`, which a packed bit has no address for.
+- `bit_valarray` has no arithmetic, so `+`, `*` and the rest stop compiling. Two operators compile and change
+  meaning: `~` is logical not, where `valarray<bool>`'s promotes and answers all `true`, and `<<` and `>>` move
+  positions as `std::bitset`'s do, where `valarray<bool>`'s shift each element's value.
 
-A word whose bits are positions, as a chess engine's bitboard or a flag word, becomes a `bit_fixed_set<64>`. The
-shift-and-mask primitives become `insert`, `erase` and `contains`, `std::popcount` becomes `size`, and the
-`w &= w - 1` loop over `std::countr_zero` becomes a range-for, lowest position first. The set's shifts translate its
-keys as the word's do, and `&`, `|` and `^` stay. A word read as a row of `bool`, indexed, rotated or reversed, is a
-`bit_array<64>` instead.
+## A speed-optimized algorithm
 
-<table>
-<tr><th>Before</th><th>After</th></tr>
-<tr><td>
-
-```cpp
-std::uint64_t bb = 0;
-bb |= std::uint64_t{1} << sq;
-bb &= ~(std::uint64_t{1} << sq);
-(bb >> sq) & 1;
-std::popcount(bb);
-for (auto x = bb; x != 0; x &= x - 1) {
-        use(std::countr_zero(x));
-}
-auto north = bb << 8;
-auto both = bb & other;
-```
-
-</td><td>
-
-```cpp
-#include <xstd/bits/bit_set/bit_fixed_set.hpp>
-
-auto bb = xstd::bit_fixed_set<64>();
-bb.insert(sq);
-bb.erase(sq);
-bb.contains(sq);
-bb.size();
-for (auto i : bb) {
-        use(i);
-}
-auto north = bb << 8;
-auto both = bb & other;
-```
-
-</td></tr>
-</table>
-
-Kept where it is, in a struct or an ABI, the word takes the set's interface in place through a view.
+On a packed sequence a `std::ranges` algorithm still compiles, and visits one proxy at a time. Its counterpart in
+`xstd::ranges` carries a `bit_` prefix and works a block at a time, in O(`N`/`D`) for `D` bits per block, over any
+sequence of the library's, a `bit_span` and its windows included. Over `bool` a predicate is the identity, so
+`bit_all_of`, `bit_any_of` and `bit_none_of` drop it, and `bit_count` and `bit_find` take the value they look for.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>
 <tr><td>
 
 ```cpp
-std::uint64_t w = 0;
-w |= std::uint64_t{1} << 5;
-w &= ~(std::uint64_t{1} << 5);
-(w >> 9) & 1;
-std::popcount(w);
-for (auto x = w; x != 0; x &= x - 1) {
-        use(std::countr_zero(x));
-}
-```
+#include <algorithm>
+#include <functional>
 
-</td><td>
-
-```cpp
-#include <xstd/bits/bit_set/bit_set_view.hpp>
-
-auto v = xstd::bit_set_view(w);  // w stays where it is
-v.insert(5);
-v.erase(5);
-v.contains(9);
-v.size();
-for (auto i : v) {
-        use(i);
-}
-```
-
-</td></tr>
-</table>
-
-### An enumeration's keys
-
-`bit_enum_set<Enum>` is the set of an enumeration's enumerators, one bit each in the smallest unsigned type that holds
-them, as Java's `EnumSet` is. An enumeration that ends in a `count` enumerator needs nothing more; another lists its
-values in a specialization of `xstd::enum_traits`. The shifts by `std::to_underlying` go, and iteration yields the
-keys in the enumeration's own type.
-
-<table>
-<tr><th>Before</th><th>After</th></tr>
-<tr><td>
-
-```cpp
-enum class weekday { mon, tue, wed, thu, fri, sat, sun, count };
-
-auto days = 0U;
-days |= 1U << std::to_underlying(weekday::sat);
-days &= ~(1U << std::to_underlying(weekday::sat));
-(days >> std::to_underlying(weekday::sun)) & 1U;
-std::popcount(days);
-for (auto x = days; x != 0; x &= x - 1) {
-        use(static_cast<weekday>(std::countr_zero(x)));
-}
-```
-
-</td><td>
-
-```cpp
-#include <xstd/bits/bit_set/bit_enum_set.hpp>
-
-auto days = xstd::bit_enum_set<weekday>();  // one byte
-days.insert(weekday::sat);
-days.erase(weekday::sat);
-days.contains(weekday::sun);
-days.size();
-for (auto d : days) {
-        use(d);
-}
-```
-
-</td></tr>
-</table>
-
-### Enumeration flags: `std::filesystem::perms` and other [[bitmask.types]](https://eel.is/c++draft/bitmask.types)
-
-`bit_flag_set<Mask, N>` is the set of the mask's one-bit values. It converts implicitly from and to the mask, so
-the constants and the functions that take the mask stay as they are; what changes is the type of the variable.
-Iteration yields the flags from the highest down.
-
-<table>
-<tr><th>Before</th><th>After</th></tr>
-<tr><td>
-
-```cpp
-namespace fs = std::filesystem;
-
-auto p = fs::perms::owner_read | fs::perms::owner_write;
-p |= fs::perms::group_read;
-(p & fs::perms::owner_write) != fs::perms::none;
-(p & mask) == mask;
-fs::permissions(path, p);
+auto v = xstd::bit_vector(n);
+std::ranges::count(v, true);
+std::ranges::find(v, true);
+std::ranges::all_of(v, std::identity());
+std::ranges::equal(v, w);
+std::ranges::reverse(v);
+std::ranges::sort(v);
 ```
 
 </td><td>
 
 ```cpp
 #include <xstd/bits/bit_algorithm.hpp>
-#include <xstd/bits/bit_set/bit_flag_set.hpp>
 
-using perms = xstd::bit_flag_set<fs::perms, 16>;
-
-auto p = perms{fs::perms::owner_read, fs::perms::owner_write};
-p |= fs::perms::group_read;
-p.contains(fs::perms::owner_write);
-xstd::ranges::bit_includes(p, mask);
-fs::permissions(path, p);  // converts to fs::perms
+auto v = xstd::bit_vector(n);
+xstd::ranges::bit_count(v, true);
+xstd::ranges::bit_find(v, true);
+xstd::ranges::bit_all_of(v);
+xstd::ranges::bit_equal(v, w);
+xstd::ranges::bit_reverse(v);
+xstd::ranges::bit_sort(v);
 ```
 
 </td></tr>
 </table>
-
-### Qt's `QFlags`
-
-`QFlags<Enum>` wraps an enumeration of one-bit values; `bit_flag_set` over the same enumeration replaces it, keyed on
-the flags themselves. It takes the enumeration although `Qt::AlignLeft | Qt::AlignTop` is a `QFlags` rather than an
-`Qt::AlignmentFlag`: a flag type accepts any enumeration whose `|` compiles, whatever it returns. `Qt::AlignmentFlag`
-has no fixed underlying type, so its values are only those of the nine-bit field its enumerators need, and the width
-is written out: with a wider one, `~a` would form a value the enumeration cannot hold.
-
-<table>
-<tr><th>Before</th><th>After</th></tr>
-<tr><td>
-
-```cpp
-#include <QtCore/QFlags>
-
-Qt::Alignment a = Qt::AlignLeft | Qt::AlignTop;
-a |= Qt::AlignBottom;
-a &= ~Qt::AlignTop;
-a.setFlag(Qt::AlignLeft, false);
-a.setFlag(Qt::AlignHCenter);
-a.testFlag(Qt::AlignHCenter);
-a.testFlags(Qt::AlignCenter);
-a.testAnyFlags(Qt::AlignVertical_Mask);
-a.toInt();
-```
-
-</td><td>
-
-```cpp
-#include <xstd/bits/bit_algorithm.hpp>
-#include <xstd/bits/bit_set/bit_flag_set.hpp>
-
-using Alignment = xstd::bit_flag_set<Qt::AlignmentFlag, 9>;
-
-auto a = Alignment{Qt::AlignLeft, Qt::AlignTop};
-a |= Qt::AlignBottom;
-a -= Qt::AlignTop;
-a.erase(Qt::AlignLeft);
-a.insert(Qt::AlignHCenter);
-a.contains(Qt::AlignHCenter);
-xstd::ranges::bit_includes(a, Qt::AlignCenter);
-xstd::ranges::bit_intersects(a, Qt::AlignVertical_Mask);
-Qt::AlignmentFlag(a);
-```
-
-</td></tr>
-</table>
-
-Member by member:
-
-| `QFlags` | Flag type |
-| :-- | :-- |
-| `testFlag(f)`, `f` one bit | `contains(f)` |
-| `testFlags(m)` | `xstd::ranges::bit_includes(a, m)`, except that `testFlags(0)` asks whether `a` is empty, and `bit_includes(a, 0)` is always true |
-| `testAnyFlags(m)` | `xstd::ranges::bit_intersects(a, m)` |
-| `setFlag(f, on)`, `f` one bit | `on ? a.insert(f) : a.erase(f)` |
-| `setFlag(m, on)`, `m` several bits | `on ? a \|= m : a -= m` |
-| `toInt()` | the conversion to the mask, `Qt::AlignmentFlag(a)`, or `xstd::bit_convert<unsigned>(a)` for the word |
-
-An unscoped enumeration converts to `bool`, so `if (a & Qt::AlignLeft)` still reads as any-of, through the
-conversion to the mask. A scoped enumeration does not, and its flag type then asks `xstd::ranges::bit_intersects` or
-`contains` instead.
-
-### A signed word of unsigned flags: POSIX `sa_flags`
-
-A flag type keeps a signed word's sign bit out of its universe, so a flag that sits there needs the word's unsigned
-type. glibc's `SA_RESETHAND` is `0x80000000`, an `unsigned` constant, stored in `struct sigaction`'s `int sa_flags`.
-The word is `int`, the flags are `unsigned`: key on `unsigned`, and cast once on each side of the field. Iteration
-is then `std::set<unsigned, std::greater<unsigned>>`'s, `SA_RESETHAND` first.
-
-<table>
-<tr><th>Before</th><th>After</th></tr>
-<tr><td>
-
-```cpp
-#include <signal.h>
-
-struct sigaction sa{};
-sa.sa_flags = SA_RESTART | SA_RESETHAND;
-sa.sa_flags |= SA_NODEFER;
-(sa.sa_flags & SA_RESETHAND) != 0;
-```
-
-</td><td>
-
-```cpp
-#include <xstd/bits/bit_set/bit_flag_set.hpp>
-#include <signal.h>
-
-using sa_flags = xstd::bit_flag_set<unsigned>;
-
-auto f = sa_flags{SA_RESTART, SA_RESETHAND};
-f |= SA_NODEFER;
-f.contains(SA_RESETHAND);
-sa.sa_flags = static_cast<int>(unsigned(f));
-auto g = sa_flags(static_cast<unsigned>(sa.sa_flags));
-```
-
-</td></tr>
-</table>
-
-`xstd::bit_flag_set<int>{SA_RESETHAND}` does not compile on glibc: the constant narrows into `int`. A run-time value
-with the sign bit set fails the flag type's assertion on the way in.
