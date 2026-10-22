@@ -240,6 +240,29 @@ cases users will meet and the pitfalls they will fall into, never against a cons
 A fixture that runs a component over a user-shaped argument such as `test::set::strong_index` and its
 `offset_mapping` probes no concept, and stays.
 
+## The relation table
+
+The reference's relation table, in `doc/reference/index.md`, relates every public entity to the working draft, a row
+per entity or family. Its rules are the same across the xstd libraries, so that a reader of one table can read the
+others:
+
+- **Clause first.** The Counterpart cell leads with the clause of the draft that specifies the counterpart, as
+  `[[set]](https://eel.is/c++draft/set)`, then says only how the entity extends or generalizes it. The clause already
+  names the standard facility, so the cell does not name it again. Several clauses go in the draft's order.
+- **The draft's order.** Rows follow the draft's numbering of their leading clause, as eel.is shows it, and the names
+  within a row follow the draft's order of their counterparts: `bit_all_of`, `bit_any_of`, `bit_none_of`, not the
+  alphabet. A row with no counterpart sits beside its nearest kin, citing the kin's clause where one is shared, and
+  its names are alphabetical.
+- **One clause for a family.** Where a family's counterparts share a tight parent subclause, it is cited once, as
+  `[alg.set.operations]` and `[numarray]` are. The algorithms split by the sections their umbrella cites.
+- **Permission is no counterpart.** A clause cited only as a license, such as `[namespace.std]` for a `formatter`
+  specialization, stays in the description and decides nothing about the row's place.
+- **Customization is new.** A standard-named type generalizes its counterpart; the `basic_` templates and the other
+  storages that choose its block type, storage or allocator take a row of their own, of kind New, led by the same
+  clause.
+- **Words kept for elsewhere.** `bitset` belongs to the migration guide, not this table, and "bit string" is kept for
+  a future `bit_string`.
+
 ## Checking your work
 
 Break things here, not on CI's runners, where a push waits hours for its first result. Two scripts make that
@@ -283,7 +306,8 @@ which draw on one account's runners.
   branch, which runs nothing; open the pull request when the queue is empty.
 - **A pull request is what merges or reverts as one.** Changes that touch the same files, or that are only tests or
   only documentation, go in one pull request rather than one per issue. A pull request that changes only paths no
-  ladder builds, which `.github/workflows/changes.yml` lists, skips the ladders and costs minutes rather than hours.
+  ladder builds, which `.github/workflows/changes.yml` lists, skips the ladders and costs minutes rather than hours,
+  so it may open beside a long run.
 - **Neither stack nor fan out.** Each pull request branches off `main` and waits there. Its turn starts by merging
   `main` into it, never rebasing, so its one run is against the `main` it will land on. A stack costs the same runs
   and adds a restack whenever a lower pull request changes; pull requests in parallel make every merge put the rest
