@@ -20,7 +20,7 @@ on:
 jobs:
   # The last stub to arrive: the shared workflow could not express this library before cpp-ci v0.4.1.
   consumption:
-    uses: rhalbersma/cpp-ci/.github/workflows/consumption.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # v0.14.0
+    uses: rhalbersma/cpp-ci/.github/workflows/consumption.yml@1b5265b916e459cfe621a970e819b6b16a29c3c5 # main after rhalbersma/cpp-ci#81, whose install-gcc falls back to the Launchpad librarian when the toolchain PPA's mirror is down
     with:
       # CMakeLists.txt find_package()s boost_hash2 and boost_container unconditionally, so every configure here needs vcpkg.
       vcpkg: true
