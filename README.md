@@ -72,6 +72,12 @@ specialization changes what `vector<T>` promises for one `T`: at `T = bool`, `op
 no `bool*`, and code written against `vector<T>` breaks there. Scott Meyers's *Effective STL* (2001) gave it an item
 of its own, Item 18: "Avoid using `vector<bool>`."
 
+Howard Hinnant's [On `vector<bool>`](https://howardhinnant.github.io/onvectorbool.html) (2012) separated the two
+questions: is an array of bits a good data structure, and should it be named `vector<bool>`? "Yes. No." Under a
+`bit_vector` of its own, the range-for that fails to compile on `vector<bool>` fails the same way, but now the coder
+sees a dynamic array of bits, whose bits no reference can bind to: "names are important." And with the algorithms
+adapted to read a word at a time, the same data structure is a speed optimization as well as a space one.
+
 In hindsight the workaround had the better design: a packed container chosen by its own name, with its proxy stated up
 front, beside a `vector<bool>` that stays a vector. `xstd::bit_vector` restores the name the STL promised to remove.
 
