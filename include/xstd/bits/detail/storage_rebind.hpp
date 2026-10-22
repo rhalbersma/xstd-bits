@@ -43,24 +43,32 @@ using storage_with_block_t = bit_storage_rebind<Blocks>::template with_block<Oth
 template<class Blocks, std::size_t L>
 using storage_with_block_count_t = bit_storage_rebind<Blocks>::template with_block_count<L>;
 
-// The members rebind asks of Owner<Blocks, N>: none where the storage cannot change its block.
-template<template<class, std::size_t> class Owner, class Blocks, std::size_t N>
+// The owner over other blocks and another cap: each owner over a storage names itself here, as type<OtherBlocks, M>.
+template<class Owner>
+struct storage_owner
+{};
+
+template<class Owner, class OtherBlocks, std::size_t M>
+using storage_owner_t = storage_owner<Owner>::template type<OtherBlocks, M>;
+
+// The members rebind asks of an owner over Blocks capped at N: none where the storage cannot change its block.
+template<class Owner, class Blocks, std::size_t N>
 struct storage_rebind
 {};
 
 // A storage of no fixed count changes its block alone, and keeps the cap.
-template<template<class, std::size_t> class Owner, class Blocks, std::size_t N>
+template<class Owner, class Blocks, std::size_t N>
         requires rebindable_storage<Blocks> and (not counted_storage<Blocks>)
 struct storage_rebind<Owner, Blocks, N>
 {
         using block_type = std::ranges::range_value_t<Blocks>;
 
         template<class OtherBlock>
-        using with_block = Owner<storage_with_block_t<Blocks, OtherBlock>, N>;
+        using with_block = storage_owner_t<Owner, storage_with_block_t<Blocks, OtherBlock>, N>;
 };
 
 // A counted storage's width is the cap, else its blocks' bits; another block or width counts the blocks that hold it.
-template<template<class, std::size_t> class Owner, class Blocks, std::size_t N>
+template<class Owner, class Blocks, std::size_t N>
         requires counted_storage<Blocks>
 struct storage_rebind<Owner, Blocks, N>
 {
@@ -68,10 +76,10 @@ struct storage_rebind<Owner, Blocks, N>
         static constexpr std::size_t width = N != std::dynamic_extent ? N : bit_storage_rebind<Blocks>::block_count * bit_blocks_extent_v<block_type>;
 
         template<class OtherBlock>
-        using with_block = Owner<storage_with_block_count_t<storage_with_block_t<Blocks, OtherBlock>, num_blocks_v<OtherBlock, width>>, N>;
+        using with_block = storage_owner_t<Owner, storage_with_block_count_t<storage_with_block_t<Blocks, OtherBlock>, num_blocks_v<OtherBlock, width>>, N>;
 
         template<std::size_t M>
-        using with_width = Owner<storage_with_block_count_t<Blocks, num_blocks_v<block_type, M>>, N == std::dynamic_extent ? std::dynamic_extent : M>;
+        using with_width = storage_owner_t<Owner, storage_with_block_count_t<Blocks, num_blocks_v<block_type, M>>, N == std::dynamic_extent ? std::dynamic_extent : M>;
 };
 
 } // namespace xstd::bits::detail

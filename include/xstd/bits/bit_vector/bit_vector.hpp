@@ -13,7 +13,7 @@
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
-#include <xstd/bits/detail/storage_rebind.hpp>               // fits_storage, storage_rebind, storage_width_v
+#include <xstd/bits/detail/storage_rebind.hpp>               // fits_storage, storage_owner, storage_rebind, storage_width_v
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
 #include <xstd/misc/concepts/simple_allocator.hpp>           // simple_allocator
 #include <cstddef>                                           // size_t
@@ -155,7 +155,14 @@ basic_bit_vector(from_blocks_t, Blocks, Allocator) -> basic_bit_vector<Blocks, b
 
 // Another block or width goes through the storage's bit_storage_rebind, and a counted storage recounts its blocks.
 template<class Blocks, std::size_t N>
-struct bits::detail::rebind<basic_bit_vector<Blocks, N>> : bits::detail::storage_rebind<basic_bit_vector, Blocks, N>
+struct bits::detail::storage_owner<basic_bit_vector<Blocks, N>>
+{
+        template<class OtherBlocks, std::size_t M>
+        using type = basic_bit_vector<OtherBlocks, M>;
+};
+
+template<class Blocks, std::size_t N>
+struct bits::detail::rebind<basic_bit_vector<Blocks, N>> : bits::detail::storage_rebind<basic_bit_vector<Blocks, N>, Blocks, N>
 {};
 
 } // namespace xstd
