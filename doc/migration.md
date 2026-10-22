@@ -1,8 +1,8 @@
 # Migrating to xstd-bits
 
 A move to xstd-bits serves one of three goals: a packed representation of a standard container, a focused interface
-where `std::bitset` and `boost::dynamic_bitset` offer every reading at once, or a set's interface over raw integers
-and flags. A section covers each source whose interface differs, as a *Tony Table*, the before-and-after form WG21
+where `std::bitset` and `boost::dynamic_bitset` offer every reading at once, or a class interface over raw integers,
+enumerations and flags. A section covers each source whose interface differs, as a *Tony Table*, the before-and-after form WG21
 papers use: what the code says today on the left, what it says here on the right. Every right-hand column compiles
 and runs against the library with GCC 15 and Clang 22, and so does every left-hand one except itsy_bitsy's, whose
 last release no longer builds with either.
@@ -401,21 +401,64 @@ view[17] = true;
 
 </td></tr>
 </table>
-## Raw integers and flags
+## A class interface over raw integers, enumerations and flags
 
-Code that keeps a set in an integer spells the keys as positions, enumerators or flags; the set takes the keys the
-code already has:
+Code that keeps bits in an integer spells them as positions, enumerators or flags, and works them with shifts and
+masks; the class takes the keys the code already has, and the shifts and masks become its members:
 
-- **positions in a word**: `bit_fixed_set<N>` for a word of its own, `bit_set_view` for one kept where it is.
+- **positions in a word**: `bit_fixed_set<N>` for a word of its own, or `bit_array<N>` where the word is a row of
+  `bool`; `bit_set_view` for one kept where it is.
 - **an enumeration's keys**: `bit_enum_set<Enum>`.
 - **a bitmask type's flags**: `bit_flag_set<Mask, N>`, for the standard library's
   [[bitmask.types]](https://eel.is/c++draft/bitmask.types) and for other libraries' flags, such as Qt's `QFlags` and
   POSIX's `sa_flags`.
 
-### An integer flag word
+### A bitboard or a flag word
 
-Owned, the word becomes a fixed set. Kept where it is, in a struct or an ABI, a view gives it the set's interface
-in place.
+A word whose bits are positions, as a chess engine's bitboard or a flag word, becomes a `bit_fixed_set<64>`. The
+shift-and-mask primitives become `insert`, `erase` and `contains`, `std::popcount` becomes `size`, and the
+`w &= w - 1` loop over `std::countr_zero` becomes a range-for, lowest position first. The set's shifts translate its
+keys as the word's do, and `&`, `|` and `^` stay. A word read as a row of `bool`, indexed, rotated or reversed, is a
+`bit_array<64>` instead.
+
+<table>
+<tr><th>Before</th><th>After</th></tr>
+<tr><td>
+
+```cpp
+std::uint64_t bb = 0;
+bb |= std::uint64_t{1} << sq;
+bb &= ~(std::uint64_t{1} << sq);
+(bb >> sq) & 1;
+std::popcount(bb);
+for (auto x = bb; x != 0; x &= x - 1) {
+        use(std::countr_zero(x));
+}
+auto north = bb << 8;
+auto both = bb & other;
+```
+
+</td><td>
+
+```cpp
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>
+
+auto bb = xstd::bit_fixed_set<64>();
+bb.insert(sq);
+bb.erase(sq);
+bb.contains(sq);
+bb.size();
+for (auto i : bb) {
+        use(i);
+}
+auto north = bb << 8;
+auto both = bb & other;
+```
+
+</td></tr>
+</table>
+
+Kept where it is, in a struct or an ABI, the word takes the set's interface in place through a view.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>
