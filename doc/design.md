@@ -79,11 +79,14 @@ put a branch no passing test takes on every subscript in the vehicle; the test t
 `BOOST_CONTAINER_DISABLE_FORCEINLINE`, which leaves the call, and its branch, in Boost's header.
 
 **Whether growth throws is the storage's own answer.** `std::vector::resize` can throw `std::bad_alloc`, and a
-storage with an inline capacity -- `std::inplace_vector`, `boost::container::static_vector` -- throws its own
-`bad_alloc` past it, which reaches the caller unchanged. Growth keeps whatever guarantee the storage's own `resize`
-gives, because the width moves only after the storage has grown: over any of the standard or Boost vectors, whose
-`resize` on unsigned blocks either completes or changes nothing, a failed growth leaves the owner as it was. A
-storage whose `resize` is `noexcept` never takes that path.
+storage with an inline capacity throws past it: `std::inplace_vector` a `std::bad_alloc`, and
+`boost::container::static_vector` a `boost::container::bad_alloc`, which derives from `std::exception` and not from
+`std::bad_alloc` unless `BOOST_CONTAINER_USE_STD_EXCEPTIONS` is defined. The owners ask neither past its capacity:
+they refuse first with `std::bad_alloc`, as `std::inplace_vector` specifies, so a caller catches one type over
+both. Growth keeps whatever guarantee the storage's own `resize` gives, because the width moves only after the
+storage has grown: over any of the standard or Boost vectors, whose `resize` on unsigned blocks either completes or
+changes nothing, a failed growth leaves the owner as it was. A storage whose `resize` is `noexcept` never takes
+that path.
 
 The element clause is `xstd::unsigned_integer`, and **not** the wider `bit_mask`, which would be the concept
 if the operators were all a block is asked for. They are not. Beyond them the body wants the `<bit>` intrinsics
@@ -6457,8 +6460,8 @@ It waits on [P2900](https://wg21.link/P2900)'s availability across the ladders, 
 questions are to be decided before any syntax: whether a partial migration, two vocabularies for one doctrine,
 is worse than none, and so whether a mechanism that degrades to `assert` is wanted; the C++23 floor, since the
 library compiles as C++23 and contracts in the interface move it; and what the checked build is for, legibility
-alone if contracts are only ever ignored in release and enforced in tests. The pilot is the smallest file,
-`bit_valarray/detail/valarray_adaptor.hpp` with four, reviewed for whether it reads better, and the coverage gate needs an
+alone if contracts are only ever ignored in release and enforced in tests. The pilot is one file,
+`bit_valarray/detail/valarray_proxy.hpp` with four asserts, reviewed for whether it reads better, and the coverage gate needs an
 exclusion for a contract annotation as it has one for an assert at the start of a line
 ([an-assert-begins-its-line](#an-assert-begins-its-line)).
 
@@ -6552,7 +6555,7 @@ Bit containers with a selectable or surprising column: `llvm::BitVector` is smal
 
 | inplace | signature | past the capacity | source |
 |---|---|---|---|
-| `boost::container::static_vector` | `template <typename T, std::size_t Capacity, class Options = void> class static_vector` | `std::bad_alloc` by default; with `throw_on_overflow<false>`, an assert and otherwise undefined | [static_vector.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/static_vector.hpp), [options.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/options.hpp) |
+| `boost::container::static_vector` | `template <typename T, std::size_t Capacity, class Options = void> class static_vector` | `boost::container::bad_alloc` by default, which is `std::bad_alloc` only under `BOOST_CONTAINER_USE_STD_EXCEPTIONS`; with `throw_on_overflow<false>`, an assert and otherwise undefined | [static_vector.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/static_vector.hpp), [options.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/options.hpp) |
 | `boost::static_strings::basic_static_string` | `template <std::size_t N, typename CharT, typename Traits = std::char_traits<CharT>> class basic_static_string` | `std::length_error`, and `std::out_of_range` for a bad position | [static_string.hpp](https://github.com/boostorg/static_string/blob/2ff9d3535e853f4913e85e7fea28f84b04ea5d81/include/boost/static_string/static_string.hpp) |
 | `folly::BasicFixedString` | `template <class Char, std::size_t N> class BasicFixedString` | `std::out_of_range`, a compile error in constant evaluation | [FixedString.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/FixedString.h) |
 | `folly::small_vector` with `policy_in_situ_only<true>` | `template <class Value, std::size_t RequestedMaxInline = 1, class Policy = void> class small_vector` | `std::length_error` | [small_vector.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/container/small_vector.h) |
