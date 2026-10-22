@@ -2,12 +2,17 @@
 
 A move to xstd-bits serves one of two goals.
 
-**A packed representation.** `std::array<bool, N>` and `std::inplace_vector<bool, N>` spend a byte per position and
-`std::set<std::size_t>` a node per key; `bit_array<N>`, `bit_inplace_vector<N>` and `bit_set` spend a bit.
-`std::vector<bool>` is packed already, and `bit_vector` is that packing under a vector's name. None of these needs a
-section: the type changes and the code around it stays, as each answers its counterpart's synopsis line for line
-([README](../README.md#which-one-do-i-want)). The exceptions are `[vector.bool]`'s `flip()` and deprecated static
-`swap`, and `array`'s and `inplace_vector`'s `data()`, which a packed bit has no address for.
+**A packed representation.** `std::array<bool, N>`, `std::inplace_vector<bool, N>` and `std::valarray<bool>` spend a
+byte per position and `std::set<std::size_t>` a node per key; `bit_array<N>`, `bit_inplace_vector<N>`, `bit_valarray`
+and `bit_set` spend a bit. `std::vector<bool>` is packed already, and `bit_vector` is that packing under a vector's
+name. None of these needs a section: the type changes and the code around it stays, as each answers its counterpart's
+synopsis ([README](../README.md#which-one-do-i-want)), with these exceptions:
+
+- `[vector.bool]`'s `flip()` and deprecated static `swap` are left out, and so is `array`'s and `inplace_vector`'s
+  `data()`, which a packed bit has no address for.
+- `bit_valarray` has no arithmetic, so `+`, `*` and the rest stop compiling. Two operators compile and change
+  meaning: `~` is logical not, where `valarray<bool>`'s promotes and answers all `true`, and `<<` and `>>` move
+  positions as `std::bitset`'s do, where `valarray<bool>`'s shift each element's value.
 
 **A focused interface.** `std::bitset` and `boost::dynamic_bitset` each offer three readings at once; here the type
 says which, at `std::bitset<N>`'s fixed width or `boost::dynamic_bitset`'s run-time one:
