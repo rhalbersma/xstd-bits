@@ -5,6 +5,7 @@
 
 #include <test/bit_exchange.hpp>                   // converts_between, exchanges_from_bits
 #include <test/block_types.hpp>                    // graded_extents
+#include <test/endian.hpp>                         // IWYU pragma: keep; TEST_BYTES_ARE_POSITIONS
 #include <test/set/ascending.hpp>                  // yields_ascending_keys
 #include <test/set/strong_index.hpp>               // agrees_with_std_set_of_strong_indices, offset_mapping, strong_index
 #include <test/value_reference.hpp>                // value_reference
@@ -369,7 +370,9 @@ BOOST_AUTO_TEST_CASE(AStrongIndexWithItsOwnMappingKeysItAsStdSetIsKeyed)
 
         // The positions are the keys less 10, which is what the blocks hold.
         auto const x = X({test::set::strong_index{.value = 10UZ}, test::set::strong_index{.value = 19UZ}});
+#ifdef TEST_BYTES_ARE_POSITIONS
         BOOST_CHECK(xstd::bit_convert<std::bitset<20>>(x) == std::bitset<20>(0x201ULL));
+#endif
         BOOST_CHECK_THROW(static_cast<void>(X({test::set::strong_index{.value = 30UZ}})), std::out_of_range);
 }
 

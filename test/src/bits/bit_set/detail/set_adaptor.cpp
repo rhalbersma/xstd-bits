@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/bit_exchange.hpp>                       // converts_from, converts_to
+#include <test/endian.hpp>                             // IWYU pragma: keep; TEST_BYTES_ARE_POSITIONS
 #include <test/for_each_type.hpp>                      // for_each_type
 #include <test/set/enums.hpp>                          // day, level, piece, sign
 #include <test/set/lookup.hpp>                         // lookup_mismatches
@@ -885,6 +886,7 @@ BOOST_AUTO_TEST_CASE(TheCompoundOperatorsAcrossWidthsWorkOnBlocks)
         BOOST_CHECK_EQUAL(width_of(h), 61UZ);
 }
 
+#ifdef TEST_BYTES_ARE_POSITIONS
 // A set view converts too, reaching the storage through the accessor rather than the member, as a Bits* requires.
 BOOST_AUTO_TEST_CASE(ASetViewExchangesThroughTheBitsItRefersTo)
 {
@@ -915,6 +917,7 @@ BOOST_AUTO_TEST_CASE(ASetViewExchangesThroughTheBitsItRefersTo)
                 return xstd::bit_convert<std::bitset<N>>(v).count() == 1UZ;
         }());
 }
+#endif
 
 namespace {
 

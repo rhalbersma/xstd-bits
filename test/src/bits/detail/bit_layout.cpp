@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/endian.hpp>                    // IWYU pragma: keep; TEST_BYTES_ARE_POSITIONS, bytes_are_positions
 #include <test/ext_int128.hpp>                // IWYU pragma: keep; TEST_HAS_BOOST_INT128, uint128
 #include <xstd/bits/bit/detail/bit_width.hpp> // bit_width_v
 #include <xstd/bits/detail/bit_layout.hpp>    // bit_bytes, bit_layout, block_copies_as_bytes, byte_count, bytes_bits, container_source, fixed_bit_blocks, fixed_blocks_source
@@ -36,8 +37,7 @@ struct raw
         [[nodiscard]] friend auto operator==(raw const&, raw const&) noexcept -> bool = default;
 };
 
-// The second family reads an object's bytes as its positions, which they are only on a little-endian target.
-constexpr auto bytes_are_positions = std::endian::native == std::endian::little;
+using test::bytes_are_positions;
 
 template<std::size_t N>
 auto check_each_position_lights_one_byte()
@@ -152,11 +152,11 @@ BOOST_AUTO_TEST_CASE(TheTwoDirectionsAreEachOthersInverse)
         for (auto i = 0UZ; i < 200UZ; i += 3UZ) {
                 wide.set(i);
         }
-        if constexpr (bytes_are_positions) {
-                BOOST_CHECK((round_trips.template operator()<std::bitset<200UZ>, 200UZ>(wide)));
-                BOOST_CHECK((round_trips.template operator()<std::bitset<200UZ>, 200UZ>(std::bitset<200UZ>())));
-                BOOST_CHECK((round_trips.template operator()<std::bitset<200UZ>, 200UZ>(std::bitset<200UZ>().flip())));
-        }
+#ifdef TEST_BYTES_ARE_POSITIONS
+        BOOST_CHECK((round_trips.template operator()<std::bitset<200UZ>, 200UZ>(wide)));
+        BOOST_CHECK((round_trips.template operator()<std::bitset<200UZ>, 200UZ>(std::bitset<200UZ>())));
+        BOOST_CHECK((round_trips.template operator()<std::bitset<200UZ>, 200UZ>(std::bitset<200UZ>().flip())));
+#endif
 
         // The integer family, at a width that fills the type and one that does not.
         BOOST_CHECK((round_trips.template operator()<std::uint64_t, 64UZ>(0xDEADBEEFCAFEF00DULL)));
@@ -164,9 +164,9 @@ BOOST_AUTO_TEST_CASE(TheTwoDirectionsAreEachOthersInverse)
         BOOST_CHECK((round_trips.template operator()<std::uint8_t, 8UZ>(static_cast<std::uint8_t>(0xA5U))));
 
         // Zero width, which has no byte to exchange and round trips all the same.
-        if constexpr (bytes_are_positions) {
-                BOOST_CHECK((round_trips.template operator()<std::bitset<0UZ>, 0UZ>(std::bitset<0UZ>())));
-        }
+#ifdef TEST_BYTES_ARE_POSITIONS
+        BOOST_CHECK((round_trips.template operator()<std::bitset<0UZ>, 0UZ>(std::bitset<0UZ>())));
+#endif
         static_assert(detail::byte_count<0UZ> == 0UZ);
 }
 

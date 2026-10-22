@@ -6,6 +6,7 @@
 #ifndef TEST_VALARRAY_HPP
 #define TEST_VALARRAY_HPP
 
+#include <test/endian.hpp>                                 // bytes_are_positions
 #include <xstd/bits/bit/bit_convert.hpp>                   // bit_convert
 #include <xstd/bits/bit_algorithm/bit_all_of.hpp>          // bit_all_of
 #include <xstd/bits/bit_algorithm/bit_any_of.hpp>          // bit_any_of
@@ -621,7 +622,7 @@ auto check_interop()
                 auto v = make<V>(a);
                 check_equal(xstd::bit_convert<xstd::bit_vector>(v), a);
                 check_equal(xstd::bit_convert<V>(xstd::bit_convert<xstd::bit_vector>(v)), a);
-                if constexpr (is_fixed<V>) {
+                if constexpr (is_fixed<V> and test::bytes_are_positions) {
                         auto const b = xstd::bit_convert<std::bitset<fixed_size<V>>>(v);
                         for (auto const i : std::views::iota(0UZ, a.size())) {
                                 BOOST_CHECK_EQUAL(b[i], a[i]);
