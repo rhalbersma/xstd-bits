@@ -6,29 +6,31 @@
 #ifndef TEST_SPEC_SET_HPP
 #define TEST_SPEC_SET_HPP
 
-#include <test/container/allocator.hpp>             // non_propagating
-#include <test/flat_set.hpp>                        // IWYU pragma: keep; TEST_HAS_FLAT_SET, flat_set
-#include <test/minimal_blocks.hpp>                  // minimal_blocks
-#include <test/set/exhaustive.hpp>                  // L1, L2, L3, L4, limit_v, on0, on1, on2, on3, on4, static_capacity, static_width
-#include <test/spec/input.hpp>                      // edge, exhaustive, key_list, key_vector, keyed, listed, memo, one, rebuilt, three, two
-#include <test/spec/random.hpp>                     // block_digits_v, key_samples, keyed_samples, pair_samples, triple_samples, width
-#include <test/spec/view.hpp>                       // input_t, owner_t, view_traits, view_type, viewed
-#include <test/uint128.hpp>                         // TEST_HAS_UINT128, uint128
-#include <xstd/bits/bit_set.hpp>                    // basic_bit_fixed_set, basic_bit_inplace_set, basic_bit_set, bit_key_mapping, bit_set_view
-#include <xstd/bits/bit_set/detail/set_adaptor.hpp> // set_adaptor
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/ownership.hpp>           // owned_storage, storage
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <algorithm>                                // sort
-#include <array>                                    // array
-#include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint8_t, uint16_t, uint32_t, uint64_t
-#include <functional>                               // greater, less
-#include <set>                                      // set
-#include <span>                                     // dynamic_extent
-#include <tuple>                                    // tuple, tuple_cat
-#include <utility>                                  // declval, move, pair
-#include <vector>                                   // vector
+#include <test/container/allocator.hpp>                    // non_propagating
+#include <test/flat_set.hpp>                               // IWYU pragma: keep; TEST_HAS_FLAT_SET, flat_set
+#include <test/minimal_blocks.hpp>                         // minimal_blocks
+#include <test/set/exhaustive.hpp>                         // L1, L2, L3, L4, limit_v, on0, on1, on2, on3, on4, static_capacity, static_width
+#include <test/spec/input.hpp>                             // edge, exhaustive, key_list, key_vector, keyed, listed, memo, one, rebuilt, three, two
+#include <test/spec/random.hpp>                            // block_digits_v, key_samples, keyed_samples, pair_samples, triple_samples, width
+#include <test/spec/view.hpp>                              // input_t, owner_t, view_traits, view_type, viewed
+#include <test/uint128.hpp>                                // TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit_set.hpp>                           // basic_bit_fixed_set, basic_bit_inplace_set, basic_bit_set, bit_key_mapping, bit_set_view
+#include <xstd/bits/bit_set/detail/set_adaptor.hpp>        // set_adaptor
+#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
+#include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container
+#include <xstd/bits/detail/ownership.hpp>                  // owned_storage, storage
+#include <xstd/bits/ext/boost/bit_small_set.hpp>           // basic_bit_small_set
+#include <boost/container/small_vector.hpp>                // small_vector
+#include <algorithm>                                       // sort
+#include <array>                                           // array
+#include <cstddef>                                         // size_t
+#include <cstdint>                                         // uint8_t, uint16_t, uint32_t, uint64_t
+#include <functional>                                      // greater, less
+#include <set>                                             // set
+#include <span>                                            // dynamic_extent
+#include <tuple>                                           // tuple, tuple_cat
+#include <utility>                                         // declval, move, pair
+#include <vector>                                          // vector
 
 // The candidates for the set reading, the standard library's models first, and the inputs a clause checks them over.
 namespace test::spec::set {
@@ -123,8 +125,8 @@ inline constexpr auto held_width_v = [] -> std::size_t {
         }
 }();
 
-template<class Block, std::size_t N, class Compare, class Allocator>
-inline constexpr auto held_width_v<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_mapping<std::size_t>, Compare, Allocator>> = N;
+template<class Block, std::size_t K, class Allocator, class Compare>
+inline constexpr auto held_width_v<xstd::basic_bit_set<std::size_t, boost::container::small_vector<Block, K, Allocator>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, Compare>> = K * xstd::bit_blocks_extent_v<Block>;
 
 #ifdef __clang__
 
