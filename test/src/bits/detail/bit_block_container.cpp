@@ -1118,9 +1118,9 @@ BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 
 #ifdef TEST_HAS_UINT128
 
-        // The one cell that reaches an over-aligned storage: the width is a block there, and pays nothing for it.
+        // The one cell whose storage the ABI may over-align: the width is a block there, and pays nothing for it.
         static_assert(tiles(sizeof(xstd::bits::detail::bit_block_container<xstd::bits::detail::inplace_blocks<xstd::uint128, 3>, 384>), sizeof(xstd::bits::detail::inplace_blocks<xstd::uint128, 3>), alignof(xstd::bits::detail::inplace_blocks<xstd::uint128, 3>)));
-        static_assert(alignof(xstd::bits::detail::inplace_blocks<xstd::uint128, 3>) > alignof(std::size_t));
+        static_assert(alignof(xstd::bits::detail::inplace_blocks<xstd::uint128, 3>) == alignof(xstd::uint128));
 
         // The heap column never reaches it: a vector is a pointer's alignment whatever it holds.
         static_assert(sizeof(xstd::bits::detail::bit_block_container<std::vector<xstd::uint128>>) == sizeof(xstd::bits::detail::bit_block_container<std::vector<std::uint64_t>>));
