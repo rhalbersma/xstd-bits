@@ -8,7 +8,7 @@
 
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>     // basic_bit_valarray
 #include <xstd/bits/detail/num_blocks.hpp>             // num_blocks_v, tiling_block
-#include <xstd/bits/ext/boost/detail/small_blocks.hpp> // bit_storage_rebind
+#include <xstd/bits/ext/boost/detail/small_blocks.hpp> // IWYU pragma: keep; bit_storage_rebind
 #include <xstd/ints/concepts/unsigned_integer.hpp>     // unsigned_integer
 #include <boost/container/new_allocator.hpp>           // new_allocator
 #include <boost/container/small_vector.hpp>            // small_vector

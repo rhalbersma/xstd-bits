@@ -5,7 +5,7 @@
 
 #include <test/inplace_vector.hpp>                // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
 #include <xstd/bits/bit_concepts/bit_storage.hpp> // bit_storage
-#include <xstd/bits/bit_vector.hpp>               // basic_bit_vector, bit_vector
+#include <xstd/bits/bit_vector.hpp>               // basic_bit_vector
 #include <boost/container/small_vector.hpp>       // small_vector
 #include <boost/container/static_vector.hpp>      // static_vector
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK

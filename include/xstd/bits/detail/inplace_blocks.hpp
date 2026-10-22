@@ -149,7 +149,7 @@ using inplace_blocks_for = std::conditional_t<K == 0UZ and not std::is_empty_v<i
 
 namespace xstd {
 
-// Another count of blocks goes back through inplace_blocks_for, so nought is the empty no_blocks wherever it is the owner's.
+// Another count of blocks goes through inplace_blocks_for, so nought is the empty no_blocks wherever the owner's is.
 template<class Block>
 struct bit_storage_rebind<bits::detail::no_blocks<Block>>
 {

@@ -11,7 +11,6 @@
 #include <boost/test/unit_test.hpp>                         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <cstdint>                                          // uint16_t, uint64_t, uint8_t
 #include <memory>                                           // allocator
-#include <memory_resource>                                  // polymorphic_allocator
 #include <type_traits>                                      // is_same_v
 #include <vector>                                           // vector
 

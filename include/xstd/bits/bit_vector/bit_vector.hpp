@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_VECTOR_BIT_VECTOR_HPP
 #define XSTD_BITS_BIT_VECTOR_BIT_VECTOR_HPP
 
-#include <xstd/bits/bit_concepts/bit_storage.hpp>             // bit_storage
+#include <xstd/bits/bit_concepts/bit_storage.hpp>            // bit_storage
 #include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks, from_blocks_t
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_param_t
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
@@ -22,7 +22,7 @@
 #include <memory>                                            // allocator
 #include <ranges>                                            // from_range, from_range_t, input_range
 #include <span>                                              // dynamic_extent
-#include <type_traits>                                       // is_nothrow_constructible_v, is_nothrow_move_constructible_v
+#include <type_traits>                                       // is_nothrow_move_constructible_v
 #include <utility>                                           // forward, move
 #include <vector>                                            // vector
 

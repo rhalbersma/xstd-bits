@@ -31,7 +31,7 @@
 
 namespace xstd {
 
-// The set reading over a storage of blocks, at most N positions of them: the flagship, and the one name without a qualifier.
+// The set reading over a storage of blocks, at most N positions: the flagship, and the one name without a qualifier.
 template<class Key, bit_storage Blocks = std::vector<std::size_t>, std::size_t N = std::dynamic_extent, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, bits::detail::set::key_direction<Key> Compare = std::less<Key>>
         requires bits::detail::fits_storage<Blocks, N>
 class basic_bit_set : public bits::detail::set_adaptor<bits::detail::set_bits_t<Blocks, bits::detail::storage_width_v<Blocks, N>>, bits::detail::storage::owned, basic_bit_set<Key, Blocks, N, KeyMapping, Compare>, Key, KeyMapping, Compare>
@@ -149,7 +149,7 @@ public:
 
 using bit_set = basic_bit_set<std::size_t>;
 
-// [set.overview]'s guides, in its order: the blocks from the allocator, std::size_t by default, the key being std::size_t.
+// [set.overview]'s guides, in its order: the blocks from the allocator, std::size_t by default, the key std::size_t.
 template<std::input_iterator InputIterator, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
         requires (not xstd::simple_allocator<Compare>) and xstd::simple_allocator<Allocator>
 basic_bit_set(InputIterator, InputIterator, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<std::size_t, std::vector<typename Allocator::value_type, Allocator>, std::dynamic_extent, bit_key_mapping<std::size_t>, Compare>;

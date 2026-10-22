@@ -10,17 +10,17 @@
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/spec/sequence.hpp>                   // all, pairs, sequences
 #include <test/spec/set.hpp>                        // owners, pairs, pairs_with_doubletons, sets
-#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
-#include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp> // set_adaptor
+#include <xstd/bits/bit_vector/bit_vector.hpp>      // basic_bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/inplace_blocks.hpp>      // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_INPLACE
+#include <xstd/bits/detail/inplace_blocks.hpp>      // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_INPLACE, inplace_blocks
 #include <xstd/bits/detail/ownership.hpp>           // storage
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
+#include <boost/container/small_vector.hpp>         // small_vector
 #include <cstddef>                                  // size_t
 #include <set>                                      // set
+#include <span>                                     // dynamic_extent
 #include <tuple>                                    // tuple_cat
 #include <utility>                                  // declval
 
