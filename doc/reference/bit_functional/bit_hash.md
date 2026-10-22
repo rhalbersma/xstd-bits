@@ -3,38 +3,38 @@
 ## `bit_hash_append`
 
 - *Constraints:* `Hash` models `hash_algorithm`, and:
-  - for the first form, `T` is an owner of ours, of either reading, or a set view. A sequence view, `bit_span` or a
-    window, is turned away, as `span` has no hash, though `bit_equal` compares it with its owner;
-  - for the second, `const R` models `ranges::contiguous_range` and `ranges::sized_range`, and its value type is a
-    type the first form takes whose width the type fixes, or a built-in array or an `array` of such, nested to any
-    depth: the planes of a board game's position, as `bit_fixed_set<64>[2][6]` or a `span<const bit_fixed_set<64>>`.
+    - for the first form, `T` is an owner of ours, of either reading, or a set view. A sequence view, `bit_span` or a
+      window, is turned away, as `span` has no hash, though `bit_equal` compares it with its owner;
+    - for the second, `const R` models `ranges::contiguous_range` and `ranges::sized_range`, and its value type is a
+      type the first form takes whose width the type fixes, or a built-in array or an `array` of such, nested to any
+      depth: the planes of a board game's position, as `bit_fixed_set<64>[2][6]` or a `span<const bit_fixed_set<64>>`.
 - The *bit string* of `x` is ⌈`N`/8⌉ bytes for its width `N`, byte `j` holding the positions `[8j, 8j + 8)` least
   significant bit first and the bits past `N` zero. For a set of run-time width it stops after the byte that holds
   the last key, so it is empty for an empty set: equal sets need not share a width.
 - *Effects:* For the first form:
-  - where the type of `x` fixes a width of zero, `boost::hash2::hash_append(h, f, '\x00')`, the one byte Hash2
-    writes for an empty `array`;
-  - otherwise, updates `h` with the bit string of `x`; then, where the width is a run-time value, an inplace
-    capacity included, calls `boost::hash2::hash_append_size(h, f, n)`, where `n` is a sequence's size in bits and a
-    set's bit string's length in bytes.
+    - where the type of `x` fixes a width of zero, `boost::hash2::hash_append(h, f, '\x00')`, the one byte Hash2
+      writes for an empty `array`;
+    - otherwise, updates `h` with the bit string of `x`; then, where the width is a run-time value, an inplace
+      capacity included, calls `boost::hash2::hash_append_size(h, f, n)`, where `n` is a sequence's size in bits and a
+      set's bit string's length in bytes.
 
-  For the second form:
-  - where the type of `r` fixes a count of zero, `boost::hash2::hash_append(h, f, '\x00')`;
-  - otherwise appends each element in order, by the first form or, for a nested array, by this one; then, where the
-    type of `r` fixes no count, calls `boost::hash2::hash_append_size(h, f, ranges::size(r))`. A built-in array, an
-    `array` and a `span` of static extent fix one.
+    For the second form:
+    - where the type of `r` fixes a count of zero, `boost::hash2::hash_append(h, f, '\x00')`;
+    - otherwise appends each element in order, by the first form or, for a nested array, by this one; then, where the
+      type of `r` fixes no count, calls `boost::hash2::hash_append_size(h, f, ranges::size(r))`. A built-in array, an
+      `array` and a `span` of static extent fix one.
 - The block type is no part of the message, and `f` orders the bytes of the appended size alone. Under
   `little_endian_flavor`:
 
-  | `x` | message |
-  | :-- | :-- |
-  | `basic_bit_fixed_set<size_t, uint64_t, 10>{1, 3, 5, 9}` | bytes `2A 02` |
-  | `bit_fixed_set<0>()`, `bit_array<0>()` | byte `00` |
-  | `basic_bit_vector<uint64_t>(10)`, its even positions `true` | bytes `55 01`, then the size 10 |
-  | `basic_bit_set<size_t, uint64_t>{1, 3, 5}` | byte `2A`, then the size 1 |
-  | `basic_bit_set<size_t, uint64_t>{1, 3, 64}` | bytes `0A 00 00 00 00 00 00 00 01`, then the size 9 |
-  | an empty `basic_bit_vector<uint64_t>` or `basic_bit_set<size_t, uint64_t>` | the size 0 |
-  | `array<bit_fixed_set<64>, 0>()` | byte `00` |
+    | `x` | message |
+    | :-- | :-- |
+    | `basic_bit_fixed_set<size_t, uint64_t, 10>{1, 3, 5, 9}` | bytes `2A 02` |
+    | `bit_fixed_set<0>()`, `bit_array<0>()` | byte `00` |
+    | `basic_bit_vector<uint64_t>(10)`, its even positions `true` | bytes `55 01`, then the size 10 |
+    | `basic_bit_set<size_t, uint64_t>{1, 3, 5}` | byte `2A`, then the size 1 |
+    | `basic_bit_set<size_t, uint64_t>{1, 3, 64}` | bytes `0A 00 00 00 00 00 00 00 01`, then the size 9 |
+    | an empty `basic_bit_vector<uint64_t>` or `basic_bit_set<size_t, uint64_t>` | the size 0 |
+    | `array<bit_fixed_set<64>, 0>()` | byte `00` |
 
 - *Remarks:* Wherever the storage holds the bit string, a little-endian target and a block of a built-in type whose
   value bits fill its object, the string goes in as one `update` over the storage. Elsewhere, a class-type block
@@ -78,11 +78,11 @@ As xstd-misc's `hash`, with:
   containers of one reading.
 - There is no specialization for a string key.
 - `operator()`:
-  - *Constraints:* `U` is `T`, or `xstd::ranges::bit_equal(x, y)` is valid for a `const T& x` and a `const U& y`;
-    and `U` is a type `bit_hash_append` takes. So `bit_hash<bit_array<64>>` does not take a `bit_span`.
-  - *Effects:* Copies the prototype to `h` and calls `bit_hash_append(h, Flavor(), v)`. The prototype is unchanged.
-  - *Returns:* `boost::hash2::get_integral_result<size_t>(h)`.
-  - `v` is appended as the `U` it is, not converted to `T`.
+    - *Constraints:* `U` is `T`, or `xstd::ranges::bit_equal(x, y)` is valid for a `const T& x` and a `const U& y`;
+      and `U` is a type `bit_hash_append` takes. So `bit_hash<bit_array<64>>` does not take a `bit_span`.
+    - *Effects:* Copies the prototype to `h` and calls `bit_hash_append(h, Flavor(), v)`. The prototype is unchanged.
+    - *Returns:* `boost::hash2::get_integral_result<size_t>(h)`.
+    - `v` is appended as the `U` it is, not converted to `T`.
 - It hashes the bits, not the value as its standard model has it: no key and no count, so `bit_hash<T, H>()(x)` and
   xstd-misc's `hash<T, H>()(x)` differ.
 - Equal bits hash equal: a `bit_fixed_set<100>` and its `bit_set_view`, the same set over `uint8_t` blocks, and a

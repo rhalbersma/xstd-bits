@@ -56,10 +56,10 @@ As [[array]](https://eel.is/c++draft/array) for `array<bool, N>`, with:
   `void`, `data()` is absent, and `iterator` is random access rather than contiguous. `const_reference` is the same
   proxy over const storage, and reads without assigning.
 - The class is no aggregate. Its constructors are what `array`'s initialization does:
-  - The default constructor makes every position `false`.
-  - The `initializer_list` constructor sets the leading positions to the listed values and leaves the rest `false`.
-    *Preconditions:* `il.size() <= N`.
-  - The built-in array constructor copies `a` position by position, and only an array of `N` elements converts.
+    - The default constructor makes every position `false`.
+    - The `initializer_list` constructor sets the leading positions to the listed values and leaves the rest `false`.
+      *Preconditions:* `il.size() <= N`.
+    - The built-in array constructor copies `a` position by position, and only an array of `N` elements converts.
 - *`from_blocks` constructor:* *Constraints:* `Bits` models `bit_blocks`, and its bits have a layout this width
   reads: a block, a `std::array` or a built-in array of blocks holding at least `N` bits, or, on a little-endian
   target, a trivially copyable object with room for `N` bits, read as `bit_cast` reads it. *Effects:* Position `i`

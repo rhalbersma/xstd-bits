@@ -33,12 +33,12 @@ A key's mapping is an order-preserving bijection onto the positions `0` to `size
   `size`.
 - `bit_key_mapping<Key>` is the mapping a set takes by default. Its primary template is declared and not defined,
   and it is specialized as `char_traits` is:
-  - for every unsigned integer `Key`, the identity, with no `size`, leaving the universe open; `is_key(k)` holds
-    where `k` survives the round trip through `size_t`;
-  - for an enumeration whose `enum_traits<Key>::values` is declared, `bit_range_mapping` where the values run without
-    a gap and `bit_find_mapping` over the list otherwise;
-  - for an enumeration that declares no list and has an enumerator `count`, `bit_range_mapping` from `Key{}` to
-    `count`, the sentinel itself no key. *Mandates:* `count` is not negative.
-  - A program may specialize it for a key type of its own, such as a strong index.
+    - for every unsigned integer `Key`, the identity, with no `size`, leaving the universe open; `is_key(k)` holds
+      where `k` survives the round trip through `size_t`;
+    - for an enumeration whose `enum_traits<Key>::values` is declared, `bit_range_mapping` where the values run without
+      a gap and `bit_find_mapping` over the list otherwise;
+    - for an enumeration that declares no list and has an enumerator `count`, `bit_range_mapping` from `Key{}` to
+      `count`, the sentinel itself no key. *Mandates:* `count` is not negative.
+    - A program may specialize it for a key type of its own, such as a strong index.
 - `enum_traits<Enum>` is empty. A program specializes it beside an enumeration with a `static constexpr`
   `std::array` named `values`, listing the enumerators ascending, each once.
