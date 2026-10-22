@@ -83,10 +83,11 @@ storage with an inline capacity throws past it: `std::inplace_vector` a `std::ba
 `boost::container::static_vector` a `boost::container::bad_alloc`, which derives from `std::exception` and not from
 `std::bad_alloc` unless `BOOST_CONTAINER_USE_STD_EXCEPTIONS` is defined. The owners ask neither past its capacity:
 they refuse first with `std::bad_alloc`, as `std::inplace_vector` specifies, so a caller catches one type over
-both. Growth keeps whatever guarantee the storage's own `resize` gives, because the width moves only after the
-storage has grown: over any of the standard or Boost vectors, whose `resize` on unsigned blocks either completes or
-changes nothing, a failed growth leaves the owner as it was. A storage whose `resize` is `noexcept` never takes
-that path.
+both. The tests build without the macro, so a Boost exception that escapes an owner fails the test that expects the
+standard one; a leg that defined it would turn that failure into a pass. Growth keeps whatever guarantee the
+storage's own `resize` gives, because the width moves only after the storage has grown: over any of the standard or
+Boost vectors, whose `resize` on unsigned blocks either completes or changes nothing, a failed growth leaves the
+owner as it was. A storage whose `resize` is `noexcept` never takes that path.
 
 The element clause is `xstd::unsigned_integer`, and **not** the wider `bit_mask`, which would be the concept
 if the operators were all a block is asked for. They are not. Beyond them the body wants the `<bit>` intrinsics

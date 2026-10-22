@@ -21,5 +21,8 @@ A [`basic_bit_vector`](../bit_vector/bit_vector.md) over `boost::container::smal
 - `allocator_type` is the small vector's, which wraps `Alloc`, and every allocator argument is of that type.
   Constructing from an allocator does not throw, inline blocks allocating nothing.
 - `capacity()`, `reserve` and `shrink_to_fit` are the small vector's.
+- Every exception is a standard one: `std::length_error` past `max_size()`, before the small vector would throw
+  Boost's own, and `std::bad_alloc` from the allocator. Blocks taken out with `extract` are the small vector itself,
+  and throw `boost::container` exceptions unless `BOOST_CONTAINER_USE_STD_EXCEPTIONS` is defined.
 - The header also brings `std::hash` and Boost's `is_range` and `is_tuple_like` for it, which `basic_bit_vector`'s
   headers declare. The Hash2 hook's model is `vector<bool>`.

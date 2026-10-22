@@ -41,7 +41,10 @@ As [[inplace.vector]](https://eel.is/c++draft/inplace.vector) for `inplace_vecto
   `optional<reference>`, `nullopt` when full, and `unchecked_push_back` and `unchecked_emplace_back` have
   `size() < N` as their precondition. There is no `try_append_range`, which
   [P4022R0](https://wg21.link/P4022R0) takes out of C++26.
-- Growth past `N` throws `bad_alloc` before anything is written. `append_range` from a range with no size undoes
+- Growth past `N` throws `std::bad_alloc` before anything is written, over either storage: the owner refuses before
+  `static_vector` would throw its own `boost::container::bad_alloc`, so it is a drop-in for `inplace_vector<bool, N>`
+  wherever the standard library has none. Blocks taken out with `extract` are the storage itself, and throw what it
+  throws: over `static_vector`, the standard exceptions only where `BOOST_CONTAINER_USE_STD_EXCEPTIONS` is defined. `append_range` from a range with no size undoes
   what it appended before the exception leaves, so it has no effects, as
   [[inplace.vector.modifiers]](https://eel.is/c++draft/inplace.vector.modifiers) asks.
 - *`from_blocks` constructor:* *Effects:* Moves `blocks` in. Every bit is a position, so `size()` is

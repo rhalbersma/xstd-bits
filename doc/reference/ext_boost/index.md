@@ -46,3 +46,11 @@ the `K` blocks that hold `N` bits inline, and the heap past them. `<xstd/bits.hp
 on Boost.Container's `small_vector` is opted into by name. It also exports the sequence reading's `erase` and
 `erase_if` and the set reading's `erase_if`. `<xstd/bits/ext/boost/dynamic_bitset.hpp>`, which converts to and from
 `boost::dynamic_bitset`, is outside this part.
+
+Each owner throws only the standard exceptions, as its standard counterpart does, because it refuses a width before
+Boost.Container is asked for it. Boost.Container's own exceptions, which derive from `std::exception` but not from
+`std::bad_alloc` or `std::length_error`, reach only code that calls a `small_vector` or `static_vector` directly.
+Defining `BOOST_CONTAINER_USE_STD_EXCEPTIONS` makes them the standard ones. It changes inline functions in Boost's
+headers, so it is defined for the whole program, on the command line or in the build, never in one source file. The
+library neither defines it nor needs it, and its tests build without it, so that a Boost exception escaping an owner
+fails them.
