@@ -1,24 +1,27 @@
 # Migrating to xstd-bits
 
-Two migrations need no page. `std::vector<bool>` becomes `xstd::bit_vector` and `std::set<std::size_t>` becomes
-`xstd::bit_set` by changing the type: each answers its counterpart's synopsis line for line, `[vector.bool]`'s
-`flip()` and deprecated static `swap` aside, so the code around it stays as it is ([README](../README.md#which-one-do-i-want)).
+A move to xstd-bits serves one of two goals.
 
-This page is for the sources whose interface differs: `std::bitset`, integer flag words, enumeration flags, Qt's
-`QFlags`, POSIX's `sa_flags`, `boost::dynamic_bitset` and itsy_bitsy. Each section is a *Tony Table*, the
+**A packed representation.** `std::array<bool, N>` and `std::inplace_vector<bool, N>` spend a byte per position and
+`std::set<std::size_t>` a node per key; `bit_array<N>`, `bit_inplace_vector<N>` and `bit_set` spend a bit.
+`std::vector<bool>` is packed already, and `bit_vector` is that packing under a vector's name. None of these needs a
+section: the type changes and the code around it stays, as each answers its counterpart's synopsis line for line
+([README](../README.md#which-one-do-i-want)). The exceptions are `[vector.bool]`'s `flip()` and deprecated static
+`swap`, and `array`'s and `inplace_vector`'s `data()`, which a packed bit has no address for.
+
+**A focused interface.** `std::bitset` and `boost::dynamic_bitset` each offer three readings at once; here the type
+says which, at `std::bitset<N>`'s fixed width or `boost::dynamic_bitset`'s run-time one:
+
+- **a set of positions**: membership, flags, iterating over what is set. That is `bit_fixed_set<N>` or `bit_set`.
+- **a sequence of `bool`**: a value at each index, rotating, a row of cells. That is `bit_array<N>` or `bit_vector`.
+- **a row combined whole**: `&`, `|`, `^`, `~` and shifts over every element at once. That is `std::valarray<bool>`'s
+  reading, `bit_fixed_valarray<N>` or `bit_valarray`.
+
+The sections below take each source whose interface differs in turn: `std::bitset`, integer flag words, enumeration
+flags, Qt's `QFlags`, POSIX's `sa_flags`, `boost::dynamic_bitset` and itsy_bitsy. Each is a *Tony Table*, the
 before-and-after form WG21 papers use: what the code says today on the left, what it says here on the right. Every
 right-hand column compiles and runs against the library with GCC 15 and Clang 22, and so does every left-hand one
 except itsy_bitsy's, whose last release no longer builds with either.
-
-The first question is always which reading the old code meant. `std::bitset` and `boost::dynamic_bitset` offer
-both at once; here the type says which:
-
-- **a set of positions**: membership, flags, iterating over what is set. That is `bit_fixed_set<N>`,
-  `bit_inplace_set<N>`, `bit_set`, or `bit_flag_set<Mask, N>` for a bitmask type.
-- **a sequence of `bool`**: a value at each index, rotating, a row of cells. That is `bit_array<N>`,
-  `bit_inplace_vector<N>` or `bit_vector`.
-- **a row combined whole**: `&`, `|`, `^`, `~` and shifts over every element at once. That is `std::valarray<bool>`'s
-  reading, `bit_fixed_valarray<N>`, `bit_inplace_valarray<N>` or `bit_valarray`.
 
 ## `std::bitset<N>` as a set of positions
 
