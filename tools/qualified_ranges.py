@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TREES = ["include", "test", "benchmark", "fuzz", "examples"]
+TREES = ["include", "test", "benchmark", "examples"]
 SOURCES = {".hpp", ".cpp", ".h"}
 
 COMMENTS = re.compile(r"//[^\n]*|/\*.*?\*/", re.DOTALL)

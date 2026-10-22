@@ -20,7 +20,7 @@ cmake -S "$SRC/xstd-bits" -B "$WORK/build" -DBUILD_TESTING=OFF \
 cmake --build "$WORK/build" --parallel "$(nproc)" --target fuzz_set fuzz_valarray fuzz_vector
 
 for target in fuzz_set fuzz_valarray fuzz_vector; do
-        cp "$WORK/build/fuzz/$target" "$OUT/"
+        cp "$WORK/build/test/fuzz/$target" "$OUT/"
         # The checked-in seeds, which ClusterFuzzLite unpacks beside the corpus it keeps.
-        (cd "$SRC/xstd-bits/fuzz/corpus/$target" && zip -q -j "$OUT/${target}_seed_corpus.zip" ./*)
+        (cd "$SRC/xstd-bits/test/fuzz/corpus/$target" && zip -q -j "$OUT/${target}_seed_corpus.zip" ./*)
 done
