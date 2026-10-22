@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_INPLACE_VECTOR_BIT_INPLACE_VECTOR_HPP
 #define XSTD_BITS_BIT_INPLACE_VECTOR_BIT_INPLACE_VECTOR_HPP
 
-#include <xstd/bits/bit_vector/bit_vector.hpp>    // basic_bit_vector
+#include <xstd/bits/bit_vector/bit_vector.hpp>     // basic_bit_vector
 #include <xstd/bits/detail/inplace_blocks.hpp>     // inplace_blocks_for
 #include <xstd/bits/detail/num_blocks.hpp>         // num_blocks_v, tiling_block
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer

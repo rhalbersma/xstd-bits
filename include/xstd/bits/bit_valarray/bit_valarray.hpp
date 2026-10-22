@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_VALARRAY_BIT_VALARRAY_HPP
 #define XSTD_BITS_BIT_VALARRAY_BIT_VALARRAY_HPP
 
-#include <xstd/bits/bit_concepts/bit_storage.hpp>              // bit_storage
+#include <xstd/bits/bit_concepts/bit_storage.hpp>             // bit_storage
 #include <xstd/bits/bit_valarray/detail/valarray_adaptor.hpp> // valarray_adaptor
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container
 #include <xstd/bits/detail/rebind.hpp>                        // rebind
