@@ -48,22 +48,22 @@ inline constexpr auto constant_evaluable_v<std::flat_set<Key, Compare, KeyContai
 
 #endif
 
-template<class Block, std::size_t N, class Compare, class Allocator>
-inline constexpr auto constant_evaluable_v<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_mapping<std::size_t>, Compare, Allocator>> = false;
+template<class Block, std::size_t K, class Compare, class Allocator>
+inline constexpr auto constant_evaluable_v<xstd::basic_bit_set<std::size_t, boost::container::small_vector<Block, K, Allocator>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, Compare>> = false;
 
-template<class Block, std::size_t N, class Allocator>
-inline constexpr auto constant_evaluable_v<xstd::basic_bit_small_vector<Block, N, Allocator>> = false;
+template<class Block, std::size_t K, class Allocator>
+inline constexpr auto constant_evaluable_v<xstd::basic_bit_vector<boost::container::small_vector<Block, K, Allocator>>> = false;
 
 template<class Block, class Compare>
 inline constexpr auto constant_evaluable_v<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<test::minimal_blocks<Block>>, xstd::bits::detail::storage::owned, void, std::size_t, xstd::bit_key_mapping<std::size_t>, Compare>> = false;
 
 #ifndef XSTD_BITS_HAS_CONSTEXPR_INPLACE
 
-template<class Block, std::size_t N, class Compare>
-inline constexpr auto constant_evaluable_v<xstd::basic_bit_inplace_set<std::size_t, Block, N, xstd::bit_key_mapping<std::size_t>, Compare>> = false;
+template<class Block, std::size_t K, std::size_t N, class Compare>
+inline constexpr auto constant_evaluable_v<xstd::basic_bit_set<std::size_t, xstd::bits::detail::inplace_blocks<Block, K>, N, xstd::bit_key_mapping<std::size_t>, Compare>> = false;
 
-template<class Block, std::size_t N>
-inline constexpr auto constant_evaluable_v<xstd::basic_bit_inplace_vector<Block, N>> = false;
+template<class Block, std::size_t K, std::size_t N>
+inline constexpr auto constant_evaluable_v<xstd::basic_bit_vector<xstd::bits::detail::inplace_blocks<Block, K>, N>> = false;
 
 #endif
 

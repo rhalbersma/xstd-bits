@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(OneIndexServesEveryOwnerAndEveryBlock)
                 auto const b    = xstd::bit_gslice(g);
                 auto const wide = test::valarray::make<xstd::bit_valarray>(a);
                 test::valarray::check_equal(wide[b], test::valarray::model_of(r[g]));
-                auto const narrow = test::valarray::make<xstd::basic_bit_valarray<std::uint8_t>>(a);
+                auto const narrow = test::valarray::make<xstd::basic_bit_valarray<std::vector<std::uint8_t>>>(a);
                 test::valarray::check_equal(narrow[b], test::valarray::model_of(r[g]));
                 auto const fixed = test::valarray::make<xstd::basic_bit_fixed_valarray<std::uint8_t, 130>>(a);
                 test::valarray::check_equal(fixed[b], test::valarray::model_of(r[g]));

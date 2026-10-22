@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(ComparesWhatBitEqualToComparesAlone)
 {
         static_assert(std::same_as<xstd::bit_compare_three_way::is_transparent, void>);
         static_assert(xstd::bit_compare_three_way()(xstd::bit_fixed_set<70>{1UZ}, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 70>{1UZ, 65UZ}) == std::strong_ordering::less);
-        static_assert(std::invocable<xstd::bit_compare_three_way, xstd::bit_vector, xstd::basic_bit_vector<std::uint8_t>>);
+        static_assert(std::invocable<xstd::bit_compare_three_way, xstd::bit_vector, xstd::basic_bit_vector<std::vector<std::uint8_t>>>);
         static_assert(not std::invocable<xstd::bit_compare_three_way, xstd::bit_array<8>, xstd::bit_vector> and not std::invocable<xstd::bit_compare_three_way, xstd::bit_fixed_set<8>, xstd::bit_set>);
         static_assert(not std::invocable<xstd::bit_compare_three_way, xstd::bit_fixed_set<8>, xstd::bit_array<8>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"

@@ -100,9 +100,9 @@ template<class A, class F, class G>
 // A destination of n bools over Block, striped so a write past its range or short of it shows.
 template<class Block>
 [[nodiscard]] auto striped_vector(std::size_t n)
-        -> xstd::basic_bit_vector<Block>
+        -> xstd::basic_bit_vector<std::vector<Block>>
 {
-        return test::sequence::make_sequence<xstd::basic_bit_vector<Block>>(n, [](std::size_t i) -> bool { return test::sequence::stripes(i); });
+        return test::sequence::make_sequence<xstd::basic_bit_vector<std::vector<Block>>>(n, [](std::size_t i) -> bool { return test::sequence::stripes(i); });
 }
 
 // The offsets a destination is written at: aligned, inside a narrow block, and either side of a wide one's boundary.

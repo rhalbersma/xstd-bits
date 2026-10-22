@@ -187,7 +187,7 @@ BOOST_AUTO_TEST_CASE(OnlyASetOfEnumerationOrIntegerKeysHasAnUnderlyingBlock)
 {
         static_assert(underlying_rebinds<xstd::bit_flag_set<wire::flag>> and underlying_rebinds<xstd::bit_flag_set<wire::signed_flag, 3>>);
         static_assert(not underlying_rebinds<xstd::bit_array<9>> and std::is_same_v<xstd::bit_underlying<xstd::bit_set>, xstd::bit_set>);
-        static_assert(std::is_same_v<xstd::bit_underlying<xstd::basic_bit_set<wire::flag, std::uint8_t, xstd::bit_flag_mapping<wire::flag>, std::greater<wire::flag>>>, xstd::basic_bit_set<wire::flag, std::uint32_t, xstd::bit_flag_mapping<wire::flag>, std::greater<wire::flag>>>); // NOLINT(modernize-use-transparent-functors): the comparator the type names
+        static_assert(std::is_same_v<xstd::bit_underlying<xstd::basic_bit_set<wire::flag, std::vector<std::uint8_t>, std::dynamic_extent, xstd::bit_flag_mapping<wire::flag>, std::greater<wire::flag>>>, xstd::basic_bit_set<wire::flag, std::vector<std::uint32_t>, std::dynamic_extent, xstd::bit_flag_mapping<wire::flag>, std::greater<wire::flag>>>); // NOLINT(modernize-use-transparent-functors): the comparator the type names
         static_assert(std::is_same_v<xstd::bit_underlying<xstd::bit_least<xstd::bit_fixed_set<9>>>, xstd::bit_fixed_set<9>>);
         static_assert(not underlying_rebinds<xstd::bit_flag_set<std::bitset<16>>>);
         static_assert(not underlying_rebinds<xstd::basic_bit_fixed_set<wire::yes_no, std::uint8_t, 2, wire::yes_no_mapping>>);

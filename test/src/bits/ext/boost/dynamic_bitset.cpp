@@ -64,13 +64,13 @@ BOOST_AUTO_TEST_CASE(ADynamicBitsetConvertsInKeepingItsSizeAndPositions)
         auto const v = xstd::bit_convert<xstd::bit_vector>(narrow);
         BOOST_CHECK_EQUAL(v.size(), 13UZ);
         BOOST_CHECK(positions(v) == keys);
-        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(narrow)) == keys);
-        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::uint16_t>>(narrow)) == keys);
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(narrow)) == keys);
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::vector<std::uint16_t>>>(narrow)) == keys);
 
         // A set target takes whole blocks of its own, and a wider source block lands on narrower ones.
         auto const wide = make<std::uint64_t>(70, {0, 69});
         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::bit_set>(wide)).size(), test::whole_blocks(70UZ));
-        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(wide)) == (std::vector<std::size_t>{0, 69}));
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(wide)) == (std::vector<std::size_t>{0, 69}));
 
         // An empty one is an empty sequence.
         BOOST_CHECK(xstd::bit_convert<xstd::bit_vector>(boost::dynamic_bitset<>()).empty());
@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(AnOwnerConvertsOutKeepingItsWidthAndPositions)
         BOOST_CHECK(positions(xstd::bit_convert<boost::dynamic_bitset<std::uint8_t>>(v)) == (std::vector<std::size_t>{0, 69}));
 
         // A narrower source block is gathered into a wider target one, as far as the source reaches.
-        auto const octets = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(make<std::uint8_t>(13, {12}));
+        auto const octets = xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(make<std::uint8_t>(13, {12}));
         BOOST_CHECK(positions(xstd::bit_convert<boost::dynamic_bitset<std::uint64_t>>(octets)) == (std::vector<std::size_t>{12}));
 
         BOOST_CHECK_EQUAL(xstd::bit_convert<boost::dynamic_bitset<>>(xstd::bit_set{3, 64, 129}).size(), test::whole_blocks(130UZ));

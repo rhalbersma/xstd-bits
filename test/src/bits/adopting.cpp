@@ -39,7 +39,7 @@ BOOST_AUTO_TEST_CASE(TheBlocksMoveInWithoutACopy)
         auto const* const data = v.data();
 
         auto s = xstd::basic_bit_set(xstd::from_blocks, std::move(v));
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::uint8_t>>);
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>>);
         BOOST_CHECK(std::ranges::equal(s, std::vector<std::size_t>{0, 2, 15}));
         auto const blocks = std::move(s).extract();
         BOOST_CHECK(blocks.data() == data);
@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE(TheBlocksMoveInWithoutACopy)
 BOOST_AUTO_TEST_CASE(EveryBitOfTheBlocksIsAPosition)
 {
         auto const v = xstd::basic_bit_vector(xstd::from_blocks, std::vector<std::uint8_t>{0x05, 0x80});
-        static_assert(std::same_as<decltype(v), xstd::basic_bit_vector<std::uint8_t> const>);
+        static_assert(std::same_as<decltype(v), xstd::basic_bit_vector<std::vector<std::uint8_t>> const>);
         BOOST_CHECK_EQUAL(v.size(), 16UZ);
         BOOST_CHECK(v[0] and not v[1] and v[2] and v[15]);
 }
@@ -59,11 +59,11 @@ BOOST_AUTO_TEST_CASE(TheAllocatorExtendedFormDeducesAsThePlainOne)
 {
         auto const alloc = std::allocator<std::uint8_t>();
         auto const s     = xstd::basic_bit_set(xstd::from_blocks, std::vector<std::uint8_t>{0x01}, alloc);
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>> const>);
         BOOST_CHECK(s.contains(0));
 
         auto const v = xstd::basic_bit_vector(xstd::from_blocks, std::vector<std::uint8_t>{0x01}, alloc);
-        static_assert(std::same_as<decltype(v), xstd::basic_bit_vector<std::uint8_t> const>);
+        static_assert(std::same_as<decltype(v), xstd::basic_bit_vector<std::vector<std::uint8_t>> const>);
         BOOST_CHECK(v.size() == 8UZ and v[0]);
 }
 
@@ -112,20 +112,20 @@ BOOST_AUTO_TEST_CASE(AdoptionIsConstexpr)
         BOOST_CHECK(true);
 }
 
-// Inline blocks deduce the capacity they hold in whole, through each inplace owner, whichever storage holds them.
+// Inline blocks deduce the capacity they hold in whole, an inplace owner of it, whichever storage holds them.
 BOOST_AUTO_TEST_CASE(InlineBlocksDeduceTheirAlignedCapacity)
 {
-        auto const v = xstd::basic_bit_inplace_vector(xstd::from_blocks, xstd::bits::detail::inplace_blocks<std::uint8_t, 2>{0x81});
+        auto const v = xstd::basic_bit_vector(xstd::from_blocks, xstd::bits::detail::inplace_blocks<std::uint8_t, 2>{0x81});
         static_assert(std::same_as<decltype(v), xstd::basic_bit_inplace_vector<std::uint8_t, 16> const>);
         BOOST_CHECK(v.size() == 8UZ and v[0] and v[7]);
 
-        auto const s = xstd::basic_bit_inplace_set(xstd::from_blocks, xstd::bits::detail::inplace_blocks<std::uint8_t, 2>{0x81});
+        auto const s = xstd::basic_bit_set(xstd::from_blocks, xstd::bits::detail::inplace_blocks<std::uint8_t, 2>{0x81});
         static_assert(std::same_as<decltype(s), xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 16> const>);
         BOOST_CHECK(s.contains(0) and s.contains(7));
 }
 
 // The heap owners over a polymorphic allocator, which two resources make unequal.
-using polymorphic_owners = std::tuple<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 16, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>>; // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+using polymorphic_owners = std::tuple<xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t, std::pmr::polymorphic_allocator<std::uint8_t>>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 16, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::uint8_t>>>; // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
 
 // Blocks adopted under an unequal allocator are copied into it; storage taken from new and delete would leak.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AdoptionUnderAnUnequalAllocatorCopiesTheBlocks, S, polymorphic_owners)

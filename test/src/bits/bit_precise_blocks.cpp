@@ -108,7 +108,7 @@ template<std::size_t W, std::size_t N>
 concept set_admits = requires { typename xstd::basic_bit_fixed_set<std::size_t, xstd::bit_uint<W>, N>; };
 
 template<std::size_t W>
-concept vector_admits = requires { typename xstd::basic_bit_vector<xstd::bit_uint<W>>; };
+concept vector_admits = requires { typename xstd::basic_bit_vector<std::vector<xstd::bit_uint<W>>>; };
 
 } // namespace
 

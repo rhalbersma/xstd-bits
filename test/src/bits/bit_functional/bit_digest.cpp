@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(EqualBitsDigestEqualAcrossBlockTypes)
                 BOOST_CHECK_EQUAL((xstd::bit_digest<X, boost::hash2::xxhash_64>()(fixed)), 0xF8C0'7F80'B85C'9EA1ULL);
         });
         test::for_each_type<std::tuple<std::uint8_t, std::uint64_t>>([]<class Block> -> void {
-                using X = xstd::basic_bit_set<std::size_t, Block>;
+                using X = xstd::basic_bit_set<std::size_t, std::vector<Block>>;
                 BOOST_CHECK_EQUAL((xstd::bit_digest<X, boost::hash2::fnv1a_64>()(X({1, 64, 199}))), 0x4EAC'991A'7BBE'935BULL);
         });
 }

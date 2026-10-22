@@ -151,14 +151,14 @@ struct user_allocator
         using type = X::allocator_type;
 };
 
-template<class Block, std::size_t N, class Compare, class Allocator>
-struct user_allocator<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_mapping<std::size_t>, Compare, Allocator>>
+template<class Block, std::size_t K, class Compare, class Allocator>
+struct user_allocator<xstd::basic_bit_set<std::size_t, boost::container::small_vector<Block, K, Allocator>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, Compare>>
 {
         using type = Allocator;
 };
 
-template<class Block, std::size_t N, class Allocator>
-struct user_allocator<xstd::basic_bit_small_vector<Block, N, Allocator>>
+template<class Block, std::size_t K, class Allocator>
+struct user_allocator<xstd::basic_bit_vector<boost::container::small_vector<Block, K, Allocator>>>
 {
         using type = Allocator;
 };

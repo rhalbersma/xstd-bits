@@ -55,8 +55,9 @@ inline constexpr auto fixed_size<xstd::basic_bit_fixed_valarray<Block, N>> = N;
 template<class V>
 inline constexpr auto capacity = std::dynamic_extent;
 
-template<class Block, std::size_t N>
-inline constexpr auto capacity<xstd::basic_bit_inplace_valarray<Block, N>> = N;
+template<class Blocks, std::size_t N>
+        requires (N != std::dynamic_extent)
+inline constexpr auto capacity<xstd::basic_bit_valarray<Blocks, N>> = N;
 
 template<class V>
 inline constexpr bool is_fixed = fixed_size<V> != std::dynamic_extent;
@@ -699,7 +700,7 @@ using block_t = std::ranges::range_value_t<typename V::block_container_type>;
 
 // The array a proxy is handed: any owner of the same blocks, here the one on the heap, which takes any size.
 template<class V>
-using operand_t = xstd::basic_bit_valarray<block_t<V>>;
+using operand_t = xstd::basic_bit_valarray<std::vector<block_t<V>>>;
 
 // What a const subscript gathers into: an owner of run-time size its own type, the fixed one the inplace one.
 template<class V>

@@ -464,7 +464,7 @@ BOOST_AUTO_TEST_CASE(AKeysHiddenFriendsDecideBesideAHostileStorageAndKeyMapping)
 BOOST_AUTO_TEST_CASE(EverySetClosesItsProxyPair)
 {
         static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65>>);
-        static_assert(test::closed_proxies<xstd::basic_bit_set<std::size_t, std::uint64_t>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_set<std::size_t, std::vector<std::uint64_t>>>);
         static_assert(test::closed_proxies<xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 65>>);
         static_assert(test::closed_proxies<xstd::basic_bit_small_set<std::size_t, std::uint64_t, 65>>);
         static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<key, std::uint64_t, 65, key_mapping>>);

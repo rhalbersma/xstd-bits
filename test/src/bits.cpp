@@ -48,14 +48,14 @@ BOOST_AUTO_TEST_CASE(EveryContainerArrivesThroughTheUmbrella)
         static_assert(std::ranges::random_access_range<decltype(xstd::bit_span(packed))>);
 
         // The dynamic column, one name per reading, both over a std::vector of blocks.
-        static_assert(std::ranges::bidirectional_range<xstd::basic_bit_set<std::size_t, std::size_t>>);
-        static_assert(std::ranges::random_access_range<xstd::basic_bit_vector<std::size_t>>);
+        static_assert(std::ranges::bidirectional_range<xstd::basic_bit_set<std::size_t, std::vector<std::size_t>>>);
+        static_assert(std::ranges::random_access_range<xstd::basic_bit_vector<std::vector<std::size_t>>>);
 
         // The two layers the umbrella shows: basic_ chooses the storage, and the restricted name fixes size_t.
         static_assert(std::same_as<xstd::bit_fixed_set<8>, xstd::basic_bit_fixed_set<std::size_t, std::size_t, 8>>);
         static_assert(std::same_as<xstd::bit_array<8>, xstd::basic_bit_array<std::size_t, 8>>);
-        static_assert(std::same_as<xstd::bit_set, xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::allocator<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
-        static_assert(std::same_as<xstd::bit_vector, xstd::basic_bit_vector<std::size_t, std::allocator<std::size_t>>>);
+        static_assert(std::same_as<xstd::bit_set, xstd::basic_bit_set<std::size_t, std::vector<std::size_t, std::allocator<std::size_t>>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+        static_assert(std::same_as<xstd::bit_vector, xstd::basic_bit_vector<std::vector<std::size_t, std::allocator<std::size_t>>>>);
 
         // The enum set is the fixed set keyed by an enumeration's ranks, in the smallest block holding them.
         static_assert(std::same_as<xstd::bit_enum_set<perm>, xstd::basic_bit_fixed_set<perm, std::uint8_t, 3, xstd::bit_key_mapping<perm>>>);

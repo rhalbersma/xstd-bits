@@ -59,7 +59,7 @@ using array_models = std::tuple<std::array<bool, 0>, std::array<bool, 1>, std::a
 
 using vector_model = std::tuple<std::vector<bool>>;
 
-using dynamic = std::tuple<xstd::basic_bit_vector<std::uint8_t>, xstd::basic_bit_vector<std::uint64_t>>;
+using dynamic = std::tuple<xstd::basic_bit_vector<std::vector<std::uint8_t>>, xstd::basic_bit_vector<std::vector<std::uint64_t>>>;
 
 // Inline blocks that a sweep to its limit spills from, that a sweep fits in, and that hold half of what a sample spans.
 using small = std::tuple<xstd::basic_bit_small_vector<std::uint8_t, 9>, xstd::basic_bit_small_vector<std::uint64_t, 64>, xstd::basic_bit_small_vector<std::uint64_t, 1024>>;
@@ -81,7 +81,7 @@ using growable_all = decltype(std::tuple_cat(std::declval<vector_all>(), std::de
 using all = decltype(std::tuple_cat(std::declval<array_all>(), std::declval<growable_all>()));
 
 // The owners that take an allocator, under one that keeps a ledger and refuses on request, std::vector<bool> first.
-using ledgered = std::tuple<std::vector<bool, test::container::non_propagating<bool>>, xstd::basic_bit_vector<std::uint8_t, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_vector<std::uint64_t, test::container::non_propagating<std::uint64_t>>, xstd::basic_bit_small_vector<std::uint8_t, 9, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_vector<std::uint64_t, 64, test::container::non_propagating<std::uint64_t>>>;
+using ledgered = std::tuple<std::vector<bool, test::container::non_propagating<bool>>, xstd::basic_bit_vector<std::vector<std::uint8_t, test::container::non_propagating<std::uint8_t>>>, xstd::basic_bit_vector<std::vector<std::uint64_t, test::container::non_propagating<std::uint64_t>>>, xstd::basic_bit_small_vector<std::uint8_t, 9, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_vector<std::uint64_t, 64, test::container::non_propagating<std::uint64_t>>>;
 
 // The positions a sequence holds without growing: a width or capacity in its type, a small one's inline bits, or none.
 template<class X>
@@ -96,8 +96,8 @@ inline constexpr auto held_width_v = [] -> std::size_t {
         }
 }();
 
-template<class Block, std::size_t N, class Allocator>
-inline constexpr auto held_width_v<xstd::basic_bit_small_vector<Block, N, Allocator>> = N;
+template<class Block, std::size_t K, class Allocator>
+inline constexpr auto held_width_v<xstd::basic_bit_vector<boost::container::small_vector<Block, K, Allocator>>> = K * xstd::bit_blocks_extent_v<Block>;
 
 #ifdef __clang__
 
