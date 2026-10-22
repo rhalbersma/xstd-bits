@@ -324,8 +324,8 @@ BOOST_AUTO_TEST_CASE(DeductionGuides)
 
         static_assert(deduces_bit_vector<I> and deduces_bit_vector<I, Alloc> and not deduces_bit_vector<I, int>); // [sequence.reqmts]/69
         static_assert(std::same_as<decltype(xstd::basic_bit_vector(I(), I(), Alloc())), xstd::bit_vector>);       // [sequence.reqmts]/69
-        // An integer pair is a count and a value, whose bools name no block.
-        static_assert(not deduces_bit_vector<int>); // [sequence.reqmts]/69
+        // An integer pair is a count and a value, over the default storage, as it is for std::vector.
+        static_assert(std::same_as<decltype(xstd::basic_bit_vector(3, 1)), xstd::bit_vector>); // [sequence.reqmts]/69
         BOOST_CHECK(true);
 }
 
