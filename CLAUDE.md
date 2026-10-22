@@ -283,7 +283,8 @@ which draw on one account's runners.
   branch, which runs nothing; open the pull request when the queue is empty.
 - **A pull request is what merges or reverts as one.** Changes that touch the same files, or that are only tests or
   only documentation, go in one pull request rather than one per issue. A pull request that changes only paths no
-  ladder builds, which `.github/workflows/changes.yml` lists, skips the ladders and costs minutes rather than hours.
+  ladder builds, which `.github/workflows/changes.yml` lists, skips the ladders and costs minutes rather than hours,
+  so it may open beside a long run.
 - **Neither stack nor fan out.** Each pull request branches off `main` and waits there. Its turn starts by merging
   `main` into it, never rebasing, so its one run is against the `main` it will land on. A stack costs the same runs
   and adds a restack whenever a lower pull request changes; pull requests in parallel make every merge put the rest

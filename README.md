@@ -180,6 +180,8 @@ Storage is the exception, refused when volatile, since a block algorithm merges 
 apart; a volatile register is converted by one read instead, `xstd::bit_convert<xstd::bit_array<32>>(status)`
 ([cv-transparency](doc/design.md#cv-transparency)).
 
+<div class="headers" markdown>
+
 | Header | Description |
 | :----- | :---------- |
 | `<xstd/bits.hpp>` | Every header below but the Boost extensions, through one include. |
@@ -198,6 +200,8 @@ apart; a volatile register is converted by one read instead, `xstd::bit_convert<
 | `<xstd/bits/bit.hpp>` | `bit_convert`, the positions of any bit storage into any other, at any two widths. |
 | `<xstd/bits/ext/boost.hpp>` | The three readings in Boost.Container's `small_vector`, inline up to a capacity and on the heap past it. |
 | `<xstd/bits/ext/boost/dynamic_bitset.hpp>` | `bit_convert` to and from `boost::dynamic_bitset`. |
+
+</div>
 
 [The reference](doc/reference/index.md) lists each group's headers and specifies each entity.
 
