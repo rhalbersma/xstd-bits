@@ -6254,7 +6254,7 @@ Prior art for the inplace and small strings is in [prior-art-by-column](#prior-a
 ### bit-mdspan
 
 A bit matrix, `std::mdspan` over packed bits, adds a dimension to the views row rather than a reading
-([#196](https://github.com/rhalbersma/xstd-bits/issues/196)): bitboards, adjacency matrices, parity-check matrices,
+([#467](https://github.com/rhalbersma/xstd-bits/issues/467)): bitboards, adjacency matrices, parity-check matrices,
 cellular automata and binary images are its workloads. `[mdspan.accessor.reqmts]` lets an accessor's `reference`
 be other than `element_type&` and its `data_handle_type` other than `element_type*`, so the accessor is the
 sequence reading's proxy and iterator: `access(p, i)` is `*(p + i)` and `offset(p, i)` is `p + i`. The constraint
@@ -6535,7 +6535,7 @@ of code and stand either way.
 The directions above draw on one inventory of third-party containers, classified by behaviour rather than by
 name: **fixed**, an exact size at compile time; **inplace**, a size up to a compile-time capacity with no heap;
 **small**, an inline buffer of `N` and then the heap; **run-time-fixed**, a size chosen once at construction; and
-**dynamic**, a heap that grows ([#324](https://github.com/rhalbersma/xstd-bits/issues/324)). The block choice is
+**dynamic**, a heap that grows. The block choice is
 compared in [block-and-width-transformations](#block-and-width-transformations) and the enum and flag sets in
 [flag-types](#flag-types). Every signature was read from the header at the linked commit; these are references for
 design comparison, not test oracles.
