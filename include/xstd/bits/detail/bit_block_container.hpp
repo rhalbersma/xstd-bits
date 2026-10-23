@@ -711,7 +711,12 @@ public:
         [[nodiscard]] constexpr auto find_first() const noexcept
                 -> std::size_t
         {
-                return inclusive_find_next(0UZ);
+                // One whole block: countr_zero of an empty block is the block's width, which is size() itself.
+                if constexpr (has_static_size and static_num_blocks == 1 and N == bits_per_block) {
+                        return bits::detail::countr_zero(m_blocks[0]);
+                } else {
+                        return inclusive_find_next(0UZ);
+                }
         }
 
         // The primitive: inclusive, so both derivations are + 1 and nothing wraps.
@@ -758,6 +763,45 @@ public:
         {
                 assert(is_valid(n));
                 return inclusive_find_next(n + 1);
+        }
+
+        // The two ends of a non-empty container, deliberately NOT total: no empty case to answer.
+        [[nodiscard]] constexpr auto find_front() const noexcept
+                -> std::size_t
+        {
+                assert(any());
+                if constexpr (has_static_size and static_num_blocks == 1) {
+                        return bits::detail::countr_zero(m_blocks[0]);
+                } else if constexpr (has_static_size and static_num_blocks == 2) {
+                        return m_blocks[0] != zero ? bits::detail::countr_zero(m_blocks[0]) : bits::detail::countr_zero(m_blocks[1]) + bits_per_block;
+                } else {
+                        // A while, not a for: any() makes a for's exit untestable.
+                        auto i = 0UZ;
+                        while (m_blocks[i] == zero) {
+                                assert(i != last_block());
+                                ++i;
+                        }
+                        return (bits_per_block * i) + bits::detail::countr_zero(m_blocks[i]);
+                }
+        }
+
+        [[nodiscard]] constexpr auto find_back() const noexcept
+                -> std::size_t
+        {
+                assert(any());
+                if constexpr (has_static_size and static_num_blocks == 1) {
+                        return last_bit() - bits::detail::countl_zero(m_blocks[0]);
+                } else if constexpr (has_static_size and static_num_blocks == 2) {
+                        return m_blocks[1] != zero ? last_bit() - bits::detail::countl_zero(m_blocks[1]) : left_bit - bits::detail::countl_zero(m_blocks[0]);
+                } else {
+                        // The mirror of find_front, counting up from block i's base to drop the reversed range's term.
+                        auto i = last_block();
+                        while (m_blocks[i] == zero) {
+                                assert(i != 0);
+                                --i;
+                        }
+                        return (bits_per_block * i) + left_bit - bits::detail::countl_zero(m_blocks[i]);
+                }
         }
 
         // Deliberately NOT total: three instructions cheaper, and rend() supplies the guard.
@@ -1621,6 +1665,12 @@ private:
                 -> std::size_t
         {
                 return num_blocks() - 1UZ;
+        }
+
+        [[nodiscard]] constexpr auto last_bit() const noexcept
+                -> std::size_t
+        {
+                return (num_blocks() * bits_per_block) - 1UZ;
         }
 
         // The blocks a range of positions spans, each with its mask: whole blocks, a partial one at the end.

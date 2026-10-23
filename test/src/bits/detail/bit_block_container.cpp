@@ -127,15 +127,21 @@ public:
                 disagree(m_x == m_y, m_mx == m_my);
         }
 
-        // find_first is total and answers size(); the scan back from size() asserts there is a position.
+        // find_front, find_back and exclusive_find_prev assert a position; find_first is total and answers size().
         auto scans()
                 -> void
         {
                 if (m_cardinality != 0) {
+                        auto front = 0UZ;
+                        while (not m_mx[front]) {
+                                ++front;
+                        }
                         auto back = m_n - 1;
                         while (not m_mx[back]) {
                                 --back;
                         }
+                        unequal(m_x.find_front(), front);
+                        unequal(m_x.find_back(), back);
                         unequal(m_x.exclusive_find_prev(m_n), back);
                 }
 

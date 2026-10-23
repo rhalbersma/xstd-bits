@@ -376,6 +376,7 @@ public:
 
         static constexpr bool owns_storage     = is_owner;
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
+        static constexpr bool has_closed_width = (set::static_max_size<Bits, Store>() != std::dynamic_extent);
 
         // types
         using key_type               = Key;
@@ -661,29 +662,24 @@ public:
 
         using members_type::max_size;
 
-        // element access, both with a non-empty set as their precondition.
+        // element access, both with a non-empty set as their precondition, so neither scan answers an empty one.
         [[nodiscard]] constexpr auto front() const noexcept
                 -> const_reference
         {
-                return *begin();
+                XSTD_BITS_ASSERT(not empty());
+                return {&bits(), is_descending ? highest() : lowest()};
         }
 
-        // A zero width has no position to scan back from, and exclusive_find_prev asserts there.
         [[nodiscard]] constexpr auto back() const noexcept
                 -> const_reference
         {
-                if constexpr (is_zero_width) {
-                        return {&bits(), 0UZ};
-                } else if constexpr (is_descending) {
-                        return {&bits(), bits().find_first()};
-                } else {
-                        return {&bits(), bits().exclusive_find_prev(bits().size())};
-                }
+                XSTD_BITS_ASSERT(not empty());
+                return {&bits(), is_descending ? lowest() : highest()};
         }
 
         // modifiers; each writes through the storage, so each exists exactly where the storage lets this handle write.
         template<class... Args>
-        constexpr auto emplace(this non_volatile auto&& self, Args&&... args)
+        constexpr auto emplace(this non_volatile auto&& self, Args&&... args) noexcept(has_static_width)
                 -> std::pair<iterator, bool>
                 requires (sizeof...(args) <= 1) and requires { self.bits().growing_insert(KeyMapping::to_index(value_type(std::forward<Args>(args)...))); }
         {
@@ -691,7 +687,7 @@ public:
         }
 
         template<class... Args>
-        constexpr auto emplace_hint(this non_volatile auto&& self, const_iterator position, Args&&... args)
+        constexpr auto emplace_hint(this non_volatile auto&& self, const_iterator position, Args&&... args) noexcept(has_static_width)
                 -> iterator
                 requires (sizeof...(args) <= 1) and requires { self.bits().growing_insert(KeyMapping::to_index(value_type(std::forward<Args>(args)...))); }
         {
@@ -699,14 +695,14 @@ public:
         }
 
         // [set]'s two overloads by value: a key is kept only as its position, so there is nothing to move.
-        constexpr auto insert(this non_volatile auto&& self, value_type x)
+        constexpr auto insert(this non_volatile auto&& self, value_type x) noexcept(has_static_width)
                 -> std::pair<iterator, bool>
                 requires requires { self.bits().growing_insert(KeyMapping::to_index(x)); }
         {
                 return self.do_insert(KeyMapping::to_index(x));
         }
 
-        constexpr auto insert(this non_volatile auto&& self, const_iterator position, value_type x)
+        constexpr auto insert(this non_volatile auto&& self, const_iterator position, value_type x) noexcept(has_static_width)
                 -> iterator
                 requires requires { self.bits().growing_insert(KeyMapping::to_index(x)); }
         {
@@ -769,16 +765,18 @@ public:
                 return nrv;
         }
 
-        // Total over key_type, as std::set's is: an absent key is the no-op returning zero.
+        // The storage's erase, which clears unconditionally; a key past a run-time width is absent.
         constexpr auto erase(this non_volatile auto&& self, key_type const& x) noexcept
                 -> size_type
-                requires requires { self.bits().assign(KeyMapping::to_index(x), false); }
+                requires requires { self.bits().erase(KeyMapping::to_index(x)); }
         {
-                if (not self.contains(x)) {
+                auto const pos = KeyMapping::to_index(x);
+                if constexpr (has_static_width) {
+                        XSTD_BITS_ASSERT(pos < self.bits().size());
+                } else if (pos >= self.bits().size()) {
                         return 0UZ;
                 }
-                self.bits().assign(KeyMapping::to_index(x), false);
-                return 1UZ;
+                return static_cast<size_type>(self.bits().erase(pos));
         }
 
         constexpr auto erase(this non_volatile auto&& self, const_iterator first, const_iterator last) noexcept
@@ -890,8 +888,7 @@ public:
                 return self;
         }
 
-        // Not noexcept: an enumerator outside the listed values throws here, as insert does.
-        constexpr auto operator|=(this non_volatile auto&& self, key_type x)
+        constexpr auto operator|=(this non_volatile auto&& self, key_type x) noexcept(has_static_width)
                 -> auto&
                 requires enumerator_is_one_key and requires { self.insert(x); }
         {
@@ -899,7 +896,7 @@ public:
                 return self;
         }
 
-        constexpr auto operator^=(this non_volatile auto&& self, key_type x)
+        constexpr auto operator^=(this non_volatile auto&& self, key_type x) noexcept(has_static_width)
                 -> auto&
                 requires enumerator_is_one_key and requires { self.complement(x); }
         {
@@ -932,7 +929,7 @@ public:
                 return rhs & lhs;
         }
 
-        [[nodiscard]] friend constexpr auto operator|(set_adaptor const& lhs, key_type rhs)
+        [[nodiscard]] friend constexpr auto operator|(set_adaptor const& lhs, key_type rhs) noexcept(has_static_width)
                 -> derived_type
                 requires is_owner and enumerator_is_one_key
         {
@@ -941,14 +938,14 @@ public:
                 return nrv;
         }
 
-        [[nodiscard]] friend constexpr auto operator|(key_type lhs, set_adaptor const& rhs)
+        [[nodiscard]] friend constexpr auto operator|(key_type lhs, set_adaptor const& rhs) noexcept(has_static_width)
                 -> derived_type
                 requires is_owner and enumerator_is_one_key
         {
                 return rhs | lhs;
         }
 
-        [[nodiscard]] friend constexpr auto operator^(set_adaptor const& lhs, key_type rhs)
+        [[nodiscard]] friend constexpr auto operator^(set_adaptor const& lhs, key_type rhs) noexcept(has_static_width)
                 -> derived_type
                 requires is_owner and enumerator_is_one_key
         {
@@ -957,7 +954,7 @@ public:
                 return nrv;
         }
 
-        [[nodiscard]] friend constexpr auto operator^(key_type lhs, set_adaptor const& rhs)
+        [[nodiscard]] friend constexpr auto operator^(key_type lhs, set_adaptor const& rhs) noexcept(has_static_width)
                 -> derived_type
                 requires is_owner and enumerator_is_one_key
         {
@@ -1180,8 +1177,8 @@ public:
         }
 
 private:
-        // Toggling one key, growing where insert grows; not noexcept, since growing allocates.
-        constexpr auto complement(this non_volatile auto&& self, value_type x)
+        // Toggling one key, growing where insert grows: the storage's flip inside the width.
+        constexpr auto complement(this non_volatile auto&& self, value_type x) noexcept(has_static_width)
                 -> void
                 requires requires { self.bits().assign(KeyMapping::to_index(x), true); }
         {
@@ -1194,7 +1191,7 @@ private:
                         }
                 }
                 assert(pos < self.bits().size());
-                self.bits().assign(pos, not self.bits().test(pos));
+                self.bits().flip(pos);
         }
 
         // The whole-set complement, at a static width alone: complementing needs a universe, which N is.
@@ -1255,38 +1252,45 @@ private:
                 return static_cast<derived_type&>(*this);
         }
 
-        // Where a write is refused: past a closed universe at any width, and past what the storage can ever hold.
-        constexpr auto guard_key(std::size_t x) const
+        // The two ends of a non-empty set, by the storage's primitives; a zero width has no position to find.
+        [[nodiscard]] constexpr auto lowest() const noexcept
+                -> std::size_t
+        {
+                if constexpr (is_zero_width) {
+                        return 0UZ;
+                } else {
+                        return bits().find_front();
+                }
+        }
+
+        [[nodiscard]] constexpr auto highest() const noexcept
+                -> std::size_t
+        {
+                if constexpr (is_zero_width) {
+                        return 0UZ;
+                } else {
+                        return bits().find_back();
+                }
+        }
+
+        // A key past a closed universe or a type-fixed width is a precondition, as an index past std::array's is.
+        constexpr auto guard_key(std::size_t x) const noexcept(has_closed_width)
                 -> void
         {
-                if constexpr (has_static_width) {
-                        if (x >= max_size()) {
-                                throw out_of_range(x);
-                        }
+                // A value that is no key ranks at or past the universe's size.
+                if constexpr (sized_bit_index_mapping<KeyMapping, Key>) {
+                        XSTD_BITS_ASSERT(x < static_cast<std::size_t>(KeyMapping::size));
+                }
+                if constexpr (has_closed_width) {
+                        XSTD_BITS_ASSERT(x < max_size());
                 } else {
-                        // A value that is no key ranks at or past the universe's size, as at a static width.
-                        if constexpr (sized_bit_index_mapping<KeyMapping, Key>) {
-                                if (x >= static_cast<std::size_t>(KeyMapping::size)) {
-                                        throw out_of_range(x);
-                                }
-                        }
-                        // Past what a heap can count is length_error here, and past a capacity bad_alloc on growth.
+                        // Past what a heap can count is length_error.
                         static_cast<void>(bits_type::check_width(bits_type::width_sum(x, 1UZ)));
                 }
         }
 
-        [[nodiscard]] constexpr auto out_of_range(std::size_t x, std::source_location const& loc = std::source_location::current()) const
-        {
-                return std::out_of_range(
-                        std::format(
-                                "{}:{}:{}: exception: ‘{}‘: argument ‘x‘ is no key this set can hold [{} >= {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), x, max_size()
-                        )
-                );
-        }
-
         // growing_insert reports whether the bit was new, so one walk answers where two did.
-        constexpr auto do_insert(this non_volatile auto&& self, std::size_t x)
+        constexpr auto do_insert(this non_volatile auto&& self, std::size_t x) noexcept(has_static_width)
                 -> std::pair<iterator, bool>
         {
                 self.guard_key(x);
@@ -1294,7 +1298,7 @@ private:
                 return {{&self.bits(), x}, inserted};
         }
 
-        constexpr auto do_insert(this non_volatile auto&& self, const_iterator, std::size_t x)
+        constexpr auto do_insert(this non_volatile auto&& self, const_iterator, std::size_t x) noexcept(has_static_width)
                 -> iterator
         {
                 self.guard_key(x);
