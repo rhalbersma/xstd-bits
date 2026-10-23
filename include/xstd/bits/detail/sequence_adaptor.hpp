@@ -21,6 +21,7 @@
 #include <xstd/bits/detail/ownership.hpp>                    // owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ptr_t, storage_ref_t
+#include <xstd/bits/detail/throw.hpp>                        // throw_exception, XSTD_BITS_HAS_EXCEPTIONS
 #include <xstd/misc/type_traits/conditional_data_member.hpp> // XSTD_NO_UNIQUE_ADDRESS, conditional_data_member_t
 #include <xstd/misc/type_traits/empty_base_type.hpp>         // empty_base_type
 #include <boost/container_hash/is_range.hpp>                 // is_range
@@ -809,6 +810,7 @@ public:
                         blit(rg.bits(), rg.offset(), rg.size());
                 } else if constexpr (not std::ranges::sized_range<R>) {
                         // No size to check first, so a failure part way, at a capacity or an allocation, is undone.
+#if XSTD_BITS_HAS_EXCEPTIONS
                         auto const n = size();
                         try {
                                 pack(std::forward<R>(rg));
@@ -816,6 +818,9 @@ public:
                                 m_bits.resize(n);
                                 throw;
                         }
+#else
+                        pack(std::forward<R>(rg));
+#endif
                 } else {
                         pack(std::forward<R>(rg));
                 }
@@ -841,12 +846,16 @@ public:
                         auto const n = static_cast<size_type>(std::ranges::distance(rg));
                         open_gap(pos, n);
                         // Reading the range is all that can throw here, and closing the gap again cannot.
+#if XSTD_BITS_HAS_EXCEPTIONS
                         try {
                                 write_at(pos, rg);
                         } catch (...) {
                                 close_gap(pos, pos + n);
                                 throw;
                         }
+#else
+                        write_at(pos, rg);
+#endif
                         return begin() + static_cast<difference_type>(pos);
                 } else {
                         if constexpr (blittable<std::remove_cvref_t<R>>) {
@@ -1168,7 +1177,7 @@ public:
                 requires has_static_capacity
         {
                 if (n > members_type::capacity()) {
-                        throw std::bad_alloc();
+                        bits::detail::throw_exception(std::bad_alloc());
                 }
         }
 
@@ -1206,7 +1215,7 @@ public:
                 if (n < self.size()) {
                         return {&self.bits(), self.offset() + n};
                 }
-                throw out_of_range(n, self.size());
+                bits::detail::throw_exception(out_of_range(n, self.size()));
         }
 
         // Both are preconditions in [sequence.reqmts]; each assert is spread so the coverage gate excludes it.
@@ -1254,7 +1263,7 @@ private:
                 requires bits_type::has_zero_capacity
         {
                 if (some) {
-                        throw std::bad_alloc();
+                        bits::detail::throw_exception(std::bad_alloc());
                 }
         }
 

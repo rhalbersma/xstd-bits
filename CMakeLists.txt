@@ -233,6 +233,7 @@ target_sources(
         include/xstd/bits/detail/range_const_reference.hpp
         include/xstd/bits/detail/shift.hpp
         include/xstd/bits/detail/storage_ptr.hpp
+        include/xstd/bits/detail/throw.hpp
         include/xstd/bits/detail/views.hpp
         include/xstd/bits/detail/blocks.hpp
         include/xstd/bits/bit_type_traits/detail/blocks_extent.hpp
@@ -340,6 +341,9 @@ if(PROJECT_IS_TOP_LEVEL)
 
         # On by default, and the coverage job alone turns it off. The hardened test builds the library with NDEBUG, so its instantiations differ from every Debug one by the asserts compiled out, and gcovr keys their branches apart from the Debug run's: one such translation unit put 31 branches in the denominator and covered none. What it checks, an abort where a precondition breaks, sits on the assert lines that job excludes anyway.
         option(${project_option_prefix}_BUILD_HARDENED_TESTS "Build the test that breaks each precondition a hardened release checks" ON)
+
+        # On by default, and the coverage job alone turns it off, as for the hardened test. Built with -fno-exceptions, its instantiations are counted apart from every other one, and the abort that each of its refusals ends in exits before gcov writes what that run covered.
+        option(${project_option_prefix}_BUILD_NO_EXCEPTIONS_TESTS "Build the test that builds every member without exceptions and refuses each request it can" ON)
 
         add_subdirectory(test)
     endif()

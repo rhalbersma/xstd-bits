@@ -21,6 +21,7 @@
 #include <xstd/bits/detail/owned_bit_blocks.hpp>             // owned_bit_blocks
 #include <xstd/bits/detail/resizable_bit_blocks.hpp>         // resizable_bit_blocks
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl, shr
+#include <xstd/bits/detail/throw.hpp>                        // throw_exception, XSTD_BITS_HAS_EXCEPTIONS
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/ints/cstdlib/div.hpp>                         // div, div_result
 #include <xstd/ints/limits.hpp>                              // numeric_limits
@@ -510,7 +511,7 @@ public:
                 -> std::size_t
         {
                 if (n > max_width) {
-                        throw length_error(n);
+                        bits::detail::throw_exception(length_error(n));
                 }
                 return n;
         }
@@ -520,7 +521,7 @@ public:
                 -> std::size_t
         {
                 if (n > max_addressable_width) {
-                        throw addressable_length_error(n);
+                        bits::detail::throw_exception(addressable_length_error(n));
                 }
                 return n;
         }
@@ -1454,7 +1455,7 @@ private:
         {
                 if constexpr (has_static_capacity) {
                         if (n > N) {
-                                throw std::bad_alloc();
+                                bits::detail::throw_exception(std::bad_alloc());
                         }
                 }
         }
@@ -1517,6 +1518,7 @@ private:
                                         std::ranges::swap(m_blocks, blocks);
                                 } else {
                                         // Nothing installs this allocator without a step that throws: basic only.
+#if XSTD_BITS_HAS_EXCEPTIONS
                                         try {
                                                 m_blocks = source;
                                         } catch (...) {
@@ -1525,6 +1527,9 @@ private:
                                                 store_count(0UZ);
                                                 throw;
                                         }
+#else
+                                        m_blocks = source;
+#endif
                                 }
                                 return;
                         }

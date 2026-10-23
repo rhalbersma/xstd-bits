@@ -25,6 +25,7 @@
 #include <xstd/bits/detail/owner_members.hpp>                 // owner_members
 #include <xstd/bits/detail/ownership.hpp>                     // owned_storage, owner_of, owns, reads, set_reading_tag, storage, storage_access
 #include <xstd/bits/detail/storage_ptr.hpp>                   // storage_ptr_t, storage_ref_t
+#include <xstd/bits/detail/throw.hpp>                         // throw_exception
 #include <xstd/misc/concepts/specialization_of.hpp>           // specialization_of
 #include <xstd/misc/type_traits/empty_base_type.hpp>          // empty_base_type
 #include <boost/container_hash/is_range.hpp>                  // is_range
@@ -1260,13 +1261,13 @@ private:
         {
                 if constexpr (has_static_width) {
                         if (x >= max_size()) {
-                                throw out_of_range(x);
+                                bits::detail::throw_exception(out_of_range(x));
                         }
                 } else {
                         // A value that is no key ranks at or past the universe's size, as at a static width.
                         if constexpr (sized_bit_index_mapping<KeyMapping, Key>) {
                                 if (x >= static_cast<std::size_t>(KeyMapping::size)) {
-                                        throw out_of_range(x);
+                                        bits::detail::throw_exception(out_of_range(x));
                                 }
                         }
                         // Past what a heap can count is length_error here, and past a capacity bad_alloc on growth.

@@ -267,3 +267,37 @@ if(${project_option_prefix}_BUILD_HARDENED_TESTS)
         endif()
     endforeach()
 endif()
+
+if(${project_option_prefix}_BUILD_NO_EXCEPTIONS_TESTS)
+    # The library without exceptions, as libc++ and libstdc++ support it: every member builds, and each refusal aborts with its message.
+    add_executable(test.no_exceptions no_exceptions/no_exceptions.cpp)
+
+    target_link_libraries(
+        test.no_exceptions PRIVATE
+        xstd::bits
+    )
+
+    target_compile_definitions(
+        test.no_exceptions PRIVATE
+        $<$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>:_HAS_EXCEPTIONS=0>
+    )
+
+    target_compile_options(
+        test.no_exceptions PRIVATE
+        ${cxx_compile_options_warnings}
+        ${cxx_compile_options_optimization}
+        $<IF:$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>,/EHs-c-,-fno-exceptions>
+    )
+
+    add_test(NAME test.no_exceptions.grant COMMAND test.no_exceptions)
+    # Each refusal passes on the message its exception would have carried, which is written before the abort; bad_alloc's is the standard library's own.
+    foreach(entry IN ITEMS "at|is out of range" "length|is no width" "capacity|bad.alloc|bad allocation" "key|is no key this set can hold" "lost_positions|a position at or past" "lost_keys|bad.alloc|bad allocation")
+        string(FIND "${entry}" "|" bar)
+        string(SUBSTRING "${entry}" 0 ${bar} refusal)
+        math(EXPR after "${bar} + 1")
+        string(SUBSTRING "${entry}" ${after} -1 message)
+        add_test(NAME test.no_exceptions.${refusal} COMMAND test.no_exceptions ${refusal})
+        # Each run ends in one abort within milliseconds, so a run still going after a minute is a hang to fail.
+        set_tests_properties(test.no_exceptions.${refusal} PROPERTIES TIMEOUT 60 PASS_REGULAR_EXPRESSION "${message}")
+    endforeach()
+endif()

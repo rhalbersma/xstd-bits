@@ -14,6 +14,7 @@
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, byte_count, bytes_bits, copy_bits
 #include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owner, reads, set_reading_tag, storage_access, view
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
+#include <xstd/bits/detail/throw.hpp>                        // throw_exception
 #include <xstd/ints/limits.hpp>                              // numeric_limits
 #include <algorithm>                                         // copy, min
 #include <array>                                             // array
@@ -233,7 +234,7 @@ constexpr auto refuse_lost_keys(std::size_t capped_width, std::size_t kept, std:
         -> void
 {
         if (capped_width < width and kept != count) {
-                throw std::bad_alloc();
+                bits::detail::throw_exception(std::bad_alloc());
         }
 }
 
@@ -286,7 +287,7 @@ constexpr auto refuse_lost_positions(std::size_t kept, std::size_t count)
         -> void
 {
         if (kept != count) {
-                throw std::overflow_error("xstd::bit_convert: a position at or past the target's width is set");
+                bits::detail::throw_exception(std::overflow_error("xstd::bit_convert: a position at or past the target's width is set"));
         }
 }
 
