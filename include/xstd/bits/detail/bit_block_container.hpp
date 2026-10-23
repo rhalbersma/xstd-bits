@@ -273,8 +273,9 @@ public:
 
         [[nodiscard]] static constexpr auto static_capacity() noexcept
                 -> std::size_t
+                requires has_static_capacity
         {
-                return has_static_capacity ? N : 0UZ;
+                return N;
         }
 
         // The width as a type, dynamic_extent where there is none: asked before an object exists.
