@@ -12,72 +12,72 @@ rewrite = [{ from = "std::vector<bool>", to = "xstd::bit_vector" }]
 
 # libc++'s own invariant check names a member only its vector<bool> has; the paragraph's guarantees are asserted beside it.
 [[libcxx.assertion]]
-file = "construct_default.pass.cpp"
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_default.pass.cpp"
 sha256 = "91e7235d968d312105753e0900d2774d2b4c22d328dff4e01924803c9d9f41c1"
 line = "LIBCPP_ASSERT(c.__invariants());"
 drop = true
 departure = "libc++'s internal __invariants()"
 
 [[libcxx.assertion]]
-file = "construct_default.pass.cpp"
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_default.pass.cpp"
 sha256 = "91e7235d968d312105753e0900d2774d2b4c22d328dff4e01924803c9d9f41c1"
 line = "LIBCPP_ASSERT(c1.__invariants());"
 drop = true
 departure = "libc++'s internal __invariants()"
 
 [[libcxx.assertion]]
-file = "construct_size.pass.cpp"
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_size.pass.cpp"
 sha256 = "cadd143ad1be3268aa333f3240255cae78980589795db98fbc680735fba9b93b"
 line = "LIBCPP_ASSERT(c.__invariants());"
 drop = true
 departure = "libc++'s internal __invariants()"
 
 [[libcxx.assertion]]
-file = "construct_size_value.pass.cpp"
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_size_value.pass.cpp"
 sha256 = "a95b41f6af6a8fa1a394e2270920a6f31392c1e05896e87111fcb548ca7781ad"
 line = "LIBCPP_ASSERT(c.__invariants());"
 drop = true
 departure = "libc++'s internal __invariants()"
 
 [[libcxx.assertion]]
-file = "construct_size_value_alloc.pass.cpp"
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_size_value_alloc.pass.cpp"
 sha256 = "239cc590980b5468e9397cb6417ca8bdd6488143e1ab7899ec9165949f9a0504"
 line = "LIBCPP_ASSERT(c.__invariants());"
 drop = true
 departure = "libc++'s internal __invariants()"
 
 [[libcxx.assertion]]
-file = "copy.pass.cpp"
+file = "libcxx/test/std/containers/sequences/vector.bool/copy.pass.cpp"
 sha256 = "099b47ccca0a2dfdb2ff6b04dfd90424d2c90f93eb46061108170a40dfe366ca"
 line = "LIBCPP_ASSERT(c.__invariants());"
 drop = true
 departure = "libc++'s internal __invariants()"
 
 [[libcxx.assertion]]
-file = "copy_alloc.pass.cpp"
+file = "libcxx/test/std/containers/sequences/vector.bool/copy_alloc.pass.cpp"
 sha256 = "85df1926257b925fec12caeed7faf3672229040d195f4d1531b10c8a0a30500e"
 line = "LIBCPP_ASSERT(c.__invariants());"
 drop = true
 departure = "libc++'s internal __invariants()"
 
-# The word the libc++-only block measures its capacity in is bit_vector's block_type.
+# The word the libc++-only block measures its capacity in is the value type of bit_vector's block container.
 [[libcxx.assertion]]
-file = "shrink_to_fit.pass.cpp"
+file = "libcxx/test/std/containers/sequences/vector.bool/shrink_to_fit.pass.cpp"
 sha256 = "0728d15aaa564c44bb8411abd91a35bd87a8298987d2284293a93e86518c1a4a"
 line = "unsigned bits_per_word = static_cast<unsigned>(sizeof(C::__storage_type) * CHAR_BIT);"
-to = "unsigned bits_per_word = static_cast<unsigned>(sizeof(C::block_type) * CHAR_BIT);"
-departure = "libc++'s internal __storage_type, which is bit_vector's block_type"
+to = "unsigned bits_per_word = static_cast<unsigned>(sizeof(C::block_container_type::value_type) * CHAR_BIT);"
+departure = "libc++'s internal __storage_type, which is bit_vector's block_container_type::value_type"
 
 # The rewrite reaches the container and not the class template argument deduction it is compared with.
 [[libcxx.assertion]]
-file = "assign_range.pass.cpp"
+file = "libcxx/test/std/containers/sequences/vector.bool/assign_range.pass.cpp"
 sha256 = "2597e4d51293c0e5e631cff3b0dc00554f33dd6264db492ee397bb58fa6c13be"
 line = "assert(v == (std::vector{true, true, false}));"
 to = "assert(std::ranges::equal(v, std::vector{true, true, false}));"
 departure = "no == between bit_vector and std::vector<bool>"
 
 [[libcxx.assertion]]
-file = "insert_range.pass.cpp"
+file = "libcxx/test/std/containers/sequences/vector.bool/insert_range.pass.cpp"
 sha256 = "74eee090d5000e2a38e986e39895e7b29b944e3dbde136aedb6787ed56640152"
 line = "assert(v == (std::vector{true, true, false}));"
 to = "assert(std::ranges::equal(v, std::vector{true, true, false}));"
@@ -85,7 +85,7 @@ departure = "no == between bit_vector and std::vector<bool>"
 
 # std::find walks bit_vector's iterators a bit at a time, past Clang's constant-evaluation step limit; the run-time half is kept.
 [[libcxx.assertion]]
-file = "find.pass.cpp"
+file = "libcxx/test/std/containers/sequences/vector.bool/find.pass.cpp"
 sha256 = "ce82dff5fad1230ff99fc840c68fb6043444eaffdea8e2303769136501825b9b"
 line = "static_assert(tests());"
 drop = true
