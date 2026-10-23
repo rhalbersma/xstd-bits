@@ -17,11 +17,12 @@
 #include <tuple>                                   // tuple
 #include <utility>                                 // declval
 #include <valarray>                                // slice
+#include <vector>                                  // vector
 
 BOOST_AUTO_TEST_SUITE(BitValarray)
 
 template<class... Blocks>
-auto valarrays(std::tuple<Blocks...>) -> std::tuple<xstd::basic_bit_valarray<Blocks>...>;
+auto valarrays(std::tuple<Blocks...>) -> std::tuple<xstd::basic_bit_valarray<std::vector<Blocks>>...>;
 
 // Every block the library takes, each over a heap.
 using Types = decltype(valarrays(std::declval<test::all_block_types>()));
@@ -167,7 +168,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BitConvertKeepsPositionsAndASpanViewsIt, V, Types)
 
 BOOST_AUTO_TEST_CASE(TheDefaultBlockIsSizeT)
 {
-        static_assert(std::same_as<xstd::bit_valarray, xstd::basic_bit_valarray<std::size_t, std::allocator<std::size_t>>>);
+        static_assert(std::same_as<xstd::bit_valarray, xstd::basic_bit_valarray<std::vector<std::size_t, std::allocator<std::size_t>>>>);
 }
 
 // A size no difference_type can count is refused as std::vector<bool> refuses it, before anything is allocated.
@@ -176,7 +177,7 @@ BOOST_AUTO_TEST_CASE(ASizePastTheAddressableOnesThrowsLengthError)
         constexpr auto n = std::numeric_limits<std::size_t>::max();
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_valarray(n)), std::length_error);
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_valarray(true, n)), std::length_error);
-        auto v = xstd::basic_bit_valarray<std::uint8_t>(3UZ);
+        auto v = xstd::basic_bit_valarray<std::vector<std::uint8_t>>(3UZ);
         BOOST_CHECK_THROW(v.resize(n), std::length_error);
         BOOST_CHECK_EQUAL(v.size(), 3UZ);
 }

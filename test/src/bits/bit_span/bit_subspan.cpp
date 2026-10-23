@@ -60,7 +60,7 @@ auto twenty()
         return x;
 }
 
-using ViewedTypes = std::tuple<Owner, xstd::basic_bit_vector<std::uint8_t>>;
+using ViewedTypes = std::tuple<Owner, xstd::basic_bit_vector<std::vector<std::uint8_t>>>;
 
 } // namespace
 

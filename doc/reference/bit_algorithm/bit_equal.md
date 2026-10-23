@@ -9,7 +9,7 @@ As `ranges::equal` in [[alg.equal]](https://eel.is/c++draft/alg.equal), with:
     - the width their types fix, a window's extent where it has one and otherwise its storage's, is the same, or both
       widths are run-time values.
 
-    So `bit_array<8>` compares with `basic_bit_array<uint8_t, 8>` and `bit_vector` with `basic_bit_vector<uint8_t>`,
+    So `bit_array<8>` compares with `basic_bit_array<uint8_t, 8>` and `bit_vector` with `basic_bit_vector<vector<uint8_t>>`,
     and `bit_array<8>` does not compare with `bit_vector`, with `bit_array<9>` or with `bit_fixed_set<8>`, nor
     `bit_fixed_set<8>` with `bit_set` or with a set of the same keys under `greater<>`.
 - *Returns:* `ranges::equal(r1, r2)` over the elements in iteration order: for two sequences, whether the sizes and

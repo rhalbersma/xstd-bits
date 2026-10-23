@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE(ReversesAsRangesReverse)
         auto wrong = 0;
         for (auto const n : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 63UZ, 64UZ, 65UZ, 200UZ}) {
                 wrong += static_cast<int>(not agrees(test::algorithm::patterned(xstd::bit_vector(n))));
-                wrong += static_cast<int>(not agrees(test::algorithm::patterned(xstd::basic_bit_vector<std::uint8_t>(n))));
+                wrong += static_cast<int>(not agrees(test::algorithm::patterned(xstd::basic_bit_vector<std::vector<std::uint8_t>>(n))));
         }
         BOOST_CHECK_EQUAL(wrong, 0);
 }

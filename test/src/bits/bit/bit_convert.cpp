@@ -110,8 +110,8 @@ template<class Block>
 using sources_of = std::tuple<
         xstd::basic_bit_fixed_set<std::size_t, Block, 100>,
         xstd::basic_bit_array<Block, 100>,
-        xstd::basic_bit_set<std::size_t, Block>,
-        xstd::basic_bit_vector<Block>,
+        xstd::basic_bit_set<std::size_t, std::vector<Block>>,
+        xstd::basic_bit_vector<std::vector<Block>>,
         xstd::basic_bit_inplace_set<std::size_t, Block, 128>,
         xstd::basic_bit_inplace_vector<Block, 128>,
         xstd::basic_bit_small_set<std::size_t, Block, 128>,
@@ -123,8 +123,8 @@ using sources = decltype(std::tuple_cat(
 
 template<class Block>
 using targets_of = std::tuple<
-        xstd::basic_bit_set<std::size_t, Block>,
-        xstd::basic_bit_vector<Block>,
+        xstd::basic_bit_set<std::size_t, std::vector<Block>>,
+        xstd::basic_bit_vector<std::vector<Block>>,
         xstd::basic_bit_inplace_set<std::size_t, Block, 128>,
         xstd::basic_bit_inplace_vector<Block, 128>,
         xstd::basic_bit_small_set<std::size_t, Block, 128>,
@@ -366,7 +366,7 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthNarrowsByValue)
         BOOST_CHECK_EQUAL(xstd::bit_convert<std::bitset<70>>(wide).count(), 2UZ);
 #endif
 
-        auto const short_one = make<xstd::basic_bit_vector<std::uint8_t>>(3, {2});
+        auto const short_one = make<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(3, {2});
         BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_array<64>>(short_one)) == (std::vector<std::size_t>{2}));
         BOOST_CHECK((xstd::bit_convert<std::array<std::uint16_t, 2>>(short_one) == std::array<std::uint16_t, 2>{4, 0}));
 
@@ -412,7 +412,7 @@ BOOST_AUTO_TEST_CASE(ASetSourceGivesASequenceItsWholeBlocks)
 BOOST_AUTO_TEST_CASE(ASetTargetTakesWholeBlocksOfItsOwn)
 {
         auto const v = make<xstd::bit_vector>(70, {0, 69});
-        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::uint8_t>>(v)).size(), 72UZ);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>>(v)).size(), 72UZ);
         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::bit_set>(v)).size(), test::whole_blocks(70UZ));
 }
 
@@ -436,13 +436,13 @@ BOOST_AUTO_TEST_CASE(AWholeViewOfARunTimeWidthConvertsAsItsOwner)
 // A window converts from its own first position, at any offset into blocks of any width, into any block width.
 BOOST_AUTO_TEST_CASE(AWindowConvertsFromItsFirstPosition)
 {
-        auto v = make<xstd::basic_bit_vector<std::uint8_t>>(200, {3, 7, 64, 65, 100, 131, 199});
+        auto v = make<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(200, {3, 7, 64, 65, 100, 131, 199});
         for (auto const offset : {0UZ, 1UZ, 7UZ, 8UZ, 63UZ, 64UZ, 65UZ}) {
                 for (auto const length : {0UZ, 1UZ, 9UZ, 64UZ, 65UZ, 135UZ}) {
                         auto const window = xstd::bit_span(v).subspan(offset, length);
                         auto const expect = std::views::iota(offset, offset + length) | std::views::filter([&](std::size_t i) -> bool { return v[i]; }) | std::views::transform([&](std::size_t i) -> std::size_t { return i - offset; }) | std::ranges::to<std::vector>();
                         BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_vector>(window)) == expect);
-                        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::uint16_t>>(window)) == expect);
+                        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint16_t>>>(window)) == expect);
                         BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_set>(window)) == expect);
                         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(window).size(), length);
                 }
@@ -497,7 +497,7 @@ BOOST_AUTO_TEST_CASE(OnlyTheSameBlockContainerIsAdopted)
         using xstd::bits::detail::adopts_from;
         static_assert(adopts_from<xstd::bit_vector, xstd::bit_set> and adopts_from<xstd::bit_small_set<256>, xstd::bit_small_vector<256>>);
         static_assert(not adopts_from<xstd::bit_vector, xstd::bit_set&> and not adopts_from<xstd::bit_vector, xstd::bit_set const>);
-        static_assert(not adopts_from<xstd::bit_vector, xstd::basic_bit_set<std::size_t, std::uint8_t>>);
+        static_assert(not adopts_from<xstd::bit_vector, xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>>);
         static_assert(not adopts_from<xstd::bit_vector, xstd::bit_array<64>>);
 
         // An inplace capacity short of its blocks' last bit could not hold all of what it adopts.
@@ -525,7 +525,7 @@ BOOST_AUTO_TEST_CASE(ACopyLeavesTheSourceUnchanged)
         BOOST_CHECK(v == before);
         BOOST_CHECK(positions(s) == (std::vector<std::size_t>{1, 69}));
 
-        auto const narrow = xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::uint8_t>>(std::move(v));
+        auto const narrow = xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>>(std::move(v));
         BOOST_CHECK(v == before); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): a copy leaves the source, which is the check.
         BOOST_CHECK(positions(narrow) == (std::vector<std::size_t>{1, 69}));
 }
@@ -534,9 +534,9 @@ BOOST_AUTO_TEST_CASE(ACopyLeavesTheSourceUnchanged)
 BOOST_AUTO_TEST_CASE(TheConversionIsAConstantExpression)
 {
         static_assert([] -> bool {
-                auto s             = xstd::basic_bit_set<std::size_t, std::uint8_t>{3, 9, 20};
-                auto const wide    = xstd::bit_convert<xstd::basic_bit_vector<std::uint32_t>>(s);
-                auto const adopted = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(std::move(s));
+                auto s             = xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>{3, 9, 20};
+                auto const wide    = xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint32_t>>>(s);
+                auto const adopted = xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(std::move(s));
                 return wide.size() == 24UZ and wide[20] and adopted.size() == 24UZ and xstd::ranges::bit_count(adopted, true) == 3;
         }());
 #ifdef TEST_BYTES_ARE_POSITIONS
@@ -545,7 +545,7 @@ BOOST_AUTO_TEST_CASE(TheConversionIsAConstantExpression)
                 a[0]         = true;
                 a[69]        = true;
                 auto const s = xstd::bit_convert<xstd::bit_set>(a);
-                auto const v = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(std::bitset<70>(0b1011));
+                auto const v = xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(std::bitset<70>(0b1011));
                 return s.contains(69UZ) and s.size() == 2UZ and v.size() == 70UZ and xstd::ranges::bit_count(v, true) == 3;
         }());
 #endif
@@ -569,8 +569,8 @@ BOOST_AUTO_TEST_CASE(AStdBitsetIsASequenceOfItsWidth)
                 auto const v = xstd::bit_convert<xstd::bit_vector>(b);
                 BOOST_CHECK_EQUAL(v.size(), N);
                 BOOST_CHECK(positions(v) == keys);
-                BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::uint8_t>>(b)) == keys);
-                BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::uint16_t>>(b)) == keys);
+                BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>>(b)) == keys);
+                BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint16_t>>>(b)) == keys);
                 BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_small_set<128>>(b)) == keys);
                 BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_inplace_vector<128>>(b)) == keys);
         };

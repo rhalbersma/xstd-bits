@@ -3,7 +3,8 @@
 ## `basic_bit_set`, `bit_set`
 
 ```cpp
-template<class Key, unsigned_integer Block, bit_index_mapping<Key> KeyMapping, see below Compare, class Allocator>
+template<class Key, bit_storage Blocks = vector<size_t>, size_t N = dynamic_extent,
+         bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, see below Compare = less<Key>>
   requires see below
 class basic_bit_set {
 public:
@@ -12,7 +13,7 @@ public:
   using key_compare            = Compare;
   using value_type             = Key;
   using value_compare          = Compare;
-  using allocator_type         = Allocator;
+  using allocator_type         = typename Blocks::allocator_type;  // where Blocks has one
   using pointer                = void;
   using const_pointer          = void;
   using reference              = see below;
@@ -24,11 +25,12 @@ public:
   using reverse_iterator       = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
   using key_mapping_type       = KeyMapping;
-  using block_container_type   = vector<Block, Allocator>;
+  using block_container_type   = Blocks;
 
-  // construct: [set.cons]'s, with
-  constexpr basic_bit_set(from_blocks_t, vector<Block, Allocator> blocks) noexcept;
-  constexpr basic_bit_set(from_blocks_t, vector<Block, Allocator> blocks, const Allocator& a);
+  // construct: [set.cons]'s, each allocator form where Blocks has an allocator, with
+  constexpr basic_bit_set(from_blocks_t, block_container_type blocks)
+    noexcept(is_nothrow_move_constructible_v<block_container_type>);
+  constexpr basic_bit_set(from_blocks_t, block_container_type blocks, const allocator_type& a);
 
   // modifiers: [set.modifiers]'s, with
   constexpr auto insert(value_type x) -> pair<iterator, bool>;
@@ -57,11 +59,14 @@ constexpr auto operator<<(const basic_bit_set& x, size_t n) -> basic_bit_set;
 constexpr auto operator>>(const basic_bit_set& x, size_t n) -> basic_bit_set;
 ```
 
-As [[set]](https://eel.is/c++draft/set) for `set<Key, Compare, Allocator>`, with:
+As [[set]](https://eel.is/c++draft/set) for `set<Key, Compare>`, over the blocks of `Blocks` as
+[[flat.set]](https://eel.is/c++draft/flat.set) is over its `KeyContainer`, with:
 
-- `bit_set` is a set of `size_t` in `size_t` blocks, and `basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>`
-  a set of `Key` whose positions `KeyMapping` names, in a `vector<Block, Allocator>`. The requires-clause admits a
-  cv-unqualified `Block` whose digits are a power of two and at least `unsigned char`'s.
+- `bit_set` is a set of `size_t` in a `vector<size_t>`, and `basic_bit_set<Key, Blocks, N, KeyMapping, Compare>` a set
+  of `Key` whose positions `KeyMapping` names, in the blocks of `Blocks`. `Blocks` and the cap `N` are as
+  [`basic_bit_vector`](../bit_vector/bit_vector.md)'s, and `bit_inplace_set` and `bit_small_set` name two storages.
+  Where `Blocks` has an allocator, each constructor of [[set.cons]](https://eel.is/c++draft/set.cons) has its
+  allocator-extended form; where it has none, there is no allocator argument.
 - `KeyMapping` takes a key to its position by `to_index` and back by `from_index`, preserving order. A mapping that
   models `sized_bit_index_mapping` closes the universe at `KeyMapping::size` keys.
 - `Compare` is `less<Key>`, `less<>`, `greater<Key>` or `greater<>`: the order of the positions is fixed, so the
@@ -99,12 +104,13 @@ As [[set]](https://eel.is/c++draft/set) for `set<Key, Compare, Allocator>`, with
   descending keys that is the order of the two masks as unsigned numbers.
 - *`from_blocks` constructors:* *Effects:* Move `blocks` in, the second under `a`. Every bit is a position, so the
   set's keys are those whose positions are set. Under an allocator equal to theirs the second keeps their storage,
-  and under an unequal one it copies them into `a`'s. The guides deduce the block and the allocator.
+  and under an unequal one it copies them into `a`'s. The guides deduce the storage, capped at its constant capacity
+  where it has one.
 - *`replace`:* *Effects:* Moves `blocks` in, the keys becoming those whose positions are set. *`extract`:*
   *Returns:* the blocks, moved out. *Postconditions:* `empty()`. A set loses nothing in the round trip, its width
   being capacity.
-- The guides of [[set.overview]](https://eel.is/c++draft/set.overview) deduce `Key` as `size_t` and the block from
-  the allocator, `size_t` where none is given.
+- The guides of [[set.overview]](https://eel.is/c++draft/set.overview) deduce `Key` as `size_t` and a `vector` over
+  the block of the allocator, `vector<size_t>` where none is given.
 - **Enumerator operands.** Where `Key` is an enumeration and `KeyMapping` does not read it as a mask, an enumerator
   is the one-element set holding it: `&=`, `|=`, `^=` and `-=` take one on the right, and on an owner `&`, `|`, `^`
   and `-` take one on either side. The enumeration itself gains no operator. `|=` and `^=` throw as `insert` does.

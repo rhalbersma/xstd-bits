@@ -476,7 +476,7 @@ BOOST_AUTO_TEST_CASE(ToUnderlyingReadsTheKeyTheProxyConvertsTo)
 BOOST_AUTO_TEST_CASE(ADynamicWidthTogglesAnEnumeratorIn)
 {
         using test::set::piece;
-        auto x = xstd::basic_bit_set<piece, std::uint8_t>();
+        auto x = xstd::basic_bit_set<piece, std::vector<std::uint8_t>>();
         BOOST_CHECK(&(x ^= piece::king) == &x);
         BOOST_CHECK(x.contains(piece::king));
         BOOST_CHECK_EQUAL(x.size(), 1UZ);

@@ -2,9 +2,11 @@
 
 ```cpp
 namespace xstd {
-  // what holds the bits: one block, or a sized contiguous range of them
+  // what holds the bits: one block, or a sized contiguous range of them, and the storage an owner grows
   template<class Bits>
     concept bit_blocks = see below;
+  template<class Blocks>
+    concept bit_storage = see below;
 
   // what a set owner asks of the mapping that places its keys in bits
   template<class Mapping, class Key>
@@ -25,6 +27,7 @@ namespace xstd {
 | Header | Declares |
 | :----- | :------- |
 | [`<xstd/bits/bit_concepts/bit_blocks.hpp>`](bit_blocks.md) | `bit_blocks` |
+| [`<xstd/bits/bit_concepts/bit_storage.hpp>`](bit_storage.md) | `bit_storage` |
 | [`<xstd/bits/bit_concepts/bit_index_mapping.hpp>`](bit_index_mapping.md) | `bit_index_mapping` |
 | [`<xstd/bits/bit_concepts/sized_bit_index_mapping.hpp>`](sized_bit_index_mapping.md) | `sized_bit_index_mapping` |
 | [`<xstd/bits/bit_concepts/bit_mask_mapping.hpp>`](bit_mask_mapping.md) | `bit_mask_mapping` |

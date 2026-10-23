@@ -5,7 +5,7 @@ namespace xstd {
   // [inplace.vector], class template inplace_vector
   template<unsigned_integer Block, size_t N>
       requires see below
-    class basic_bit_inplace_vector;
+    using basic_bit_inplace_vector = basic_bit_vector<see below, N>;
   template<size_t N>
     using bit_inplace_vector = basic_bit_inplace_vector<size_t, N>;
 
@@ -18,17 +18,7 @@ namespace xstd {
 
 #define XSTD_BITS_HAS_CONSTEXPR_INPLACE 1                                     // see below
 
-namespace std {
-  template<class Block, size_t N>
-    struct hash<xstd::basic_bit_inplace_vector<Block, N>>;
-}
-
-namespace boost::container_hash {
-  template<class Block, size_t N>
-    struct is_range<xstd::basic_bit_inplace_vector<Block, N>> : false_type {};
-  template<class Block, size_t N>
-    struct is_tuple_like<xstd::basic_bit_inplace_vector<Block, N>> : false_type {};
-}
+// hash, is_range and is_tuple_like: basic_bit_vector's, exported again
 ```
 
 | Header | Declares |

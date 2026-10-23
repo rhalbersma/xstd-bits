@@ -150,8 +150,8 @@ template<class Hash>
 
 // Blocks of one width on every target, so that a message depends on the flavor alone.
 using fixed_set   = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 10>;
-using dynamic_set = xstd::basic_bit_set<std::size_t, std::uint64_t>;
-using sequence    = xstd::basic_bit_vector<std::uint64_t>;
+using dynamic_set = xstd::basic_bit_set<std::size_t, std::vector<std::uint64_t>>;
+using sequence    = xstd::basic_bit_vector<std::vector<std::uint64_t>>;
 
 // Every other position set, from the first on.
 template<class T>
@@ -322,10 +322,10 @@ BOOST_AUTO_TEST_CASE(EqualBitsHashEqualAcrossBlockTypes)
 
         // A run-time width at the narrowest and the widest word-sized block.
         test::for_each_type<std::tuple<std::uint8_t, std::uint64_t>>([]<class Block> -> void {
-                auto const growing = xstd::basic_bit_set<std::size_t, Block>({1, 64, 199});
+                auto const growing = xstd::basic_bit_set<std::size_t, std::vector<Block>>({1, 64, 199});
                 BOOST_CHECK_EQUAL(little_endian_digest<boost::hash2::fnv1a_64>(growing), 0x4EAC'991A'7BBE'935BULL);
 
-                auto const bools = alternating(xstd::basic_bit_vector<Block>(130));
+                auto const bools = alternating(xstd::basic_bit_vector<std::vector<Block>>(130));
                 BOOST_CHECK_EQUAL(little_endian_digest<boost::hash2::fnv1a_64>(bools), 0x6F6F'BA15'A239'791EULL);
         });
 }

@@ -40,6 +40,7 @@
 #include <limits>                                      // numeric_limits
 #include <ranges>                                      // bidirectional_range, from_range, iota, ranges::to, transform
 #include <set>                                         // set
+#include <span>                                        // dynamic_extent
 #include <stdexcept>                                   // length_error, out_of_range
 #include <tuple>                                       // tuple, tuple_cat
 #include <type_traits>                                 // underlying_type_t
@@ -136,9 +137,9 @@ constexpr bool compares_with = requires (X const& x, Y const& y) { x == y; };
 BOOST_AUTO_TEST_CASE(AnOwnerIsATypeOfItsOwnOverItsStorage)
 {
         static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 20>>, xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>, 20>>);
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_set<std::size_t, std::uint32_t>>, xstd::bits::detail::set_bits_t<std::vector<std::uint32_t>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_set<std::size_t, std::vector<std::uint32_t>>>, xstd::bits::detail::set_bits_t<std::vector<std::uint32_t>>>);
         static_assert(not compares_with<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 24>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>>>>);
-        static_assert(not compares_with<xstd::basic_bit_set<std::size_t, std::uint32_t>, xstd::bits::detail::set_adaptor<xstd::bits::detail::set_bits_t<std::vector<std::uint32_t>>>>);
+        static_assert(not compares_with<xstd::basic_bit_set<std::size_t, std::vector<std::uint32_t>>, xstd::bits::detail::set_adaptor<xstd::bits::detail::set_bits_t<std::vector<std::uint32_t>>>>);
         BOOST_CHECK(true);
 }
 
@@ -484,7 +485,7 @@ enum class flag : std::uint8_t
 
 // Every owning column over one closed mapping, as wide as its keys: a width, the heap, a capacity and inline blocks.
 template<class Key, std::size_t N, class KeyMapping = xstd::bit_key_mapping<Key>>
-using closed_columns = std::tuple<xstd::basic_bit_fixed_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::uint8_t, KeyMapping>, xstd::basic_bit_inplace_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_small_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::uint8_t, KeyMapping, std::greater<>>>;
+using closed_columns = std::tuple<xstd::basic_bit_fixed_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::vector<std::uint8_t>, std::dynamic_extent, KeyMapping>, xstd::basic_bit_inplace_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_small_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::vector<std::uint8_t>, std::dynamic_extent, KeyMapping, std::greater<>>>;
 
 // A range from zero with padding, one from a negative value, a list with gaps, a list across zero, and one-bit values.
 using closed_owners = decltype(std::tuple_cat(std::declval<closed_columns<test::set::day, 5UZ>>(), std::declval<closed_columns<test::set::level, 3UZ>>(), std::declval<closed_columns<test::set::piece, 6UZ>>(), std::declval<closed_columns<test::set::sign, 3UZ>>(), std::declval<closed_columns<flag, 6UZ, xstd::bit_flag_mapping<flag, 6UZ>>>()));
@@ -925,7 +926,7 @@ template<class Compare, std::size_t N>
 using fixed_by = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, N, xstd::bit_key_mapping<std::size_t>, Compare>;
 
 template<class Compare>
-using dynamic_by = xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, Compare>;
+using dynamic_by = xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, Compare>;
 
 using descending_fixed = fixed_by<std::greater<std::size_t>, 130>;
 
@@ -940,7 +941,7 @@ template<class Compare>
 constexpr bool small_takes = requires { typename xstd::basic_bit_small_set<std::size_t, std::uint8_t, 8, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
 
 template<class Compare>
-constexpr bool dynamic_takes = requires { typename xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+constexpr bool dynamic_takes = requires { typename xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
 
 template<class Compare>
 constexpr bool every_owner_takes = fixed_takes<Compare> and inplace_takes<Compare> and small_takes<Compare> and dynamic_takes<Compare>;
@@ -1129,7 +1130,7 @@ BOOST_AUTO_TEST_CASE(TheGuidesDeduceTheComparator)
 {
         auto const keys = std::vector<std::size_t>{2UZ, 9UZ, 4UZ};
         auto const s    = xstd::basic_bit_set(keys.begin(), keys.end(), std::greater<std::size_t>()); // NOLINT(modernize-use-transparent-functors): the key-typed form is the one deduced
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>> const>);
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::vector<std::size_t>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>> const>);
         BOOST_CHECK(std::ranges::equal(s, std::vector<std::size_t>{9UZ, 4UZ, 2UZ}));
 }
 
@@ -1193,7 +1194,7 @@ auto query_mismatches_over_pairs(std::size_t width)
 }
 
 using small_descending_fixed = xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 6, xstd::bit_key_mapping<std::size_t>, std::greater<>>;
-using small_descending_set   = xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::greater<>>;
+using small_descending_set   = xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::greater<>>;
 
 } // namespace
 
