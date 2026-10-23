@@ -1261,13 +1261,13 @@ private:
         {
                 if constexpr (has_static_width) {
                         if (x >= max_size()) {
-                                bits::detail::throw_exception(out_of_range(x));
+                                throw_out_of_range(x);
                         }
                 } else {
                         // A value that is no key ranks at or past the universe's size, as at a static width.
                         if constexpr (sized_bit_index_mapping<KeyMapping, Key>) {
                                 if (x >= static_cast<std::size_t>(KeyMapping::size)) {
-                                        bits::detail::throw_exception(out_of_range(x));
+                                        throw_out_of_range(x);
                                 }
                         }
                         // Past what a heap can count is length_error here, and past a capacity bad_alloc on growth.
@@ -1275,12 +1275,15 @@ private:
                 }
         }
 
-        [[nodiscard]] constexpr auto out_of_range(std::size_t x, std::source_location const& loc = std::source_location::current()) const
+        [[noreturn]] XSTD_BITS_COLD constexpr auto throw_out_of_range(std::size_t x, std::source_location const& loc = std::source_location::current()) const
+                -> void
         {
-                return std::out_of_range(
-                        std::format(
-                                "{}:{}:{}: exception: ‘{}‘: argument ‘x‘ is no key this set can hold [{} >= {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), x, max_size()
+                bits::detail::throw_exception(
+                        std::out_of_range(
+                                std::format(
+                                        "{}:{}:{}: exception: ‘{}‘: argument ‘x‘ is no key this set can hold [{} >= {}]",
+                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(), x, max_size()
+                                )
                         )
                 );
         }

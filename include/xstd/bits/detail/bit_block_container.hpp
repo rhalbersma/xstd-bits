@@ -511,7 +511,7 @@ public:
                 -> std::size_t
         {
                 if (n > max_width) {
-                        bits::detail::throw_exception(length_error(n));
+                        throw_length_error(n);
                 }
                 return n;
         }
@@ -521,7 +521,7 @@ public:
                 -> std::size_t
         {
                 if (n > max_addressable_width) {
-                        bits::detail::throw_exception(addressable_length_error(n));
+                        throw_addressable_length_error(n);
                 }
                 return n;
         }
@@ -1829,23 +1829,29 @@ private:
         }
 
         // std::length_error, what a container throws for a size it cannot represent; the readings inherit it.
-        [[nodiscard]] static constexpr auto length_error(std::size_t n, std::source_location const& loc = std::source_location::current())
+        [[noreturn]] XSTD_BITS_COLD static constexpr auto throw_length_error(std::size_t n, std::source_location const& loc = std::source_location::current())
+                -> void
         {
-                return std::length_error(
-                        std::format(
-                                "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width this storage can count [{} > {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_width
+                bits::detail::throw_exception(
+                        std::length_error(
+                                std::format(
+                                        "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width this storage can count [{} > {}]",
+                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_width
+                                )
                         )
                 );
         }
 
         // The same, against the ceiling a difference_type sets rather than the one a size_t sets.
-        [[nodiscard]] static constexpr auto addressable_length_error(std::size_t n, std::source_location const& loc = std::source_location::current())
+        [[noreturn]] XSTD_BITS_COLD static constexpr auto throw_addressable_length_error(std::size_t n, std::source_location const& loc = std::source_location::current())
+                -> void
         {
-                return std::length_error(
-                        std::format(
-                                "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width a distance can name [{} > {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_addressable_width
+                bits::detail::throw_exception(
+                        std::length_error(
+                                std::format(
+                                        "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width a distance can name [{} > {}]",
+                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_addressable_width
+                                )
                         )
                 );
         }

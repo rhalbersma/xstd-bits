@@ -1215,7 +1215,7 @@ public:
                 if (n < self.size()) {
                         return {&self.bits(), self.offset() + n};
                 }
-                bits::detail::throw_exception(out_of_range(n, self.size()));
+                throw_out_of_range(n, self.size());
         }
 
         // Both are preconditions in [sequence.reqmts]; each assert is spread so the coverage gate excludes it.
@@ -1449,12 +1449,15 @@ private:
                 return static_cast<size_type>(position - cbegin());
         }
 
-        [[nodiscard]] static constexpr auto out_of_range(std::size_t n, std::size_t width, std::source_location const& loc = std::source_location::current())
+        [[noreturn]] XSTD_BITS_COLD static constexpr auto throw_out_of_range(std::size_t n, std::size_t width, std::source_location const& loc = std::source_location::current())
+                -> void
         {
-                return std::out_of_range(
-                        std::format(
-                                "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is out of range [{} >= {}]",
-                                loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, width
+                bits::detail::throw_exception(
+                        std::out_of_range(
+                                std::format(
+                                        "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is out of range [{} >= {}]",
+                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, width
+                                )
                         )
                 );
         }
