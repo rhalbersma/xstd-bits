@@ -343,7 +343,7 @@ if(PROJECT_IS_TOP_LEVEL)
         option(${project_option_prefix}_BUILD_STD_TEST_SUITES "Run the standard libraries' test suites against the containers they mirror" OFF)
 
         if(${project_option_prefix}_BUILD_STD_TEST_SUITES)
-            add_subdirectory(test/std_test_suite)
+            add_subdirectory(test/std-test-suite)
         endif()
     endif()
 
