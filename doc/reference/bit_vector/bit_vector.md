@@ -48,7 +48,8 @@ As [[vector.bool]](https://eel.is/c++draft/vector.bool), over the blocks of `Blo
 
 - `bit_vector` holds its bits in a `vector<size_t>`. `Blocks` is any [`bit_storage`](../bit_concepts/bit_storage.md):
   `vector` over another block or allocator, `pmr::vector` over an arena, `inplace_vector`, Boost's `static_vector` and
-  `small_vector`, or a container of the user's own. `bit_inplace_vector` and `bit_small_vector` name two of them.
+  `small_vector`, or a container of the user's own. `bit_inplace_vector` names the inline one, and the aliases under
+  [`ext/`](../ext_boost/index.md) name other libraries' containers.
 - `N` caps the width in bits. It defaults to `dynamic_extent`: no cap over a storage of no constant capacity, and its
   whole blocks over one with a constant capacity, such as `inplace_vector<Block, K>`. A cap is admitted only over a
   constant capacity, and only in its last block, so `N` is at most that capacity and more than the blocks before it.

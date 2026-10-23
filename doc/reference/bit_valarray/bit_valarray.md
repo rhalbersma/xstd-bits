@@ -99,8 +99,8 @@ public:
 As [[template.valarray]](https://eel.is/c++draft/template.valarray) for `valarray<bool>`, with:
 
 - `bit_valarray` holds its bools in a `vector<size_t>`. `Blocks` and the cap `N` are as
-  [`basic_bit_vector`](../bit_vector/bit_vector.md)'s, and `bit_inplace_valarray` and `bit_small_valarray` name two
-  storages. There is no allocator argument or `get_allocator`.
+  [`basic_bit_vector`](../bit_vector/bit_vector.md)'s; `bit_fixed_valarray` and `bit_inplace_valarray` name the
+  standard ones. There is no allocator argument or `get_allocator`.
 - `reference` is the sequence reading's proxy, standing in for `T&`; the `const` subscript returns a `bool`. The
   iterators `begin` and `end` return are the sequence reading's, so it is a random-access range with no member
   `begin` or `end`, and `bit_span` views it as `span<bool>` views a `valarray<bool>`.

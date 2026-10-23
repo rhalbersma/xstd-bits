@@ -19,8 +19,9 @@ The library's own terms are used throughout:
 - A *block* is an unsigned integer holding bits. Position `i` is bit `i % D` of block `i / D`, where `D` is the
   block's `numeric_limits<Block>::digits`.
 - The *storage* holds the blocks: *fixed*, the width the type's; *inplace*, a run-time width within a capacity the
-  type carries, the blocks held inline; *small*, inline up to a capacity and on the heap past it; or *dynamic*, on
-  the heap.
+  type carries, the blocks held inline; or *dynamic*, on the heap. Each has a standard backend: `array`,
+  `inplace_vector` and `vector`. Any other container is a `bit_storage` argument; the aliases over other libraries'
+  containers, such as Boost's `small_vector`, are under [`ext/`](ext_boost/index.md) and are not related here.
 - An *owner* holds its storage, and a *view* refers to storage another object holds.
 - A *reading* is what the bits mean: a *sequence* of `bool`, a *set* of keys, or a *valarray*, the sequence read
   elementwise.
@@ -91,11 +92,11 @@ clause where one is shared.
 | `tuple_size`<br>`tuple_element`<br>`get` | Extends | [[array.tuple]](https://eel.is/c++draft/array.tuple) specializations and an overload for `basic_bit_array` |
 | `erase`<br>`erase_if` | Generalizes | [[vector.erasure]](https://eel.is/c++draft/vector.erasure) [[inplace.vector.erasure]](https://eel.is/c++draft/inplace.vector.erasure) [[set.erasure]](https://eel.is/c++draft/set.erasure) for the packed sequences and sets |
 | `bit_vector` | Generalizes | [[vector.bool]](https://eel.is/c++draft/vector.bool) packed into blocks, which `vector<bool>` leaves to the implementation |
-| `basic_bit_vector`<br>`basic_bit_small_vector`<br>`bit_small_vector` | New | [[vector.bool]](https://eel.is/c++draft/vector.bool) customizing the storage, and with it the block type and the allocator, and capping the width; the small storage is inline up to a capacity and on the heap past it, through Boost.Container's `small_vector` |
+| `basic_bit_vector` | New | [[vector.bool]](https://eel.is/c++draft/vector.bool) customizing the storage, and with it the block type and the allocator, and capping the width |
 | `bit_inplace_vector` | Generalizes | [[inplace.vector]](https://eel.is/c++draft/inplace.vector) of `bool`, packed |
 | `basic_bit_inplace_vector` | New | [[inplace.vector]](https://eel.is/c++draft/inplace.vector) customizing the block type, as `basic_bit_vector` over inline blocks |
 | `bit_set` | Generalizes | [[set]](https://eel.is/c++draft/set) of positions, one bit per possible key, packed into blocks |
-| `basic_bit_set`<br>`basic_bit_fixed_set`<br>`basic_bit_inplace_set`<br>`basic_bit_small_set`<br>`bit_fixed_set`<br>`bit_inplace_set`<br>`bit_small_set` | New | [[set]](https://eel.is/c++draft/set) customizing the key mapping and the storage, and with it the block type and the allocator: at a fixed width, within an inline capacity, or small |
+| `basic_bit_set`<br>`basic_bit_fixed_set`<br>`basic_bit_inplace_set`<br>`bit_fixed_set`<br>`bit_inplace_set` | New | [[set]](https://eel.is/c++draft/set) customizing the key mapping and the storage, and with it the block type and the allocator: at a fixed width or within an inline capacity |
 | `bit_set_view` | New | none: no standard view reads a range as a set |
 | `bit_find_mapping`<br>`bit_flag_mapping`<br>`bit_key_mapping`<br>`bit_range_mapping`<br>`enum_traits` | New | none; `bit_key_mapping` is specialized per key as `char_traits` is, [[char.traits]](https://eel.is/c++draft/char.traits) |
 | `bit_storage` | New | [[flat.set.overview]](https://eel.is/c++draft/flat.set.overview) as `flat_set` constrains its `KeyContainer`, for the blocks an owner keeps |
@@ -110,7 +111,7 @@ clause where one is shared.
 | `bit_intersects`<br>`bit_disjoint` | New | [[alg.set.operations]](https://eel.is/c++draft/alg.set.operations) none: the standard has no test of whether two sets share an element |
 | `bit_lexicographical_compare_three_way` | Proposed | [[alg.three.way]](https://eel.is/c++draft/alg.three.way) over two ranges, as [P2022R3](https://wg21.link/p2022r3) proposes `ranges::lexicographical_compare_three_way` |
 | `bit_valarray`<br>`bit_slice`<br>`bit_slice_array`<br>`bit_gslice`<br>`bit_gslice_array`<br>`bit_mask_array`<br>`bit_indirect_array` | Generalizes | [[numarray]](https://eel.is/c++draft/numarray) of `bool`, packed, with the slices and helper arrays that select from it |
-| `basic_bit_valarray`<br>`basic_bit_fixed_valarray`<br>`basic_bit_inplace_valarray`<br>`basic_bit_small_valarray`<br>`bit_fixed_valarray`<br>`bit_inplace_valarray`<br>`bit_small_valarray` | New | [[numarray]](https://eel.is/c++draft/numarray) customizing the storage, and with it the block type and the allocator: at a fixed width, within an inline capacity, or small |
+| `basic_bit_valarray`<br>`basic_bit_fixed_valarray`<br>`basic_bit_inplace_valarray`<br>`bit_fixed_valarray`<br>`bit_inplace_valarray` | New | [[numarray]](https://eel.is/c++draft/numarray) customizing the storage, and with it the block type and the allocator: at a fixed width or within an inline capacity |
 | `bit_rebind`<br>`bit_resize` | Generalizes | [[simd.traits]](https://eel.is/c++draft/simd.traits) from [P1928R15](https://wg21.link/p1928r15), for owners rather than `simd` types |
 
 </div>
@@ -137,7 +138,7 @@ in another language where that counterpart shares its purpose. A container that 
 - **`bit_vector`, and `vector<bool>`:** the SGI STL's [`bit_vector`](https://stl.boost.org/bit_vector.html), a
   class of its own for want of partial specialization, and [N1847](https://wg21.link/n1847), *vector<bool>: More
   Problems, Better Solutions* (Herb Sutter).
-- **The dynamic and small storages:**
+- **The dynamic storage, and the containers under `ext/`:**
     - [`boost::dynamic_bitset`](https://www.boost.org/doc/libs/release/libs/dynamic_bitset/), and
       [N2050](https://wg21.link/n2050), *Proposal to Add a Dynamically Sizeable Bitset to the Standard Library
       Technical Report Revision 1* (J. Allsop, A. Meredith, G. Prota), which proposed it for the standard.
@@ -146,8 +147,8 @@ in another language where that counterpart shares its purpose. A container that 
       EASTL's [`bitvector`](https://github.com/electronicarts/EASTL/blob/master/include/EASTL/bitvector.h) and Qt's
       [`QBitArray`](https://doc.qt.io/qt-6/qbitarray.html).
     - Boost.Container's
-      [`small_vector`](https://www.boost.org/doc/libs/release/doc/html/boost/container/small_vector.html), which holds
-      the small column, and `static_vector`, which holds the inplace one below C++26.
+      [`small_vector`](https://www.boost.org/doc/libs/release/doc/html/boost/container/small_vector.html), which
+      `ext/boost/`'s small aliases adopt, and `static_vector`, which holds the inplace storage below C++26.
 - **`bit_inplace_vector`, `bit_inplace_set`, `bit_inplace_valarray`:** [P0843R14](https://wg21.link/p0843r14),
   *inplace_vector* (Gonzalo Brito Gadeschi, Timur Doumler, Nevin Liber, David Sankel).
 - **`bit_span`, `bit_subspan` and the proxies:**

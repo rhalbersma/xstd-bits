@@ -102,7 +102,7 @@ interoperate through `xstd::bit_convert` instead.
 | reading  | standard counterpart                                                       | packed here as                                              |
 | :------- | :------------------------------------------------------------------------- | :---------------------------------------------------------- |
 | sequence | `std::array<bool, N>`, `std::inplace_vector<bool, N>`, `std::vector<bool>` | `bit_array`, `bit_inplace_vector`, `bit_vector`             |
-| valarray | `std::valarray<bool>`                                                      | `bit_fixed_valarray`, `bit_inplace_valarray`, `bit_small_valarray`, `bit_valarray` |
+| valarray | `std::valarray<bool>`                                                      | `bit_fixed_valarray`, `bit_inplace_valarray`, `bit_valarray` |
 | set      | `std::set<std::size_t>`                                                    | `bit_fixed_set`, `bit_inplace_set`, `bit_set`               |
 | string   | `std::string`                                                              | `bit_string` (planned)                                      |
 
@@ -135,9 +135,10 @@ xstd-bits is **twelve containers**: two readings of a block of bits — an order
 | :------------------------------------------------ | :---------------------- | :----------------------------------- | :------------------------ |
 | fixed at compile time                             | `bit_fixed_set<N>`      | `bit_array<N>`                       | `bit_fixed_valarray<N>`   |
 | at most `N`, never more                           | `bit_inplace_set<N>`    | `bit_inplace_vector<N>`              | `bit_inplace_valarray<N>` |
-| usually at most `N`, inline; more on the heap     | `bit_small_set<N>`      | `bit_small_vector<N>`                | `bit_small_valarray<N>`   |
 | known only at run time                            | `bit_set`               | `bit_vector`                         | `bit_valarray`            |
 | whatever bits someone else owns                   | `bit_set_view`          | `bit_span`, and `bit_subspan` for a part of it | `bit_span` over one, as `std::span<bool>` over a `std::valarray<bool>` |
+
+The fixed, inplace and dynamic rows are the standard backends, `std::array`, `std::inplace_vector` and `std::vector`. Any other container holds the blocks through the `basic_` forms, such as `basic_bit_vector<Blocks>`, and `ext/boost/` names Boost's `small_vector` this way: `bit_small_set<N>`, `bit_small_vector<N>` and `bit_small_valarray<N>` keep up to `N` bits inline and the rest on the heap.
 
 Three specializations of the fixed set cover the keys a set most often holds:
 
