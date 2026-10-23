@@ -27,7 +27,7 @@ jobs:
   clang_cl_ladder:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@1b5265b916e459cfe621a970e819b6b16a29c3c5 # main after rhalbersma/cpp-ci#81, whose install-gcc falls back to the Launchpad librarian when the toolchain PPA's mirror is down
+    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@acbf0f0b3ed85dcabf95cd0d4806c0fa7c451ecf # main after rhalbersma/cpp-ci#83, with the std_test_suite adapters of rhalbersma/cpp-ci#82
     with:
       toolset: ClangCL,host=x64
       preview_toolset_prefix: "ClangCL,"

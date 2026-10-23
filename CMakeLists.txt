@@ -211,6 +211,7 @@ target_sources(
         include/xstd/bits/detail/comparisons.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp
         include/xstd/bits/detail/hash.hpp
+        include/xstd/bits/detail/input_iterator_pair.hpp
         include/xstd/bits/detail/intrinsic.hpp
         include/xstd/bits/bit_set/detail/flag_block.hpp
         include/xstd/bits/detail/ordinal.hpp
@@ -342,6 +343,13 @@ if(PROJECT_IS_TOP_LEVEL)
         option(${project_option_prefix}_BUILD_HARDENED_TESTS "Build the test that breaks each precondition a hardened release checks" ON)
 
         add_subdirectory(test)
+
+        # Off by default, and one libc++ leg turns it on. The standard libraries' own test suites, written against the paragraphs by people who never saw this library, rewritten onto its spelling: a check whose authors have no stake in the answer. Needs git and Python 3.11.
+        option(${project_option_prefix}_BUILD_STD_TEST_SUITES "Run the standard libraries' test suites against the containers they mirror" OFF)
+
+        if(${project_option_prefix}_BUILD_STD_TEST_SUITES)
+            add_subdirectory(test/std-test-suite)
+        endif()
     endif()
 
     # Off by default, and outside BUILD_TESTING: ClusterFuzzLite builds the fuzz targets alone, without the test tree's Boost.Test and range-v3. Clang only, libFuzzer being clang's.

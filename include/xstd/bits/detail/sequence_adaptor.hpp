@@ -16,6 +16,7 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                  // three_way
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
+#include <xstd/bits/detail/input_iterator_pair.hpp>          // input_iterator_pair
 #include <xstd/bits/detail/non_volatile.hpp>                 // non_volatile
 #include <xstd/bits/detail/owner_members.hpp>                // owner_members
 #include <xstd/bits/detail/ownership.hpp>                    // owned_storage, owner_of, owns, reads, sequence_reading_tag, storage, storage_access, window
@@ -496,6 +497,9 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
                 // Writable where the storage is not const: a const storage has no assign to reach.
                 static constexpr bool is_writable = not std::is_const_v<storage_type> and requires (storage_type& c, std::size_t n, value_type value) { c.assign(n, value); };
 
+                // The const twin, whose conversion below reads these members; names itself where this is the const one.
+                friend class basic_reference<true>;
+
                 friend sequence_adaptor;
 
                 friend class basic_iterator<IsConst>;
@@ -510,6 +514,14 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
         public:
                 // Said out loud: the assignments below are user-provided, deprecating the implicit copy constructor.
                 basic_reference(basic_reference const&) = default;
+
+                // A mutable reference converts to its const twin, as std::vector<bool>::reference does to bool.
+                template<bool OtherConst>
+                        requires (IsConst and not OtherConst)
+                [[nodiscard]] constexpr explicit(false) basic_reference(basic_reference<OtherConst> other) noexcept // NOLINT(misc-explicit-constructor)
+                        : m_ptr(other.m_ptr)
+                        , m_idx(other.m_idx)
+                {}
 
                 [[nodiscard]] constexpr auto operator&() const noexcept
                         -> iterator
@@ -656,8 +668,8 @@ public:
                 }
         }
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
+        template<class I, class S>
+                requires bits::detail::input_iterator_pair<I, S> and can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr sequence_adaptor(I first, S last)
         {
                 // A capacity of nought refuses any element outright, rather than through a loop that cannot go round.
@@ -729,8 +741,8 @@ public:
                 }
         }
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>> and is_allocator_aware
+        template<class I, class S>
+                requires bits::detail::input_iterator_pair<I, S> and can_grow and std::constructible_from<value_type, std::iter_reference_t<I>> and is_allocator_aware
         [[nodiscard]] constexpr sequence_adaptor(I first, S last, allocator_param const& alloc)
                 : members_type(std::in_place, alloc)
         {
@@ -781,8 +793,8 @@ public:
                 m_bits.resize(bits_type::check_addressable_width(n), value);
         }
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
+        template<class I, class S>
+                requires bits::detail::input_iterator_pair<I, S> and can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
         constexpr auto assign(I first, S last)
                 -> void
         {
@@ -878,12 +890,22 @@ public:
                 return begin() + static_cast<difference_type>(pos);
         }
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
+        template<class I, class S>
+                requires bits::detail::input_iterator_pair<I, S> and can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
         constexpr auto insert(const_iterator position, I first, S last)
                 -> iterator
         {
-                return insert_range(position, std::ranges::subrange(first, last));
+                if constexpr (std::input_iterator<I> and std::sentinel_for<S, I>) {
+                        return insert_range(position, std::ranges::subrange(first, last));
+                } else {
+                        // A C++17 input iterator pair makes no range, so it is read once into the rebuilt sequence.
+                        auto const pos = index_of(position);
+                        return rebuild(pos, pos, [&](sequence_adaptor& tmp) -> void {
+                                for (; first != last; ++first) {
+                                        tmp.m_bits.push_back(static_cast<value_type>(*first));
+                                }
+                        });
+                }
         }
 
         constexpr auto insert(const_iterator position, std::initializer_list<value_type> il)
