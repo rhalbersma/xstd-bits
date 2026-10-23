@@ -84,6 +84,10 @@ As [[set]](https://eel.is/c++draft/set) for `set<Key, Compare>`, over the blocks
   growth that reallocates the blocks invalidates none.
 - `insert` takes its key by value, one overload where [[set]](https://eel.is/c++draft/set) has two. `emplace` and
   `emplace_hint` take at most one argument, from which a `Key` is made.
+- An iterator pair is taken where [[set.cons]](https://eel.is/c++draft/set.cons) and `insert` take one: an
+  `InputIterator` qualifies by its `iterator_category`, as
+  [[container.requirements.general]](https://eel.is/c++draft/container.requirements.general) has it, so a C++17 input
+  iterator with no default constructor or no `const` `operator*` is taken, and so is a C++20 iterator with its sentinel.
 - `size()` counts the keys, and runs in constant time, the count being kept beside the blocks. A key past the width
   grows the width; the width is capacity and never value.
 - `max_size()` answers the keys the storage could hold, and no more than `KeyMapping::size` where the mapping names

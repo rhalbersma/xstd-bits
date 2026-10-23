@@ -25,7 +25,7 @@ public:
 
 using bit_vector = basic_bit_vector<>;
 
-template<input_iterator InputIterator, class Allocator = allocator<size_t>>
+template<class InputIterator, class Allocator = allocator<size_t>>
     requires simple_allocator<Allocator>
   basic_bit_vector(InputIterator, InputIterator, Allocator = Allocator())
     -> basic_bit_vector<vector<typename Allocator::value_type, Allocator>>;
@@ -56,7 +56,11 @@ As [[vector.bool]](https://eel.is/c++draft/vector.bool), over the blocks of `Blo
   `basic_bit_inplace_vector`'s, and so are the modifiers that refuse growth past it.
 - The reference and the iterator are `basic_bit_array`'s. [[vector.bool]](https://eel.is/c++draft/vector.bool)'s
   extras are left out: `flip()` on the container and on the proxy, and the static `swap(reference, reference)`.
-  `const_reference` is a read-only proxy rather than `bool`.
+  `const_reference` is a read-only proxy rather than `bool`, and a `reference` converts to it.
+- An iterator pair is taken where [[sequence.reqmts]](https://eel.is/c++draft/sequence.reqmts) takes one: an
+  `InputIterator` qualifies by its `iterator_category`, as
+  [[container.requirements.general]](https://eel.is/c++draft/container.requirements.general) has it, so a C++17 input
+  iterator with no default constructor or no `const` `operator*` is taken, and so is a C++20 iterator with its sentinel.
 - `push_back` returns `void`, as [[vector.bool.pspc]](https://eel.is/c++draft/vector.bool.pspc) has it, where the
   storage has no constant capacity. Growth goes through the blocks' own `resize`, so the storage's growth policy picks
   the capacity: `n` appends at the end make O(log n) allocations over `vector`.

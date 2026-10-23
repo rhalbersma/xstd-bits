@@ -10,13 +10,14 @@
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>   // bit_includes
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp> // bit_intersects
 #include <xstd/bits/bit_set.hpp>                      // hash
-#include <xstd/bits/bit_set/bit_fixed_set.hpp>        // basic_bit_fixed_set
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>        // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>      // bit_key_mapping, bit_range_mapping
 #include <xstd/bits/bit_set/bit_set.hpp>              // bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>         // bit_set_view
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp>   // set_adaptor
 #include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container, set_bits_t
 #include <xstd/bits/detail/ownership.hpp>             // owned_bits_t, storage
+#include <boost/iterator/function_input_iterator.hpp> // make_function_input_iterator
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                  // equal, ranges::equal
 #include <array>                                      // array
@@ -28,7 +29,7 @@
 #include <format>                                     // format
 #include <functional>                                 // greater, hash, less
 #include <initializer_list>                           // initializer_list
-#include <iterator>                                   // iter_value_t
+#include <iterator>                                   // iter_value_t, sentinel_for
 #include <memory>                                     // allocator
 #include <ranges>                                     // equal, iota, reverse, to
 #include <set>                                        // set
@@ -240,6 +241,28 @@ BOOST_AUTO_TEST_CASE(ItDeducesAsStdSetDoes)
 
         BOOST_CHECK(a == c and c == e);
         BOOST_CHECK(std::ranges::equal(b, a) and std::ranges::equal(d, a) and std::ranges::equal(f, a) and g == b);
+}
+
+// Boost's function_input_iterator has no default constructor, so no sentinel_for, yet std::set takes it.
+BOOST_AUTO_TEST_CASE(ItTakesACpp17InputIteratorPairAsStdSetDoes)
+{
+        auto multiples_of_three = [k = 0UZ]() mutable -> std::size_t { return 3UZ * k++; };
+        auto const first        = boost::make_function_input_iterator(multiples_of_three, 0);
+        auto const last         = boost::make_function_input_iterator(multiples_of_three, 4);
+        static_assert(not std::sentinel_for<decltype(first), decltype(first)>);
+
+        auto s = xstd::basic_bit_set(first, last);
+        static_assert(std::same_as<decltype(s), xstd::bit_set>);
+        BOOST_CHECK(s == (xstd::bit_set{0UZ, 3UZ, 6UZ, 9UZ}));
+
+        auto ones = [] -> std::size_t { return 1UZ; };
+        s.insert(boost::make_function_input_iterator(ones, 0), boost::make_function_input_iterator(ones, 2));
+        BOOST_CHECK(s == (xstd::bit_set{0UZ, 1UZ, 3UZ, 6UZ, 9UZ}));
+
+        auto const t = xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>(boost::make_function_input_iterator(ones, 0), boost::make_function_input_iterator(ones, 1), std::allocator<std::uint8_t>());
+        BOOST_CHECK(std::ranges::equal(t, std::array{1UZ}));
+        auto const u = xstd::bit_fixed_set<8>(boost::make_function_input_iterator(ones, 0), boost::make_function_input_iterator(ones, 1));
+        BOOST_CHECK(std::ranges::equal(u, std::array{1UZ}));
 }
 
 // A strong index keys the set through bit_key_mapping, and the set answers as std::set<strong_index> does.

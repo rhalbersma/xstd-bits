@@ -211,6 +211,7 @@ target_sources(
         include/xstd/bits/detail/comparisons.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp
         include/xstd/bits/detail/hash.hpp
+        include/xstd/bits/detail/input_iterator_pair.hpp
         include/xstd/bits/detail/intrinsic.hpp
         include/xstd/bits/bit_set/detail/flag_block.hpp
         include/xstd/bits/detail/ordinal.hpp
