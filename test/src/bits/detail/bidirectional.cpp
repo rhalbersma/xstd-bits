@@ -33,6 +33,7 @@
 #include <set>                                      // set
 #include <type_traits>                              // is_assignable_v, is_constructible_v, is_convertible_v, is_trivially_destructible_v
 #include <utility>                                  // cmp_equal, declval
+#include <vector>                                   // vector
 
 namespace {
 
@@ -464,7 +465,7 @@ BOOST_AUTO_TEST_CASE(AKeysHiddenFriendsDecideBesideAHostileStorageAndKeyMapping)
 BOOST_AUTO_TEST_CASE(EverySetClosesItsProxyPair)
 {
         static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65>>);
-        static_assert(test::closed_proxies<xstd::basic_bit_set<std::size_t, std::uint64_t>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_set<std::size_t, std::vector<std::uint64_t>>>);
         static_assert(test::closed_proxies<xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 65>>);
         static_assert(test::closed_proxies<xstd::basic_bit_small_set<std::size_t, std::uint64_t, 65>>);
         static_assert(test::closed_proxies<xstd::basic_bit_fixed_set<key, std::uint64_t, 65, key_mapping>>);

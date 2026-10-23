@@ -3,10 +3,10 @@
 ```cpp
 namespace xstd {
   // [template.valarray], class template valarray, beside it the fixed and inplace columns
-  template<unsigned_integer Block, class Allocator = allocator<Block>>
+  template<bit_storage Blocks = vector<size_t>, size_t N = dynamic_extent>
       requires see below
     class basic_bit_valarray;
-  using bit_valarray = basic_bit_valarray<size_t>;
+  using bit_valarray = basic_bit_valarray<>;
   template<unsigned_integer Block, size_t N>
       requires see below
     class basic_bit_fixed_valarray;
@@ -14,7 +14,7 @@ namespace xstd {
     using bit_fixed_valarray = basic_bit_fixed_valarray<size_t, N>;
   template<unsigned_integer Block, size_t N>
       requires see below
-    class basic_bit_inplace_valarray;
+    using basic_bit_inplace_valarray = basic_bit_valarray<see below, N>;
   template<size_t N>
     using bit_inplace_valarray = basic_bit_inplace_valarray<size_t, N>;
 

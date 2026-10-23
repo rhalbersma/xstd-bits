@@ -6,82 +6,117 @@
 #ifndef XSTD_BITS_BIT_VECTOR_BIT_VECTOR_HPP
 #define XSTD_BITS_BIT_VECTOR_BIT_VECTOR_HPP
 
+#include <xstd/bits/bit_concepts/bit_storage.hpp>            // bit_storage
 #include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks, from_blocks_t
+#include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_param_t
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
-#include <xstd/bits/detail/num_blocks.hpp>                   // tiling_block
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
-#include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
+#include <xstd/bits/detail/storage_rebind.hpp>               // fits_storage, storage_owner, storage_rebind, storage_width_v
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
 #include <xstd/misc/concepts/simple_allocator.hpp>           // simple_allocator
 #include <cstddef>                                           // size_t
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator
-#include <memory>                                            // allocator, allocator_traits
+#include <memory>                                            // allocator
 #include <ranges>                                            // from_range, from_range_t, input_range
-#include <type_traits>                                       // type_identity_t
+#include <span>                                              // dynamic_extent
+#include <type_traits>                                       // is_nothrow_move_constructible_v
 #include <utility>                                           // forward, move
 #include <vector>                                            // vector
 
 namespace xstd {
 
-// The sequence reading over a heap of blocks: std::vector<bool> under the name Hinnant proposed for it.
-template<xstd::unsigned_integer Block, class Allocator = std::allocator<Block>>
-        requires bits::detail::tiling_block<Block>
-class basic_bit_vector : public bits::detail::sequence_adaptor<bits::detail::bit_block_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_vector<Block, Allocator>>
+// The sequence reading over a storage of blocks, at most N bits of them: std::vector<bool> under Hinnant's name for it.
+template<bit_storage Blocks = std::vector<std::size_t>, std::size_t N = std::dynamic_extent>
+        requires bits::detail::fits_storage<Blocks, N>
+class basic_bit_vector : public bits::detail::sequence_adaptor<bits::detail::bit_block_container<Blocks, bits::detail::storage_width_v<Blocks, N>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_vector<Blocks, N>>
 {
-        using base_type = bits::detail::sequence_adaptor<bits::detail::bit_block_container<std::vector<Block, Allocator>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_vector<Block, Allocator>>;
+        using base_type = bits::detail::sequence_adaptor<bits::detail::bit_block_container<Blocks, bits::detail::storage_width_v<Blocks, N>>, bits::detail::storage::owned, bits::detail::window::all, basic_bit_vector<Blocks, N>>;
+
+        // An allocator argument where the storage has an allocator, and no overload taking one where it has none.
+        using allocator_param = bits::detail::allocator_param_t<Blocks>;
 
 public:
-        using typename base_type::allocator_type;
+        using typename base_type::block_container_type;
         using typename base_type::size_type;
 
-        // [vector.bool.pspc]'s constructors, in its order.
-        [[nodiscard]] constexpr basic_bit_vector() noexcept(noexcept(Allocator()))
-                : basic_bit_vector(Allocator())
-        {}
+        // [vector.bool.pspc]'s constructors, in its order, each beside its allocator-extended form.
+        [[nodiscard]] basic_bit_vector() = default;
 
-        [[nodiscard]] constexpr explicit basic_bit_vector(Allocator const& a) noexcept
+        // [allocator.requirements.general] forbids an allocator copy to throw, and empty blocks allocate nothing.
+        [[nodiscard]] constexpr explicit basic_bit_vector(allocator_param const& a) noexcept
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(a)
         {}
 
-        [[nodiscard]] constexpr explicit basic_bit_vector(size_type n, Allocator const& a = Allocator())
+        [[nodiscard]] constexpr explicit basic_bit_vector(size_type n)
+                : base_type(n)
+        {}
+
+        [[nodiscard]] constexpr explicit basic_bit_vector(size_type n, allocator_param const& a)
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(n, a)
         {}
 
-        [[nodiscard]] constexpr basic_bit_vector(size_type n, bool const& value, Allocator const& a = Allocator())
+        [[nodiscard]] constexpr basic_bit_vector(size_type n, bool const& value)
+                : base_type(n, value)
+        {}
+
+        [[nodiscard]] constexpr basic_bit_vector(size_type n, bool const& value, allocator_param const& a)
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(n, value, a)
         {}
 
         template<std::input_iterator InputIterator>
-        [[nodiscard]] constexpr basic_bit_vector(InputIterator first, InputIterator last, Allocator const& a = Allocator())
+        [[nodiscard]] constexpr basic_bit_vector(InputIterator first, InputIterator last)
+                : base_type(first, last)
+        {}
+
+        template<std::input_iterator InputIterator>
+                requires bits::detail::allocator_aware<Blocks>
+        [[nodiscard]] constexpr basic_bit_vector(InputIterator first, InputIterator last, allocator_param const& a)
                 : base_type(first, last, a)
         {}
 
         template<xstd::container_compatible_range<bool> R>
-        [[nodiscard]] constexpr basic_bit_vector(std::from_range_t, R&& rg, Allocator const& a = Allocator())
+        [[nodiscard]] constexpr basic_bit_vector(std::from_range_t, R&& rg)
+                : base_type(std::from_range, std::forward<R>(rg))
+        {}
+
+        template<xstd::container_compatible_range<bool> R>
+                requires bits::detail::allocator_aware<Blocks>
+        [[nodiscard]] constexpr basic_bit_vector(std::from_range_t, R&& rg, allocator_param const& a)
                 : base_type(std::from_range, std::forward<R>(rg), a)
         {}
 
-        [[nodiscard]] constexpr basic_bit_vector(basic_bit_vector const& x, std::type_identity_t<Allocator> const& a)
+        [[nodiscard]] constexpr basic_bit_vector(basic_bit_vector const& x, allocator_param const& a)
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(x, a)
         {}
 
-        [[nodiscard]] constexpr basic_bit_vector(basic_bit_vector&& x, std::type_identity_t<Allocator> const& a)
+        [[nodiscard]] constexpr basic_bit_vector(basic_bit_vector&& x, allocator_param const& a)
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(std::move(x), a)
         {}
 
-        [[nodiscard]] constexpr basic_bit_vector(std::initializer_list<bool> il, Allocator const& a = Allocator())
+        [[nodiscard]] constexpr basic_bit_vector(std::initializer_list<bool> il)
+                : base_type(il)
+        {}
+
+        [[nodiscard]] constexpr basic_bit_vector(std::initializer_list<bool> il, allocator_param const& a)
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(il, a)
         {}
 
         // Not in [vector.bool.pspc]: flat_set's container constructor under the bit-storage tag.
-        [[nodiscard]] constexpr basic_bit_vector(from_blocks_t, std::vector<Block, Allocator> blocks) noexcept
+        [[nodiscard]] constexpr basic_bit_vector(from_blocks_t, block_container_type blocks) noexcept(std::is_nothrow_move_constructible_v<block_container_type>)
                 : base_type(from_blocks, std::move(blocks))
         {}
 
-        [[nodiscard]] constexpr basic_bit_vector(from_blocks_t, std::vector<Block, Allocator> blocks, Allocator const& a)
+        [[nodiscard]] constexpr basic_bit_vector(from_blocks_t, block_container_type blocks, allocator_param const& a)
+                requires bits::detail::allocator_aware<Blocks>
                 : base_type(from_blocks, std::move(blocks), a)
         {}
 
@@ -95,37 +130,39 @@ public:
         }
 };
 
-using bit_vector = basic_bit_vector<std::size_t>;
+using bit_vector = basic_bit_vector<>;
 
-// [vector.overview]'s guides: Block from the allocator, std::size_t by default, the element being bool.
+// [vector.overview]'s guides: the blocks from the allocator, std::size_t by default, the element being bool.
 template<std::input_iterator InputIterator, class Allocator = std::allocator<std::size_t>>
         requires xstd::simple_allocator<Allocator>
-basic_bit_vector(InputIterator, InputIterator, Allocator = Allocator()) -> basic_bit_vector<typename Allocator::value_type, Allocator>;
+basic_bit_vector(InputIterator, InputIterator, Allocator = Allocator()) -> basic_bit_vector<std::vector<typename Allocator::value_type, Allocator>>;
 
 template<std::ranges::input_range R, class Allocator = std::allocator<std::size_t>>
         requires xstd::simple_allocator<Allocator>
-basic_bit_vector(std::from_range_t, R&&, Allocator = Allocator()) -> basic_bit_vector<typename Allocator::value_type, Allocator>;
+basic_bit_vector(std::from_range_t, R&&, Allocator = Allocator()) -> basic_bit_vector<std::vector<typename Allocator::value_type, Allocator>>;
 
 template<class Allocator = std::allocator<std::size_t>>
         requires xstd::simple_allocator<Allocator>
-basic_bit_vector(std::initializer_list<bool>, Allocator = Allocator()) -> basic_bit_vector<typename Allocator::value_type, Allocator>;
+basic_bit_vector(std::initializer_list<bool>, Allocator = Allocator()) -> basic_bit_vector<std::vector<typename Allocator::value_type, Allocator>>;
 
-// The blocks adopted name the block and the allocator both.
-template<xstd::unsigned_integer Block, class Allocator>
-basic_bit_vector(from_blocks_t, std::vector<Block, Allocator>) -> basic_bit_vector<Block, Allocator>;
+// The blocks adopted are the storage, every bit of them a position: a constant capacity becomes the cap.
+template<bit_storage Blocks>
+basic_bit_vector(from_blocks_t, Blocks) -> basic_bit_vector<Blocks, bits::detail::storage_width_v<Blocks, std::dynamic_extent>>;
 
-template<xstd::unsigned_integer Block, class Allocator>
-basic_bit_vector(from_blocks_t, std::vector<Block, Allocator>, Allocator) -> basic_bit_vector<Block, Allocator>;
+template<bit_storage Blocks, class Allocator>
+basic_bit_vector(from_blocks_t, Blocks, Allocator) -> basic_bit_vector<Blocks, bits::detail::storage_width_v<Blocks, std::dynamic_extent>>;
 
-// Another block takes the allocator with it, as std::allocator_traits rebinds one; the width is a run-time value.
-template<class Block, class Allocator>
-struct bits::detail::rebind<basic_bit_vector<Block, Allocator>>
+// Another block or width goes through the storage's bit_storage_rebind, and a counted storage recounts its blocks.
+template<class Blocks, std::size_t N>
+struct bits::detail::storage_owner<basic_bit_vector<Blocks, N>>
 {
-        using block_type = Block;
-
-        template<class OtherBlock>
-        using with_block = basic_bit_vector<OtherBlock, typename std::allocator_traits<Allocator>::template rebind_alloc<OtherBlock>>;
+        template<class OtherBlocks, std::size_t M>
+        using type = basic_bit_vector<OtherBlocks, M>;
 };
+
+template<class Blocks, std::size_t N>
+struct bits::detail::rebind<basic_bit_vector<Blocks, N>> : bits::detail::storage_rebind<basic_bit_vector<Blocks, N>, Blocks, N>
+{};
 
 } // namespace xstd
 

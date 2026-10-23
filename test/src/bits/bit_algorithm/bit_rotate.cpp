@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(RotatesAsRangesRotate)
         auto wrong = 0;
         for (auto const n : {0UZ, 1UZ, 7UZ, 8UZ, 9UZ, 63UZ, 64UZ, 65UZ, 130UZ}) {
                 wrong += disagreements(test::algorithm::patterned(xstd::bit_vector(n)));
-                wrong += disagreements(test::algorithm::patterned(xstd::basic_bit_vector<std::uint8_t>(n)));
+                wrong += disagreements(test::algorithm::patterned(xstd::basic_bit_vector<std::vector<std::uint8_t>>(n)));
         }
         BOOST_CHECK_EQUAL(wrong, 0);
 }

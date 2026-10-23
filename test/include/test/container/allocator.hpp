@@ -6,18 +6,20 @@
 #ifndef TEST_CONTAINER_ALLOCATOR_HPP
 #define TEST_CONTAINER_ALLOCATOR_HPP
 
-#include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <cstddef>                                  // size_t
-#include <cstdint>                                  // int64_t, uint8_t
-#include <iterator>                                 // ranges::distance
-#include <memory>                                   // allocator
-#include <new>                                      // bad_alloc
-#include <ranges>                                   // iota
-#include <set>                                      // set
-#include <type_traits>                              // bool_constant, false_type, is_constructible_v
-#include <utility>                                  // cmp_equal
+#include <xstd/bits/bit_set/bit_key_mapping.hpp> // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>         // basic_bit_set
+#include <xstd/bits/bit_vector/bit_vector.hpp>   // basic_bit_vector
+#include <boost/container/small_vector.hpp>      // small_vector
+#include <cstddef>                               // size_t
+#include <cstdint>                               // int64_t, uint8_t
+#include <iterator>                              // ranges::distance
+#include <memory>                                // allocator
+#include <new>                                   // bad_alloc
+#include <ranges>                                // iota
+#include <set>                                   // set
+#include <span>                                  // dynamic_extent
+#include <type_traits>                           // bool_constant, false_type, is_constructible_v
+#include <utility>                               // cmp_equal
 
 // An allocator that keeps accounts and refuses on request, and the exception guarantees it lets a case observe.
 namespace test::container {
@@ -151,14 +153,14 @@ struct user_allocator
         using type = X::allocator_type;
 };
 
-template<class Block, std::size_t N, class Compare, class Allocator>
-struct user_allocator<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_mapping<std::size_t>, Compare, Allocator>>
+template<class Block, std::size_t K, class Compare, class Allocator>
+struct user_allocator<xstd::basic_bit_set<std::size_t, boost::container::small_vector<Block, K, Allocator>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, Compare>>
 {
         using type = Allocator;
 };
 
-template<class Block, std::size_t N, class Allocator>
-struct user_allocator<xstd::basic_bit_small_vector<Block, N, Allocator>>
+template<class Block, std::size_t K, class Allocator>
+struct user_allocator<xstd::basic_bit_vector<boost::container::small_vector<Block, K, Allocator>>>
 {
         using type = Allocator;
 };

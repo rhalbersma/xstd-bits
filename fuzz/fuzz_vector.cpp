@@ -29,7 +29,7 @@ namespace {
 // The sequence reading's owners: a heap, a static width, a capacity, and a small buffer, each across blocks.
 using owners = std::tuple<
         xstd::bit_vector,
-        xstd::basic_bit_vector<std::uint8_t>,
+        xstd::basic_bit_vector<std::vector<std::uint8_t>>,
         xstd::bit_array<1>,
         xstd::basic_bit_array<std::uint8_t, 17>,
         xstd::bit_array<65>,

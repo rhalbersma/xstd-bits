@@ -112,7 +112,7 @@ template<class Check>
         auto disagreements = 0;
         for (auto const width : {0UZ, 1UZ, 2UZ, 3UZ, 4UZ, 5UZ, 6UZ, 7UZ, 8UZ, 9UZ, 10UZ, 11UZ, 12UZ, 13UZ, 14UZ, 15UZ, 16UZ, 17UZ, 63UZ, 64UZ, 65UZ, 127UZ, 128UZ, 129UZ}) {
                 disagreements += sweep(std::vector<bool>(width), check);
-                disagreements += sweep(xstd::basic_bit_vector<std::uint64_t>(width), check);
+                disagreements += sweep(xstd::basic_bit_vector<std::vector<std::uint64_t>>(width), check);
         }
         return disagreements;
 }

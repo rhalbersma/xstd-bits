@@ -79,6 +79,7 @@ nav:
       - bit_convertible_to.hpp: reference/bit_concepts/bit_convertible_to.md
       - bit_index_mapping.hpp: reference/bit_concepts/bit_index_mapping.md
       - bit_mask_mapping.hpp: reference/bit_concepts/bit_mask_mapping.md
+      - bit_storage.hpp: reference/bit_concepts/bit_storage.md
       - sized_bit_index_mapping.hpp: reference/bit_concepts/sized_bit_index_mapping.md
     - bit_functional.hpp:
       - reference/bit_functional/index.md
@@ -131,6 +132,7 @@ nav:
       - bit_least.hpp: reference/bit_type_traits/bit_least.md
       - bit_rebind.hpp: reference/bit_type_traits/bit_rebind.md
       - bit_resize.hpp: reference/bit_type_traits/bit_resize.md
+      - bit_storage_rebind.hpp: reference/bit_type_traits/bit_storage_rebind.md
       - bit_underlying.hpp: reference/bit_type_traits/bit_underlying.md
     - bit_valarray.hpp:
       - reference/bit_valarray/index.md

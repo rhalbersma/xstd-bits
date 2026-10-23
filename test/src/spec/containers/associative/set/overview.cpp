@@ -19,7 +19,9 @@
 #include <iterator>                              // bidirectional_iterator, distance
 #include <ranges>                                // bidirectional_range, iota
 #include <set>                                   // IWYU pragma: keep; set
+#include <span>                                  // dynamic_extent
 #include <utility>                               // cmp_equal, pair
+#include <vector>                                // vector
 #include <version>                               // IWYU pragma: keep; __cpp_lib_constexpr_set
 
 BOOST_AUTO_TEST_SUITE(Spec)
@@ -43,7 +45,7 @@ inline constexpr bool constant_evaluable<xstd::basic_bit_inplace_set<std::size_t
 #endif
 
 template<class Block, class Compare, class Allocator>
-inline constexpr bool constant_evaluable<xstd::basic_bit_set<std::size_t, Block, xstd::bit_key_mapping<std::size_t>, Compare, Allocator>> = true;
+inline constexpr bool constant_evaluable<xstd::basic_bit_set<std::size_t, std::vector<Block, Allocator>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, Compare>> = true;
 
 #if defined(__cpp_lib_constexpr_set) && __cpp_lib_constexpr_set >= 202502L
 

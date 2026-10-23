@@ -120,9 +120,9 @@ constexpr bool compares_with = requires (X const& x, Y const& y) { x == y; };
 BOOST_AUTO_TEST_CASE(AnOwnerIsATypeOfItsOwnOverItsStorage)
 {
         static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_array<std::uint8_t, 20>>, xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>, 20>>);
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_vector<std::uint32_t>>, xstd::bits::detail::bit_block_container<std::vector<std::uint32_t>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_vector<std::vector<std::uint32_t>>>, xstd::bits::detail::bit_block_container<std::vector<std::uint32_t>>>);
         static_assert(not compares_with<xstd::basic_bit_array<std::uint8_t, 24>, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>>>>);
-        static_assert(not compares_with<xstd::basic_bit_vector<std::uint32_t>, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_block_container<std::vector<std::uint32_t>>>>);
+        static_assert(not compares_with<xstd::basic_bit_vector<std::vector<std::uint32_t>>, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_block_container<std::vector<std::uint32_t>>>>);
         BOOST_CHECK(true);
 }
 
@@ -234,7 +234,7 @@ BOOST_AUTO_TEST_CASE(ThereAreNoBulkOperators)
 BOOST_AUTO_TEST_CASE(ABlitSourceIsASequenceOfTheSameBlockType)
 {
         using xstd::bits::detail::blit_source;
-        using bytes = xstd::basic_bit_vector<std::uint8_t>;
+        using bytes = xstd::basic_bit_vector<std::vector<std::uint8_t>>;
         static_assert(blit_source<bytes, std::uint8_t> and blit_source<xstd::basic_bit_array<std::uint8_t, 9>, std::uint8_t>);
         static_assert(blit_source<xstd::basic_bit_inplace_vector<std::uint8_t, 9>, std::uint8_t>);
         static_assert(blit_source<xstd::bit_span<std::array<std::uint8_t, 2>>, std::uint8_t>);

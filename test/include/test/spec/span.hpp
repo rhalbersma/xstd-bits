@@ -153,7 +153,7 @@ struct view_traits<xstd::bit_span<std::array<Block, K> const, N>> : span::detail
 {};
 
 template<class Block, class Allocator>
-struct view_traits<xstd::bit_span<std::vector<Block, Allocator>, std::dynamic_extent>> : span::detail::whole_traits<xstd::basic_bit_vector<Block, Allocator>, false>
+struct view_traits<xstd::bit_span<std::vector<Block, Allocator>, std::dynamic_extent>> : span::detail::whole_traits<xstd::basic_bit_vector<std::vector<Block, Allocator>>, false>
 {};
 
 template<class Block, std::size_t K, std::size_t E, std::size_t N>
@@ -165,7 +165,7 @@ struct view_traits<xstd::bit_subspan<std::array<Block, K> const, E, N>> : span::
 {};
 
 template<class Block, class Allocator, std::size_t E>
-struct view_traits<xstd::bit_subspan<std::vector<Block, Allocator>, E, std::dynamic_extent>> : span::detail::window_traits<xstd::basic_bit_vector<Block, Allocator>, false, E>
+struct view_traits<xstd::bit_subspan<std::vector<Block, Allocator>, E, std::dynamic_extent>> : span::detail::window_traits<xstd::basic_bit_vector<std::vector<Block, Allocator>>, false, E>
 {};
 
 } // namespace test::spec
