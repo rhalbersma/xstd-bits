@@ -569,20 +569,15 @@ auto admits_at_every_door(X const& a, Model const& model, typename X::key_type v
         BOOST_CHECK(modelled<Model>(from_range) == Model{v});
 }
 
-// An enumerator is a one-element set: the operators that write it refuse it, and the two that only read it answer.
+// A value that is no key, met by the two operators that only read it, past a run-time width only: they are unchecked.
 template<class X>
-auto meets_it_as_an_empty_set_or_refuses(X const& a, typename X::key_type v)
+auto meets_it_as_an_empty_set(X const& a, typename X::key_type v)
         -> void
 {
-        auto x = a;
-        check_refuses([&] -> void { x |= v; });
-        check_refuses([&] -> void { x ^= v; });
-        check_refuses([&] -> void { static_cast<void>(x | v); });
-        check_refuses([&] -> void { static_cast<void>(v ^ x); });
-        check_refuses([&] -> void { static_cast<void>(v - x); });
-        BOOST_CHECK(x == a);
-        auto const met = a & v;
-        BOOST_CHECK(met.empty() and (a - v) == a);
+        if constexpr (not X::has_static_width) {
+                auto const met = a & v;
+                BOOST_CHECK(met.empty() and (a - v) == a);
+        }
 }
 
 // An enumerator is a one-element set, and each operator meets a key as the model's set algebra does.
@@ -636,7 +631,7 @@ BOOST_AUTO_TEST_CASE(EveryOwnerAdmitsAKeyAndRefusesAValueThatIsNoKey)
                                 } else {
                                         refuses_at_every_door(a, v);
                                         if constexpr (not xstd::bit_mask_mapping<key_mapping, key_type>) {
-                                                meets_it_as_an_empty_set_or_refuses(a, v);
+                                                meets_it_as_an_empty_set(a, v);
                                         }
                                 }
                         }
