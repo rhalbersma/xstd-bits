@@ -64,7 +64,7 @@ As [[set]](https://eel.is/c++draft/set) for `set<Key, Compare>`, over the blocks
 
 - `bit_set` is a set of `size_t` in a `vector<size_t>`, and `basic_bit_set<Key, Blocks, N, KeyMapping, Compare>` a set
   of `Key` whose positions `KeyMapping` names, in the blocks of `Blocks`. `Blocks` and the cap `N` are as
-  [`basic_bit_vector`](../bit_vector/bit_vector.md)'s, and `bit_inplace_set` and `bit_small_set` name two storages.
+  [`basic_bit_vector`](../bit_vector/bit_vector.md)'s; `bit_fixed_set` and `bit_inplace_set` name the standard ones.
   Where `Blocks` has an allocator, each constructor of [[set.cons]](https://eel.is/c++draft/set.cons) has its
   allocator-extended form; where it has none, there is no allocator argument.
 - `KeyMapping` takes a key to its position by `to_index` and back by `from_index`, preserving order. A mapping that
