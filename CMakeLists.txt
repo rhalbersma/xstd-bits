@@ -134,6 +134,7 @@ target_sources(
         include/xstd/bits/bit/bit_expand.hpp
         include/xstd/bits/bit_concepts.hpp
         include/xstd/bits/bit_concepts/bit_blocks.hpp
+        include/xstd/bits/bit_concepts/bit_storage.hpp
         include/xstd/bits/bit_concepts/bit_constructible_from.hpp
         include/xstd/bits/bit_concepts/bit_convertible_to.hpp
         include/xstd/bits/bit_concepts/bit_index_mapping.hpp
@@ -182,6 +183,7 @@ target_sources(
         include/xstd/bits/bit_type_traits.hpp
         include/xstd/bits/bit_type_traits/bit_align.hpp
         include/xstd/bits/bit_type_traits/bit_blocks_extent.hpp
+        include/xstd/bits/bit_type_traits/bit_storage_rebind.hpp
         include/xstd/bits/bit_type_traits/bit_fast.hpp
         include/xstd/bits/bit_type_traits/bit_least.hpp
         include/xstd/bits/bit_type_traits/bit_rebind.hpp
@@ -221,6 +223,7 @@ target_sources(
         include/xstd/bits/ext/boost/bit_small_valarray.hpp
         include/xstd/bits/ext/boost/dynamic_bitset.hpp
         include/xstd/bits/ext/boost/detail/dynamic_bitset.hpp
+        include/xstd/bits/ext/boost/detail/small_blocks.hpp
         include/xstd/bits/detail/bit_layout.hpp
         include/xstd/bits/bit/detail/bit_convertible.hpp
         include/xstd/bits/bit/detail/bit_permute.hpp
@@ -228,6 +231,7 @@ target_sources(
         include/xstd/bits/detail/bit_block_range.hpp
         include/xstd/bits/detail/owned_bit_blocks.hpp
         include/xstd/bits/detail/resizable_bit_blocks.hpp
+        include/xstd/bits/detail/storage_rebind.hpp
         include/xstd/bits/bit/detail/bit_width.hpp
         include/xstd/bits/detail/range_const_reference.hpp
         include/xstd/bits/detail/shift.hpp

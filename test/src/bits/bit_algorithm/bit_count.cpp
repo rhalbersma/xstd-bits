@@ -73,7 +73,7 @@ BOOST_AUTO_TEST_CASE(AnswersTheDifferenceTypeOverOurSequencesAlone)
         static_assert(std::same_as<decltype(xstd::ranges::bit_count(xstd::bit_array<8>(), true)), std::ptrdiff_t>);
         static_assert(xstd::ranges::bit_count(test::algorithm::patterned(xstd::bit_array<70>()), true) == std::ranges::count(test::algorithm::patterned(std::vector<bool>(70)), true));
         static_assert(xstd::ranges::bit_count(test::algorithm::patterned(xstd::bit_array<70>()), false) == std::ranges::count(test::algorithm::patterned(std::vector<bool>(70)), false));
-        static_assert(countable<xstd::bit_vector> and countable<xstd::basic_bit_vector<std::uint8_t>>);
+        static_assert(countable<xstd::bit_vector> and countable<xstd::basic_bit_vector<std::vector<std::uint8_t>>>);
         static_assert(not countable<std::vector<bool>> and not countable<xstd::bit_fixed_set<8>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }

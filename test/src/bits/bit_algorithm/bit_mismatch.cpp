@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(AgreesWithRangesMismatchAtEveryPosition)
 {
         auto wrong = 0;
         for (auto const n : {0UZ, 1UZ, 8UZ, 21UZ, 64UZ, 130UZ}) {
-                auto const v = test::algorithm::patterned(xstd::basic_bit_vector<std::uint8_t>(n));
+                auto const v = test::algorithm::patterned(xstd::basic_bit_vector<std::vector<std::uint8_t>>(n));
                 wrong += static_cast<int>(not agrees(v, v));
                 for (auto const i : std::views::iota(0UZ, n)) {
                         auto w = v;

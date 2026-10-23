@@ -28,7 +28,7 @@ namespace {
 // The valarray reading's owners: a heap, a static size, a capacity and inline blocks; slices and masks over each.
 using owners = std::tuple<
         xstd::bit_valarray,
-        xstd::basic_bit_valarray<std::uint8_t>,
+        xstd::basic_bit_valarray<std::vector<std::uint8_t>>,
         xstd::bit_fixed_valarray<1>,
         xstd::basic_bit_fixed_valarray<std::uint8_t, 17>,
         xstd::bit_fixed_valarray<65>,
@@ -49,8 +49,9 @@ concept growing = requires (X& x) { x.resize(0UZ); };
 template<class X>
 inline constexpr auto capacity = dynamic_bits;
 
-template<class Block, std::size_t N>
-inline constexpr auto capacity<xstd::basic_bit_inplace_valarray<Block, N>> = N < dynamic_bits ? N : dynamic_bits;
+template<class Blocks, std::size_t N>
+        requires (N != std::dynamic_extent)
+inline constexpr auto capacity<xstd::basic_bit_valarray<Blocks, N>> = N < dynamic_bits ? N : dynamic_bits;
 
 // Equal elements, and a count over whole blocks that would see a bit set in the padding.
 template<class X>
@@ -218,7 +219,7 @@ template<class X, class Selector>
 auto fuzz_subscript(fuzz::decoder& in, fuzz::checker const& check, X& x, model& m, Selector const& selector, std::vector<std::size_t> const& positions)
         -> void
 {
-        using operand    = xstd::basic_bit_valarray<std::ranges::range_value_t<typename X::block_container_type>>;
+        using operand    = xstd::basic_bit_valarray<std::vector<std::ranges::range_value_t<typename X::block_container_type>>>;
         auto const count = positions.size();
         switch (in.byte() % 3U) {
                 case 0: {

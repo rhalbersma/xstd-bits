@@ -3,14 +3,14 @@
 ## `basic_bit_valarray`, `bit_valarray`
 
 ```cpp
-template<unsigned_integer Block, class Allocator>
+template<bit_storage Blocks = vector<size_t>, size_t N = dynamic_extent>
   requires see below
 class basic_bit_valarray {
 public:
   using value_type           = bool;
   using reference            = see below;
   using size_type            = size_t;
-  using block_container_type = vector<Block, Allocator>;
+  using block_container_type = Blocks;
 
   // [valarray.cons]
   basic_bit_valarray() = default;
@@ -98,9 +98,9 @@ public:
 
 As [[template.valarray]](https://eel.is/c++draft/template.valarray) for `valarray<bool>`, with:
 
-- `bit_valarray` holds its bools in `size_t` blocks, and `basic_bit_valarray<Block, Allocator>` in `Block`s, in a
-  `vector<Block, Allocator>`. The requires-clause admits `Block` as `basic_bit_vector`'s does. There is no
-  allocator argument or `get_allocator`.
+- `bit_valarray` holds its bools in a `vector<size_t>`. `Blocks` and the cap `N` are as
+  [`basic_bit_vector`](../bit_vector/bit_vector.md)'s; `bit_fixed_valarray` and `bit_inplace_valarray` name the
+  standard ones. There is no allocator argument or `get_allocator`.
 - `reference` is the sequence reading's proxy, standing in for `T&`; the `const` subscript returns a `bool`. The
   iterators `begin` and `end` return are the sequence reading's, so it is a random-access range with no member
   `begin` or `end`, and `bit_span` views it as `span<bool>` views a `valarray<bool>`.

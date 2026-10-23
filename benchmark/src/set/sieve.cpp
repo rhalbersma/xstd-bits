@@ -31,7 +31,7 @@ inline constexpr auto hi = 1L << 20;
 
 // The dynamic set at a chosen block and a std::size_t key, named so a macro takes it as one argument.
 template<class Block>
-using bit_set_of = xstd::basic_bit_set<std::size_t, Block>;
+using bit_set_of = xstd::basic_bit_set<std::size_t, std::vector<Block>>;
 
 namespace {
 

@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/endian.hpp>                               // IWYU pragma: keep; TEST_BYTES_ARE_POSITIONS, bytes_are_positions
 #include <test/for_each_type.hpp>                        // for_each_type
 #include <test/whole_blocks.hpp>                         // block_bits, whole_blocks
 #include <xstd/bits/bit/bit_convert.hpp>                 // bit_convert
@@ -109,8 +110,8 @@ template<class Block>
 using sources_of = std::tuple<
         xstd::basic_bit_fixed_set<std::size_t, Block, 100>,
         xstd::basic_bit_array<Block, 100>,
-        xstd::basic_bit_set<std::size_t, Block>,
-        xstd::basic_bit_vector<Block>,
+        xstd::basic_bit_set<std::size_t, std::vector<Block>>,
+        xstd::basic_bit_vector<std::vector<Block>>,
         xstd::basic_bit_inplace_set<std::size_t, Block, 128>,
         xstd::basic_bit_inplace_vector<Block, 128>,
         xstd::basic_bit_small_set<std::size_t, Block, 128>,
@@ -122,8 +123,8 @@ using sources = decltype(std::tuple_cat(
 
 template<class Block>
 using targets_of = std::tuple<
-        xstd::basic_bit_set<std::size_t, Block>,
-        xstd::basic_bit_vector<Block>,
+        xstd::basic_bit_set<std::size_t, std::vector<Block>>,
+        xstd::basic_bit_vector<std::vector<Block>>,
         xstd::basic_bit_inplace_set<std::size_t, Block, 128>,
         xstd::basic_bit_inplace_vector<Block, 128>,
         xstd::basic_bit_small_set<std::size_t, Block, 128>,
@@ -169,7 +170,7 @@ BOOST_AUTO_TEST_CASE(AWindowHasNoFixedWidth)
         static_assert(bit_width_v<xstd::bit_span<std::array<std::uint8_t, 3>>> == 24UZ and bit_width_v<xstd::bit_set_view<std::uint64_t>> == 64UZ);
         static_assert(bit_width_v<window> == std::dynamic_extent and bit_width_v<window const> == std::dynamic_extent);
         static_assert(not fixed_width<window> and not fixed_target<window> and not fixed_target<xstd::bit_span<std::array<std::uint8_t, 3>>>);
-        static_assert(fixed_width<xstd::bit_span<std::array<std::uint8_t, 3>>> and fixed_target<xstd::bit_array<24>> and fixed_target<std::bitset<24>>);
+        static_assert(fixed_width<xstd::bit_span<std::array<std::uint8_t, 3>>> and fixed_target<xstd::bit_array<24>> and fixed_target<std::bitset<24>> == test::bytes_are_positions);
         BOOST_CHECK(true);
 }
 
@@ -179,7 +180,9 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsReadThroughItsStorageAndAFixedWidthElseThroughItsB
         using xstd::bits::detail::bit_source;
         static_assert(not std::same_as<decltype(bit_source<xstd::bit_array<64>>::blocks(std::declval<xstd::bit_array<64> const&>())), std::array<unsigned char, 8>>);
         static_assert(not std::same_as<decltype(bit_source<xstd::bit_fixed_set<64> const>::blocks(std::declval<xstd::bit_fixed_set<64> const&>())), std::array<unsigned char, 8>>);
+#ifdef TEST_BYTES_ARE_POSITIONS
         static_assert(std::same_as<decltype(bit_source<std::bitset<64>>::blocks(std::declval<std::bitset<64> const&>())), std::array<unsigned char, 8>>);
+#endif
         static_assert(std::same_as<decltype(bit_source<xstd::bit_set_view<std::uint64_t>>::blocks(std::declval<xstd::bit_set_view<std::uint64_t> const&>())), std::array<unsigned char, 8>>);
         static_assert(std::same_as<decltype(bit_source<xstd::bit_span<std::array<std::uint8_t, 3>>>::blocks(std::declval<xstd::bit_span<std::array<std::uint8_t, 3>> const&>())), std::array<unsigned char, 3>>);
         BOOST_CHECK(true);
@@ -188,6 +191,7 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsReadThroughItsStorageAndAFixedWidthElseThroughItsB
 // Equal fixed widths cross whole, between any two readings and to and from the blocks and a std::bitset.
 BOOST_AUTO_TEST_CASE(EqualFixedWidthsCrossWhole)
 {
+#ifdef TEST_BYTES_ARE_POSITIONS
         static_assert([] -> bool {
                 auto const set    = xstd::bit_fixed_set<64>{0, 5, 63};
                 auto const block  = xstd::bit_convert<std::uint64_t>(set);
@@ -204,6 +208,7 @@ BOOST_AUTO_TEST_CASE(EqualFixedWidthsCrossWhole)
 
         // Width zero has no bytes to copy, and still converts.
         BOOST_CHECK(xstd::bit_convert<std::bitset<0>>(xstd::bit_array<0>()).none());
+#endif
 
         // A view is read from as the blocks it spans.
         auto board = std::uint64_t{0b1010};
@@ -244,7 +249,9 @@ BOOST_AUTO_TEST_CASE(ABuiltInArrayConvertsAsTheStdArrayOfItsBlocks)
         static_assert(xstd::bit_convert<xstd::bit_array<256>>(blocks) == xstd::bit_convert<xstd::bit_array<256>>(same));
         static_assert(xstd::bit_convert<xstd::bit_fixed_set<256>>(blocks) == xstd::bit_fixed_set<256>{0, 63, 132, 133, 134, 135, 255});
         static_assert(noexcept(xstd::bit_convert<xstd::bit_array<256>>(blocks)));
+#ifdef TEST_BYTES_ARE_POSITIONS
         BOOST_CHECK(xstd::bit_convert<std::bitset<256>>(blocks) == xstd::bit_convert<std::bitset<256>>(same));
+#endif
 
         // Into a run-time width, as a copy of its positions.
         BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_vector>(blocks)) == positions(xstd::bit_convert<xstd::bit_vector>(same)));
@@ -254,7 +261,7 @@ BOOST_AUTO_TEST_CASE(ABuiltInArrayConvertsAsTheStdArrayOfItsBlocks)
         BOOST_CHECK((xstd::bit_convert<std::array<std::uint64_t, 4>>(xstd::bit_convert<xstd::bit_fixed_set<256>>(blocks)) == same));
 
         // As wide or wider, as for a std::array, and never into the array itself.
-        static_assert(xstd::bit_convertible_to<four_blocks const&, xstd::bit_array<256>> and xstd::bit_convertible_to<four_blocks, std::bitset<257>>);
+        static_assert(xstd::bit_convertible_to<four_blocks const&, xstd::bit_array<256>> and xstd::bit_convertible_to<four_blocks, std::bitset<257>> == test::bytes_are_positions);
         static_assert(not xstd::bit_convertible_to<four_blocks const&, xstd::bit_array<255>>);
         static_assert(not xstd::bit_convertible_to<xstd::bit_array<256>, four_blocks> and not xstd::bit_convertible_to<std::array<std::uint64_t, 4>, four_blocks>);
         static_assert(not xstd::bit_convertible_to<xstd::bit_vector, four_blocks>);
@@ -282,8 +289,10 @@ BOOST_AUTO_TEST_CASE(AFixedWidthWidensZeroExtended)
 #endif
 
         // Into and out of a std::bitset, a block, a whole view and another block width.
+#ifdef TEST_BYTES_ARE_POSITIONS
         static_assert(xstd::bit_convert<std::bitset<64>>(xstd::bit_fixed_set<10>{2, 9}) == std::bitset<64>(0b10'0000'0100));
         static_assert(xstd::bit_convert<xstd::bit_fixed_set<128>>(std::bitset<70>(1ULL << 63U) << 6U) == xstd::bit_fixed_set<128>{69});
+#endif
         static_assert(xstd::bit_convert<xstd::bit_array<64>>(std::uint8_t{0x81}) == xstd::bit_array<64>(xstd::from_blocks, std::uint64_t{0x81}));
         static_assert([] -> bool {
                 auto word = std::uint8_t{0x81};
@@ -295,9 +304,13 @@ BOOST_AUTO_TEST_CASE(AFixedWidthWidensZeroExtended)
 
         // Every position of a full source crosses, and not one past its width.
         static_assert(xstd::ranges::bit_count(xstd::bit_convert<xstd::bit_array<64>>(~xstd::bit_fixed_set<9>()), true) == 9);
+#ifdef TEST_BYTES_ARE_POSITIONS
         static_assert(xstd::bit_convert<xstd::bit_fixed_set<128>>(std::bitset<70>().set()).size() == 70UZ);
+#endif
         static_assert(xstd::bit_convert<std::uint32_t>(std::array<std::uint8_t, 3>{0xFF, 0xFF, 0xFF}) == 0xFF'FFFFU);
+#ifdef TEST_BYTES_ARE_POSITIONS
         BOOST_CHECK_EQUAL(xstd::bit_convert<std::bitset<200>>(~xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 100>()).count(), 100UZ);
+#endif
 
         // A bit-precise block widens as any other does.
 #ifdef __BITINT_MAXWIDTH__
@@ -315,13 +328,19 @@ BOOST_AUTO_TEST_CASE(AFixedWidthWidensZeroExtended)
 BOOST_AUTO_TEST_CASE(OnlyTwoFixedWidthsAreNoexcept)
 {
         static_assert(noexcept(xstd::bit_convert<std::uint64_t>(std::declval<xstd::bit_fixed_set<64> const&>())));
+#ifdef TEST_BYTES_ARE_POSITIONS
         static_assert(noexcept(xstd::bit_convert<xstd::bit_array<70>>(std::declval<std::bitset<70> const&>())));
+#endif
         static_assert(noexcept(xstd::bit_convert<std::uint8_t>(std::declval<xstd::bit_array<5> const&>())));
         static_assert(noexcept(xstd::bit_convert<std::array<std::uint64_t, 2>>(std::declval<xstd::bit_fixed_set<100> const&>())));
+#ifdef TEST_BYTES_ARE_POSITIONS
         static_assert(noexcept(xstd::bit_convert<xstd::bit_fixed_set<128>>(std::declval<std::bitset<70> const&>())));
         static_assert(noexcept(xstd::bit_convert<std::bitset<64>>(std::declval<xstd::bit_set_view<std::uint8_t> const&>())));
+#endif
         static_assert(not noexcept(xstd::bit_convert<std::uint64_t>(std::declval<xstd::bit_set const&>())));
+#ifdef TEST_BYTES_ARE_POSITIONS
         static_assert(not noexcept(xstd::bit_convert<xstd::bit_vector>(std::declval<std::bitset<70> const&>())));
+#endif
         static_assert(not noexcept(xstd::bit_convert<xstd::bit_vector>(std::declval<xstd::bit_set&&>())));
         BOOST_CHECK(true);
 }
@@ -340,18 +359,22 @@ BOOST_AUTO_TEST_CASE(ARunTimeWidthNarrowsByValue)
         // A sequence wider than the target narrows when its tail is clear, and a shorter one zero-extends.
         auto wide = xstd::bit_vector(70);
         wide[63]  = true;
+#ifdef TEST_BYTES_ARE_POSITIONS
         BOOST_CHECK(xstd::bit_convert<std::bitset<64>>(wide).test(63));
         wide[69] = true;
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<std::bitset<64>>(wide)), std::overflow_error);
         BOOST_CHECK_EQUAL(xstd::bit_convert<std::bitset<70>>(wide).count(), 2UZ);
+#endif
 
-        auto const short_one = make<xstd::basic_bit_vector<std::uint8_t>>(3, {2});
+        auto const short_one = make<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(3, {2});
         BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_array<64>>(short_one)) == (std::vector<std::size_t>{2}));
         BOOST_CHECK((xstd::bit_convert<std::array<std::uint16_t, 2>>(short_one) == std::array<std::uint16_t, 2>{4, 0}));
 
         // Width zero holds nothing, so only an empty source fits.
+#ifdef TEST_BYTES_ARE_POSITIONS
         BOOST_CHECK(xstd::bit_convert<std::bitset<0>>(xstd::bit_set()).none());
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<std::bitset<0>>(xstd::bit_set{0})), std::overflow_error);
+#endif
 
         static_assert(xstd::bit_convert<std::uint64_t>(xstd::bit_set{3}) == 8ULL);
 }
@@ -389,7 +412,7 @@ BOOST_AUTO_TEST_CASE(ASetSourceGivesASequenceItsWholeBlocks)
 BOOST_AUTO_TEST_CASE(ASetTargetTakesWholeBlocksOfItsOwn)
 {
         auto const v = make<xstd::bit_vector>(70, {0, 69});
-        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::uint8_t>>(v)).size(), 72UZ);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>>(v)).size(), 72UZ);
         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::bit_set>(v)).size(), test::whole_blocks(70UZ));
 }
 
@@ -413,13 +436,13 @@ BOOST_AUTO_TEST_CASE(AWholeViewOfARunTimeWidthConvertsAsItsOwner)
 // A window converts from its own first position, at any offset into blocks of any width, into any block width.
 BOOST_AUTO_TEST_CASE(AWindowConvertsFromItsFirstPosition)
 {
-        auto v = make<xstd::basic_bit_vector<std::uint8_t>>(200, {3, 7, 64, 65, 100, 131, 199});
+        auto v = make<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(200, {3, 7, 64, 65, 100, 131, 199});
         for (auto const offset : {0UZ, 1UZ, 7UZ, 8UZ, 63UZ, 64UZ, 65UZ}) {
                 for (auto const length : {0UZ, 1UZ, 9UZ, 64UZ, 65UZ, 135UZ}) {
                         auto const window = xstd::bit_span(v).subspan(offset, length);
                         auto const expect = std::views::iota(offset, offset + length) | std::views::filter([&](std::size_t i) -> bool { return v[i]; }) | std::views::transform([&](std::size_t i) -> std::size_t { return i - offset; }) | std::ranges::to<std::vector>();
                         BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_vector>(window)) == expect);
-                        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::uint16_t>>(window)) == expect);
+                        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint16_t>>>(window)) == expect);
                         BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_set>(window)) == expect);
                         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(window).size(), length);
                 }
@@ -474,7 +497,7 @@ BOOST_AUTO_TEST_CASE(OnlyTheSameBlockContainerIsAdopted)
         using xstd::bits::detail::adopts_from;
         static_assert(adopts_from<xstd::bit_vector, xstd::bit_set> and adopts_from<xstd::bit_small_set<256>, xstd::bit_small_vector<256>>);
         static_assert(not adopts_from<xstd::bit_vector, xstd::bit_set&> and not adopts_from<xstd::bit_vector, xstd::bit_set const>);
-        static_assert(not adopts_from<xstd::bit_vector, xstd::basic_bit_set<std::size_t, std::uint8_t>>);
+        static_assert(not adopts_from<xstd::bit_vector, xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>>);
         static_assert(not adopts_from<xstd::bit_vector, xstd::bit_array<64>>);
 
         // An inplace capacity short of its blocks' last bit could not hold all of what it adopts.
@@ -502,7 +525,7 @@ BOOST_AUTO_TEST_CASE(ACopyLeavesTheSourceUnchanged)
         BOOST_CHECK(v == before);
         BOOST_CHECK(positions(s) == (std::vector<std::size_t>{1, 69}));
 
-        auto const narrow = xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::uint8_t>>(std::move(v));
+        auto const narrow = xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>>(std::move(v));
         BOOST_CHECK(v == before); // NOLINT(bugprone-use-after-move,hicpp-invalid-access-moved,clang-analyzer-cplusplus.Move): a copy leaves the source, which is the check.
         BOOST_CHECK(positions(narrow) == (std::vector<std::size_t>{1, 69}));
 }
@@ -511,25 +534,28 @@ BOOST_AUTO_TEST_CASE(ACopyLeavesTheSourceUnchanged)
 BOOST_AUTO_TEST_CASE(TheConversionIsAConstantExpression)
 {
         static_assert([] -> bool {
-                auto s             = xstd::basic_bit_set<std::size_t, std::uint8_t>{3, 9, 20};
-                auto const wide    = xstd::bit_convert<xstd::basic_bit_vector<std::uint32_t>>(s);
-                auto const adopted = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(std::move(s));
+                auto s             = xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>{3, 9, 20};
+                auto const wide    = xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint32_t>>>(s);
+                auto const adopted = xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(std::move(s));
                 return wide.size() == 24UZ and wide[20] and adopted.size() == 24UZ and xstd::ranges::bit_count(adopted, true) == 3;
         }());
+#ifdef TEST_BYTES_ARE_POSITIONS
         static_assert([] -> bool {
                 auto a       = xstd::basic_bit_array<std::uint16_t, 70>();
                 a[0]         = true;
                 a[69]        = true;
                 auto const s = xstd::bit_convert<xstd::bit_set>(a);
-                auto const v = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(std::bitset<70>(0b1011));
+                auto const v = xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(std::bitset<70>(0b1011));
                 return s.contains(69UZ) and s.size() == 2UZ and v.size() == 70UZ and xstd::ranges::bit_count(v, true) == 3;
         }());
+#endif
 #ifdef XSTD_BITS_HAS_CONSTEXPR_INPLACE
         static_assert(xstd::ranges::bit_count(xstd::bit_convert<xstd::bit_inplace_vector<100>>(xstd::bit_fixed_set<100>{7, 99}), true) == 2);
 #endif
         BOOST_CHECK(true);
 }
 
+#ifdef TEST_BYTES_ARE_POSITIONS
 // A std::bitset is a sequence of its N, at a whole number of bytes and blocks or not, width zero included.
 BOOST_AUTO_TEST_CASE(AStdBitsetIsASequenceOfItsWidth)
 {
@@ -543,8 +569,8 @@ BOOST_AUTO_TEST_CASE(AStdBitsetIsASequenceOfItsWidth)
                 auto const v = xstd::bit_convert<xstd::bit_vector>(b);
                 BOOST_CHECK_EQUAL(v.size(), N);
                 BOOST_CHECK(positions(v) == keys);
-                BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::uint8_t>>(b)) == keys);
-                BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::uint16_t>>(b)) == keys);
+                BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>>(b)) == keys);
+                BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint16_t>>>(b)) == keys);
                 BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_small_set<128>>(b)) == keys);
                 BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_inplace_vector<128>>(b)) == keys);
         };
@@ -554,6 +580,7 @@ BOOST_AUTO_TEST_CASE(AStdBitsetIsASequenceOfItsWidth)
         check.operator()<70>();
         check.operator()<128>();
 }
+#endif
 
 // An inplace target that cannot hold the source throws what its own growth throws, std::bad_alloc.
 BOOST_AUTO_TEST_CASE(AInplaceTargetTooSmallThrowsWhatItsGrowthThrows)
@@ -562,12 +589,16 @@ BOOST_AUTO_TEST_CASE(AInplaceTargetTooSmallThrowsWhatItsGrowthThrows)
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_inplace_vector<100>>(xstd::bit_vector(101))), std::bad_alloc);
         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_inplace_vector<100>>(xstd::bit_vector(100)).size(), 100UZ);
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_inplace_vector<100>>(xstd::bit_set{3, 100})), std::bad_alloc);
+#ifdef TEST_BYTES_ARE_POSITIONS
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_inplace_vector<100>>(std::bitset<128>())), std::bad_alloc);
+#endif
 
         // A set target is capped at its capacity, and throws only for a key beyond it.
         BOOST_CHECK(positions(xstd::bit_convert<xstd::bit_inplace_set<100>>(xstd::bit_set{3, 64})) == (std::vector<std::size_t>{3, 64}));
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_inplace_set<100>>(xstd::bit_set{3, 150})), std::bad_alloc);
+#ifdef TEST_BYTES_ARE_POSITIONS
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 100>>(std::bitset<128>(1ULL << 63U) << 64U)), std::bad_alloc);
+#endif
 
         // A wide universe with no key past the capacity fits.
         auto grown = xstd::bit_set{3, 255};

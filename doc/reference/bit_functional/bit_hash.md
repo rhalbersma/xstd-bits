@@ -30,10 +30,10 @@
     | :-- | :-- |
     | `basic_bit_fixed_set<size_t, uint64_t, 10>{1, 3, 5, 9}` | bytes `2A 02` |
     | `bit_fixed_set<0>()`, `bit_array<0>()` | byte `00` |
-    | `basic_bit_vector<uint64_t>(10)`, its even positions `true` | bytes `55 01`, then the size 10 |
-    | `basic_bit_set<size_t, uint64_t>{1, 3, 5}` | byte `2A`, then the size 1 |
-    | `basic_bit_set<size_t, uint64_t>{1, 3, 64}` | bytes `0A 00 00 00 00 00 00 00 01`, then the size 9 |
-    | an empty `basic_bit_vector<uint64_t>` or `basic_bit_set<size_t, uint64_t>` | the size 0 |
+    | `basic_bit_vector<vector<uint64_t>>(10)`, its even positions `true` | bytes `55 01`, then the size 10 |
+    | `basic_bit_set<size_t, vector<uint64_t>>{1, 3, 5}` | byte `2A`, then the size 1 |
+    | `basic_bit_set<size_t, vector<uint64_t>>{1, 3, 64}` | bytes `0A 00 00 00 00 00 00 00 01`, then the size 9 |
+    | an empty `basic_bit_vector<vector<uint64_t>>` or `basic_bit_set<size_t, vector<uint64_t>>` | the size 0 |
     | `array<bit_fixed_set<64>, 0>()` | byte `00` |
 
 - *Remarks:* Wherever the storage holds the bit string, a little-endian target and a block of a built-in type whose

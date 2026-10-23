@@ -260,6 +260,9 @@ others:
 - **Customization is new.** A standard-named type generalizes its counterpart; the `basic_` templates and the other
   storages that choose its block type, storage or allocator take a row of their own, of kind New, led by the same
   clause.
+- **Standard backends only.** The storages related are the ones a standard container provides: fixed over `array`,
+  inplace over `inplace_vector`, and dynamic over `vector`. An alias over another library's container, under `ext/`,
+  takes no row; its own reference page relates it, and the `basic_` template it instantiates already has its row.
 - **Words kept for elsewhere.** `bitset` belongs to the migration guide, not this table, and "bit string" is kept for
   a future `bit_string`.
 

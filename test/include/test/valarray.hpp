@@ -6,6 +6,7 @@
 #ifndef TEST_VALARRAY_HPP
 #define TEST_VALARRAY_HPP
 
+#include <test/endian.hpp>                                 // bytes_are_positions
 #include <xstd/bits/bit/bit_convert.hpp>                   // bit_convert
 #include <xstd/bits/bit_algorithm/bit_all_of.hpp>          // bit_all_of
 #include <xstd/bits/bit_algorithm/bit_any_of.hpp>          // bit_any_of
@@ -55,8 +56,9 @@ inline constexpr auto fixed_size<xstd::basic_bit_fixed_valarray<Block, N>> = N;
 template<class V>
 inline constexpr auto capacity = std::dynamic_extent;
 
-template<class Block, std::size_t N>
-inline constexpr auto capacity<xstd::basic_bit_inplace_valarray<Block, N>> = N;
+template<class Blocks, std::size_t N>
+        requires (N != std::dynamic_extent)
+inline constexpr auto capacity<xstd::basic_bit_valarray<Blocks, N>> = N;
 
 template<class V>
 inline constexpr bool is_fixed = fixed_size<V> != std::dynamic_extent;
@@ -621,7 +623,7 @@ auto check_interop()
                 auto v = make<V>(a);
                 check_equal(xstd::bit_convert<xstd::bit_vector>(v), a);
                 check_equal(xstd::bit_convert<V>(xstd::bit_convert<xstd::bit_vector>(v)), a);
-                if constexpr (is_fixed<V>) {
+                if constexpr (is_fixed<V> and test::bytes_are_positions) {
                         auto const b = xstd::bit_convert<std::bitset<fixed_size<V>>>(v);
                         for (auto const i : std::views::iota(0UZ, a.size())) {
                                 BOOST_CHECK_EQUAL(b[i], a[i]);
@@ -699,7 +701,7 @@ using block_t = std::ranges::range_value_t<typename V::block_container_type>;
 
 // The array a proxy is handed: any owner of the same blocks, here the one on the heap, which takes any size.
 template<class V>
-using operand_t = xstd::basic_bit_valarray<block_t<V>>;
+using operand_t = xstd::basic_bit_valarray<std::vector<block_t<V>>>;
 
 // What a const subscript gathers into: an owner of run-time size its own type, the fixed one the inplace one.
 template<class V>

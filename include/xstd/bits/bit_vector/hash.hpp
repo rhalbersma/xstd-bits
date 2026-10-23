@@ -7,14 +7,15 @@
 #define XSTD_BITS_BIT_VECTOR_HASH_HPP
 
 #include <xstd/bits/bit_vector/bit_vector.hpp> // basic_bit_vector
+#include <cstddef>                             // size_t
 #include <functional>                          // hash
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
 
 namespace std {
 
-template<class Block, class Allocator>
-struct hash<xstd::basic_bit_vector<Block, Allocator>> : hash<typename xstd::basic_bit_vector<Block, Allocator>::adaptor_type>
+template<class Blocks, std::size_t N>
+struct hash<xstd::basic_bit_vector<Blocks, N>> : hash<typename xstd::basic_bit_vector<Blocks, N>::adaptor_type>
 {};
 
 } // namespace std

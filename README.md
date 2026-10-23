@@ -72,6 +72,12 @@ specialization changes what `vector<T>` promises for one `T`: at `T = bool`, `op
 no `bool*`, and code written against `vector<T>` breaks there. Scott Meyers's *Effective STL* (2001) gave it an item
 of its own, Item 18: "Avoid using `vector<bool>`."
 
+Howard Hinnant's [On `vector<bool>`](https://howardhinnant.github.io/onvectorbool.html) (2012) separated the two
+questions: is an array of bits a good data structure, and should it be named `vector<bool>`? "Yes. No." Under a
+`bit_vector` of its own, the range-for that fails to compile on `vector<bool>` fails the same way, but now the coder
+sees a dynamic array of bits, whose bits no reference can bind to: "names are important." And with the algorithms
+adapted to read a word at a time, the same data structure is a speed optimization as well as a space one.
+
 In hindsight the workaround had the better design: a packed container chosen by its own name, with its proxy stated up
 front, beside a `vector<bool>` that stays a vector. `xstd::bit_vector` restores the name the STL promised to remove.
 
@@ -96,7 +102,7 @@ interoperate through `xstd::bit_convert` instead.
 | reading  | standard counterpart                                                       | packed here as                                              |
 | :------- | :------------------------------------------------------------------------- | :---------------------------------------------------------- |
 | sequence | `std::array<bool, N>`, `std::inplace_vector<bool, N>`, `std::vector<bool>` | `bit_array`, `bit_inplace_vector`, `bit_vector`             |
-| valarray | `std::valarray<bool>`                                                      | `bit_fixed_valarray`, `bit_inplace_valarray`, `bit_small_valarray`, `bit_valarray` |
+| valarray | `std::valarray<bool>`                                                      | `bit_fixed_valarray`, `bit_inplace_valarray`, `bit_valarray` |
 | set      | `std::set<std::size_t>`                                                    | `bit_fixed_set`, `bit_inplace_set`, `bit_set`               |
 | string   | `std::string`                                                              | `bit_string` (planned)                                      |
 
@@ -129,9 +135,10 @@ xstd-bits is **twelve containers**: two readings of a block of bits — an order
 | :------------------------------------------------ | :---------------------- | :----------------------------------- | :------------------------ |
 | fixed at compile time                             | `bit_fixed_set<N>`      | `bit_array<N>`                       | `bit_fixed_valarray<N>`   |
 | at most `N`, never more                           | `bit_inplace_set<N>`    | `bit_inplace_vector<N>`              | `bit_inplace_valarray<N>` |
-| usually at most `N`, inline; more on the heap     | `bit_small_set<N>`      | `bit_small_vector<N>`                | `bit_small_valarray<N>`   |
 | known only at run time                            | `bit_set`               | `bit_vector`                         | `bit_valarray`            |
 | whatever bits someone else owns                   | `bit_set_view`          | `bit_span`, and `bit_subspan` for a part of it | `bit_span` over one, as `std::span<bool>` over a `std::valarray<bool>` |
+
+The fixed, inplace and dynamic rows are the standard backends, `std::array`, `std::inplace_vector` and `std::vector`. Any other container holds the blocks through the `basic_` forms, such as `basic_bit_vector<Blocks>`, and `ext/boost/` names Boost's `small_vector` this way: `bit_small_set<N>`, `bit_small_vector<N>` and `bit_small_valarray<N>` keep up to `N` bits inline and the rest on the heap.
 
 Three specializations of the fixed set cover the keys a set most often holds:
 
@@ -140,6 +147,8 @@ Three specializations of the fixed set cover the keys a set most often holds:
 - a key type of your own, through a `bit_key_mapping` and the `basic_` forms.
 
 The block is a separate and later choice. Every name above holds `std::size_t` blocks. `bit_least<X>` and `bit_fast<X>` take the smallest and the fastest block that holds the width, and `bit_align<X>` rounds the width up to whole blocks; `bit_rebind<Block, X>` names any block outright.
+
+So is the storage. `basic_bit_vector`, `basic_bit_set` and `basic_bit_valarray` take any `bit_storage` as `std::flat_set` takes its container: a `std::pmr::vector` over an arena, Boost's `small_vector`, or a contiguous container of your own. The inplace and small names above are two such storages, and a cap in bits keeps an inline storage to an exact width.
 
 ### Each one is the packing of a standard container, and speaks that container's vocabulary
 
@@ -203,8 +212,8 @@ The Boost extensions sit apart, under `<xstd/bits/ext/>`. The umbrellas are:
 | `<xstd/bits/bit_span.hpp>` | `bit_span` and `bit_subspan`, the sequence reading of bits another object holds, whole or from any bit offset. |
 | `<xstd/bits/bit_algorithm.hpp>` | The `std::ranges` algorithms over bits, a block at a time, and the tests of whether two sets intersect or are disjoint. |
 | `<xstd/bits/bit_iterator.hpp>` | `bit_advance`, `bit_distance`, `bit_next` and `bit_prev`, an offset step on a sequence and select and rank on a set. |
-| `<xstd/bits/bit_concepts.hpp>` | What holds bits, what a set asks of its key mapping, and what an owner takes as blocks or converts. |
-| `<xstd/bits/bit_type_traits.hpp>` | The transformations that give an owner another block or width, and the blocks they choose. |
+| `<xstd/bits/bit_concepts.hpp>` | What holds bits and what an owner takes as its storage, what a set asks of its key mapping, and what an owner takes as blocks or converts. |
+| `<xstd/bits/bit_type_traits.hpp>` | How a storage rebinds, the transformations that give an owner another block or width, and the blocks they choose. |
 | `<xstd/bits/bit_functional.hpp>` | The comparisons across block types and storages, and the hash and digest of the bits. |
 | `<xstd/bits/bit_ranges.hpp>` | `from_blocks`, the tag that reads an argument's blocks as bits. |
 | `<xstd/bits/bit.hpp>` | `bit_convert`, the positions of any bit storage into any other, at any two widths, and `bit_compress` and `bit_expand`, PEXT and PDEP over owners of any width. |

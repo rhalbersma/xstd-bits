@@ -13,7 +13,7 @@
 
 BOOST_AUTO_TEST_SUITE(BitVectorHash)
 
-using T = xstd::basic_bit_vector<std::uint8_t>;
+using T = xstd::basic_bit_vector<std::vector<std::uint8_t>>;
 
 // The owner hashes as std::vector<bool> does, equal values equal; the view over it no more than std::span does.
 BOOST_AUTO_TEST_CASE(TheOwnerHashesAndTheViewDoesNot)

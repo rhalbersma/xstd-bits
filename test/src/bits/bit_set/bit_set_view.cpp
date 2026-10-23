@@ -245,7 +245,7 @@ BOOST_AUTO_TEST_CASE(TheOrderingSpansBlocksAndNotJustPositions)
 
         // Three blocks, where "anything above" has to look past the next block as well as into it.
         test::set::ordering_agrees_with_std_set_sampled<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 18>>(18UZ, 20000UZ);
-        test::set::ordering_agrees_with_std_set_sampled<xstd::basic_bit_set<std::size_t, std::uint8_t>>(18UZ, 20000UZ);
+        test::set::ordering_agrees_with_std_set_sampled<xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>>(18UZ, 20000UZ);
 }
 
 // A view of keys composes with the lazy set algebra; the block-wise operators are the owner's shortcut.

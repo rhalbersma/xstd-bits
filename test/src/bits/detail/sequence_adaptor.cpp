@@ -5,6 +5,7 @@
 
 #include <test/bit_exchange.hpp>                    // converts_between, converts_from, converts_to, exchanges_from_bits
 #include <test/block_types.hpp>                     // graded_extents
+#include <test/endian.hpp>                          // IWYU pragma: keep; TEST_BYTES_ARE_POSITIONS, bytes_are_positions
 #include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
 #include <xstd/bits/bit_algorithm.hpp>              // bit_all_of, bit_any_of, bit_count, bit_fill, bit_for_each, bit_mismatch, bit_none_of
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
@@ -119,9 +120,9 @@ constexpr bool compares_with = requires (X const& x, Y const& y) { x == y; };
 BOOST_AUTO_TEST_CASE(AnOwnerIsATypeOfItsOwnOverItsStorage)
 {
         static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_array<std::uint8_t, 20>>, xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>, 20>>);
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_vector<std::uint32_t>>, xstd::bits::detail::bit_block_container<std::vector<std::uint32_t>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_vector<std::vector<std::uint32_t>>>, xstd::bits::detail::bit_block_container<std::vector<std::uint32_t>>>);
         static_assert(not compares_with<xstd::basic_bit_array<std::uint8_t, 24>, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>>>>);
-        static_assert(not compares_with<xstd::basic_bit_vector<std::uint32_t>, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_block_container<std::vector<std::uint32_t>>>>);
+        static_assert(not compares_with<xstd::basic_bit_vector<std::vector<std::uint32_t>>, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_block_container<std::vector<std::uint32_t>>>>);
         BOOST_CHECK(true);
 }
 
@@ -233,7 +234,7 @@ BOOST_AUTO_TEST_CASE(ThereAreNoBulkOperators)
 BOOST_AUTO_TEST_CASE(ABlitSourceIsASequenceOfTheSameBlockType)
 {
         using xstd::bits::detail::blit_source;
-        using bytes = xstd::basic_bit_vector<std::uint8_t>;
+        using bytes = xstd::basic_bit_vector<std::vector<std::uint8_t>>;
         static_assert(blit_source<bytes, std::uint8_t> and blit_source<xstd::basic_bit_array<std::uint8_t, 9>, std::uint8_t>);
         static_assert(blit_source<xstd::basic_bit_inplace_vector<std::uint8_t, 9>, std::uint8_t>);
         static_assert(blit_source<xstd::bit_span<std::array<std::uint8_t, 2>>, std::uint8_t>);
@@ -566,6 +567,7 @@ BOOST_AUTO_TEST_CASE(TheRangeForWritesThroughTheProxy)
         BOOST_CHECK_EQUAL(xstd::ranges::bit_count(a, true), std::ranges::ssize(a));
 }
 
+#ifdef TEST_BYTES_ARE_POSITIONS
 // The byte exchange at the sequence reading: byte j holds [8j, 8j + 8), least significant bit first.
 BOOST_AUTO_TEST_CASE(APackedArrayExchangesBytesWithAFieldOfBits)
 {
@@ -633,14 +635,15 @@ BOOST_AUTO_TEST_CASE(AWindowConvertsFromItsOffsetAndAPlainViewAsAFieldOfBits)
         // A view never gains the INBOUND direction, which would write through bits it does not own.
         static_assert(not test::converts_from<View, std::bitset<100>>);
 }
+#endif
 
 // A run-time width takes no field of N bits through the tag, a growing sequence having no single N, but converts.
 BOOST_AUTO_TEST_CASE(ARunTimeWidthConvertsRatherThanExchanges)
 {
         static_assert(not test::exchanges_from_bits<xstd::bit_vector, std::bitset<64>>);
         static_assert(not test::exchanges_from_bits<DynamicOctet, std::bitset<64>>);
-        static_assert(test::converts_between<xstd::bit_vector, std::bitset<64>>);
-        static_assert(test::converts_between<DynamicOctet, std::bitset<64>>);
+        static_assert(test::converts_between<xstd::bit_vector, std::bitset<64>> == test::bytes_are_positions);
+        static_assert(test::converts_between<DynamicOctet, std::bitset<64>> == test::bytes_are_positions);
 }
 
 // Raw blocks read differently here than at the set reading: five is true, false, true, then false.

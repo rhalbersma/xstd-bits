@@ -31,6 +31,9 @@ template<bit_block_container_type Bits>
         } else if constexpr (Bits::has_static_size) {
                 // Blocks lent by span, which has no equality of its own: compared a block at a time instead.
                 return std::ranges::equal(x.blocks(), y.blocks());
+        } else if constexpr (Bits::has_zero_capacity) {
+                // A capacity of nought holds no position, so any two are equal.
+                return true;
         } else {
                 // ranges::equal over the shared prefix as an iterator pair, which lowers to a memcmp.
                 auto const shared = static_cast<std::ptrdiff_t>(std::ranges::min(x.num_blocks(), y.num_blocks()));

@@ -416,7 +416,7 @@ BOOST_AUTO_TEST_CASE(AStoragesNamespaceIsNotAssociatedWithItsProxies)
 BOOST_AUTO_TEST_CASE(EverySequenceClosesItsProxyPair)
 {
         static_assert(test::closed_proxies<xstd::basic_bit_array<std::uint64_t, 65>>);
-        static_assert(test::closed_proxies<xstd::basic_bit_vector<std::uint64_t>>);
+        static_assert(test::closed_proxies<xstd::basic_bit_vector<std::vector<std::uint64_t>>>);
         static_assert(test::closed_proxies<xstd::basic_bit_inplace_vector<std::uint64_t, 65>>);
         static_assert(test::closed_proxies<xstd::basic_bit_small_vector<std::uint64_t, 65>>);
         static_assert(test::closed_proxies<xstd::bit_span<std::array<std::uint64_t, 2>>>);

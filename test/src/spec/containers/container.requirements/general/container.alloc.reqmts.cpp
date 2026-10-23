@@ -31,6 +31,7 @@
 #include <ranges>                                   // from_range, iota
 #include <scoped_allocator>                         // scoped_allocator_adaptor
 #include <set>                                      // pmr::set, set
+#include <span>                                     // dynamic_extent
 #include <tuple>                                    // tuple, tuple_cat
 #include <type_traits>                              // is_constructible_v, is_nothrow_constructible_v
 #include <utility>                                  // declval, move
@@ -75,7 +76,7 @@ template<class Allocator>
 
 // std::set is the model, over the allocator's own value_type; the bit sets take it rebound to their Block.
 template<template<class> class Allocator>
-using allocator_aware = std::tuple<std::set<std::size_t, std::less<std::size_t>, Allocator<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint8_t>>, xstd::basic_bit_set<std::size_t, std::uint64_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint64_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint64_t>>>;
+using allocator_aware = std::tuple<std::set<std::size_t, std::less<std::size_t>, Allocator<std::size_t>>, xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t, Allocator<std::uint8_t>>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>, xstd::basic_bit_set<std::size_t, std::vector<std::uint64_t, Allocator<std::uint64_t>>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator<std::uint64_t>>>;
 
 using Types = decltype(std::tuple_cat(std::declval<allocator_aware<propagating>>(), std::declval<allocator_aware<non_propagating>>(), std::declval<allocator_aware<std::pmr::polymorphic_allocator>>()));
 
@@ -83,11 +84,11 @@ using Types = decltype(std::tuple_cat(std::declval<allocator_aware<propagating>>
 template<class X>
 inline constexpr auto wraps_allocator = false;
 
-template<class Block, std::size_t N, class Compare, class Allocator>
-inline constexpr auto wraps_allocator<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_mapping<std::size_t>, Compare, Allocator>> = true;
+template<class Block, std::size_t K, class Compare, class Allocator>
+inline constexpr auto wraps_allocator<xstd::basic_bit_set<std::size_t, boost::container::small_vector<Block, K, Allocator>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, Compare>> = true;
 
-template<class Block, std::size_t N, class Allocator>
-inline constexpr auto wraps_allocator<xstd::basic_bit_small_vector<Block, N, Allocator>> = true;
+template<class Block, std::size_t K, class Allocator>
+inline constexpr auto wraps_allocator<xstd::basic_bit_vector<boost::container::small_vector<Block, K, Allocator>>> = true;
 
 template<class X>
 [[nodiscard]] auto allocator(int tag)
@@ -107,7 +108,7 @@ concept list_converts_from = requires (Args... args) { accept<C>({args...}); };
 
 // std::vector<bool> is the model, over bool; the bit sequences take the allocator rebound to their Block.
 template<template<class> class Allocator>
-using sequence_allocator_aware = std::tuple<std::vector<bool, Allocator<bool>>, xstd::basic_bit_vector<std::uint8_t, Allocator<std::uint8_t>>, xstd::basic_bit_vector<std::uint64_t, Allocator<std::uint64_t>>, xstd::basic_bit_small_vector<std::uint8_t, 9, Allocator<std::uint8_t>>, xstd::basic_bit_small_vector<std::uint64_t, 64, Allocator<std::uint64_t>>>;
+using sequence_allocator_aware = std::tuple<std::vector<bool, Allocator<bool>>, xstd::basic_bit_vector<std::vector<std::uint8_t, Allocator<std::uint8_t>>>, xstd::basic_bit_vector<std::vector<std::uint64_t, Allocator<std::uint64_t>>>, xstd::basic_bit_small_vector<std::uint8_t, 9, Allocator<std::uint8_t>>, xstd::basic_bit_small_vector<std::uint64_t, 64, Allocator<std::uint64_t>>>;
 
 using SequenceTypes = decltype(std::tuple_cat(std::declval<sequence_allocator_aware<propagating>>(), std::declval<sequence_allocator_aware<non_propagating>>(), std::declval<sequence_allocator_aware<std::pmr::polymorphic_allocator>>()));
 
@@ -508,7 +509,7 @@ BOOST_AUTO_TEST_CASE(AllocatorArguments)
 // [container.reqmts]/64: a memory_resource* converts to the polymorphic allocator.
 BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocator)
 {
-        using pmr_bit_set = xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::size_t>>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
+        using pmr_bit_set = xstd::basic_bit_set<std::size_t, std::vector<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
         auto mr           = std::pmr::monotonic_buffer_resource();
 
         auto const s = pmr_bit_set({1, 2}, &mr);
@@ -519,7 +520,7 @@ BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocator)
 // [container.reqmts]/64: uses-allocator construction hands each element the container's allocator.
 BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOn)
 {
-        using pmr_bit_set = xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::pmr::polymorphic_allocator<std::size_t>>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
+        using pmr_bit_set = xstd::basic_bit_set<std::size_t, std::vector<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
         auto mr           = std::pmr::monotonic_buffer_resource();
         auto sets         = std::pmr::vector<pmr_bit_set>(&mr);
 
@@ -549,9 +550,9 @@ BOOST_AUTO_TEST_CASE(AScopedAllocatorAdaptorPassesItsAllocatorOn)
 {
         using pmr_allocator = std::pmr::polymorphic_allocator<std::size_t>;
         check_scoped_construction<std::pmr::set<std::size_t>>();
-        check_scoped_construction<xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, pmr_allocator>>(); // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
+        check_scoped_construction<xstd::basic_bit_set<std::size_t, std::vector<std::size_t, pmr_allocator>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>>(); // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
         check_scoped_construction<std::pmr::vector<bool>>(3UZ, true);
-        check_scoped_construction<xstd::basic_bit_vector<std::size_t, pmr_allocator>>(3UZ, true);
+        check_scoped_construction<xstd::basic_bit_vector<std::vector<std::size_t, pmr_allocator>>>(3UZ, true);
 }
 
 // [container.reqmts]/64: a rebound std::allocator converts, as it does for std::set.
@@ -580,7 +581,7 @@ BOOST_AUTO_TEST_CASE(AnEmptyBraceIsADefaultAllocator)
 // [container.reqmts]/64: a memory_resource* converts to a sequence's polymorphic allocator.
 BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocatorOfASequence)
 {
-        using pmr_bit_vector = xstd::basic_bit_vector<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
+        using pmr_bit_vector = xstd::basic_bit_vector<std::vector<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>>;
         auto mr              = std::pmr::monotonic_buffer_resource();
 
         auto const v = pmr_bit_vector(3, true, &mr);
@@ -591,7 +592,7 @@ BOOST_AUTO_TEST_CASE(AMemoryResourceConvertsToThePolymorphicAllocatorOfASequence
 // [container.reqmts]/64: uses-allocator construction hands each sequence the container's allocator.
 BOOST_AUTO_TEST_CASE(AnAllocatorAwareContainerPassesItsAllocatorOnToASequence)
 {
-        using pmr_bit_vector = xstd::basic_bit_vector<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>;
+        using pmr_bit_vector = xstd::basic_bit_vector<std::vector<std::size_t, std::pmr::polymorphic_allocator<std::size_t>>>;
         static_assert(std::uses_allocator_v<pmr_bit_vector, std::pmr::polymorphic_allocator<pmr_bit_vector>>);
 
         auto mr      = std::pmr::monotonic_buffer_resource();
@@ -629,7 +630,7 @@ BOOST_AUTO_TEST_CASE(OnlyARunTimeWidthTakesAnAllocator)
 {
         static_assert(std::is_nothrow_constructible_v<std::vector<bool>, std::allocator<bool> const&>);
         static_assert(std::is_nothrow_constructible_v<xstd::bit_vector, std::allocator<std::size_t> const&>);
-        static_assert(std::is_nothrow_constructible_v<xstd::basic_bit_vector<std::uint8_t>, std::allocator<std::uint8_t> const&>);
+        static_assert(std::is_nothrow_constructible_v<xstd::basic_bit_vector<std::vector<std::uint8_t>>, std::allocator<std::uint8_t> const&>);
         static_assert(std::is_nothrow_constructible_v<xstd::basic_bit_small_vector<std::uint64_t, 64>, xstd::basic_bit_small_vector<std::uint64_t, 64>::allocator_type const&>);
         static_assert(std::is_nothrow_constructible_v<xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64>::allocator_type const&>);
         static_assert(not std::is_constructible_v<xstd::bit_array<64>, std::allocator<std::size_t>>);
