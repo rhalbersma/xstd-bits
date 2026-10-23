@@ -26,6 +26,20 @@ drop = true
 departure = "libc++'s internal __invariants()"
 
 [[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_iter_iter.pass.cpp"
+sha256 = "c858cf3457f94615e611d11fa37535543ff20825ac6fc17c13a73db91e264684"
+line = "LIBCPP_ASSERT(c.__invariants());"
+drop = true
+departure = "libc++'s internal __invariants()"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_iter_iter_alloc.pass.cpp"
+sha256 = "20896f7a3a5190983a56e1b06fe923d3da59e3897fa5900ab82d557b141dd066"
+line = "LIBCPP_ASSERT(c.__invariants());"
+drop = true
+departure = "libc++'s internal __invariants()"
+
+[[libcxx.assertion]]
 file = "libcxx/test/std/containers/sequences/vector.bool/construct_size.pass.cpp"
 sha256 = "cadd143ad1be3268aa333f3240255cae78980589795db98fbc680735fba9b93b"
 line = "LIBCPP_ASSERT(c.__invariants());"
