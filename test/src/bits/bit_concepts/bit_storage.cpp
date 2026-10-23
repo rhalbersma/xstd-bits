@@ -41,8 +41,8 @@ BOOST_AUTO_TEST_CASE(ContiguousResizableSequencesOfBlocksAreBitStorage)
 // An arena's vector is the storage of an owner like any other, its blocks allocated from the arena.
 BOOST_AUTO_TEST_CASE(AnArenaHoldsTheBlocks)
 {
-        auto arena = std::pmr::monotonic_buffer_resource();
-        auto v     = xstd::basic_bit_vector<std::pmr::vector<std::uint64_t>>(130, true, &arena);
+        auto arena   = std::pmr::monotonic_buffer_resource();
+        auto const v = xstd::basic_bit_vector<std::pmr::vector<std::uint64_t>>(130, true, &arena);
         BOOST_CHECK(v.size() == 130UZ);
         BOOST_CHECK(v.get_allocator().resource() == &arena);
 }
