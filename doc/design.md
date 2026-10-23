@@ -4243,8 +4243,16 @@ performance benefit does not survive measurement: on the sieve at `N = 2^16`, GC
 twenty-five, 188.0µs unchecked against 188.1µs checked, and 75.1µs against 75.1µs over 65536 inserts. The comparison
 is against a compile-time constant and is never taken; it costs nothing to keep.
 
-An enumerator's `^=`, which toggles one key, is the same write and answers the same way. A key past the width is
-absent, so the toggle that admits it **is** the insert that admits it, and it grows where insert grows.
+**The operators are the unchecked doors.** That measurement holds where the key is a constant or a value the compiler
+can bound, and there the comparison folds. A key read from memory, a `Square` from a board array or a king square
+from `front()`, cannot be bounded, and there a throwing check is a compare, a branch and a call to the throw in every
+caller. Porting Stockfish onto `bit_enum_set<Square>` showed what that costs: the cold calls grew `do_move` and its
+neighbours past GCC's and Clang's inlining limits, and perft ran 4% slower than master under PGO. So the split is
+`std::bitset`'s own, `set(pos)` throwing beside an unchecked `operator[]`: `insert`, `emplace` and the ranged forms
+keep the check above, while an enumerator's `|=`, `^=`, `-=` and `&=`, and `operator[] const`, take the key as their
+precondition, checked only by a hardened build, and each writes its one position as the storage's `set`, `flip`,
+`reset` or one-position `&=` does. A toggle past a dynamic width is the insert that admits the key, and grows where
+insert grows; `length_error` past what a heap can count is a resource limit, not a key's, and stays.
 
 A value that is no key of a mapping closing the universe is the fourth reason, and it has one answer at every
 extent. It ranks at or past the mapping's `size`, and a static width is that `size`, so a fixed set says
@@ -4252,8 +4260,8 @@ extent. It ranks at or past the mapping's `size`, and a static width is that `si
 back there is none, so it asks the same question of `size` before its storage's own ceiling, and says
 `out_of_range` too. The two refusals never meet on one owner: an inplace set over such a mapping has that `size` for
 its capacity, so `bad_alloc` is left to an open universe's key past the capacity, and `length_error` to one past
-what a heap can count. Every door a value comes in through asks it: `insert`, `emplace`, `emplace_hint`, the ranged
-and listed forms, the constructors that insert, and an enumerator's `|=` and `^=`. A flag value of
+what a heap can count. Every checked door a value comes in through asks it: `insert`, `emplace`, `emplace_hint`, the
+ranged and listed forms, and the constructors that insert. A flag value of
 several bits, or of none, stays `bit_flag_mapping`'s precondition, there being no one position to rank it at.
 
 The element-wise `insert(first, last)` and `insert(ilist)` keep what they inserted before the refused key, which
@@ -4261,15 +4269,17 @@ is `[set]`'s own behaviour when an allocation throws midway; the consecutive `in
 range's last position before it writes anything, so that one is all or nothing.
 
 Erasing stays total like `contains`: removing what is not there is the no-op returning zero that
-`std::set::erase` is.
+`std::set::erase` is. Inside the width it is the storage's `erase`, which clears unconditionally, so the count it
+returns costs nothing when it is not read.
 
 **The single position**, member by member, measured at `-O1 -DNDEBUG -fsanitize=address` against libstdc++ 14:
 
 | a key past the width, or a step past an end | `std::set<size_t>` | here |
 |---|---|---|
 | `contains`, `count`, `find`, `lower_bound`, `upper_bound`, `equal_range`, `erase(key)` | answers | answers |
-| `insert`, `emplace`, `emplace_hint`, `insert(hint, x)`, an enumerator's `^=` | grows | `out_of_range` at a static width, grows at a dynamic one |
+| `insert`, `emplace`, `emplace_hint`, `insert(hint, x)` | grows | `out_of_range` at a static width, grows at a dynamic one |
 | the same, with a value that is no key of a closed universe | grows | `out_of_range` at every width |
+| an enumerator's `\|=`, `^=`, `-=`, `&=`, and `operator[]` | — | precondition, checked by a hardened build |
 | `erase(end())` | undefined | `assert(position != end())`, which it already said |
 | `erase(first, last)` reversed | aborts: a free of a pointer never allocated | `assert(*first <= *last)` |
 | `++end()` | undefined | `assert(m_idx < size())` |

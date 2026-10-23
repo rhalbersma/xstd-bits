@@ -45,8 +45,9 @@ As `basic_bit_set`, with:
   `KeyMapping::size == N`.
 - There is no allocator, and neither `allocator_type` nor `get_allocator`. The default constructor is `noexcept`.
 - `max_size` is a constant of the type, `N`; `size()` and `empty()` are functions that count the keys.
-- `insert`, `emplace`, the ranged forms and an enumerator's `|=` and `^=` throw `out_of_range` for a key whose
-  position is `N` or more.
+- `insert`, `emplace` and the ranged forms throw `out_of_range` for a key whose position is `N` or more. An
+  enumerator's `|=`, `^=`, `-=` and `&=`, the non-members over them, and `operator[]` take a position below `N` as
+  their precondition, and are `noexcept`.
 - `~x` complements every key below `N`. `<<= n` keeps the keys that land below `N`, and `>>= n` the keys at or
   above `n`, both emptying the set where `n >= N`. Every operator over two sets is `noexcept`.
 - *`from_blocks` constructor:* As `basic_bit_array`'s: position `i` is a key where bit `i` of `b` is set. The guides

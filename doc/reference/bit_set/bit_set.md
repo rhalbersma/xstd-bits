@@ -94,9 +94,15 @@ As [[set]](https://eel.is/c++draft/set) for `set<Key, Compare>`, over the blocks
   one.
 - **Out of range.** `contains`, `count`, `find`, `lower_bound`, `upper_bound`, `equal_range` and `erase(const
   key_type&)` are total, as on `set`: a key outside the universe, or a value that is no key at all, is absent, and
-  where `Key` is totally ordered the bounds place it among the keys by that order. `insert`, `emplace`, the ranged
-  forms and an enumerator's `|=` and `^=` throw `out_of_range` for a value the mapping ranks at or past
-  `KeyMapping::size`; a key of an open universe throws `length_error` past what the storage can count.
+  where `Key` is totally ordered the bounds place it among the keys by that order. `insert`, `emplace` and the
+  ranged forms throw `out_of_range` for a value the mapping ranks at or past `KeyMapping::size`; a key of an open
+  universe throws `length_error` past what the storage can count.
+- **Unchecked.** The operators with an enumerator, `|=`, `^=`, `-=`, `&=` and the non-members over them, are the
+  unchecked doors, as `bitset`'s `operator[]` is beside `set`: a value the mapping ranks at or past
+  `KeyMapping::size` is their precondition, and at a static width so is a position at or past it. `operator[](const
+  key_type&) const` returns `bool`, the unchecked `contains`, with a position inside the width as its precondition.
+  Each writes the one position as the storage's `set`, `flip`, `reset` or one-position `&=` does, and a hardened
+  build checks the precondition.
 - *Set algebra:* The compound operators combine with a set of the same type at any two widths, a block at a time:
   `&=` keeps the common keys, `|=` adds the other's, `^=` keeps those in one alone, `-=` removes the other's. `|=`
   and `^=` grow the width to the other's highest key. `<<= n` adds `n` to every key, growing the width towards
