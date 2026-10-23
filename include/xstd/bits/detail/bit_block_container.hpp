@@ -1419,7 +1419,7 @@ private:
                         for (auto const i : std::views::iota(0UZ, num_blocks())) {
                                 op(this->m_blocks[i], other.m_blocks[i]);
                         }
-                } else if constexpr (not has_static_size) {
+                } else if constexpr (not has_static_size and not has_zero_capacity) {
                         if (this->size() != other.size()) {
                                 combine_blocks(op, [&](std::size_t i) -> block_type { return other.padded_block(i); });
                         } else {
