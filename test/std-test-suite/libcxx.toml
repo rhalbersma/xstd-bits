@@ -90,3 +90,54 @@ sha256 = "ce82dff5fad1230ff99fc840c68fb6043444eaffdea8e2303769136501825b9b"
 line = "static_assert(tests());"
 drop = true
 departure = "libc++'s word-wise find over its own __bit_iterator"
+
+# [vector.bool.pspc] gives const_reference as bool; bit_vector's is a proxy, as libc++'s own is under its default ABI.
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/sequences/vector.bool/const_reference.pass.cpp"
+sha256 = "b2c54fc371d858255f12176d0bd81261fb309f4c74e6cfdcc76e1e650ca07779"
+fails = "compile"
+paragraph = "[vector.bool.pspc]"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/iterators.pass.cpp"
+sha256 = "4b0f26352d9b48f8962149dab9b46647ede1fa17dda2c1a0ee697336629b4252"
+line = "ASSERT_SAME_TYPE(ConstIterRefT, std::__bit_const_reference<std::vector<bool> >);"
+drop = true
+departure = "const_reference is bit_vector's own proxy"
+
+# [vector.bool.pspc] gives allocator_type as Allocator over bool; bit_vector's is its block container's.
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/types.pass.cpp"
+sha256 = "174730a46512add8952033d489f06d7df3fe22ebbc4dab7c40b353382e58103f"
+line = "static_assert((std::is_same<std::vector<bool>::allocator_type, std::allocator<bool> >::value), \"\");"
+drop = true
+departure = "allocator_type is the block container's allocator"
+
+# [vector.bool.pspc] gives reference a flip(); bit_vector's reference assigns its negation instead.
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/reference/ctor_copy.pass.cpp"
+sha256 = "3b5e218787b78ee3300e6d4b6bf7c00963d70e4570fa1e50152789ab368c1ef3"
+line = "ref.flip();"
+to = "ref = !ref;"
+departure = "no reference::flip()"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/sequences/vector.bool/reference/flip.pass.cpp"
+sha256 = "14c46e44ed31299acde45c92a0b23eb11ca64addf8929ccdec8ab5a3bf083b80"
+fails = "compile"
+paragraph = "[vector.bool.pspc]"
+
+# [vector.bool.pspc] gives vector<bool> a static swap(reference, reference); bit_vector swaps two references with std::swap.
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/sequences/vector.bool/reference.swap.pass.cpp"
+sha256 = "61152ce772dcfb1ff7ac8f64e0d270416a4bb27f2317fbcfccfb2d15414aee2d"
+fails = "compile"
+paragraph = "[vector.bool.pspc]"
+
+# The helper is written over std::vector<bool, Alloc> and its libc++-only __storage_type, so bit_vector cannot reach it.
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/max_size.pass.cpp"
+sha256 = "54d60eacfd4e4b899f2f2d671d90083411506a5cff970d485bc5844aaa379011"
+line = "test(std::vector<bool>());"
+drop = true
+departure = "a helper over std::vector<bool, Alloc>"
