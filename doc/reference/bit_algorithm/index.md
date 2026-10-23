@@ -26,6 +26,9 @@ namespace xstd::ranges {
   // [alg.find], find
   template<see below R>
     constexpr auto bit_find(R&& r, bool value) noexcept -> ranges::borrowed_iterator_t<R>;
+  template<class R, class Pred>
+      requires see below
+    constexpr auto bit_find_if(R&& r, Pred pred) -> ranges::borrowed_iterator_t<R>;
 
   // [alg.find.last], find last
   template<see below R>
@@ -151,6 +154,7 @@ namespace xstd::ranges {
 | [`<xstd/bits/bit_algorithm/bit_none_of.hpp>`](bit_all_of.md) | `bit_none_of` |
 | [`<xstd/bits/bit_algorithm/bit_for_each.hpp>`](bit_for_each.md) | `bit_for_each` |
 | [`<xstd/bits/bit_algorithm/bit_find.hpp>`](bit_find.md) | `bit_find` |
+| [`<xstd/bits/bit_algorithm/bit_find_if.hpp>`](bit_find.md) | `bit_find_if` |
 | [`<xstd/bits/bit_algorithm/bit_find_last.hpp>`](bit_find.md) | `bit_find_last` |
 | [`<xstd/bits/bit_algorithm/bit_count.hpp>`](bit_count.md) | `bit_count` |
 | [`<xstd/bits/bit_algorithm/bit_mismatch.hpp>`](bit_mismatch.md) | `bit_mismatch` |
