@@ -22,6 +22,9 @@ A tag that says at the call site that an argument's blocks are read as bits, rat
     - `basic_bit_array(from_blocks, uint16_t{...})` is `basic_bit_array<uint16_t, 16>`;
     - `basic_bit_fixed_set(from_blocks, array<uint8_t, 3>{...})` is `basic_bit_fixed_set<size_t, uint8_t, 24>`;
     - an empty `array` deduces width zero.
+- The deduction guides of `basic_bit_vector` and `basic_bit_set` deduce the storage from the container they adopt:
+  `basic_bit_vector(from_blocks, vector<uint8_t>{...})` is `basic_bit_vector<vector<uint8_t>>`, and over a storage
+  of constant capacity the width is that capacity in bits.
 - A signed integer, or an `array` of them, deduces nothing, and a run-time width takes no block of a fixed width:
   `bit_vector` is not constructible from `from_blocks` and a `uint64_t`.
 - A type that has bit storage without being it, such as a `bitset<64>` or a `bit_array<64>`, is not read through the

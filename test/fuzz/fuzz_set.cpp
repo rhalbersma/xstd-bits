@@ -31,7 +31,7 @@ namespace {
 // The set reading's owners at each kind of width: dynamic, small, fixed across block boundaries, and inplace.
 using owners = std::tuple<
         xstd::bit_set,
-        xstd::basic_bit_set<std::size_t, std::uint8_t>,
+        xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>,
         xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64>,
         xstd::bit_fixed_set<1>,
         xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17>,

@@ -75,11 +75,11 @@ BOOST_AUTO_TEST_CASE(ALookupCrossesBlockTypesAndStorages)
         BOOST_CHECK(not sets.contains(xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 100>{1UZ}));
 
         auto const vectors = std::unordered_set<xstd::bit_vector, xstd::bit_hash<xstd::bit_vector>, xstd::bit_equal_to>({xstd::bit_vector(9UZ, true), xstd::bit_vector(70UZ)});
-        BOOST_CHECK(vectors.contains(xstd::basic_bit_vector<std::uint8_t>(9UZ, true)));
-        BOOST_CHECK(not vectors.contains(xstd::basic_bit_vector<std::uint8_t>(10UZ, true)));
+        BOOST_CHECK(vectors.contains(xstd::basic_bit_vector<std::vector<std::uint8_t>>(9UZ, true)));
+        BOOST_CHECK(not vectors.contains(xstd::basic_bit_vector<std::vector<std::uint8_t>>(10UZ, true)));
 
         auto const dynamic = std::unordered_set<xstd::bit_set, xstd::bit_hash<xstd::bit_set>, xstd::bit_equal_to>({{3UZ, 300UZ}});
-        BOOST_CHECK(dynamic.contains(xstd::basic_bit_set<std::size_t, std::uint8_t>{3UZ, 300UZ}));
+        BOOST_CHECK(dynamic.contains(xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>{3UZ, 300UZ}));
 }
 
 // Transparent, and never a static width against a run-time one, which bit_hash keeps apart.
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(ComparesOneReadingAndOneWidthKindAlone)
 {
         static_assert(std::same_as<xstd::bit_equal_to::is_transparent, void>);
         static_assert(xstd::bit_equal_to()(xstd::bit_fixed_set<70>{1UZ, 65UZ}, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 70>{1UZ, 65UZ}));
-        static_assert(std::invocable<xstd::bit_equal_to, xstd::bit_vector, xstd::basic_bit_vector<std::uint8_t>>);
+        static_assert(std::invocable<xstd::bit_equal_to, xstd::bit_vector, xstd::basic_bit_vector<std::vector<std::uint8_t>>>);
         static_assert(not std::invocable<xstd::bit_equal_to, xstd::bit_array<8>, xstd::bit_vector> and not std::invocable<xstd::bit_equal_to, xstd::bit_fixed_set<8>, xstd::bit_set>);
         static_assert(not std::invocable<xstd::bit_equal_to, xstd::bit_fixed_set<8>, xstd::bit_array<8>> and not std::invocable<xstd::bit_equal_to, std::vector<bool>, std::vector<bool>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"

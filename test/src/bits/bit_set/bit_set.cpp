@@ -32,19 +32,20 @@
 #include <memory>                                     // allocator
 #include <ranges>                                     // equal, iota, reverse, to
 #include <set>                                        // set
+#include <span>                                       // dynamic_extent
 #include <type_traits>                                // is_constructible_v
 #include <utility>                                    // move
 #include <vector>                                     // vector
 
 BOOST_AUTO_TEST_SUITE(BitSet)
 
-using T = xstd::basic_bit_set<std::size_t, std::uint8_t>;
+using T = xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>;
 
 // The flagship: the set reading over a heap of blocks, built on the set adaptor.
 BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::set_bits_t<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, T>>);
-        static_assert(std::same_as<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::allocator<std::uint8_t>>, T>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+        static_assert(std::same_as<xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t, std::allocator<std::uint8_t>>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>, T>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
 }
 
 // [set.cons]'s allocator arguments, constructed rather than merely asked about in a requires-expression.
@@ -225,17 +226,17 @@ BOOST_AUTO_TEST_CASE(ItDeducesAsStdSetDoes)
         auto const a = xstd::basic_bit_set(keys.begin(), keys.end());
         static_assert(std::same_as<decltype(a), xstd::bit_set const>);
         auto const b = xstd::basic_bit_set(keys.begin(), keys.end(), alloc);
-        static_assert(std::same_as<decltype(b), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
+        static_assert(std::same_as<decltype(b), xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>> const>);
         auto const c = xstd::basic_bit_set(std::from_range, keys);
         static_assert(std::same_as<decltype(c), xstd::bit_set const>);
         auto const d = xstd::basic_bit_set(std::from_range, keys, alloc);
-        static_assert(std::same_as<decltype(d), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
+        static_assert(std::same_as<decltype(d), xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>> const>);
         auto const e = xstd::basic_bit_set({3UZ, 1UZ, 4UZ});
         static_assert(std::same_as<decltype(e), xstd::bit_set const>);
         auto const f = xstd::basic_bit_set({3UZ, 1UZ, 4UZ}, alloc);
-        static_assert(std::same_as<decltype(f), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
+        static_assert(std::same_as<decltype(f), xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>> const>);
         auto const g = xstd::basic_bit_set(b, alloc);
-        static_assert(std::same_as<decltype(g), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
+        static_assert(std::same_as<decltype(g), xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>> const>);
 
         BOOST_CHECK(a == c and c == e);
         BOOST_CHECK(std::ranges::equal(b, a) and std::ranges::equal(d, a) and std::ranges::equal(f, a) and g == b);
@@ -244,7 +245,7 @@ BOOST_AUTO_TEST_CASE(ItDeducesAsStdSetDoes)
 // A strong index keys the set through bit_key_mapping, and the set answers as std::set<strong_index> does.
 BOOST_AUTO_TEST_CASE(AStrongIndexKeysItAsStdSetIsKeyed)
 {
-        using X = xstd::basic_bit_set<test::set::strong_index, std::uint8_t>;
+        using X = xstd::basic_bit_set<test::set::strong_index, std::vector<std::uint8_t>>;
         static_assert(std::same_as<X::key_type, test::set::strong_index>);
         static_assert(std::same_as<X::value_type, test::set::strong_index>);
         static_assert(std::same_as<X::key_mapping_type, xstd::bit_key_mapping<test::set::strong_index>>);
@@ -259,8 +260,8 @@ BOOST_AUTO_TEST_CASE(AStrongIndexKeysItAsStdSetIsKeyed)
 // Any unsigned key, narrower or wider than std::size_t, keys the set as std::set<Key> is keyed, in either direction.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedKeyKeysItAsStdSetIsKeyed, Key, test::all_block_types)
 {
-        using X = xstd::basic_bit_set<Key, std::uint8_t>;
-        using Y = xstd::basic_bit_set<Key, std::uint8_t, xstd::bit_key_mapping<Key>, std::greater<>>;
+        using X = xstd::basic_bit_set<Key, std::vector<std::uint8_t>>;
+        using Y = xstd::basic_bit_set<Key, std::vector<std::uint8_t>, std::dynamic_extent, xstd::bit_key_mapping<Key>, std::greater<>>;
         static_assert(std::same_as<typename X::key_type, Key>);
         static_assert(std::same_as<std::iter_value_t<typename X::iterator>, Key>);
 

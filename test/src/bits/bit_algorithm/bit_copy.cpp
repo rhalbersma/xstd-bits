@@ -59,7 +59,7 @@ template<class Block>
 [[nodiscard]] auto overlapping_disagreements()
         -> int
 {
-        auto const v = test::algorithm::patterned(xstd::basic_bit_vector<Block>(150UZ));
+        auto const v = test::algorithm::patterned(xstd::basic_bit_vector<std::vector<Block>>(150UZ));
         auto wrong   = 0;
         for (auto const& [first, count] : {std::pair{9UZ, 70UZ}, std::pair{64UZ, 70UZ}, std::pair{70UZ, 3UZ}}) {
                 for (auto const to : {0UZ, 1UZ, 8UZ, first - 1UZ, first}) {

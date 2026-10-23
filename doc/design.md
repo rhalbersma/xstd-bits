@@ -79,11 +79,15 @@ put a branch no passing test takes on every subscript in the vehicle; the test t
 `BOOST_CONTAINER_DISABLE_FORCEINLINE`, which leaves the call, and its branch, in Boost's header.
 
 **Whether growth throws is the storage's own answer.** `std::vector::resize` can throw `std::bad_alloc`, and a
-storage with an inline capacity -- `std::inplace_vector`, `boost::container::static_vector` -- throws its own
-`bad_alloc` past it, which reaches the caller unchanged. Growth keeps whatever guarantee the storage's own `resize`
-gives, because the width moves only after the storage has grown: over any of the standard or Boost vectors, whose
-`resize` on unsigned blocks either completes or changes nothing, a failed growth leaves the owner as it was. A
-storage whose `resize` is `noexcept` never takes that path.
+storage with an inline capacity throws past it: `std::inplace_vector` a `std::bad_alloc`, and
+`boost::container::static_vector` a `boost::container::bad_alloc`, which derives from `std::exception` and not from
+`std::bad_alloc` unless `BOOST_CONTAINER_USE_STD_EXCEPTIONS` is defined. The owners ask neither past its capacity:
+they refuse first with `std::bad_alloc`, as `std::inplace_vector` specifies, so a caller catches one type over
+both. The tests build without the macro, so a Boost exception that escapes an owner fails the test that expects the
+standard one; a leg that defined it would turn that failure into a pass. Growth keeps whatever guarantee the
+storage's own `resize` gives, because the width moves only after the storage has grown: over any of the standard or
+Boost vectors, whose `resize` on unsigned blocks either completes or changes nothing, a failed growth leaves the
+owner as it was. A storage whose `resize` is `noexcept` never takes that path.
 
 The element clause is `xstd::unsigned_integer`, and **not** the wider `bit_mask`, which would be the concept
 if the operators were all a block is asked for. They are not. Beyond them the body wants the `<bit>` intrinsics
@@ -694,14 +698,12 @@ sequence and set readings' run-time-width owners and on no view, since a view ha
 valarrays take the adopting constructor alone. The static widths' tag
 constructor requires a width in the type and the adopting one a width in the object, so the two never meet.
 
-Each owner deduces through guides of its own. `basic_bit_vector(from_blocks, std::move(v))` deduces
-`basic_bit_vector<Block, Allocator>` from a guide spelled on `std::vector<Block, Allocator>`, and the inplace names
-deduce their capacity from `inplace_blocks<Block, K>`, adopted at `N = K * digits`: an alias template is
-transparent, so `K` deduces through it from a `std::inplace_vector<Block, K>` or a
-`boost::container::static_vector<Block, K>`, whichever the library holds the blocks in. There is no
-guide over every resizable storage, and `std::vector` has no such guide to match. A storage the library does not
-name has no owner of its own; the adaptor over it adopts it the same way, which is how the tests run
-`test::minimal_blocks`.
+Each owner deduces through guides of its own. `basic_bit_vector(from_blocks, std::move(blocks))` deduces
+`basic_bit_vector<Blocks, N>` from one guide over every `bit_storage`, `N` the storage's constant capacity where it
+has one and `dynamic_extent` where it has none, so `K` inline blocks are adopted at `N = K * digits`, which is
+`basic_bit_inplace_vector<Block, K * digits>`, and a `std::vector` at no cap. The guide is the class's: the inplace
+and small names are aliases that name the storage through `inplace_blocks_for` and `num_blocks_v`, which no
+deduction sees through, so blocks adopted whole are deduced through `basic_bit_vector` and `basic_bit_set`.
 
 `replace` has no precondition to state, which is where it parts from `flat_set`'s: the width becomes the blocks'
 whole width, every bit a position, so there is no tail for it to find dirty and no order for it to find broken. The
@@ -1780,11 +1782,15 @@ What a tag would key on, each container names outright: its base clause says
 uses: measured, a central switchboard has `bit_array.hpp` pulling `<vector>`, which is exactly what the vehicle
 split prevents.
 
-**The axis is closed to users and open to the library.** What a storage has to satisfy is the exposition-only
-`owned_bit_blocks` ([owned-bit-storage](#owned-bit-storage)), which is a claim about blocks and says nothing about
-where they live. `ext/boost.hpp` joins on that and nothing else: two containers over
-`boost::container::small_vector`, added without a line of the core changing. No owner takes a storage argument, so a
-new column is a new owner here, not a parameter a user sets.
+**The axis is open to users.** What a run-time width's storage has to satisfy is the public `bit_storage`, which
+publishes the exposition-only `owned_bit_blocks` ([owned-bit-storage](#owned-bit-storage)) with growth and the
+all-or-nothing `resize` the no-effects guarantees rest on, and says nothing about where the blocks live.
+`basic_bit_vector`, `basic_bit_set` and `basic_bit_valarray` take one as `std::flat_set` takes its `KeyContainer`,
+and a cap in bits below a constant capacity: the inplace and small columns are aliases naming two storages, and
+`ext/boost.hpp` joins on that and nothing else. An arena's `std::pmr::vector`, Abseil's or LLVM's small vector, or a
+file-backed slice is an argument, not a new owner, and two choices coexist in one program with no setting to agree
+on. Rebinding goes through `bit_storage_rebind`, which a storage of another shape specializes beside itself. The fixed
+widths keep `<Block, N>`: a width the type fixes is not something a storage holds.
 
 ### the-container-adaptor
 
@@ -1797,9 +1803,9 @@ names is reached from inside the library and its tests alone.
 **The owners are classes deriving from the adaptors, not aliases over them.** Each passes itself as its adaptor's
 last argument over the `bit_block_container` its base clause spells, which `owned_bits_t` names; a second
 class over the same storage is a distinct type all the same. Each writes out its constructors in the order and
-notation of the clause it packs: [[set.cons]](https://eel.is/c++draft/set.cons) for the three sets, less the allocator forms where the storage has
-none; [[vector.bool.pspc]](https://eel.is/c++draft/vector.bool.pspc) for `basic_bit_vector` and `basic_bit_small_vector`; [[inplace.vector.overview]](https://eel.is/c++draft/inplace.vector.overview) for
-`basic_bit_inplace_vector`; and for `basic_bit_array`, `std::array` being an aggregate, the default and initializer-list
+notation of the clause it packs: [[set.cons]](https://eel.is/c++draft/set.cons) for the sets, less the allocator forms where the storage has
+none; [[vector.bool.pspc]](https://eel.is/c++draft/vector.bool.pspc) for `basic_bit_vector`, each allocator form beside the form without, and
+offered only where the storage has an allocator, which covers [[inplace.vector.overview]](https://eel.is/c++draft/inplace.vector.overview)'s for its inline storages; and for `basic_bit_array`, `std::array` being an aggregate, the default and initializer-list
 constructors its aggregate initialization stands for. What the clause lacks and the adaptor offers -- the
 `from_blocks` doors -- follows the standard ones, each marked as not in the clause. The copy and move constructors, both assignments and the
 destructor are left to the compiler, which declares each as the adaptor underneath answers it, `noexcept` and
@@ -1837,8 +1843,8 @@ through. The one-block guides need no defaulted count either. The views are a se
 
 ### owning-is-ours
 
-Owning is ours and viewing is interop. An owning adaptor sits over a storage of this library,
-`bit_block_container` over `std::array` or `std::vector`, and nothing else is supported or tested: the owning
+Owning is ours and viewing is interop. An owning adaptor sits over blocks of ours or a `bit_storage` the user
+names, `bit_block_container` over the blocks themselves, and never over a foreign bitset: the owning
 `set_adaptor` and `sequence_adaptor` take their ordering from the storage's own
 three-way members, with no synthesized fallback for a storage without them. A view reads blocks, and a foreign
 bitset reaches either reading by conversion.
@@ -2973,12 +2979,14 @@ every consumer who does not.
 
 Two layers of names, over a third nobody spells. The adaptors under `detail/` carry the reading and take the
 storage, the parameters each reading needs and no more ([the-two-adaptors](#the-two-adaptors)). The
-`basic_` layer chooses the storage and leaves the block open, `basic_string`-style:
-`basic_bit_array<Block, N>`, `basic_bit_vector<Block, Allocator>` and their sequence siblings. A set's `basic_` name
-leads with its key, as `std::set<Key>` does, then the storage, then the defaulted policies, the key's mapping first:
-`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>`,
-`basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>` and `basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>`,
-with `KeyMapping` defaulting to `bit_key_mapping<Key>` and `Compare` to `std::less<Key>`. The block leads the storage in
+`basic_` layer leaves the storage open, `flat_set`-style, where the width is a run-time value, and the block open
+where the type fixes the width: `basic_bit_array<Block, N>` beside `basic_bit_vector<Blocks, N>`, whose `Blocks` is
+the whole storage and `N` an optional cap, and whose inplace and small siblings are aliases naming a storage. A set's
+`basic_` name leads with its key, as `std::set<Key>` does, then the storage, then the defaulted policies, the key's
+mapping first: `basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>` and
+`basic_bit_set<Key, Blocks, N, KeyMapping, Compare>`, with `basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>`
+and `basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>` naming two storages of the latter, and
+`KeyMapping` defaulting to `bit_key_mapping<Key>` and `Compare` to `std::less<Key>`. The block leads the storage in
 every column, so a `basic_` name hands its base clause the arguments in the order it was given them --
 `basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>` derives from `set_adaptor<bit_block_container<std::array<Block, K>, N>,
 storage::owned, basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>, Key, KeyMapping, Compare>`, straight
@@ -3160,15 +3168,14 @@ choices written through that pair, the block or width computed from `X`'s own:
 | `bit_underlying<X>` | `underlying_block_t<X::key_type>`: the key's underlying type, enumeration or integer, made unsigned | `N` |
 
 `bit_rebind` takes every owner: `basic_bit_array<Block, N>`,
-`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>`, `basic_bit_fixed_valarray<Block, N>`,
-`basic_bit_inplace_vector<Block, N>`, `basic_bit_inplace_set<Key, Block, N, KeyMapping, Compare>`,
-`basic_bit_inplace_valarray<Block, N>`, `basic_bit_vector<Block, Allocator>`,
-`basic_bit_set<Key, Block, KeyMapping, Compare, Allocator>`, `basic_bit_valarray<Block, Allocator>`, and the Boost
-extension's `basic_bit_small_vector<Block, N, Alloc>`, `basic_bit_small_set<Key, Block, N, KeyMapping, Compare, Alloc>`
-and `basic_bit_small_valarray<Block, N, Alloc>`, short names included. `bit_underlying` takes the four sets among
-them, the owners with a `key_type`. `bit_resize`, `bit_least`, `bit_fast` and `bit_align` read or write `N`, so they
-take the nine whose type carries one, the inplace and small ones changing their capacity. So `bit_rebind<std::uint8_t, bit_vector>` is
-`basic_bit_vector<std::uint8_t, std::allocator<std::uint8_t>>`, `bit_least<bit_fixed_set<9>>` is
+`basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>` and `basic_bit_fixed_valarray<Block, N>`, and
+`basic_bit_vector<Blocks, N>`, `basic_bit_set<Key, Blocks, N, KeyMapping, Compare>` and
+`basic_bit_valarray<Blocks, N>` over a storage with a `bit_storage_rebind`, the inplace and small aliases and the
+short names included. `bit_underlying` takes the sets among them, the owners with a `key_type`. `bit_resize`,
+`bit_least`, `bit_fast` and `bit_align` read or write a width, so they take the owners whose type carries one: a
+fixed width, a cap, or a storage whose `bit_storage_rebind` counts its blocks, the inplace ones changing their
+capacity and the small ones their inline blocks. So `bit_rebind<std::uint8_t, bit_vector>` is
+`basic_bit_vector<std::vector<std::uint8_t>>`, `bit_least<bit_fixed_set<9>>` is
 `basic_bit_fixed_set<std::size_t, std::uint16_t, 9>`, two bytes where `bit_fixed_set<9>` is eight, and
 `bit_align<bit_array<9>>` is `bit_array<64>`, whose last block carries no unused tail. A type with nothing to change,
 a view, a standard bit container or a bare block, and a run-time owner asked for a width, is rejected by the alias's
@@ -5826,7 +5833,7 @@ Notes:
 3. A view over an owner is a view over the storage that owner wraps: `xstd::bit_set_view(s)` over a `bit_fixed_set<N>` deduces `xstd::bit_set_view<std::array<std::size_t, K>, N>`, the blocks and width the set is stored in, and `decltype` is how you name the result. The deduction guide for a plain storage is constrained to non-owners, so an owner and the storage inside it do not tie.
 4. The variable-size sequence of `bool` is named `xstd::bit_vector` and decoupled from the general `std::vector` class template.
 5. All containers use a dense (single bit per element) representation. Variable-size sparse sets can be provided by `flat_set`, either in [Boost](https://www.boost.org/doc/libs/1_80_0/doc/html/boost/container/flat_set.html) or in [C++ 23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1222r4.pdf).
-6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open, and for a set the key before it: `xstd::basic_bit_fixed_set<Key, Block, N>`, `xstd::basic_bit_array<Block, N>` and their inplace siblings, and `xstd::basic_bit_set<Key, Block>` and `xstd::basic_bit_vector<Block, Allocator>` down the dynamic column. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::size_t, std::uint8_t>` is how a block is chosen.
+6. The names above are the short ones, which fix `Block` to `std::size_t` and so take only the width, or nothing at all in the dynamic column where there is no width to give. Each has a `basic_` form that leaves the block open, and for a set the key before it: `xstd::basic_bit_fixed_set<Key, Block, N>`, `xstd::basic_bit_array<Block, N>` and their inplace siblings, and down the dynamic column `xstd::basic_bit_set<Key, Blocks>` and `xstd::basic_bit_vector<Blocks>`, which leave the whole storage open. So `xstd::bit_set` is an alias, not a template, and `xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>` is how a block is chosen.
 7. Every static-width name takes `xstd::bit_align`, a type transformation rounding its width up to whole blocks so that no block carries an unused tail: `xstd::bit_align<xstd::bit_array<120>>` is `xstd::bit_array<128>`. The inplace names take it too, rounding their capacity. That costs nothing in storage at a width already spanning whole blocks, and removes the tail-restoring mask from `fill`, `flip` and the left shift.
 8. Every static-width name also takes `xstd::bit_least` and `xstd::bit_fast`, which keep the width and store it in the smallest or the fastest block that holds it, as `std::uint_least8_t` and `std::uint_fast8_t` do: `xstd::bit_least<xstd::bit_fixed_set<9>>` is two bytes, a `std::uint16_t`, and past 64 bits it is several `std::uint64_t`. `xstd::bit_enum_set<E>` is `bit_least` over the enumeration's fixed set. Least then align, `bit_align<bit_least<X>>`, is the compact form with no unused tail ([block-and-width-transformations](#block-and-width-transformations)).
 
@@ -6292,7 +6299,7 @@ the bitwise operators drop out by constraint above one bit. The set reading take
 one bit per potential element, and the valarray reading stays `bool`.
 
 Open before the first header: whether the element and its mapping join the existing owners' parameter lists,
-defaulted to `bool`, or name a separate family, since `basic_bit_vector<Block, Allocator>` changing touches every
+defaulted to `bool`, or name a separate family, since `basic_bit_vector<Blocks, N>` changing touches every
 alias, every `rebind` and `bit_rebind` and `bit_resize`; whether a width that does not divide the block straddles
 two blocks, as `sdsl::int_vector<9>` does, or pads each block, with power-of-two widths first because they do
 neither; and the one kernel that does not exist yet, a SWAR field compare for `count` and `find` over fields. The
@@ -6454,8 +6461,8 @@ It waits on [P2900](https://wg21.link/P2900)'s availability across the ladders, 
 questions are to be decided before any syntax: whether a partial migration, two vocabularies for one doctrine,
 is worse than none, and so whether a mechanism that degrades to `assert` is wanted; the C++23 floor, since the
 library compiles as C++23 and contracts in the interface move it; and what the checked build is for, legibility
-alone if contracts are only ever ignored in release and enforced in tests. The pilot is the smallest file,
-`bit_valarray/detail/valarray_adaptor.hpp` with four, reviewed for whether it reads better, and the coverage gate needs an
+alone if contracts are only ever ignored in release and enforced in tests. The pilot is one file,
+`bit_valarray/detail/valarray_proxy.hpp` with four asserts, reviewed for whether it reads better, and the coverage gate needs an
 exclusion for a contract annotation as it has one for an assert at the start of a line
 ([an-assert-begins-its-line](#an-assert-begins-its-line)).
 
@@ -6549,7 +6556,7 @@ Bit containers with a selectable or surprising column: `llvm::BitVector` is smal
 
 | inplace | signature | past the capacity | source |
 |---|---|---|---|
-| `boost::container::static_vector` | `template <typename T, std::size_t Capacity, class Options = void> class static_vector` | `std::bad_alloc` by default; with `throw_on_overflow<false>`, an assert and otherwise undefined | [static_vector.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/static_vector.hpp), [options.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/options.hpp) |
+| `boost::container::static_vector` | `template <typename T, std::size_t Capacity, class Options = void> class static_vector` | `boost::container::bad_alloc` by default, which is `std::bad_alloc` only under `BOOST_CONTAINER_USE_STD_EXCEPTIONS`; with `throw_on_overflow<false>`, an assert and otherwise undefined | [static_vector.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/static_vector.hpp), [options.hpp](https://github.com/boostorg/container/blob/2d2f12280290f4d60096d1bfb521bb689adbe91d/include/boost/container/options.hpp) |
 | `boost::static_strings::basic_static_string` | `template <std::size_t N, typename CharT, typename Traits = std::char_traits<CharT>> class basic_static_string` | `std::length_error`, and `std::out_of_range` for a bad position | [static_string.hpp](https://github.com/boostorg/static_string/blob/2ff9d3535e853f4913e85e7fea28f84b04ea5d81/include/boost/static_string/static_string.hpp) |
 | `folly::BasicFixedString` | `template <class Char, std::size_t N> class BasicFixedString` | `std::out_of_range`, a compile error in constant evaluation | [FixedString.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/FixedString.h) |
 | `folly::small_vector` with `policy_in_situ_only<true>` | `template <class Value, std::size_t RequestedMaxInline = 1, class Policy = void> class small_vector` | `std::length_error` | [small_vector.h](https://github.com/facebook/folly/blob/282636437de660ac3603eb61c10b83247199d421/folly/container/small_vector.h) |

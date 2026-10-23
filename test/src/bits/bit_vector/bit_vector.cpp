@@ -35,7 +35,7 @@
 
 BOOST_AUTO_TEST_SUITE(BitVector)
 
-using T = xstd::basic_bit_vector<std::uint8_t>;
+using T = xstd::basic_bit_vector<std::vector<std::uint8_t>>;
 
 // Dependent, so a constrained-away member is a false rather than a hard error.
 template<class X>
@@ -57,7 +57,7 @@ constexpr bool has_range_members = requires (X x, std::vector<bool> const& r) { 
 BOOST_AUTO_TEST_CASE(TheDynamicSequenceIsTheSequenceAdaptorOverAHeapOfBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::sequence_adaptor<xstd::bits::detail::bit_block_container<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, xstd::bits::detail::window::all, T>>);
-        static_assert(std::same_as<xstd::basic_bit_vector<std::uint8_t, std::allocator<std::uint8_t>>, T>);
+        static_assert(std::same_as<xstd::basic_bit_vector<std::vector<std::uint8_t, std::allocator<std::uint8_t>>>, T>);
         static_assert(std::same_as<T::allocator_type, std::allocator<std::uint8_t>>);
 }
 
@@ -101,7 +101,7 @@ template<class X>
 // An allocator a copy hands over and a move does not: taken strongly where a swap hands it over, else basically.
 BOOST_AUTO_TEST_CASE(ACopyTakesAnAllocatorThatAMoveCannotAsStronglyAsASwapAllows)
 {
-        using swapping           = xstd::basic_bit_vector<std::uint8_t, test::container::copy_and_swap_propagating<std::uint8_t>>;
+        using swapping           = xstd::basic_bit_vector<std::vector<std::uint8_t, test::container::copy_and_swap_propagating<std::uint8_t>>>;
         auto const wide_swapping = swapping(1000UZ, true, swapping::allocator_type(1));
         auto narrow_swapping     = swapping(1UZ, true, swapping::allocator_type(0));
         narrow_swapping          = wide_swapping;
@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE(ACopyTakesAnAllocatorThatAMoveCannotAsStronglyAsASwapAllows
         BOOST_CHECK(alike_swapping == wide_swapping);
         BOOST_CHECK(test::container::strong_guarantee(swapping(1UZ, true), copy_in_from(wide_swapping)));
 
-        using copying           = xstd::basic_bit_vector<std::uint8_t, test::container::copy_propagating<std::uint8_t>>;
+        using copying           = xstd::basic_bit_vector<std::vector<std::uint8_t, test::container::copy_propagating<std::uint8_t>>>;
         auto const wide_copying = copying(1000UZ, true, copying::allocator_type(1));
         auto narrow_copying     = copying(1UZ, true, copying::allocator_type(0));
         narrow_copying          = wide_copying;
@@ -236,7 +236,7 @@ BOOST_AUTO_TEST_CASE(AppendRangeBlitsFromASequenceAtAnyAlignment)
         v.append_range(source);
         v.append_range(view);
         v.append_range(fixed);
-        v.append_range(xstd::basic_bit_vector<std::uint64_t>(std::from_range, pattern(13)));
+        v.append_range(xstd::basic_bit_vector<std::vector<std::uint64_t>>(std::from_range, pattern(13)));
         auto m = std::vector<bool>();
         append_to(m, pattern(50));
         append_to(m, pattern(50));
@@ -297,7 +297,7 @@ BOOST_AUTO_TEST_CASE(InsertingAWindowOfItselfRebuildsAsAStdVectorDoes)
 // Within capacity every shape of insertion shifts the tail in place, so with each allocation refused, all complete.
 BOOST_AUTO_TEST_CASE(InsertingWithinCapacityAllocatesNothing)
 {
-        using X           = xstd::basic_bit_vector<std::uint8_t, test::container::propagating<std::uint8_t>>;
+        using X           = xstd::basic_bit_vector<std::vector<std::uint8_t, test::container::propagating<std::uint8_t>>>;
         auto const blocks = T(std::from_range, pattern(13));
         auto const bools  = pattern(11);
         for (auto const pos : {0UZ, 1UZ, 8UZ, 13UZ, 20UZ}) {
@@ -326,7 +326,7 @@ BOOST_AUTO_TEST_CASE(InsertingWithinCapacityAllocatesNothing)
 // Inserting at the end grows as push_back does, geometrically, so n insertions make O(log n) allocations.
 BOOST_AUTO_TEST_CASE(InsertingAtTheEndGrowsGeometrically)
 {
-        using X                = xstd::basic_bit_vector<std::uint8_t, test::container::propagating<std::uint8_t>>;
+        using X                = xstd::basic_bit_vector<std::vector<std::uint8_t, test::container::propagating<std::uint8_t>>>;
         constexpr auto n       = 10'000UZ;
         constexpr auto granted = std::int64_t{1'000'000};
         auto book              = test::container::ledger();
@@ -345,7 +345,7 @@ BOOST_AUTO_TEST_CASE(InsertingAtTheEndGrowsGeometrically)
 // A sized append grows through the storage's own resize, as push_back does: n nine-bool appends, O(log n) allocations.
 BOOST_AUTO_TEST_CASE(AppendingSmallRangesGrowsGeometrically)
 {
-        using X                = xstd::basic_bit_vector<std::uint8_t, test::container::propagating<std::uint8_t>>;
+        using X                = xstd::basic_bit_vector<std::vector<std::uint8_t, test::container::propagating<std::uint8_t>>>;
         constexpr auto n       = 10'000UZ;
         constexpr auto granted = std::int64_t{1'000'000};
         auto const one         = xstd::bit_vector(1UZ, true);
@@ -484,23 +484,23 @@ BOOST_AUTO_TEST_CASE(ItDeducesAsStdVectorDoes)
         static_assert(std::same_as<decltype(a), xstd::bit_vector const>);
         static_assert(std::same_as<decltype(std::vector(bools.begin(), bools.end())), std::vector<bool>>);
         auto const b = xstd::basic_bit_vector(bools.begin(), bools.end(), alloc);
-        static_assert(std::same_as<decltype(b), xstd::basic_bit_vector<std::uint8_t> const>);
+        static_assert(std::same_as<decltype(b), xstd::basic_bit_vector<std::vector<std::uint8_t>> const>);
         auto const c = xstd::basic_bit_vector(std::from_range, bools);
         static_assert(std::same_as<decltype(c), xstd::bit_vector const>);
         auto const d = xstd::basic_bit_vector(std::from_range, bools, alloc);
-        static_assert(std::same_as<decltype(d), xstd::basic_bit_vector<std::uint8_t> const>);
+        static_assert(std::same_as<decltype(d), xstd::basic_bit_vector<std::vector<std::uint8_t>> const>);
 #ifdef __cpp_lib_containers_ranges
 
         static_assert(std::same_as<decltype(std::vector(std::from_range, bools)), std::vector<bool>>);
 
 #endif
         auto const e = xstd::basic_bit_vector(b, alloc);
-        static_assert(std::same_as<decltype(e), xstd::basic_bit_vector<std::uint8_t> const>);
+        static_assert(std::same_as<decltype(e), xstd::basic_bit_vector<std::vector<std::uint8_t>> const>);
         auto const f = xstd::basic_bit_vector({true, false, true, true});
         static_assert(std::same_as<decltype(f), xstd::bit_vector const>);
         static_assert(std::same_as<decltype(std::vector({true, false, true, true})), std::vector<bool>>);
         auto const g = xstd::basic_bit_vector({true, false, true, true}, alloc);
-        static_assert(std::same_as<decltype(g), xstd::basic_bit_vector<std::uint8_t> const>);
+        static_assert(std::same_as<decltype(g), xstd::basic_bit_vector<std::vector<std::uint8_t>> const>);
 
         BOOST_CHECK(std::ranges::equal(a, bools) and std::ranges::equal(b, bools) and std::ranges::equal(c, bools));
         BOOST_CHECK(std::ranges::equal(d, bools) and e == b and f == a and g == b);
@@ -541,7 +541,7 @@ BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDo)
         static_assert(noexcept(xstd::ranges::bit_rotate(std::declval<T&>(), std::declval<T&>().begin())) and noexcept(xstd::ranges::bit_reverse(std::declval<T&>())));
         static_assert(test::sequence::permutes_ten_bits(T(10)));
         BOOST_CHECK_EQUAL(permutation_sweeps<T>(), 0);
-        BOOST_CHECK_EQUAL(permutation_sweeps<xstd::basic_bit_vector<std::uint64_t>>(), 0);
+        BOOST_CHECK_EQUAL(permutation_sweeps<xstd::basic_bit_vector<std::vector<std::uint64_t>>>(), 0);
 }
 
 // A view rotates and reverses what it views, as it flips it; a window does neither.

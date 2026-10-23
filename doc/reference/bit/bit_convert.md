@@ -98,7 +98,7 @@ run-time end can allocate, refuse a capacity or throw `overflow_error`.
   `bit_convert<bit_vector>(bit_fixed_set<100>{99})` has 100. A `bit_vector` of 70 converts to a set over 72 positions
   in `uint8_t` blocks.
 - `bit_convert<bit_vector>(std::move(s))` for a `bit_set s` takes `s`'s blocks, and `s` is then empty; from a
-  `basic_bit_set<size_t, uint8_t>` it copies, and the source keeps its bits.
+  `basic_bit_set<size_t, vector<uint8_t>>` it copies, and the source keeps its bits.
 
 ### See also
 

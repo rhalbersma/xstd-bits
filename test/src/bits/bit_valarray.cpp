@@ -9,6 +9,7 @@
 #include <cstddef>                    // size_t
 #include <utility>                    // declval
 #include <valarray>                   // gslice, slice, valarray
+#include <vector>                     // vector
 
 BOOST_AUTO_TEST_SUITE(Valarray)
 
@@ -17,7 +18,7 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesEveryValarrayAndProxy)
 {
         static_assert(std::same_as<xstd::bit_fixed_valarray<8>, xstd::basic_bit_fixed_valarray<std::size_t, 8>>);
         static_assert(std::same_as<xstd::bit_inplace_valarray<8>, xstd::basic_bit_inplace_valarray<std::size_t, 8>>);
-        static_assert(std::same_as<xstd::bit_valarray, xstd::basic_bit_valarray<std::size_t>>);
+        static_assert(std::same_as<xstd::bit_valarray, xstd::basic_bit_valarray<std::vector<std::size_t>>>);
         static_assert(std::same_as<decltype(std::declval<xstd::bit_valarray&>()[std::slice()]), xstd::bit_slice_array<std::size_t>>);
         static_assert(std::same_as<decltype(std::declval<xstd::bit_valarray&>()[std::gslice()]), xstd::bit_gslice_array<std::size_t>>);
         static_assert(std::same_as<decltype(std::declval<xstd::bit_valarray&>()[std::declval<xstd::bit_valarray const&>()]), xstd::bit_mask_array<std::size_t>>);
