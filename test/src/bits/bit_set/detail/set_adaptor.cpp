@@ -11,6 +11,7 @@
 #include <test/set/primitives.hpp>                     // heterogeneous_key
 #include <test/spec/random.hpp>                        // engine, seed
 #include <xstd/bits/bit/bit_convert.hpp>               // bit_convert
+#include <xstd/bits/bit/shl.hpp>                       // shl
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>    // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>    // bit_includes
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp>  // bit_intersects
@@ -684,10 +685,11 @@ BOOST_AUTO_TEST_CASE(ALeftShiftDropsTheKeysItCarriesPastMaxSize)
         shifted <<= 64UZ;
         BOOST_CHECK_EQUAL(shifted.size(), 1UZ);
         BOOST_CHECK(shifted.contains(64UZ));
-        for (auto const n : {shifted.max_size() - 64UZ, top - 64UZ, top}) {
-                auto emptied = shifted;
-                emptied <<= n;
-                BOOST_CHECK(emptied.empty());
+        auto emptied = shifted;
+        emptied <<= shifted.max_size() - 64UZ;
+        BOOST_CHECK(emptied.empty());
+        for (auto const n : {top - 64UZ, top}) {
+                BOOST_CHECK(xstd::shl(shifted, n).empty());
         }
 }
 

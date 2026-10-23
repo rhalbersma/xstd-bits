@@ -65,8 +65,8 @@ namespace {
 template<class T>
 auto check_empties(T const& a, std::size_t n) -> void
 {
-        // At a static width the operators take n < N as their precondition, and the total forms are shl and shr.
-        if constexpr (requires { requires T::has_static_width; }) {
+        // The operators take n < max_size() as their precondition, and the total forms are shl and shr.
+        if constexpr (requires { xstd::shl(a, n); }) {
                 BOOST_CHECK(xstd::shl(a, n).empty());
                 BOOST_CHECK(xstd::shr(a, n).empty());
         } else {

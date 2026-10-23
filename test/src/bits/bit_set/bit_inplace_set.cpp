@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/set/ascending.hpp>                   // yields_ascending_keys
+#include <xstd/bits/bit/shl.hpp>                    // shl
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set, bit_inplace_set
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp> // set_adaptor
 #include <xstd/bits/bit_type_traits/bit_align.hpp>  // bit_align
@@ -178,26 +179,24 @@ BOOST_AUTO_TEST_CASE(ShiftingKeepsWhatFitsUnderTheCapacityWhateverTheWidth)
         BOOST_CHECK(narrow == T({23UZ}));
 }
 
-// An empty set has no key to carry, so every distance leaves it empty, the widest too.
+// An empty set has no key to carry, so every distance leaves it empty, the capacity and the widest through shl.
 BOOST_AUTO_TEST_CASE(ShiftingAnEmptySetLeavesItEmpty)
 {
         auto s = T();
-        s <<= 24;
+        s <<= 23;
         BOOST_CHECK(s.empty());
+        BOOST_CHECK(xstd::shl(s, 24).empty());
 
         s.insert(23);
         s.erase(23);
-        s <<= std::numeric_limits<std::size_t>::max();
-        BOOST_CHECK(s.empty());
+        BOOST_CHECK(xstd::shl(s, std::numeric_limits<std::size_t>::max()).empty());
 }
 
 // A distance near the top of size_t carries every key past the capacity rather than wrap it onto one that fits.
 BOOST_AUTO_TEST_CASE(ShiftingByTheWidestDistancesEmptiesRatherThanWraps)
 {
         for (auto const n : {std::numeric_limits<std::size_t>::max(), std::numeric_limits<std::size_t>::max() - 1UZ}) {
-                auto s = T({1UZ, 2UZ});
-                s <<= n;
-                BOOST_CHECK(s.empty());
+                BOOST_CHECK(xstd::shl(T({1UZ, 2UZ}), n).empty());
         }
 }
 

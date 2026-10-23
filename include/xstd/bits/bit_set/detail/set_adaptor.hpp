@@ -889,7 +889,8 @@ public:
                         mask.set(pos);
                         self.bits() &= mask;
                 } else {
-                        auto const kept = self.contains(x);
+                        XSTD_BITS_ASSERT(pos < self.max_size());
+                        auto const kept = pos < self.bits().size() and self.bits().test(pos);
                         self.clear();
                         if (kept) {
                                 self.bits().assign(pos, true);
@@ -925,8 +926,11 @@ public:
                 if constexpr (has_static_width) {
                         XSTD_BITS_ASSERT(pos < self.bits().size());
                         static_cast<void>(self.bits().erase(pos));
-                } else if (pos < self.bits().size()) {
-                        static_cast<void>(self.bits().erase(pos));
+                } else {
+                        XSTD_BITS_ASSERT(pos < self.max_size());
+                        if (pos < self.bits().size()) {
+                                static_cast<void>(self.bits().erase(pos));
+                        }
                 }
                 return self;
         }
@@ -1000,7 +1004,7 @@ public:
                 return nrv;
         }
 
-        // The shifts translate the set: native at a static width, n < N their precondition; a dynamic width grows.
+        // The shifts translate the set, n < max_size() their precondition; a dynamic width grows towards it first.
         constexpr auto operator<<=(this non_volatile auto&& self, std::size_t n) noexcept(has_static_width or bits_type::has_static_capacity)
                 -> auto&
                 requires requires { self.bits() <<= n; } and (has_static_width or requires { self.bits().resize(n); })
@@ -1010,13 +1014,16 @@ public:
                         self.bits() <<= n;
                 } else if constexpr (bits_type::has_zero_capacity) {
                         // A capacity of nought holds no element, so there is nothing to translate.
-                } else if (auto const lowest = self.bits().find_first(), width = self.bits().size(), top = self.max_size(); lowest == width or n >= top - lowest) {
-                        // No key lands below max_size(): the set empties at its width and asks for no growth.
-                        self.bits().fill(false);
                 } else {
-                        // width + n saturates and stops at max_size(); the storage's shift drops what passes the width.
-                        self.bits().resize(std::ranges::min(bits_type::width_sum(width, n), top));
-                        self.bits() <<= n;
+                        XSTD_BITS_ASSERT(n < self.max_size());
+                        if (auto const lowest = self.bits().find_first(), width = self.bits().size(), top = self.max_size(); lowest == width or n >= top - lowest) {
+                                // No key lands below max_size(): the set empties at its width and asks for no growth.
+                                self.bits().fill(false);
+                        } else {
+                                // width + n stops at max_size(); the storage's shift drops what passes the width.
+                                self.bits().resize(std::ranges::min(bits_type::width_sum(width, n), top));
+                                self.bits() <<= n;
+                        }
                 }
                 return self;
         }
@@ -1028,10 +1035,13 @@ public:
                 if constexpr (has_static_width) {
                         XSTD_BITS_ASSERT(n < self.bits().size());
                         self.bits() >>= n;
-                } else if (n < self.bits().size()) {
-                        self.bits() >>= n;
                 } else {
-                        self.bits().fill(false);
+                        XSTD_BITS_ASSERT(n < self.max_size());
+                        if (n < self.bits().size()) {
+                                self.bits() >>= n;
+                        } else {
+                                self.bits().fill(false);
+                        }
                 }
                 return self;
         }
@@ -1054,8 +1064,13 @@ public:
                 -> bool
         {
                 auto const pos = KeyMapping::to_index(x);
-                XSTD_BITS_ASSERT(pos < bits().size());
-                return bits().test(pos);
+                if constexpr (has_static_width) {
+                        XSTD_BITS_ASSERT(pos < bits().size());
+                        return bits().test(pos);
+                } else {
+                        XSTD_BITS_ASSERT(pos < max_size());
+                        return pos < bits().size() and bits().test(pos);
+                }
         }
 
         // set operations, total over key_type as std::set's are; is_key and the width are the guards, test() the read.

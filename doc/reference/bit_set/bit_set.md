@@ -97,12 +97,13 @@ As [[set]](https://eel.is/c++draft/set) for `set<Key, Compare>`, over the blocks
   where `Key` is totally ordered the bounds place it among the keys by that order. `insert`, `emplace` and the
   ranged forms throw `out_of_range` for a value the mapping ranks at or past `KeyMapping::size`; a key of an open
   universe throws `length_error` past what the storage can count.
-- **Unchecked.** The operators with an enumerator, `|=`, `^=`, `-=`, `&=` and the non-members over them, are the
-  unchecked doors, as `bitset`'s `operator[]` is beside `set`: a value the mapping ranks at or past
-  `KeyMapping::size` is their precondition, and at a static width so is a position at or past it. `operator[](const
-  key_type&) const` returns `bool`, the unchecked `contains`, with a position inside the width as its precondition.
-  Each writes the one position as the storage's `set`, `flip`, `reset` or one-position `&=` does, and a hardened
-  build checks the precondition.
+- **Unchecked.** The operators are the unchecked doors, as `bitset`'s `operator[]` is beside `set`, and the named
+  members and `xstd::shl` and `xstd::shr` the checked or total ones. For the operators with an enumerator, `|=`,
+  `^=`, `-=`, `&=` and the non-members over them, and for `operator[](const key_type&) const`, which returns `bool`,
+  a position below `max_size()` is the precondition; for `<<= n` and `>>= n`, `n < max_size()` is. At a run-time
+  width a position past the current width reads as absent, and `|=` and `^=` grow to it, the width being capacity
+  and never value. Each writes as the storage's `set`, `flip`, `reset`, one-position `&=` or shift does, and a
+  hardened build checks the precondition.
 - *Set algebra:* The compound operators combine with a set of the same type at any two widths, a block at a time:
   `&=` keeps the common keys, `|=` adds the other's, `^=` keeps those in one alone, `-=` removes the other's. `|=`
   and `^=` grow the width to the other's highest key. `<<= n` adds `n` to every key, growing the width towards
