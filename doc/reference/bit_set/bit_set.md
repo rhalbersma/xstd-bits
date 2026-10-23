@@ -124,6 +124,6 @@ As [[set]](https://eel.is/c++draft/set) for `set<Key, Compare>`, over the blocks
   the block of the allocator, `vector<size_t>` where none is given.
 - **Enumerator operands.** Where `Key` is an enumeration and `KeyMapping` does not read it as a mask, an enumerator
   is the one-element set holding it: `&=`, `|=`, `^=` and `-=` take one on the right, and on an owner `&`, `|`, `^`
-  and `-` take one on either side. The enumeration itself gains no operator. `|=` and `^=` throw as `insert` does.
+  and `-` take one on either side. The enumeration itself gains no operator. They are unchecked, as above.
 - The Boost.Hash2 hook appends the keys in iteration order, then their count, exactly as Hash2 writes the
   `set<Key, Compare>` of the same keys.
