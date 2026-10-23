@@ -31,7 +31,7 @@
 #include <initializer_list>                                   // initializer_list
 #include <ranges>                                             // from_range, from_range_t
 #include <type_traits>                                        // conditional_t, is_enum_v
-#include <utility>                                            // forward, move
+#include <utility>                                            // forward
 
 namespace xstd {
 
@@ -73,8 +73,8 @@ public:
 
         template<class InputIterator>
                 requires bits::detail::input_iterator_pair<InputIterator, InputIterator>
-        [[nodiscard]] constexpr basic_bit_fixed_set(InputIterator first, InputIterator const& last, key_compare const& /* comp */ = key_compare())
-                : base_type(std::move(first), last)
+        [[nodiscard]] constexpr basic_bit_fixed_set(InputIterator first, InputIterator last, key_compare const& /* comp */ = key_compare())
+                : base_type(first, last)
         {}
 
         template<xstd::container_compatible_range<value_type> R>

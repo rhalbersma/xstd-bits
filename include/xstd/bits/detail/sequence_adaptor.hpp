@@ -670,7 +670,7 @@ public:
 
         template<class I, class S>
                 requires bits::detail::input_iterator_pair<I, S> and can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
-        [[nodiscard]] constexpr sequence_adaptor(I first, S const& last)
+        [[nodiscard]] constexpr sequence_adaptor(I first, S last)
         {
                 // A capacity of nought refuses any element outright, rather than through a loop that cannot go round.
                 if constexpr (bits_type::has_zero_capacity) {
@@ -743,7 +743,7 @@ public:
 
         template<class I, class S>
                 requires bits::detail::input_iterator_pair<I, S> and can_grow and std::constructible_from<value_type, std::iter_reference_t<I>> and is_allocator_aware
-        [[nodiscard]] constexpr sequence_adaptor(I first, S const& last, allocator_param const& alloc)
+        [[nodiscard]] constexpr sequence_adaptor(I first, S last, allocator_param const& alloc)
                 : members_type(std::in_place, alloc)
         {
                 for (; first != last; ++first) {
@@ -795,7 +795,7 @@ public:
 
         template<class I, class S>
                 requires bits::detail::input_iterator_pair<I, S> and can_grow and std::constructible_from<value_type, std::iter_reference_t<I>>
-        constexpr auto assign(I first, S const& last)
+        constexpr auto assign(I first, S last)
                 -> void
         {
                 m_bits.clear();
