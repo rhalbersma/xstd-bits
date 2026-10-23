@@ -691,14 +691,14 @@ BOOST_AUTO_TEST_CASE(ALeftShiftDropsTheKeysItCarriesPastMaxSize)
         }
 }
 
-// back() has a non-empty set as its precondition, and a zero width has no non-empty state to ask it in.
-BOOST_AUTO_TEST_CASE(AZeroWidthAnswersBackWithoutScanning)
+// A zero width has no non-empty state, so front() and back(), whose precondition that is, are never asked of it.
+BOOST_AUTO_TEST_CASE(AZeroWidthIsAlwaysEmpty)
 {
         auto const z = xstd::bit_fixed_set<0>();
 
         BOOST_CHECK(z.empty());
         BOOST_CHECK_EQUAL(z.size(), 0UZ);
-        BOOST_CHECK_EQUAL(static_cast<std::size_t>(z.back()), 0UZ);
+        BOOST_CHECK(z.begin() == z.end());
 }
 
 // Across two run-time widths the set operations ask whole blocks, with padding clear above them by invariant.

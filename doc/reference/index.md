@@ -86,6 +86,7 @@ clause where one is shared.
 | `is_range`<br>`is_tuple_like` | New | none in the standard: specializations of Boost.ContainerHash's traits |
 | `bit_convert` | Generalizes | [[bit.cast]](https://eel.is/c++draft/bit.cast) from [P0476R2](https://wg21.link/p0476r2): position for position across widths and readings, rather than byte for byte at one size |
 | `bit_convert` with `boost::dynamic_bitset` | New | none in the standard: conversion to and from Boost.DynamicBitset |
+| `shl`<br>`shr` | Proposed | [P3793R2](https://wg21.link/p3793r2)'s total shifts, beside [[bit.rotate]](https://eel.is/c++draft/bit.rotate): a set's keys moved by any count, where the set's own `<<` and `>>` take a count below a static width as their precondition |
 | `bit_array` | Generalizes | [[array]](https://eel.is/c++draft/array) of `bool`, packed |
 | `basic_bit_array` | New | [[array]](https://eel.is/c++draft/array) customizing the block type |
 | `to_bit_array` | Generalizes | [[array.creation]](https://eel.is/c++draft/array.creation) returning a `bit_array` |

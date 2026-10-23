@@ -770,6 +770,9 @@ public:
                 -> size_type
                 requires requires { self.bits().erase(KeyMapping::to_index(x)); }
         {
+                if (not detail::is_key<KeyMapping>(x)) {
+                        return 0UZ;
+                }
                 auto const pos = KeyMapping::to_index(x);
                 if (pos >= self.bits().size()) {
                         return 0UZ;
@@ -997,18 +1000,14 @@ public:
                 return nrv;
         }
 
-        // The shifts translate the set and keep the keys below max_size(); a run-time width grows towards it first.
+        // The shifts translate the set: native at a static width, n < N their precondition; a dynamic width grows.
         constexpr auto operator<<=(this non_volatile auto&& self, std::size_t n) noexcept(has_static_width or bits_type::has_static_capacity)
                 -> auto&
                 requires requires { self.bits() <<= n; } and (has_static_width or requires { self.bits().resize(n); })
         {
                 if constexpr (has_static_width) {
-                        // The storage's shift has n < size() as its precondition; a constant n folds the test away.
-                        if (n < self.bits().size()) {
-                                self.bits() <<= n;
-                        } else {
-                                self.bits().fill(false);
-                        }
+                        XSTD_BITS_ASSERT(n < self.bits().size());
+                        self.bits() <<= n;
                 } else if constexpr (bits_type::has_zero_capacity) {
                         // A capacity of nought holds no element, so there is nothing to translate.
                 } else if (auto const lowest = self.bits().find_first(), width = self.bits().size(), top = self.max_size(); lowest == width or n >= top - lowest) {
@@ -1026,7 +1025,10 @@ public:
                 -> auto&
                 requires requires { self.bits() >>= n; }
         {
-                if (n < self.bits().size()) {
+                if constexpr (has_static_width) {
+                        XSTD_BITS_ASSERT(n < self.bits().size());
+                        self.bits() >>= n;
+                } else if (n < self.bits().size()) {
                         self.bits() >>= n;
                 } else {
                         self.bits().fill(false);

@@ -49,7 +49,9 @@ As `basic_bit_set`, with:
   enumerator's `|=`, `^=`, `-=` and `&=`, the non-members over them, and `operator[]` take a position below `N` as
   their precondition, and are `noexcept`.
 - `~x` complements every key below `N`. `<<= n` keeps the keys that land below `N`, and `>>= n` the keys at or
-  above `n`, both emptying the set where `n >= N`. Every operator over two sets is `noexcept`.
+  above `n`; both are the native shifts, as an integer's are, with `n < N` as their precondition. `xstd::shl` and
+  `xstd::shr` are the total forms, which empty the set where the count is `N` or more and shift the other way for a
+  negative count. Every operator over two sets is `noexcept`.
 - *`from_blocks` constructor:* As `basic_bit_array`'s: position `i` is a key where bit `i` of `b` is set. The guides
   deduce the width the blocks name, `Key` being `size_t`. `xstd::bit_convert` goes the other way, from the set to a
   block, an array of blocks or a `std::bitset`, position `i` staying position `i`.

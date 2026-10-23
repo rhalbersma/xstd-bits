@@ -9,6 +9,8 @@
 #include <test/spec/rejection.hpp>  // has_shift_left, has_shift_left_assign, has_shift_right, has_shift_right_assign
 #include <test/spec/set.hpp>        // const_views, keyed_sets_with_singletons, owners, sets, views
 #include <test/spec/view.hpp>       // owner_t
+#include <xstd/bits/bit/shl.hpp>    // shl
+#include <xstd/bits/bit/shr.hpp>    // shr
 #include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <cstddef>                  // size_t
 #include <limits>                   // numeric_limits
@@ -63,15 +65,21 @@ namespace {
 template<class T>
 auto check_empties(T const& a, std::size_t n) -> void
 {
-        if constexpr (requires (T x) { x <<= 1UZ; }) {
-                auto b = a;
-                b <<= n;
-                BOOST_CHECK(b.empty());
-        }
-        if constexpr (requires (T x) { x >>= 1UZ; }) {
-                auto c = a;
-                c >>= n;
-                BOOST_CHECK(c.empty());
+        // At a static width the operators take n < N as their precondition, and the total forms are shl and shr.
+        if constexpr (requires { requires T::has_static_width; }) {
+                BOOST_CHECK(xstd::shl(a, n).empty());
+                BOOST_CHECK(xstd::shr(a, n).empty());
+        } else {
+                if constexpr (requires (T x) { x <<= 1UZ; }) {
+                        auto b = a;
+                        b <<= n;
+                        BOOST_CHECK(b.empty());
+                }
+                if constexpr (requires (T x) { x >>= 1UZ; }) {
+                        auto c = a;
+                        c >>= n;
+                        BOOST_CHECK(c.empty());
+                }
         }
 }
 
