@@ -417,7 +417,7 @@ BOOST_AUTO_TEST_CASE(TheProxiesSwapAndNothingFlips)
 // vector<bool>::const_reference is bool, so a reference initializes one; the const proxy reads through the same bit.
 BOOST_AUTO_TEST_CASE(AReferenceConvertsToAConstReference)
 {
-        auto v               = T{true, false};
+        auto v                     = T{true, false};
         T::const_reference const r = v[0];
         BOOST_CHECK(r);
         v[0] = false;
