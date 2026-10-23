@@ -2215,14 +2215,14 @@ Two consequences follow from the members being constants rather than functions:
 
 ### a-set-needs-no-width
 
-A set owner could hold its blocks at `blocks_extent`, and the question is worth answering because the reading lets
-it: nothing a set reading says depends on its width. `max_size()` answers the storage's capacity, not the width;
-`set_equal` and both orderings read a missing block as empty; the hash appends positions. A `bit_set` whose width
-were always its blocks' would answer every question the same and hold one member less, eight bytes beside a
-vector's twenty-four, and no tail for any member to mask.
+A set owner could take its width from its blocks, as a span of dynamic extent does, and the question is worth
+answering because the reading lets it: nothing a set reading says depends on its width. `max_size()` answers the
+storage's capacity, not the width; `set_equal` and both orderings read a missing block as empty; the hash appends
+positions. A `bit_set` whose width were always its blocks' would answer every question the same and hold one member
+less, eight bytes beside a vector's twenty-four, and no tail for any member to mask.
 
 What it would cost is a growth path of its own. `growing_insert` resizes a stored width by the position asked
-for; at `blocks_extent` it would resize the blocks and have no width to move, and every storage member gated on
+for; with its blocks' width it would resize the blocks and have no width to move, and every storage member gated on
 `has_stored_size` -- the moves, `replace`, `extract`, the allocator constructors -- would need a third arm for an
 owner whose width is not a member. The sequence reading over the same storage does need the width, so
 the saving would be the set reading's alone, over a storage the two readings otherwise share. It is not done;
@@ -2768,18 +2768,19 @@ Every bit of the blocks is a position: bit `n` of block `i` is position `i * dig
 `from_blocks` already reads an integer in. So the width is the blocks', and there is no tail for the storage to keep
 clear -- the invariant a width of our own needs is vacuous here, which is what lets the blocks be anyone's. The
 width takes one of two forms, both named by the span's own type through `default_extent_v`, which is
-`xstd::bit_blocks_extent_v` wherever that is fixed, `blocks_extent` for a span of dynamic extent, and the
+`xstd::bit_blocks_extent_v` wherever that is fixed, `std::dynamic_extent` for a span of dynamic extent, and the
 storage's capacity otherwise:
 
 - A span of static extent `K` is a static width of `K * digits`, and runs the same arms as a `std::array`,
   the one- and two-block paths included. One block is `std::span<Block, 1>`.
-- A span of dynamic extent is `blocks_extent`, a third value of `N` beside a bit count and `std::dynamic_extent`:
-  a run-time width that is not a member, `size()` being the span's length times `digits`.
+- A span of dynamic extent is `std::dynamic_extent`, as a growing owner is, but its run-time width is not a member:
+  `size()` is the span's length times `digits`. A span is no resizable storage, so `has_stored_size` tells the two
+  apart, and no third value of `N` is needed.
 
 So `has_static_size` asks whether the width is a template argument and `has_stored_size` whether it is a member,
 and the members that grow, the written-out moves and the allocator constructors are the second question's: a
 borrowed run-time width neither grows nor moves anything but a span. `extent` still answers
-`std::dynamic_extent` for `blocks_extent`, which is what every reading already asks to mean "not static".
+`std::dynamic_extent` there, which is what every reading already asks to mean "not static".
 
 The class admits the span beside `owned_bit_blocks`, and only at the span's own default width: a narrower
 `N` over someone else's blocks would have a tail the storage could not keep clear. The span is refused as a

@@ -49,14 +49,11 @@
 
 namespace xstd::bits::detail {
 
-// The width a span of blocks implies: all of its bits, for as long as the span is that long. Above every width.
-inline constexpr auto blocks_extent = std::dynamic_extent - 1UZ;
-
 // A span of a dynamic extent, over blocks of any constness.
 template<class Blocks>
 concept dynamic_span = requires { typename Blocks::element_type; } and std::same_as<Blocks, std::span<typename Blocks::element_type>>;
 
-// The width a range of blocks names by its own type: its fixed width, all of a dynamic span, else its capacity.
+// The width a range of blocks names by its own type: its fixed width, a dynamic span's length, else its capacity.
 template<class Blocks>
 consteval auto default_extent() noexcept
         -> std::size_t
@@ -66,7 +63,7 @@ consteval auto default_extent() noexcept
         } else if constexpr (xstd::bit_blocks_extent_v<Blocks> != std::dynamic_extent) {
                 return xstd::bit_blocks_extent_v<Blocks>;
         } else if constexpr (dynamic_span<Blocks>) {
-                return blocks_extent;
+                return std::dynamic_extent;
         } else {
                 return bit_blocks_capacity_v<Blocks>;
         }
@@ -257,7 +254,7 @@ public:
 
         // A width that is a member and moves under growth; the other run-time width is the span's own length.
         static constexpr bool has_stored_size = resizable_bit_blocks<Blocks>;
-        static constexpr bool has_static_size = not has_stored_size and N != blocks_extent;
+        static constexpr bool has_static_size = not has_stored_size and N != std::dynamic_extent;
 
         // A run-time width under a capacity the type carries, which is N and may stop short of the blocks' last bit.
         static constexpr bool has_static_capacity = has_stored_size and N != std::dynamic_extent;
