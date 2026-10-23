@@ -410,9 +410,9 @@ public:
 
         template<class I, class S>
                 requires bits::detail::input_iterator_pair<I, S> and is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
-        [[nodiscard]] constexpr set_adaptor(I first, S last)
+        [[nodiscard]] constexpr set_adaptor(I first, S const& last)
         {
-                insert(first, last);
+                insert(std::move(first), last);
         }
 
         template<std::ranges::input_range R>
@@ -435,8 +435,8 @@ public:
 
         template<class I, class S>
                 requires bits::detail::input_iterator_pair<I, S> and is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
-        [[nodiscard]] constexpr set_adaptor(I first, S last, key_compare const& /* comp */)
-                : set_adaptor(first, last)
+        [[nodiscard]] constexpr set_adaptor(I first, S const& last, key_compare const& /* comp */)
+                : set_adaptor(std::move(first), last)
         {}
 
         template<std::ranges::input_range R>
@@ -463,16 +463,16 @@ public:
 
         template<class I, class S>
                 requires bits::detail::input_iterator_pair<I, S> and is_owner and is_allocator_aware and std::constructible_from<value_type, std::iter_reference_t<I>>
-        [[nodiscard]] constexpr set_adaptor(I first, S last, allocator_param const& alloc)
+        [[nodiscard]] constexpr set_adaptor(I first, S const& last, allocator_param const& alloc)
                 : members_type(std::in_place, alloc)
         {
-                insert(first, last);
+                insert(std::move(first), last);
         }
 
         template<class I, class S>
                 requires bits::detail::input_iterator_pair<I, S> and is_owner and is_allocator_aware and std::constructible_from<value_type, std::iter_reference_t<I>>
-        [[nodiscard]] constexpr set_adaptor(I first, S last, key_compare const& /* comp */, allocator_param const& alloc)
-                : set_adaptor(first, last, alloc)
+        [[nodiscard]] constexpr set_adaptor(I first, S const& last, key_compare const& /* comp */, allocator_param const& alloc)
+                : set_adaptor(std::move(first), last, alloc)
         {}
 
         template<std::ranges::input_range R>
@@ -714,7 +714,7 @@ public:
         }
 
         template<class I, class S>
-        constexpr auto insert(this non_volatile auto&& self, I first, S last)
+        constexpr auto insert(this non_volatile auto&& self, I first, S const& last)
                 -> void
                 requires bits::detail::input_iterator_pair<I, S> and std::constructible_from<value_type, std::iter_reference_t<I>> and requires { self.bits().growing_insert(KeyMapping::to_index(static_cast<value_type>(*first))); }
         {

@@ -67,13 +67,13 @@ public:
         template<class InputIterator>
                 requires bits::detail::input_iterator_pair<InputIterator, InputIterator>
         [[nodiscard]] constexpr basic_bit_set(InputIterator first, InputIterator last, key_compare const& /* comp */ = key_compare())
-                : base_type(first, last)
+                : base_type(std::move(first), std::move(last))
         {}
 
         template<class InputIterator>
                 requires bits::detail::input_iterator_pair<InputIterator, InputIterator> and bits::detail::allocator_aware<Blocks>
         [[nodiscard]] constexpr basic_bit_set(InputIterator first, InputIterator last, key_compare const& /* comp */, allocator_param const& a)
-                : base_type(first, last, a)
+                : base_type(std::move(first), std::move(last), a)
         {}
 
         template<xstd::container_compatible_range<value_type> R>
@@ -114,7 +114,7 @@ public:
         template<class InputIterator>
                 requires bits::detail::input_iterator_pair<InputIterator, InputIterator> and bits::detail::allocator_aware<Blocks>
         [[nodiscard]] constexpr basic_bit_set(InputIterator first, InputIterator last, allocator_param const& a)
-                : base_type(first, last, a)
+                : base_type(std::move(first), std::move(last), a)
         {}
 
         template<xstd::container_compatible_range<value_type> R>

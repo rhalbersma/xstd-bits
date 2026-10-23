@@ -418,7 +418,7 @@ BOOST_AUTO_TEST_CASE(TheProxiesSwapAndNothingFlips)
 BOOST_AUTO_TEST_CASE(AReferenceConvertsToAConstReference)
 {
         auto v               = T{true, false};
-        T::const_reference r = v[0];
+        T::const_reference const r = v[0];
         BOOST_CHECK(r);
         v[0] = false;
         BOOST_CHECK(not r);
@@ -562,7 +562,7 @@ BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDo)
 // Boost's function_input_iterator has no default constructor, so no sentinel_for, yet std::vector<bool> takes it.
 BOOST_AUTO_TEST_CASE(ItTakesACpp17InputIteratorPairAsStdVectorDoes)
 {
-        auto every_third = [i = 0]() mutable -> bool { return i++ % 3 == 0; };
+        auto every_third = [i = 0] mutable -> bool { return i++ % 3 == 0; };
         auto const first = boost::make_function_input_iterator(every_third, 0);
         auto const last  = boost::make_function_input_iterator(every_third, 6);
         static_assert(not std::sentinel_for<decltype(first), decltype(first)>);

@@ -246,7 +246,7 @@ BOOST_AUTO_TEST_CASE(ItDeducesAsStdSetDoes)
 // Boost's function_input_iterator has no default constructor, so no sentinel_for, yet std::set takes it.
 BOOST_AUTO_TEST_CASE(ItTakesACpp17InputIteratorPairAsStdSetDoes)
 {
-        auto multiples_of_three = [k = 0UZ]() mutable -> std::size_t { return 3UZ * k++; };
+        auto multiples_of_three = [k = 0UZ] mutable -> std::size_t { return 3UZ * k++; };
         auto const first        = boost::make_function_input_iterator(multiples_of_three, 0);
         auto const last         = boost::make_function_input_iterator(multiples_of_three, 4);
         static_assert(not std::sentinel_for<decltype(first), decltype(first)>);
