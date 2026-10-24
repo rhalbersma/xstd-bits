@@ -163,6 +163,11 @@ BOOST_AUTO_TEST_CASE(WritingEveryElementAfterDefaultConstructionGivesTheArrayIts
         };
         static_assert(fill_odd(xstd::bit_array<64>()) == 32UZ);
         static_assert(fill_odd(xstd::bit_array<100>()) == 50UZ);
+        static_assert([] {
+                xstd::bit_array<100> a;
+                a[99] = true;
+                return std::ranges::count(a, true) == 1;
+        }());
         xstd::bit_array<64> const whole;
         xstd::bit_array<100> const padded;
         BOOST_CHECK(std::ranges::none_of(whole, std::identity()) and std::ranges::none_of(padded, std::identity()));

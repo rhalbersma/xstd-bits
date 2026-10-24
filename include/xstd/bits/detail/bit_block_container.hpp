@@ -7,7 +7,6 @@
 #define XSTD_BITS_DETAIL_BIT_BLOCK_CONTAINER_HPP
 
 #include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks_t
-#include <xstd/bits/bit_set/indeterminate.hpp>               // indeterminate_t
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>   // bit_blocks_extent_v
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/assert.hpp>                       // XSTD_BITS_ASSERT
@@ -32,7 +31,7 @@
 #include <array>                                             // array
 #include <bit>                                               // has_single_bit
 #include <cassert>                                           // assert
-#include <concepts>                                          // constructible_from, default_initializable, same_as
+#include <concepts>                                          // default_initializable, same_as
 #include <cstddef>                                           // ptrdiff_t, size_t
 #include <cstdint>                                           // uint64_t
 #include <format>                                            // format
@@ -45,8 +44,8 @@
 #include <source_location>                                   // source_location
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
-#include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_const_t, remove_reference_t
-#include <utility>                                           // exchange, forward, move, pair
+#include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_const_t, remove_reference_t
+#include <utility>                                           // exchange, forward, index_sequence, make_index_sequence, move, pair
 
 namespace xstd::bits::detail {
 
@@ -118,20 +117,13 @@ protected:
         [[XSTD_NO_UNIQUE_ADDRESS]]
         Width m_size{};
 
-        // No NSDMI, which no constructor could skip: the tag constructor below leaves the blocks default-initialized.
+        // No NSDMI: as std::array's, the blocks are unwritten when default-initialized and zero when value-initialized.
         Blocks m_blocks;
 
 public:
-        // Value-initialized blocks: an array starts zeroed and a vector empty.
-        [[nodiscard]] constexpr bit_members() noexcept(std::is_nothrow_default_constructible_v<Blocks>)
+        [[nodiscard]] bit_members()
                 requires std::default_initializable<Blocks>
-                : m_blocks()
-        {}
-
-        // Default-initialized blocks, for an owner that assigns before anything reads them.
-        [[nodiscard]] constexpr explicit bit_members(indeterminate_t) noexcept(std::is_nothrow_default_constructible_v<Blocks>)
-                requires std::default_initializable<Blocks>
-        {}
+        = default;
 
         template<class W, class... Args>
         [[nodiscard]] constexpr explicit bit_members(W&& w, Args&&... args) noexcept(std::is_nothrow_constructible_v<Blocks, Args...>)
@@ -198,17 +190,10 @@ struct structural_bit_members : bits::detail::allocator_base_type<Blocks>
         [[XSTD_NO_UNIQUE_ADDRESS]]
         Width m_size{};
 
-        // No NSDMI, which no constructor could skip: the tag constructor below leaves the blocks default-initialized.
+        // No NSDMI: as std::array's, the blocks are unwritten when default-initialized and zero when value-initialized.
         Blocks m_blocks;
 
-        // Value-initialized blocks, every bit clear.
-        [[nodiscard]] constexpr structural_bit_members() noexcept(std::is_nothrow_default_constructible_v<Blocks>)
-                : m_blocks()
-        {}
-
-        // Default-initialized blocks, for an owner that assigns before anything reads them.
-        [[nodiscard]] constexpr explicit structural_bit_members(indeterminate_t) noexcept(std::is_nothrow_default_constructible_v<Blocks>)
-        {}
+        [[nodiscard]] structural_bit_members() = default;
 
         template<class W, class... Args>
         [[nodiscard]] constexpr explicit structural_bit_members(W&& w, Args&&... args) noexcept(std::is_nothrow_constructible_v<Blocks, Args...>)
@@ -351,12 +336,6 @@ public:
         [[nodiscard]] bit_block_container()
                 requires std::default_initializable<Blocks>
         = default;
-
-        // Blocks left default-initialized, which only assignment may follow: the first of two initialization steps.
-        [[nodiscard]] constexpr explicit bit_block_container(indeterminate_t) noexcept(std::is_nothrow_default_constructible_v<Blocks>)
-                requires std::constructible_from<members_type, indeterminate_t>
-                : members_type(indeterminate)
-        {}
 
         // Someone else's blocks, every bit of which is a position: nothing is copied, and there is no tail to clear.
         [[nodiscard]] constexpr explicit bit_block_container(Blocks blocks) noexcept
@@ -646,8 +625,11 @@ public:
         {
                 if constexpr (fixed_blocks_source<Bits, bit_extent> and std::same_as<std::ranges::range_value_t<decltype(block_span(b))>, block_type>) {
                         // Block for block, as GCC does not fold a copy of byte_count<N> bytes back into whole blocks.
-                        std::ranges::fill(m_blocks, zero);
-                        std::ranges::copy(block_span(b).template first<static_num_blocks>(), std::ranges::begin(m_blocks));
+                        auto const source = block_span(b);
+                        // A fold and not a loop: constant indices let GCC's early inliner see each block as a register.
+                        [&]<std::size_t... I>(std::index_sequence<I...>) -> void {
+                                ((m_blocks[I] = source[I]), ...);
+                        }(std::make_index_sequence<static_num_blocks>());
                         erase_unused();
                 } else {
                         assign_bytes(bit_bytes<bit_extent>(b));

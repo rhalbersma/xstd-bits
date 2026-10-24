@@ -25,6 +25,11 @@ class basic_bit_fixed_valarray : public bits::detail::valarray_adaptor<bits::det
         using base_type = bits::detail::valarray_adaptor<bits::detail::bit_block_container<std::array<Block, bits::detail::num_blocks_v<Block, N>>, N>, basic_bit_fixed_valarray<Block, N>>;
 
 public:
+        // Every element false even when default-initialized, since writing one bool reads its block.
+        [[nodiscard]] constexpr basic_bit_fixed_valarray() noexcept
+                : base_type()
+        {}
+
         using base_type::base_type;
         using base_type::operator=;
 };

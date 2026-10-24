@@ -32,8 +32,10 @@ class basic_bit_array : public bits::detail::sequence_adaptor<bits::detail::bit_
 public:
         using typename base_type::value_type;
 
-        // std::array is an aggregate and declares none: these are what its initialization does, as constructors.
-        [[nodiscard]] basic_bit_array() = default;
+        // std::array's initialization as constructors; the default zeroes, since writing one bool reads its block.
+        [[nodiscard]] constexpr basic_bit_array() noexcept
+                : base_type()
+        {}
 
         // What is listed leads, the rest stays false.
         constexpr basic_bit_array(std::initializer_list<value_type> il)
@@ -44,6 +46,7 @@ public:
         template<std::size_t M>
                 requires (M == N)
         [[nodiscard]] constexpr explicit basic_bit_array(value_type const (&a)[M]) noexcept // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
+                : base_type()
         {
                 std::ranges::copy(a, this->begin());
         }

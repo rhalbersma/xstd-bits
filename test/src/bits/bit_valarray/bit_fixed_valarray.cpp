@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp> // basic_bit_fixed_valarray, bit_fixed_valarray
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>       // bit_valarray
 #include <xstd/bits/detail/inplace_blocks.hpp>           // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_INPLACE
-#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <concepts>                                      // constructible_from, convertible_to, same_as
 #include <cstddef>                                       // size_t
 #include <cstdint>                                       // uint8_t
@@ -87,6 +87,18 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BothSwapsExchangeValuesAndSizes, V, Types)
 BOOST_AUTO_TEST_CASE(TheDefaultBlockIsSizeT)
 {
         static_assert(std::same_as<xstd::bit_fixed_valarray<3>, xstd::basic_bit_fixed_valarray<std::size_t, 3>>);
+}
+
+// Not std::valarray's default: every element false even when default-initialized, as writing one bool reads its block.
+BOOST_AUTO_TEST_CASE(ADefaultInitializedArrayIsAllFalse)
+{
+        static_assert([] {
+                xstd::bit_fixed_valarray<100> v;
+                v[99] = true;
+                return v.sum() and not v[0];
+        }());
+        xstd::bit_fixed_valarray<100> const v;
+        BOOST_CHECK(not v.sum());
 }
 
 // Not in [valarray]: a built-in array of bools of the array's own size converts explicitly, as bit_array's does.

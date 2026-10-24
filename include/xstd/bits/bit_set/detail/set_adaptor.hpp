@@ -14,7 +14,6 @@
 #include <xstd/bits/bit_ranges/from_blocks.hpp>               // from_blocks_t
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>              // bit_key_mapping
 #include <xstd/bits/bit_set/detail/is_key.hpp>                // is_key
-#include <xstd/bits/bit_set/indeterminate.hpp>                 // indeterminate, indeterminate_t
 #include <xstd/bits/detail/adapted_bits.hpp>                  // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>           // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/assert.hpp>                        // XSTD_BITS_ASSERT
@@ -410,15 +409,11 @@ public:
                 requires is_owner
         = default;
 
-        // Blocks left default-initialized, which only assignment may follow: the first of a two-step initialization.
-        [[nodiscard]] constexpr explicit set_adaptor(indeterminate_t) noexcept(std::is_nothrow_constructible_v<Bits, indeterminate_t>)
-                requires is_owner and std::constructible_from<Bits, indeterminate_t>
-                : members_type(std::in_place, indeterminate)
-        {}
-
+        // Built key by key from value-initialized blocks, every position clear: default-initialized ones are unwritten.
         template<class I, class S>
                 requires bits::detail::input_iterator_pair<I, S> and is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr set_adaptor(I first, S last)
+                : members_type()
         {
                 insert(first, last);
         }
@@ -426,12 +421,14 @@ public:
         template<std::ranges::input_range R>
                 requires is_owner and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
         [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg)
+                : members_type()
         {
                 insert(std::ranges::begin(rg), std::ranges::end(rg));
         }
 
         [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il)
                 requires is_owner
+                : members_type()
         {
                 insert(il.begin(), il.end());
         }
@@ -439,6 +436,7 @@ public:
         // [set.cons]'s comparator arguments, taken and dropped: each key_compare a set reading admits has no state.
         [[nodiscard]] constexpr explicit set_adaptor(key_compare const& /* comp */) noexcept(std::is_nothrow_default_constructible_v<Bits>)
                 requires is_owner
+                : members_type()
         {}
 
         template<class I, class S>

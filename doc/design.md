@@ -466,7 +466,13 @@ The stated family is **one concept over a block or a fixed number of them**, and
 convertible. An unsigned integer states its own layout; a **contiguous sequence of unsigned integer blocks** states
 the rest of it, block `j` holding the positions `[j·digits, (j+1)·digits)`. A scalar is the sequence of length one,
 which is why `fixed_blocks_source` is one concept: `fixed_bit_blocks` whose width covers `N` and that a value owns.
-A scalar crosses as the range of one block it is, so one copy serves both. Everything in it is read by **shifts on values**, never by `std::bit_cast` on an
+A scalar crosses as the range of one block it is, so one copy serves both.
+That copy assigns every block, so the container starts from unwritten blocks and zeroes none of them first. It is
+a fold over the `K` block indices, not `std::ranges::copy` and not a loop. GCC sizes a function for inlining early,
+before calls and loops are folded away: a copy through a span takes the source's address, which puts it on the stack,
+and a loop indexes it at run time. Either made `Bitboard(from_blocks, x)` look like a call where it is one move, and
+pushed a chess engine's attack generator past GCC's inlining limits. The fold's constant indices give hand-written
+code's instructions at one, two and six blocks, the widths of chess, Othello and shogi, and Go. Everything in it is read by **shifts on values**, never by `std::bit_cast` on an
 object, so no padding is reachable and endianness never enters: `b[j] >> k` is the same number on either byte
 order. Only a foreign field of bits, whose internals this library cannot name, is read as an object.
 
@@ -753,7 +759,7 @@ truncating a width. Every reader goes through `size()`, which converts once, so 
 
 ### default-construction
 
-A defaulted default constructor plus an NSDMI, rather than two constructors constrained on the extent:
+A defaulted default constructor, rather than two constructors constrained on the extent:
 `std::vector` default-constructs empty, and so does a run-time width here -- width zero, no blocks, no
 allocation, as `std::vector<bool>` has it. The two members live in a base, `bit_members`, whose specialization for a
 capacity of nought declares them with no initializer and `[[no_unique_address]]`, since a default member initializer
@@ -770,12 +776,19 @@ before writing it is undefined for `std::array`, which permits the `false` it an
 `is_trivially_default_constructible`, which no packed array can have while one-element writes stay valid; masking the
 read instead would not help, as an indeterminate value is the whole block's and `block & mask` already reads it.
 
-The layouts that hold an array declare their blocks with no initializer, since a default member initializer is one no
-constructor can skip, and zero them in a user-provided default constructor instead. Beside it, a constructor taking
-`xstd::indeterminate_t` leaves them default-initialized, and `basic_bit_fixed_set` publishes it for a two-step
-initialization. Only a whole write may follow it, so it writes nothing at any width, the padding of a width that does
-not fill its blocks included; inserting one key after it is undefined, as `a[0] = true` would be. A set that is about
-to be overwritten, as a chess engine's per-ply state is, asks for the tag where it is declared.
+The zeroing is the public types' alone, and as late as the hierarchy allows. Every layer under them -- the layouts,
+`bit_block_container` and the adaptors -- defaults its default constructor and declares the blocks with no
+initializer, which a constructor could not skip, so each initializes as `std::array` does: unwritten when
+default-initialized, zero when value-initialized. The three public types over an array, `basic_bit_fixed_set`,
+`basic_bit_array` and `basic_bit_fixed_valarray`, value-initialize their base in a user-provided default constructor;
+a run-time width starts empty and has nothing to zero. Inside the layers, a constructor that writes position by
+position, from keys or bools, value-initializes its base by name, and one that assigns every block, as the
+exchange through `from_blocks` does, leaves it unwritten.
+
+`basic_bit_fixed_set` also takes `xstd::indeterminate_t`, for a two-step initialization: its constructor leaves the
+base default-initialized and writes nothing at any width, the padding of a width that does not fill its blocks
+included. Only a whole write may follow it; inserting one key after it is undefined, as `a[0] = true` would be. A set
+that is about to be overwritten, as a chess engine's per-ply state is, asks for the tag where it is declared.
 
 ### structural-at-aligned-widths
 

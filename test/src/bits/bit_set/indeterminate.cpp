@@ -85,6 +85,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheDefaultSetStaysEmpty, S, FixedSets)
                 S s;
                 return s.empty();
         }());
+        static_assert([] {
+                S s;
+                s.insert(two_keys<S>().front());
+                return s.size() == 1UZ;
+        }());
         S const s;
         BOOST_CHECK(s.empty() and S{}.empty());
 }

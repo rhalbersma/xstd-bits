@@ -22,7 +22,7 @@ public:
   using block_container_type   = array<Block, see below>;
 
   // construct
-  basic_bit_array() = default;
+  constexpr basic_bit_array() noexcept;
   constexpr basic_bit_array(initializer_list<bool> il);
   template<size_t M>
       requires (M == N)
