@@ -37,7 +37,7 @@ stay as the word's: the same precondition, `n < 64` for a shift, and the same in
 works on the word keeps working and keeps its speed; `a & ~b` is also `a - b`. A word read as a row of `bool`,
 indexed, rotated or reversed, is a `bit_array<64>` instead.
 
-`std::bitset<64>` was the standard's own answer, and bit-twiddling code did not take it, for four reasons this set
+`std::bitset<64>` was the standard's own answer, and bit-twiddling code did not take it, for five reasons this set
 answers one by one:
 
 1. **`constexpr`.** Nothing in `std::bitset` was until C++23's [P2417R2](https://wg21.link/p2417r2); every member of
@@ -49,6 +49,10 @@ answers one by one:
 4. **Single bits.** `std::bitset`'s `set`, `reset`, `flip` and `test` with a position throw `out_of_range`. The set's
    `|=`, `^=`, `-=`, `&=` and `[]` with a key are unchecked, as the word's shift-and-mask is, and a hardened build
    checks their precondition; `insert` checks, and `contains` and `erase` are total, for code that wants either.
+5. **Initialization.** `std::bitset`'s default constructor zeroes every bit, and nothing skips it, though a word can be
+   left unwritten until it is assigned. The set is empty by default, as a set must be, and
+   `bit_fixed_set<64>(xstd::indeterminate)` writes nothing, for a field that is assigned before anything reads it;
+   `xstd::indeterminate_array` builds an array of them, as a per-ply state of bitboards holds.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>
