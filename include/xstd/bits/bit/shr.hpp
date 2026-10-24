@@ -8,6 +8,7 @@
 
 #include <xstd/bits/bit/detail/shift_by.hpp> // shift_by, shiftable_set
 #include <xstd/ints/concepts/integer.hpp>    // integer
+#include <utility>                           // move
 
 // The set's keys shifted by any count of any integer type, total as the integer shr is beside a set's own operator.
 namespace xstd {
@@ -18,7 +19,7 @@ template<class X, integer S>
 [[nodiscard]] constexpr auto shr(X x, S s) noexcept(noexcept(bits::detail::shift_by(x, s, false)))
         -> X
 {
-        return bits::detail::shift_by(x, s, false);
+        return bits::detail::shift_by(std::move(x), s, false);
 }
 
 } // namespace xstd

@@ -382,7 +382,7 @@ BOOST_AUTO_TEST_CASE(TheSubscriptReadsWhatContainsReads)
         auto const s = xstd::bit_fixed_set<100>({3UZ, 64UZ, 99UZ});
         static_assert(noexcept(s[0UZ]));
         static_assert(std::same_as<decltype(s[0UZ]), bool>);
-        for (auto const i : std::views::iota(0UZ, s.max_size())) {
+        for (auto const i : std::views::iota(0UZ, xstd::bit_fixed_set<100>::max_size())) {
                 BOOST_CHECK_EQUAL(s[i], s.contains(i));
         }
 }

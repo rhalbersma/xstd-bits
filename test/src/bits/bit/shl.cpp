@@ -18,6 +18,7 @@
 #include <limits>                                // numeric_limits
 #include <ranges>                                // iota
 #include <set>                                   // set
+#include <utility>                               // cmp_less
 
 namespace {
 
@@ -29,7 +30,7 @@ template<class X>
         auto nrv = std::set<std::size_t>();
         for (auto const k : x) {
                 auto const p = static_cast<long long>(k) + s;
-                if (0 <= p and p < static_cast<long long>(width)) {
+                if (0 <= p and std::cmp_less(p, width)) {
                         nrv.insert(static_cast<std::size_t>(p));
                 }
         }
