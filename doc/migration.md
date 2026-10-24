@@ -306,7 +306,10 @@ itsy_bitsy offers the sequence reading alone, and takes the same destinations.
 
 ### `std::bitset<N>` as a set of positions
 
-The positions become keys, and `std::bitset`'s verbs become `std::set`'s.
+The positions become keys, and `std::bitset`'s verbs become `std::set`'s. The shifts are an integer's rather than
+`std::bitset`'s: `b << n` empties a bitset once `n >= N`, while `s << n` takes `n < N` as its precondition, as a shift
+of a `std::uint64_t` does, and a hardened build checks it. Where the count can reach the width, `xstd::shl(s, n)` and
+`xstd::shr(s, n)` are the total forms, which empty the set there and shift the other way for a negative count.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>
