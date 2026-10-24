@@ -132,13 +132,19 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnIndeterminateArrayIsAssignedElementByElement, S,
         static_assert(std::same_as<decltype(xstd::indeterminate_array<S, 3>()), std::array<S, 3>>);
         static_assert(noexcept(xstd::indeterminate_array<S, 3>()));
         static_assert(xstd::indeterminate_array<S, 0>().empty());
-        static_assert([] -> bool {
+        auto const assigned_element_by_element = [] -> bool {
                 auto a = xstd::indeterminate_array<S, 3>();
                 for (auto& s : a) {
                         s = two_keys<S>();
                 }
                 return a[0] == two_keys<S>() and a[2] == two_keys<S>();
-        }());
+        };
+#if defined(_MSC_VER) && !defined(__clang__)
+        // MSVC rejects it as a constant: [class.temporary]/3 lets it copy the trivially copyable result unwritten.
+        BOOST_CHECK(assigned_element_by_element());
+#else
+        static_assert(assigned_element_by_element());
+#endif
         auto a = xstd::indeterminate_array<S, 3>();
         a.fill(two_keys<S>());
         BOOST_CHECK(a[1] == two_keys<S>());
