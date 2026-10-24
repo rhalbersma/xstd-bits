@@ -783,8 +783,11 @@ initializer, which a constructor could not skip, so each leaves them unwritten w
 `basic_bit_fixed_valarray`, reset their blocks in a user-provided default constructor; a run-time width starts empty
 and has nothing to zero. Inside the layers, a constructor that writes position by position, from keys or bools,
 resets the blocks first, and one that assigns every block, as the exchange through `from_blocks` does, leaves them
-unwritten. The zeroes are assigned rather than value-initialized through the layers: GCC's constant evaluator drops
-the zero-initialization that precedes a non-trivial defaulted default constructor, and reports the blocks unwritten.
+unwritten. At a static width every layer is trivially default-constructible, as `std::array` is, so `T()`
+zero-initializes and `T t;` writes nothing. A default member initializer anywhere in the chain, even on the empty width
+tag, would make the constructor nontrivial, and GCC's constant evaluator drops the zero-initialization that precedes a
+nontrivial defaulted one. The public types and the position-by-position constructors assign their zeroes with
+`reset()` in any case, so they depend on neither.
 
 The three also take `xstd::indeterminate_t`, for a two-step initialization: the constructor leaves the base
 default-initialized and writes nothing at any width, the padding of a width that does not fill its blocks included.

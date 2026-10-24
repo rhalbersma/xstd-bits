@@ -44,7 +44,7 @@
 #include <source_location>                                   // source_location
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
-#include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_const_t, remove_reference_t
+#include <type_traits>                                       // conditional_t, is_const_v, is_empty_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_const_t, remove_reference_t
 #include <utility>                                           // exchange, forward, index_sequence, make_index_sequence, move, pair
 
 namespace xstd::bits::detail {
@@ -115,15 +115,23 @@ class bit_members : public bits::detail::allocator_base_type<Blocks>
 protected:
         // Dynamic widths only; the tag keeps the absent member distinct from any other in an enclosing layout.
         [[XSTD_NO_UNIQUE_ADDRESS]]
-        Width m_size{};
+        Width m_size;
 
-        // No NSDMI: as std::array's, the blocks are unwritten when default-initialized and zero when value-initialized.
+        // No NSDMI: a nontrivial default constructor makes GCC's constant evaluator drop T()'s zeroes.
         Blocks m_blocks;
 
 public:
+        // Trivial at a static width, as std::array's: T() zeroes the blocks and T t; leaves them unwritten.
         [[nodiscard]] bit_members()
-                requires std::default_initializable<Blocks>
+                requires std::is_empty_v<Width> and std::default_initializable<Blocks>
         = default;
+
+        // A run-time width starts at zero, as a vector starts empty.
+        [[nodiscard]] constexpr bit_members() noexcept(std::is_nothrow_default_constructible_v<Blocks>)
+                requires (not std::is_empty_v<Width>) and std::default_initializable<Blocks>
+                : m_size()
+                , m_blocks()
+        {}
 
         template<class W, class... Args>
         [[nodiscard]] constexpr explicit bit_members(W&& w, Args&&... args) noexcept(std::is_nothrow_constructible_v<Blocks, Args...>)
@@ -187,10 +195,11 @@ inline constexpr bool structural_blocks_v<std::array<Block, K>, N> = (N == xstd:
 template<class Width, class Blocks>
 struct structural_bit_members : bits::detail::allocator_base_type<Blocks>
 {
+        // A static width's tag, with no NSDMI, so that the default constructor stays trivial.
         [[XSTD_NO_UNIQUE_ADDRESS]]
-        Width m_size{};
+        Width m_size;
 
-        // No NSDMI: as std::array's, the blocks are unwritten when default-initialized and zero when value-initialized.
+        // Trivially default-constructible, as std::array is: T() zeroes the blocks and T t; leaves them unwritten.
         Blocks m_blocks;
 
         [[nodiscard]] structural_bit_members() = default;
