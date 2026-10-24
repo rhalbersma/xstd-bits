@@ -609,6 +609,9 @@ BOOST_AUTO_TEST_CASE(EveryOwnerAdmitsAKeyAndRefusesAValueThatIsNoKey)
                 auto const keys   = universe<X>();
                 auto const a      = X({keys.front(), keys.back()});
                 auto const model  = std::set<key_type, typename X::key_compare>(a.begin(), a.end());
+                // The first key alone, whose run-time width leaves the operators keys past it to meet.
+                auto const narrow       = X({keys.front()});
+                auto const narrow_model = std::set<key_type, typename X::key_compare>(narrow.begin(), narrow.end());
                 for (auto const v : offered<key_type>()) {
                         BOOST_TEST_CONTEXT("value: " << int{std::to_underlying(v)})
                         {
@@ -617,6 +620,7 @@ BOOST_AUTO_TEST_CASE(EveryOwnerAdmitsAKeyAndRefusesAValueThatIsNoKey)
                                         admits_at_every_door(a, model, v);
                                         if constexpr (not xstd::bit_mask_mapping<key_mapping, key_type>) {
                                                 meets_it_as_a_one_element_set(a, model, v);
+                                                meets_it_as_a_one_element_set(narrow, narrow_model, v);
                                         }
                                 } else {
                                         refuses_at_every_door(a, v);
