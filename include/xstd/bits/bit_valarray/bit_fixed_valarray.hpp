@@ -6,10 +6,12 @@
 #ifndef XSTD_BITS_BIT_VALARRAY_BIT_FIXED_VALARRAY_HPP
 #define XSTD_BITS_BIT_VALARRAY_BIT_FIXED_VALARRAY_HPP
 
+#include <xstd/bits/bit_set/indeterminate.hpp>                // indeterminate_t
 #include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp>    // basic_bit_inplace_valarray
 #include <xstd/bits/bit_valarray/detail/valarray_adaptor.hpp> // gathered, valarray_adaptor
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container
 #include <xstd/bits/detail/num_blocks.hpp>                    // holds_width, num_blocks_v, tiling_block
+#include <xstd/bits/detail/ownership.hpp>                     // storage_access
 #include <xstd/bits/detail/rebind.hpp>                        // rebind
 #include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
 #include <array>                                              // array
@@ -27,8 +29,12 @@ class basic_bit_fixed_valarray : public bits::detail::valarray_adaptor<bits::det
 public:
         // Every element false even when default-initialized, since writing one bool reads its block.
         [[nodiscard]] constexpr basic_bit_fixed_valarray() noexcept
-                : base_type()
-        {}
+        {
+                bits::detail::storage_access::bits(*this).reset();
+        }
+
+        // Not in [valarray]: blocks left default-initialized, after which only assignment and destruction are valid.
+        [[nodiscard]] constexpr explicit basic_bit_fixed_valarray(indeterminate_t) noexcept {}
 
         using base_type::base_type;
         using base_type::operator=;

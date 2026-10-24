@@ -778,17 +778,18 @@ read instead would not help, as an indeterminate value is the whole block's and 
 
 The zeroing is the public types' alone, and as late as the hierarchy allows. Every layer under them -- the layouts,
 `bit_block_container` and the adaptors -- defaults its default constructor and declares the blocks with no
-initializer, which a constructor could not skip, so each initializes as `std::array` does: unwritten when
-default-initialized, zero when value-initialized. The three public types over an array, `basic_bit_fixed_set`,
-`basic_bit_array` and `basic_bit_fixed_valarray`, value-initialize their base in a user-provided default constructor;
-a run-time width starts empty and has nothing to zero. Inside the layers, a constructor that writes position by
-position, from keys or bools, value-initializes its base by name, and one that assigns every block, as the
-exchange through `from_blocks` does, leaves it unwritten.
+initializer, which a constructor could not skip, so each leaves them unwritten when default-initialized, as
+`std::array` does. The three public types over an array, `basic_bit_fixed_set`, `basic_bit_array` and
+`basic_bit_fixed_valarray`, reset their blocks in a user-provided default constructor; a run-time width starts empty
+and has nothing to zero. Inside the layers, a constructor that writes position by position, from keys or bools,
+resets the blocks first, and one that assigns every block, as the exchange through `from_blocks` does, leaves them
+unwritten. The zeroes are assigned rather than value-initialized through the layers: GCC's constant evaluator drops
+the zero-initialization that precedes a non-trivial defaulted default constructor, and reports the blocks unwritten.
 
-`basic_bit_fixed_set` also takes `xstd::indeterminate_t`, for a two-step initialization: its constructor leaves the
-base default-initialized and writes nothing at any width, the padding of a width that does not fill its blocks
-included. Only a whole write may follow it; inserting one key after it is undefined, as `a[0] = true` would be. A set
-that is about to be overwritten, as a chess engine's per-ply state is, asks for the tag where it is declared.
+The three also take `xstd::indeterminate_t`, for a two-step initialization: the constructor leaves the base
+default-initialized and writes nothing at any width, the padding of a width that does not fill its blocks included.
+Only a whole write may follow it; inserting one key after it is undefined, as `a[0] = true` would be. A set that is
+about to be overwritten, as a chess engine's per-ply state is, asks for the tag where it is declared.
 
 ### structural-at-aligned-widths
 

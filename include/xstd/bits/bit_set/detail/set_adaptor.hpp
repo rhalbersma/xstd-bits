@@ -409,35 +409,36 @@ public:
                 requires is_owner
         = default;
 
-        // Built key by key from value-initialized blocks, every position clear: default-initialized ones are unwritten.
+        // Built key by key over blocks reset first: default-initialized ones are unwritten, and inserting reads them.
         template<class I, class S>
                 requires bits::detail::input_iterator_pair<I, S> and is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr set_adaptor(I first, S last)
-                : members_type()
         {
+                m_bits.reset();
                 insert(first, last);
         }
 
         template<std::ranges::input_range R>
                 requires is_owner and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
         [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg)
-                : members_type()
         {
+                m_bits.reset();
                 insert(std::ranges::begin(rg), std::ranges::end(rg));
         }
 
         [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il)
                 requires is_owner
-                : members_type()
         {
+                m_bits.reset();
                 insert(il.begin(), il.end());
         }
 
         // [set.cons]'s comparator arguments, taken and dropped: each key_compare a set reading admits has no state.
         [[nodiscard]] constexpr explicit set_adaptor(key_compare const& /* comp */) noexcept(std::is_nothrow_default_constructible_v<Bits>)
                 requires is_owner
-                : members_type()
-        {}
+        {
+                m_bits.reset();
+        }
 
         template<class I, class S>
                 requires bits::detail::input_iterator_pair<I, S> and is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
@@ -891,7 +892,7 @@ public:
                         // The storage's own &= with the one-position mask: a test and an assign fold to a cmov instead.
                         XSTD_BITS_ASSERT(pos < self.bits().size());
                         auto mask = bits_type();
-                        mask.set(pos);
+                        mask.reset().set(pos);
                         self.bits() &= mask;
                 } else {
                         XSTD_BITS_ASSERT(pos < self.max_size());

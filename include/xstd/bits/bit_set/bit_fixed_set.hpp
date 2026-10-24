@@ -69,7 +69,7 @@ public:
         {}
 
         [[nodiscard]] constexpr explicit basic_bit_fixed_set(key_compare const& /* comp */) noexcept
-                : base_type()
+                : base_type(key_compare())
         {}
 
         // Not in [set.cons]: blocks left default-initialized, after which only assignment and destruction are valid.
@@ -88,7 +88,7 @@ public:
 
         // A mask's list is the union of its values, so {m} is the conversion from m and {a, b} two one-bit values.
         [[nodiscard]] constexpr basic_bit_fixed_set(std::initializer_list<value_type> il, key_compare const& /* comp */ = key_compare()) noexcept(is_mask)
-                : base_type()
+                : base_type(key_compare())
         {
                 if constexpr (is_mask) {
                         for (auto const& mask : il) {

@@ -3,19 +3,22 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/enums.hpp>                    // day, wind
-#include <xstd/bits/bit_array.hpp>               // bit_array
-#include <xstd/bits/bit_set/bit_enum_set.hpp>    // bit_enum_set
-#include <xstd/bits/bit_set/bit_fixed_set.hpp>   // bit_fixed_set
-#include <xstd/bits/bit_set/bit_inplace_set.hpp> // bit_inplace_set
-#include <xstd/bits/bit_set/bit_set.hpp>         // bit_set
-#include <xstd/bits/bit_set/indeterminate.hpp>   // XSTD_INDETERMINATE, indeterminate, indeterminate_array, indeterminate_t
-#include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
-#include <array>                                 // array
-#include <concepts>                              // same_as
-#include <cstddef>                               // size_t
-#include <tuple>                                 // tuple
-#include <type_traits>                           // is_constructible_v, is_convertible_v, is_default_constructible_v, is_nothrow_constructible_v
+#include <test/set/enums.hpp>                            // day, wind
+#include <xstd/bits/bit_array.hpp>                       // bit_array
+#include <xstd/bits/bit_set/bit_enum_set.hpp>            // bit_enum_set
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>           // bit_fixed_set
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>         // bit_inplace_set
+#include <xstd/bits/bit_set/bit_set.hpp>                 // bit_set
+#include <xstd/bits/bit_set/indeterminate.hpp>           // XSTD_INDETERMINATE, indeterminate, indeterminate_array, indeterminate_t
+#include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp> // bit_fixed_valarray
+#include <xstd/bits/bit_valarray/bit_valarray.hpp>       // bit_valarray
+#include <xstd/bits/bit_vector/bit_vector.hpp>           // bit_vector
+#include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <array>                                         // array
+#include <concepts>                                      // same_as
+#include <cstddef>                                       // size_t
+#include <tuple>                                         // tuple
+#include <type_traits>                                   // is_constructible_v, is_convertible_v, is_default_constructible_v, is_nothrow_constructible_v
 
 BOOST_AUTO_TEST_SUITE(Indeterminate)
 
@@ -94,13 +97,33 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TheDefaultSetStaysEmpty, S, FixedSets)
         BOOST_CHECK(s.empty() and S{}.empty());
 }
 
-// A run-time width starts at width zero, with nothing to leave unwritten, and bit_array default-initializes already.
-BOOST_AUTO_TEST_CASE(OnlyTheFixedSetsTakeTheTag)
+// The other fixed owners take it too; a run-time width starts at width zero, with nothing to leave unwritten.
+BOOST_AUTO_TEST_CASE(OnlyTheFixedOwnersTakeTheTag)
 {
+        static_assert(std::is_nothrow_constructible_v<xstd::bit_array<64>, xstd::indeterminate_t>);
+        static_assert(std::is_nothrow_constructible_v<xstd::bit_fixed_valarray<64>, xstd::indeterminate_t>);
+        static_assert(not std::is_convertible_v<xstd::indeterminate_t, xstd::bit_array<64>>);
+        static_assert(not std::is_convertible_v<xstd::indeterminate_t, xstd::bit_fixed_valarray<64>>);
         static_assert(not std::is_constructible_v<xstd::bit_set, xstd::indeterminate_t>);
         static_assert(not std::is_constructible_v<xstd::bit_inplace_set<64>, xstd::indeterminate_t>);
-        static_assert(not std::is_constructible_v<xstd::bit_array<64>, xstd::indeterminate_t>);
+        static_assert(not std::is_constructible_v<xstd::bit_vector, xstd::indeterminate_t>);
+        static_assert(not std::is_constructible_v<xstd::bit_valarray, xstd::indeterminate_t>);
         BOOST_CHECK(true);
+}
+
+// Built from the tag and then assigned, a fixed array and a fixed valarray hold what they were given.
+BOOST_AUTO_TEST_CASE(AnAssignmentGivesTheArraysTheirValue)
+{
+        static_assert([] {
+                auto a = xstd::bit_array<100>(xstd::indeterminate);
+                a      = xstd::bit_array<100>({true, false, true});
+                auto v = xstd::bit_fixed_valarray<100>(xstd::indeterminate);
+                v      = xstd::bit_fixed_valarray<100>({false, true});
+                return a[2] and not a[1] and v[1] and not v[0];
+        }());
+        auto a = xstd::indeterminate_array<xstd::bit_array<100>, 2>();
+        a.fill(xstd::bit_array<100>({true}));
+        BOOST_CHECK(a[1][0] and not a[1][1]);
 }
 
 // Each element is built from the tag in place, and each takes the value its assignment gives it.
