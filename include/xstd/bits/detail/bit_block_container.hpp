@@ -364,7 +364,7 @@ public:
                 recount();
         }
 
-        // Any bits of a layout this width reads, assigned position by position; for Blocks itself, adopting wins.
+        // Any bits of a layout this width reads, assigned over unwritten blocks; for Blocks itself, adopting wins.
         template<class Bits>
                 requires exchanges_bits<Bits>
         [[nodiscard]] constexpr bit_block_container(xstd::from_blocks_t, Bits const& bits) noexcept
