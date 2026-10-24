@@ -92,7 +92,7 @@ BOOST_AUTO_TEST_CASE(TheDefaultBlockIsSizeT)
 // Not std::valarray's default: every element false even when default-initialized, as writing one bool reads its block.
 BOOST_AUTO_TEST_CASE(ADefaultInitializedArrayIsAllFalse)
 {
-        static_assert([] {
+        static_assert([] -> bool {
                 xstd::bit_fixed_valarray<100> v;
                 v[99] = true;
                 return v.sum() and not v[0];

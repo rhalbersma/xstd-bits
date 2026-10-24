@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnAssignmentGivesTheSetItsValue, S, FixedSets)
 {
         static_assert(std::is_nothrow_constructible_v<S, xstd::indeterminate_t>);
         static_assert(not std::is_convertible_v<xstd::indeterminate_t, S>);
-        static_assert([] {
+        static_assert([] -> bool {
                 auto s = S(xstd::indeterminate);
                 s      = two_keys<S>();
                 return s == two_keys<S>();
@@ -84,11 +84,11 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnAssignmentGivesTheSetItsValue, S, FixedSets)
 // The tag is the only way to an indeterminate set: a default or a value-initialized one is empty.
 BOOST_AUTO_TEST_CASE_TEMPLATE(TheDefaultSetStaysEmpty, S, FixedSets)
 {
-        static_assert([] {
+        static_assert([] -> bool {
                 S s;
                 return s.empty();
         }());
-        static_assert([] {
+        static_assert([] -> bool {
                 S s;
                 s.insert(two_keys<S>().front());
                 return s.size() == 1UZ;
@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE(OnlyTheFixedOwnersTakeTheTag)
 // Built from the tag and then assigned, a fixed array and a fixed valarray hold what they were given.
 BOOST_AUTO_TEST_CASE(AnAssignmentGivesTheArraysTheirValue)
 {
-        static_assert([] {
+        static_assert([] -> bool {
                 auto a = xstd::bit_array<100>(xstd::indeterminate);
                 a      = xstd::bit_array<100>({true, false, true});
                 auto v = xstd::bit_fixed_valarray<100>(xstd::indeterminate);
@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnIndeterminateArrayIsAssignedElementByElement, S,
         static_assert(std::same_as<decltype(xstd::indeterminate_array<S, 3>()), std::array<S, 3>>);
         static_assert(noexcept(xstd::indeterminate_array<S, 3>()));
         static_assert(xstd::indeterminate_array<S, 0>().empty());
-        static_assert([] {
+        static_assert([] -> bool {
                 auto a = xstd::indeterminate_array<S, 3>();
                 for (auto& s : a) {
                         s = two_keys<S>();

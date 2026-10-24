@@ -163,7 +163,7 @@ BOOST_AUTO_TEST_CASE(WritingEveryElementAfterDefaultConstructionGivesTheArrayIts
         };
         static_assert(fill_odd(xstd::bit_array<64>()) == 32UZ);
         static_assert(fill_odd(xstd::bit_array<100>()) == 50UZ);
-        static_assert([] {
+        static_assert([] -> bool {
                 xstd::bit_array<100> a;
                 a[99] = true;
                 return std::ranges::count(a, true) == 1;
