@@ -644,6 +644,9 @@ BOOST_AUTO_TEST_CASE(EveryOwnerHoldsAtMostItsUniverse)
                 BOOST_CHECK_EQUAL(x.size(), key_mapping::size - 1UZ);
                 BOOST_CHECK(not x.contains(keys.front()));
                 BOOST_CHECK(std::ranges::all_of(x, [](key_type k) -> bool { return key_mapping::is_key(k); }));
+                auto top = X({keys.back()});
+                top <<= 1UZ;
+                BOOST_CHECK(top.empty());
         });
 }
 
