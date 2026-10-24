@@ -137,10 +137,13 @@ auto check_shift_up_to_the_capacity(T const& s, std::size_t key) -> void
 
         // One further carries it past, and it alone is dropped: the lower key lands one higher, unless it was that key.
         auto const survivor = key == 0UZ ? T() : T({room + 1UZ});
-        auto past_capacity  = s;
-        past_capacity <<= room + 1UZ;
-        BOOST_CHECK(past_capacity == survivor);
-        BOOST_CHECK((s << (room + 1UZ)) == survivor);
+        BOOST_CHECK(xstd::shl(s, room + 1UZ) == survivor);
+        if (room + 1UZ < T::max_size()) {
+                auto past_capacity = s;
+                past_capacity <<= room + 1UZ;
+                BOOST_CHECK(past_capacity == survivor);
+                BOOST_CHECK((s << (room + 1UZ)) == survivor);
+        }
 }
 
 } // namespace
