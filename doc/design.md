@@ -762,6 +762,25 @@ blocks stay a plain member, whose tail padding an overlappable one would expose 
 A static width holds exactly the blocks its width fills, which is none at width zero: `num_blocks_v` and `blocks_for`
 give the same count, and the static arms that index a block directly are the ones selected at one block or two.
 
+Where a static width fills its blocks, `structural_bit_members` declares the blocks with no initializer, so the
+vehicle default-initializes them as `std::array` does its elements. Each reading then says what default
+construction means, the way its counterpart does:
+
+- **`bit_array`** keeps its defaulted default constructor, so `bit_array<N> a;` leaves the bits indeterminate,
+  `bit_array<N> a{};` zeroes them, and the type is trivially default constructible, all as for `std::array<bool, N>`.
+- **The sets** value-initialize their storage in the set adaptor's default constructor: `X u;` must leave `u.empty()`
+  ([container.reqmts]). The adaptor's `indeterminate_t` constructor default-initializes it instead, and
+  `basic_bit_fixed_set` publishes it for a two-step initialization, after which only assignment may come.
+- **The valarrays** value-initialize theirs, every element `false`, as `std::valarray<bool>(n)`'s are.
+
+Where the width leaves unused bits in its last block, the blocks keep their initializer: `size()`, `==` and hashing
+read whole blocks, so the padding must start clear. An indeterminate value may be any value, zero included, so a
+padded `bit_array<N> a;` that zeroes is still faithful, and so is a padded set built from the tag.
+
+A changed default would have been one constructor's edit, but it breaks [container.reqmts] for every set and leaves
+`T x;` and `T x{}` different for a type that replaces `std::bitset`, where both mean empty. A set that is about to be
+overwritten, as a chess engine's per-ply state is, asks for the tag where it is declared instead.
+
 ### structural-at-aligned-widths
 
 `[array.overview]/4` makes `std::array<bool, N>` a structural type, usable as a non-type template argument. A

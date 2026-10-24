@@ -717,6 +717,7 @@ public:
         template<class OtherBits>
                 requires is_owner and xstd::bit_blocks<OtherBits> and bits_type::template
         exchanges_bits<OtherBits> [[nodiscard]] constexpr sequence_adaptor(xstd::from_blocks_t, OtherBits const& b) noexcept
+                : members_type(std::in_place)
         {
                 m_bits.assign_bits(b);
         }

@@ -121,6 +121,7 @@ nav:
       - container_hash.hpp: /xstd-bits/reference/bit_set/hash/
       - erase_if.hpp: reference/bit_set/erase_if.md
       - hash.hpp: reference/bit_set/hash.md
+      - indeterminate.hpp: reference/bit_set/indeterminate.md
     - bit_span.hpp:
       - reference/bit_span/index.md
       - bit_span.hpp: reference/bit_span/bit_span.md

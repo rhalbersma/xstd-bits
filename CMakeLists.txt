@@ -174,6 +174,7 @@ target_sources(
         include/xstd/bits/bit_set/bit_set.hpp
         include/xstd/bits/bit_set/bit_set_view.hpp
         include/xstd/bits/bit_set/bit_fixed_set.hpp
+        include/xstd/bits/bit_set/indeterminate.hpp
         include/xstd/bits/bit_set/erase_if.hpp
         include/xstd/bits/bit_set/hash.hpp
         include/xstd/bits/bit_set/container_hash.hpp

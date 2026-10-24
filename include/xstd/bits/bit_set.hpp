@@ -13,6 +13,9 @@
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>   // IWYU pragma: export; basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp> // IWYU pragma: export; basic_bit_inplace_set, bit_inplace_set
 
+// beside them: the tag that leaves a fixed set's blocks for a later assignment, as C++26's [[indeterminate]] does
+#include <xstd/bits/bit_set/indeterminate.hpp> // IWYU pragma: export; indeterminate, indeterminate_array, indeterminate_t
+
 // beside it: the set over borrowed blocks, which no standard header has
 #include <xstd/bits/bit_set/bit_set_view.hpp> // IWYU pragma: export; bit_set_view
 

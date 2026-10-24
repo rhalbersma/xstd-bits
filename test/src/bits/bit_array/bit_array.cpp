@@ -9,15 +9,17 @@
 #include <test/value_reference.hpp>                // value_reference
 #include <xstd/bits/bit_algorithm/bit_reverse.hpp> // bit_reverse
 #include <xstd/bits/bit_algorithm/bit_rotate.hpp>  // bit_rotate
-#include <xstd/bits/bit_array.hpp>                 // basic_bit_array
+#include <xstd/bits/bit_array.hpp>                 // basic_bit_array, bit_array
 #include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                               // count, none_of
 #include <concepts>                                // regular, same_as, totally_ordered
 #include <cstddef>                                 // ptrdiff_t, size_t
 #include <cstdint>                                 // uint32_t, uint64_t, uint8_t
+#include <functional>                              // identity
 #include <iterator>                                // contiguous_iterator, random_access_iterator, size
 #include <ranges>                                  // begin, contiguous_range, empty, iota, random_access_range, size
 #include <tuple>                                   // tuple_cat, tuple_size_v
-#include <type_traits>                             // bool_constant, integral_constant
+#include <type_traits>                             // bool_constant, integral_constant, is_trivially_default_constructible_v
 #include <utility>                                 // declval, index_sequence, make_index_sequence
 
 BOOST_AUTO_TEST_SUITE(BitArray)
@@ -148,6 +150,35 @@ BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDoAcrossManyBlocks)
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(xstd::basic_bit_array<std::uint8_t, 70>()), 0);
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(xstd::basic_bit_array<std::uint64_t, 128>()), 0);
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(xstd::basic_bit_array<std::uint64_t, 130>()), 0);
+}
+
+// As std::array<bool, N>: a; default-initializes, a{} is all false, and a width that fills its blocks writes nothing.
+BOOST_AUTO_TEST_CASE(DefaultInitializationIsArraysAndValueInitializationIsFalse)
+{
+        static_assert(std::is_trivially_default_constructible_v<xstd::bit_array<64>>);
+        static_assert(std::is_trivially_default_constructible_v<xstd::basic_bit_array<std::uint8_t, 24>>);
+        static_assert(not std::is_trivially_default_constructible_v<xstd::bit_array<100>>);
+        static_assert([] {
+                xstd::bit_array<64> a{};
+                return std::ranges::none_of(a, std::identity());
+        }());
+        xstd::bit_array<64> const a{};
+        BOOST_CHECK(std::ranges::none_of(a, std::identity()));
+}
+
+// Every element written one at a time is a value, at a padded width too: the bits past N stay clear for count().
+BOOST_AUTO_TEST_CASE(WritingEveryElementGivesTheArrayItsValue)
+{
+        auto const fill_odd = []<class A>(A& a) -> std::size_t {
+                for (auto const n : std::views::iota(0UZ, a.size())) {
+                        a[n] = (n % 2UZ == 1UZ);
+                }
+                return static_cast<std::size_t>(std::ranges::count(a, true));
+        };
+        xstd::bit_array<64> whole;
+        xstd::bit_array<100> padded;
+        BOOST_CHECK_EQUAL(fill_odd(whole), 32UZ);
+        BOOST_CHECK_EQUAL(fill_odd(padded), 50UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -186,9 +186,10 @@ template<class Width, class Blocks>
 struct structural_bit_members : bits::detail::allocator_base_type<Blocks>
 {
         [[XSTD_NO_UNIQUE_ADDRESS]]
-        Width m_size{};
+        Width m_size;
 
-        Blocks m_blocks{};
+        // Default-initialized as std::array's elements are: an owner that promises an empty set value-initializes it.
+        Blocks m_blocks;
 
         [[nodiscard]] structural_bit_members() = default;
 
