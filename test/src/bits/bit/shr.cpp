@@ -19,7 +19,7 @@
 #include <limits>                                // numeric_limits
 #include <ranges>                                // iota
 #include <set>                                   // set
-#include <utility>                               // cmp_less
+#include <utility>                               // cmp_less, declval
 
 namespace {
 
@@ -104,10 +104,10 @@ BOOST_AUTO_TEST_CASE(AStaticWidthShiftThrowsNothing)
 // A view refers to keys it does not own, so it is no set to shift by value: the copy would write through.
 BOOST_AUTO_TEST_CASE(AViewIsNoSetToShift)
 {
-        auto x = xstd::bit_fixed_set<64>();
-        auto v = xstd::bit_set_view(x);
-        static_assert(not shifts<decltype(v)>);
-        static_assert(shifts<decltype(x)>);
+        using fixed = xstd::bit_fixed_set<64>;
+        using view  = decltype(xstd::bit_set_view(std::declval<fixed&>()));
+        static_assert(not shifts<view>);
+        static_assert(shifts<fixed>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
