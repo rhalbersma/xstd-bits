@@ -762,24 +762,20 @@ blocks stay a plain member, whose tail padding an overlappable one would expose 
 A static width holds exactly the blocks its width fills, which is none at width zero: `num_blocks_v` and `blocks_for`
 give the same count, and the static arms that index a block directly are the ones selected at one block or two.
 
-Where a static width fills its blocks, `structural_bit_members` declares the blocks with no initializer, so the
-vehicle default-initializes them as `std::array` does its elements. Each reading then says what default
-construction means, the way its counterpart does:
+Default construction zeroes an array's blocks at every width, `bit_array` included, though `std::array<bool, N> a;`
+leaves its elements indeterminate. The two must admit the same code, and `array<bool, N> a; a[0] = true;` is valid:
+`a[0]` is an object of its own, and writing it reads nothing else. A packed `a[0] = true` reads the block that `a[1]`
+shares, which would be undefined over a default-initialized block, so the blocks start clear. Reading a position
+before writing it is undefined for `std::array`, which permits the `false` it answers here. What is given up is
+`is_trivially_default_constructible`, which no packed array can have while one-element writes stay valid; masking the
+read instead would not help, as an indeterminate value is the whole block's and `block & mask` already reads it.
 
-- **`bit_array`** keeps its defaulted default constructor, so `bit_array<N> a;` leaves the bits indeterminate,
-  `bit_array<N> a{};` zeroes them, and the type is trivially default constructible, all as for `std::array<bool, N>`.
-- **The sets** value-initialize their storage in the set adaptor's default constructor: `X u;` must leave `u.empty()`
-  ([container.reqmts]). The adaptor's `indeterminate_t` constructor default-initializes it instead, and
-  `basic_bit_fixed_set` publishes it for a two-step initialization, after which only assignment may come.
-- **The valarrays** value-initialize theirs, every element `false`, as `std::valarray<bool>(n)`'s are.
-
-Where the width leaves unused bits in its last block, the blocks keep their initializer: `size()`, `==` and hashing
-read whole blocks, so the padding must start clear. An indeterminate value may be any value, zero included, so a
-padded `bit_array<N> a;` that zeroes is still faithful, and so is a padded set built from the tag.
-
-A changed default would have been one constructor's edit, but it breaks [container.reqmts] for every set and leaves
-`T x;` and `T x{}` different for a type that replaces `std::bitset`, where both mean empty. A set that is about to be
-overwritten, as a chess engine's per-ply state is, asks for the tag where it is declared instead.
+The layouts that hold an array declare their blocks with no initializer, since a default member initializer is one no
+constructor can skip, and zero them in a user-provided default constructor instead. Beside it, a constructor taking
+`xstd::indeterminate_t` leaves them default-initialized, and `basic_bit_fixed_set` publishes it for a two-step
+initialization. Only a whole write may follow it, so it writes nothing at any width, the padding of a width that does
+not fill its blocks included; inserting one key after it is undefined, as `a[0] = true` would be. A set that is about
+to be overwritten, as a chess engine's per-ply state is, asks for the tag where it is declared.
 
 ### structural-at-aligned-widths
 

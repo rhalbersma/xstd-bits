@@ -45,9 +45,9 @@ As `basic_bit_set`, with:
   `basic_bit_array`'s does. *Mandates:* where `KeyMapping` models `sized_bit_index_mapping<KeyMapping, Key>`,
   `KeyMapping::size == N`.
 - There is no allocator, and neither `allocator_type` nor `get_allocator`. The default constructor is `noexcept`.
-- *`indeterminate_t` constructor:* *Effects:* Leaves the blocks default-initialized: where `N` fills its blocks
-  nothing is written, and at another width the blocks are zeroed. *Remarks:* Until it is assigned, the only valid
-  operations on the set are assignment and destruction. See [`indeterminate`](indeterminate.md).
+- *`indeterminate_t` constructor:* *Effects:* Leaves the blocks default-initialized, writing nothing, at any width.
+  *Remarks:* Until it is assigned, the only valid operations on the set are assignment and destruction. See
+  [`indeterminate`](indeterminate.md).
 - `max_size` is a constant of the type, `N`; `size()` and `empty()` are functions that count the keys.
 - `insert`, `emplace` and the ranged forms throw `out_of_range` for a key whose position is `N` or more. An
   enumerator's `|=`, `^=`, `-=` and `&=`, the non-members over them, and `operator[]` take a position below `N` as

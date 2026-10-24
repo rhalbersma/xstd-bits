@@ -44,7 +44,6 @@ public:
         template<std::size_t M>
                 requires (M == N)
         [[nodiscard]] constexpr explicit basic_bit_array(value_type const (&a)[M]) noexcept // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
-                : base_type()
         {
                 std::ranges::copy(a, this->begin());
         }

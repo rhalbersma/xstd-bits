@@ -156,7 +156,6 @@ class valarray_adaptor : public adapted_bits<Bits, xstd::empty_base_type<>, Bits
         // Sized to what the proxy selects, which at a fixed size must be the type's own.
         template<class Proxy>
         [[nodiscard]] constexpr valarray_adaptor(gathering, Proxy const& a)
-                : valarray_adaptor()
         {
                 auto const n = proxy_access::size(a);
                 if constexpr (is_fixed) {
@@ -202,10 +201,7 @@ public:
         using block_container_type = Bits::block_container_type;
 
         // [valarray.cons], the sizes taken at run time where the storage has one.
-        // Value-initialized, every element false as std::valarray<bool>(n)'s are.
-        [[nodiscard]] constexpr valarray_adaptor() noexcept(std::is_nothrow_default_constructible_v<Bits>)
-                : members_type()
-        {}
+        [[nodiscard]] valarray_adaptor() = default;
 
         [[nodiscard]] constexpr explicit valarray_adaptor(count_type n)
                 : members_type(std::in_place, Bits::check_addressable_width(n))
@@ -220,7 +216,6 @@ public:
 
         // At a fixed size, std::array's aggregate initialization: what is listed leads, the rest stays false.
         [[nodiscard]] constexpr valarray_adaptor(std::initializer_list<value_type> il)
-                : valarray_adaptor()
         {
                 if constexpr (is_fixed) {
                         assert(il.size() <= size());
@@ -234,14 +229,12 @@ public:
         template<std::size_t M>
                 requires is_fixed and (M == Bits::extent)
         [[nodiscard]] constexpr explicit valarray_adaptor(value_type const (&a)[M]) noexcept // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
-                : valarray_adaptor()
         {
                 std::ranges::copy(a, elements().begin());
         }
 
         // [valarray.cons]: n bools read from p, where n is the type's own at a fixed size.
         [[nodiscard]] constexpr valarray_adaptor(value_type const* p, size_type n)
-                : valarray_adaptor()
         {
                 if constexpr (is_fixed) {
                         assert(n == size());
@@ -277,7 +270,6 @@ public:
         template<class OtherBits>
                 requires xstd::bit_blocks<OtherBits> and Bits::template
         exchanges_bits<OtherBits> [[nodiscard]] constexpr valarray_adaptor(xstd::from_blocks_t, OtherBits const& b) noexcept
-                : members_type(std::in_place)
         {
                 m_bits.assign_bits(b);
         }

@@ -7,6 +7,7 @@
 #define XSTD_BITS_DETAIL_BIT_BLOCK_CONTAINER_HPP
 
 #include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks_t
+#include <xstd/bits/bit_set/indeterminate.hpp>               // indeterminate_t
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>   // bit_blocks_extent_v
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/assert.hpp>                       // XSTD_BITS_ASSERT
@@ -31,7 +32,7 @@
 #include <array>                                             // array
 #include <bit>                                               // has_single_bit
 #include <cassert>                                           // assert
-#include <concepts>                                          // default_initializable, same_as
+#include <concepts>                                          // constructible_from, default_initializable, same_as
 #include <cstddef>                                           // ptrdiff_t, size_t
 #include <cstdint>                                           // uint64_t
 #include <format>                                            // format
@@ -44,7 +45,7 @@
 #include <source_location>                                   // source_location
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
-#include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_const_t, remove_reference_t
+#include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_const_t, remove_reference_t
 #include <utility>                                           // exchange, forward, move, pair
 
 namespace xstd::bits::detail {
@@ -108,7 +109,7 @@ template<class Blocks>
         requires allocator_aware<Blocks>
 inline constexpr bool propagates_on_copy_assignment_v<Blocks> = std::allocator_traits<allocator_param_t<Blocks>>::propagate_on_container_copy_assignment::value;
 
-// The vehicle's two members, the width first: initialized where they are declared, as a vector starts empty.
+// The vehicle's two members, the width first: a run-time width starts at zero, as a vector starts empty.
 template<class Width, class Blocks, bool Empty>
 class bit_members : public bits::detail::allocator_base_type<Blocks>
 {
@@ -117,11 +118,20 @@ protected:
         [[XSTD_NO_UNIQUE_ADDRESS]]
         Width m_size{};
 
-        // An NSDMI, not extent-constrained constructors: an array starts zeroed and a vector empty.
-        Blocks m_blocks{};
+        // No NSDMI, which no constructor could skip: the tag constructor below leaves the blocks default-initialized.
+        Blocks m_blocks;
 
 public:
-        [[nodiscard]] bit_members() = default;
+        // Value-initialized blocks: an array starts zeroed and a vector empty.
+        [[nodiscard]] constexpr bit_members() noexcept(std::is_nothrow_default_constructible_v<Blocks>)
+                requires std::default_initializable<Blocks>
+                : m_blocks()
+        {}
+
+        // Default-initialized blocks, for an owner that assigns before anything reads them.
+        [[nodiscard]] constexpr explicit bit_members(indeterminate_t) noexcept(std::is_nothrow_default_constructible_v<Blocks>)
+                requires std::default_initializable<Blocks>
+        {}
 
         template<class W, class... Args>
         [[nodiscard]] constexpr explicit bit_members(W&& w, Args&&... args) noexcept(std::is_nothrow_constructible_v<Blocks, Args...>)
@@ -186,12 +196,19 @@ template<class Width, class Blocks>
 struct structural_bit_members : bits::detail::allocator_base_type<Blocks>
 {
         [[XSTD_NO_UNIQUE_ADDRESS]]
-        Width m_size;
+        Width m_size{};
 
-        // Default-initialized as std::array's elements are: an owner that promises an empty set value-initializes it.
+        // No NSDMI, which no constructor could skip: the tag constructor below leaves the blocks default-initialized.
         Blocks m_blocks;
 
-        [[nodiscard]] structural_bit_members() = default;
+        // Value-initialized blocks, every bit clear.
+        [[nodiscard]] constexpr structural_bit_members() noexcept(std::is_nothrow_default_constructible_v<Blocks>)
+                : m_blocks()
+        {}
+
+        // Default-initialized blocks, for an owner that assigns before anything reads them.
+        [[nodiscard]] constexpr explicit structural_bit_members(indeterminate_t) noexcept(std::is_nothrow_default_constructible_v<Blocks>)
+        {}
 
         template<class W, class... Args>
         [[nodiscard]] constexpr explicit structural_bit_members(W&& w, Args&&... args) noexcept(std::is_nothrow_constructible_v<Blocks, Args...>)
@@ -334,6 +351,12 @@ public:
         [[nodiscard]] bit_block_container()
                 requires std::default_initializable<Blocks>
         = default;
+
+        // Blocks left default-initialized, which only assignment may follow: the first of two initialization steps.
+        [[nodiscard]] constexpr explicit bit_block_container(indeterminate_t) noexcept(std::is_nothrow_default_constructible_v<Blocks>)
+                requires std::constructible_from<members_type, indeterminate_t>
+                : members_type(indeterminate)
+        {}
 
         // Someone else's blocks, every bit of which is a position: nothing is copied, and there is no tail to clear.
         [[nodiscard]] constexpr explicit bit_block_container(Blocks blocks) noexcept
