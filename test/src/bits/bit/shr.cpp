@@ -69,10 +69,12 @@ BOOST_AUTO_TEST_CASE(EveryIntegerTypeIsACount)
         BOOST_CHECK(std::ranges::equal(xstd::shr(x, std::uint8_t{4}), std::set<std::size_t>{36UZ}));
         BOOST_CHECK(xstd::shr(x, std::numeric_limits<std::int64_t>::min()).empty());
         BOOST_CHECK(xstd::shr(x, std::numeric_limits<std::size_t>::max()).empty());
+#ifdef XSTD_HAS_INT128
         BOOST_CHECK(xstd::shr(x, std::numeric_limits<xstd::uint128>::max()).empty());
         BOOST_CHECK(std::ranges::equal(xstd::shr(x, xstd::int128{-1}), std::set<std::size_t>{4UZ, 41UZ}));
         BOOST_CHECK(std::ranges::equal(xstd::shr(x, xstd::int128{1}), std::set<std::size_t>{2UZ, 39UZ}));
         BOOST_CHECK(std::ranges::equal(xstd::shr(x, xstd::uint128{1}), std::set<std::size_t>{2UZ, 39UZ}));
+#endif
 }
 
 // A run-time width grows towards max_size() as its <<= does, and an inplace capacity drops what passes it.
