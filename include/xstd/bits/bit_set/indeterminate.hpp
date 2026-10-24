@@ -12,6 +12,18 @@
 #include <type_traits> // is_nothrow_constructible_v
 #include <utility>     // index_sequence, make_index_sequence
 
+// The attribute that keeps an automatic variable's storage unwritten under C++26's erroneous values, where it exists.
+#ifndef XSTD_INDETERMINATE
+#if __cplusplus > 202302L and defined(__has_cpp_attribute)
+#if __has_cpp_attribute(indeterminate)
+#define XSTD_INDETERMINATE indeterminate
+#endif
+#endif
+#endif
+#ifndef XSTD_INDETERMINATE
+#define XSTD_INDETERMINATE
+#endif
+
 namespace xstd {
 
 // The tag that leaves an owner's blocks default-initialized, as C++26's [[indeterminate]] leaves a variable's storage.

@@ -1,8 +1,10 @@
 # `<xstd/bits/bit_set/indeterminate.hpp>`
 
-## `xstd::indeterminate_t`, `xstd::indeterminate`, `xstd::indeterminate_array`
+## `xstd::indeterminate_t`, `xstd::indeterminate`, `xstd::indeterminate_array`, `XSTD_INDETERMINATE`
 
 ```cpp
+#define XSTD_INDETERMINATE see below
+
 struct indeterminate_t { explicit indeterminate_t() = default; };
 inline constexpr indeterminate_t indeterminate{};
 
@@ -31,9 +33,12 @@ in a default member initializer, as a braced `{indeterminate}` fills only the fi
   that holds it, and that block has no value yet.
 - A default-constructed set is empty, as [[container.reqmts]](https://eel.is/c++draft/container.reqmts) has `X u;`,
   and so is a value-initialized one: the tag is the only way to an indeterminate set.
-- Under C++26, [P2795R5](https://wg21.link/p2795r5) gives an automatic variable without an initializer an erroneous
-  value, which an implementation may initialize. A variable that must stay unwritten says so with
-  `[[indeterminate]]`, as `[[indeterminate]] auto s = bit_fixed_set<64>(indeterminate);` does.
+- Under C++26, [P2795R5](https://wg21.link/p2795r5) gives an automatic variable's storage erroneous values, which an
+  implementation may fill in whatever its constructors leave. A variable that must stay unwritten says so with
+  `[[indeterminate]]`, which applies to the whole variable. `XSTD_INDETERMINATE` is that attribute's name where the
+  language and the compiler have it, and empty elsewhere, so `[[XSTD_INDETERMINATE]] auto s =
+  bit_fixed_set<64>(indeterminate);` compiles under C++23 as under C++26, as `[[XSTD_NO_UNIQUE_ADDRESS]]` does. A
+  definition of it made before the header is included wins.
 - `bit_array` takes no tag. `array<bool, N> a; a[0] = true;` is valid, and the packed `a[0] = true` reads the block
   that bit 1 shares, so a default-constructed `bit_array` must start clear to admit the same code.
 

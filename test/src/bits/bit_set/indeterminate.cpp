@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>   // bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp> // bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>         // bit_set
-#include <xstd/bits/bit_set/indeterminate.hpp>   // indeterminate, indeterminate_array, indeterminate_t
+#include <xstd/bits/bit_set/indeterminate.hpp>   // XSTD_INDETERMINATE, indeterminate, indeterminate_array, indeterminate_t
 #include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
 #include <array>                                 // array
 #include <concepts>                              // same_as
@@ -119,10 +119,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(AnIndeterminateArrayIsAssignedElementByElement, S,
 // The record a hot path declares on its frame, every field written before it is read, as the tag requires.
 BOOST_AUTO_TEST_CASE(AStructOfSetsFillsItsFieldsAfterTheTag)
 {
-        auto state       = ply_state();
-        state.checkers   = xstd::bit_fixed_set<64>({12UZ});
-        state.pinners[0] = xstd::bit_fixed_set<64>({1UZ, 2UZ});
-        state.pinners[1] = xstd::bit_fixed_set<64>();
+        [[XSTD_INDETERMINATE]] auto state = ply_state();
+        state.checkers                    = xstd::bit_fixed_set<64>({12UZ});
+        state.pinners[0]                  = xstd::bit_fixed_set<64>({1UZ, 2UZ});
+        state.pinners[1]                  = xstd::bit_fixed_set<64>();
         BOOST_CHECK(state.checkers.contains(12UZ) and state.pinners[0].size() == 2UZ and state.pinners[1].empty());
 }
 

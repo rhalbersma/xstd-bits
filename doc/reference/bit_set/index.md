@@ -24,6 +24,7 @@ namespace xstd {
     using bit_inplace_set = basic_bit_inplace_set<size_t, size_t, N>;
 
   // the tag that leaves a fixed set's blocks for a later assignment
+  #define XSTD_INDETERMINATE see below
   struct indeterminate_t { explicit indeterminate_t() = default; };
   inline constexpr indeterminate_t indeterminate{};
   template<class T, size_t K>
@@ -92,7 +93,7 @@ namespace boost::container_hash {
 | [`<xstd/bits/bit_set/bit_set.hpp>`](bit_set.md) | `basic_bit_set`, `bit_set` |
 | [`<xstd/bits/bit_set/bit_fixed_set.hpp>`](bit_fixed_set.md) | `basic_bit_fixed_set`, `bit_fixed_set` |
 | [`<xstd/bits/bit_set/bit_inplace_set.hpp>`](bit_inplace_set.md) | `basic_bit_inplace_set`, `bit_inplace_set` |
-| [`<xstd/bits/bit_set/indeterminate.hpp>`](indeterminate.md) | `indeterminate`, `indeterminate_array`, `indeterminate_t` |
+| [`<xstd/bits/bit_set/indeterminate.hpp>`](indeterminate.md) | `indeterminate`, `indeterminate_array`, `indeterminate_t`, `XSTD_INDETERMINATE` |
 | [`<xstd/bits/bit_set/bit_set_view.hpp>`](bit_set_view.md) | `bit_set_view` |
 | [`<xstd/bits/bit_set/bit_key_mapping.hpp>`](bit_key_mapping.md) | `bit_find_mapping`, `bit_key_mapping`, `bit_range_mapping`, `enum_traits` |
 | [`<xstd/bits/bit_set/bit_flag_mapping.hpp>`](bit_flag_mapping.md) | `bit_flag_mapping` |
