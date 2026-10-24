@@ -667,14 +667,14 @@ public:
                 -> const_reference
         {
                 XSTD_BITS_ASSERT(not empty());
-                return {&bits(), is_descending ? highest() : lowest()};
+                return {&bits(), is_descending ? bits().find_back() : bits().find_front()};
         }
 
         [[nodiscard]] constexpr auto back() const noexcept
                 -> const_reference
         {
                 XSTD_BITS_ASSERT(not empty());
-                return {&bits(), is_descending ? lowest() : highest()};
+                return {&bits(), is_descending ? bits().find_front() : bits().find_back()};
         }
 
         // modifiers; each writes through the storage, so each exists exactly where the storage lets this handle write.
@@ -1292,27 +1292,6 @@ private:
                 -> derived_type&
         {
                 return static_cast<derived_type&>(*this);
-        }
-
-        // The two ends of a non-empty set, by the storage's primitives; a zero width has no position to find.
-        [[nodiscard]] constexpr auto lowest() const noexcept
-                -> std::size_t
-        {
-                if constexpr (is_zero_width) {
-                        return 0UZ;
-                } else {
-                        return bits().find_front();
-                }
-        }
-
-        [[nodiscard]] constexpr auto highest() const noexcept
-                -> std::size_t
-        {
-                if constexpr (is_zero_width) {
-                        return 0UZ;
-                } else {
-                        return bits().find_back();
-                }
         }
 
         // Where a named write refuses a key: past a closed universe at any width, and past what storage can hold.
