@@ -7,7 +7,7 @@
 #define XSTD_BITS_BIT_SHR_HPP
 
 #include <xstd/bits/bit/detail/shift_by.hpp> // shift_by, shiftable_set
-#include <xstd/ints/concepts/integer.hpp>   // integer
+#include <xstd/ints/concepts/integer.hpp>    // integer
 
 // The set's keys shifted by any count of any integer type, total as the integer shr is beside a set's own operator.
 namespace xstd {
