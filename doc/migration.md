@@ -32,8 +32,9 @@ masks; the class takes the keys the code already has, and the shifts and masks b
 
 A word whose bits are positions, as a chess engine's bitboard or a flag word, becomes a `bit_fixed_set<64>`. The
 shift-and-mask primitives become `insert`, `erase` and `contains`, `std::popcount` becomes `size`, and the
-`w &= w - 1` loop over `std::countr_zero` becomes a range-for, lowest position first. The set's shifts translate its
-keys as the word's do, and `&`, `|` and `^` stay. A word read as a row of `bool`, indexed, rotated or reversed, is a
+`w &= w - 1` loop over `std::countr_zero` becomes a range-for, lowest position first. `&`, `|`, `^`, `-` and the
+shifts stay as the word's: the same precondition, `n < 64` for a shift, and the same instructions, so code that
+already works on the word keeps working and keeps its speed. A word read as a row of `bool`, indexed, rotated or reversed, is a
 `bit_array<64>` instead.
 
 <table>
