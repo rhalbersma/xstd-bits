@@ -37,6 +37,19 @@ stay as the word's: the same precondition, `n < 64` for a shift, and the same in
 works on the word keeps working and keeps its speed; `a & ~b` is also `a - b`. A word read as a row of `bool`,
 indexed, rotated or reversed, is a `bit_array<64>` instead.
 
+`std::bitset<64>` was the standard's own answer, and bit-twiddling code did not take it, for four reasons this set
+answers one by one:
+
+1. **`constexpr`.** Nothing in `std::bitset` was until C++23's [P2417R2](https://wg21.link/p2417r2); every member of
+   the set is.
+2. **Iteration.** `std::bitset` has no iterators, so a loop over the set bits needs libstdc++'s `_Find_first` and
+   `_Find_next`, which no other library has. The set is a bidirectional range, with `front()` and `back()`.
+3. **Shifts.** `std::bitset` defines a shift by `N` or more as empty, a compare on every shift. The set's shifts are the
+   word's, with `n < N` as their precondition, and `xstd::shl` and `xstd::shr` are the total forms to opt into.
+4. **Single bits.** `std::bitset`'s `set`, `reset`, `flip` and `test` with a position throw `out_of_range`. The set's
+   `|=`, `^=`, `-=`, `&=` and `[]` with a key are unchecked, as the word's shift-and-mask is, and a hardened build
+   checks their precondition; `insert` checks, and `contains` and `erase` are total, for code that wants either.
+
 <table>
 <tr><th>Before</th><th>After</th></tr>
 <tr><td>
