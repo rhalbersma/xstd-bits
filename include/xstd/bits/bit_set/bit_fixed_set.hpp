@@ -16,6 +16,7 @@
 #include <xstd/bits/bit_type_traits/bit_least.hpp>            // least_block_t
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container
 #include <xstd/bits/detail/bit_layout.hpp>                    // byte_count, bytes_bits
+#include <xstd/bits/detail/input_iterator_pair.hpp>           // input_iterator_pair
 #include <xstd/bits/detail/num_blocks.hpp>                    // holds_width, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                     // storage, storage_access
 #include <xstd/bits/detail/rebind.hpp>                        // rebind
@@ -28,7 +29,6 @@
 #include <cstddef>                                            // size_t
 #include <functional>                                         // less
 #include <initializer_list>                                   // initializer_list
-#include <iterator>                                           // input_iterator
 #include <ranges>                                             // from_range, from_range_t
 #include <type_traits>                                        // conditional_t, is_enum_v
 #include <utility>                                            // forward
@@ -71,7 +71,8 @@ public:
                 : base_type()
         {}
 
-        template<std::input_iterator InputIterator>
+        template<class InputIterator>
+                requires bits::detail::input_iterator_pair<InputIterator, InputIterator>
         [[nodiscard]] constexpr basic_bit_fixed_set(InputIterator first, InputIterator last, key_compare const& /* comp */ = key_compare())
                 : base_type(first, last)
         {}

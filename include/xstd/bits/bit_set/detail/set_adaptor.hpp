@@ -21,6 +21,7 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>                 // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                   // numeric_three_way, set_equal, three_way
 #include <xstd/bits/detail/hash.hpp>                          // hash_append_keys
+#include <xstd/bits/detail/input_iterator_pair.hpp>           // input_iterator_pair
 #include <xstd/bits/detail/non_volatile.hpp>                  // non_volatile
 #include <xstd/bits/detail/owner_members.hpp>                 // owner_members
 #include <xstd/bits/detail/ownership.hpp>                     // owned_storage, owner_of, owns, reads, set_reading_tag, storage, storage_access
@@ -38,7 +39,7 @@
 #include <format>                                             // format, formatter
 #include <functional>                                         // greater, hash, less
 #include <initializer_list>                                   // initializer_list
-#include <iterator>                                           // bidirectional_iterator_tag, input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
+#include <iterator>                                           // bidirectional_iterator_tag, iter_reference_t, make_reverse_iterator, reverse_iterator
 #include <ranges>                                             // begin, enable_borrowed_range, enable_view, end, input_range, iota, iota_view, range_reference_t, from_range_t, subrange
 #include <source_location>                                    // source_location
 #include <span>                                               // dynamic_extent
@@ -407,8 +408,8 @@ public:
                 requires is_owner
         = default;
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
+        template<class I, class S>
+                requires bits::detail::input_iterator_pair<I, S> and is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr set_adaptor(I first, S last)
         {
                 insert(first, last);
@@ -432,8 +433,8 @@ public:
                 requires is_owner
         {}
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
+        template<class I, class S>
+                requires bits::detail::input_iterator_pair<I, S> and is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr set_adaptor(I first, S last, key_compare const& /* comp */)
                 : set_adaptor(first, last)
         {}
@@ -460,16 +461,16 @@ public:
                 : members_type(std::in_place, alloc)
         {}
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires is_owner and is_allocator_aware and std::constructible_from<value_type, std::iter_reference_t<I>>
+        template<class I, class S>
+                requires bits::detail::input_iterator_pair<I, S> and is_owner and is_allocator_aware and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr set_adaptor(I first, S last, allocator_param const& alloc)
                 : members_type(std::in_place, alloc)
         {
                 insert(first, last);
         }
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires is_owner and is_allocator_aware and std::constructible_from<value_type, std::iter_reference_t<I>>
+        template<class I, class S>
+                requires bits::detail::input_iterator_pair<I, S> and is_owner and is_allocator_aware and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr set_adaptor(I first, S last, key_compare const& /* comp */, allocator_param const& alloc)
                 : set_adaptor(first, last, alloc)
         {}
@@ -712,10 +713,10 @@ public:
                 return self.do_insert(position, KeyMapping::to_index(x));
         }
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
+        template<class I, class S>
         constexpr auto insert(this non_volatile auto&& self, I first, S last)
                 -> void
-                requires std::constructible_from<value_type, std::iter_reference_t<I>> and requires { self.bits().growing_insert(KeyMapping::to_index(static_cast<value_type>(*first))); }
+                requires bits::detail::input_iterator_pair<I, S> and std::constructible_from<value_type, std::iter_reference_t<I>> and requires { self.bits().growing_insert(KeyMapping::to_index(static_cast<value_type>(*first))); }
         {
                 for (; first != last; ++first) {
                         auto const x = KeyMapping::to_index(static_cast<value_type>(*first));

@@ -13,6 +13,7 @@
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp>          // admits_width, key_direction, set_adaptor
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_param_t
 #include <xstd/bits/detail/bit_block_container.hpp>          // set_bits_t
+#include <xstd/bits/detail/input_iterator_pair.hpp>          // input_iterator_pair
 #include <xstd/bits/detail/ownership.hpp>                    // storage
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/storage_rebind.hpp>               // fits_storage, storage_owner, storage_rebind, storage_width_v
@@ -21,7 +22,6 @@
 #include <cstddef>                                           // size_t
 #include <functional>                                        // less
 #include <initializer_list>                                  // initializer_list
-#include <iterator>                                          // input_iterator
 #include <memory>                                            // allocator
 #include <ranges>                                            // from_range, from_range_t, input_range
 #include <span>                                              // dynamic_extent
@@ -64,13 +64,14 @@ public:
                 : base_type(a)
         {}
 
-        template<std::input_iterator InputIterator>
+        template<class InputIterator>
+                requires bits::detail::input_iterator_pair<InputIterator, InputIterator>
         [[nodiscard]] constexpr basic_bit_set(InputIterator first, InputIterator last, key_compare const& /* comp */ = key_compare())
                 : base_type(first, last)
         {}
 
-        template<std::input_iterator InputIterator>
-                requires bits::detail::allocator_aware<Blocks>
+        template<class InputIterator>
+                requires bits::detail::input_iterator_pair<InputIterator, InputIterator> and bits::detail::allocator_aware<Blocks>
         [[nodiscard]] constexpr basic_bit_set(InputIterator first, InputIterator last, key_compare const& /* comp */, allocator_param const& a)
                 : base_type(first, last, a)
         {}
@@ -110,8 +111,8 @@ public:
                 : base_type(il, a)
         {}
 
-        template<std::input_iterator InputIterator>
-                requires bits::detail::allocator_aware<Blocks>
+        template<class InputIterator>
+                requires bits::detail::input_iterator_pair<InputIterator, InputIterator> and bits::detail::allocator_aware<Blocks>
         [[nodiscard]] constexpr basic_bit_set(InputIterator first, InputIterator last, allocator_param const& a)
                 : base_type(first, last, a)
         {}
@@ -150,8 +151,8 @@ public:
 using bit_set = basic_bit_set<std::size_t>;
 
 // [set.overview]'s guides, in its order: the blocks from the allocator, std::size_t by default, the key std::size_t.
-template<std::input_iterator InputIterator, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
-        requires (not xstd::simple_allocator<Compare>) and xstd::simple_allocator<Allocator>
+template<class InputIterator, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
+        requires bits::detail::input_iterator_pair<InputIterator, InputIterator> and (not xstd::simple_allocator<Compare>) and xstd::simple_allocator<Allocator>
 basic_bit_set(InputIterator, InputIterator, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<std::size_t, std::vector<typename Allocator::value_type, Allocator>, std::dynamic_extent, bit_key_mapping<std::size_t>, Compare>;
 
 template<std::ranges::input_range R, class Compare = std::less<std::size_t>, class Allocator = std::allocator<std::size_t>>
@@ -162,8 +163,8 @@ template<class Key, class Compare = std::less<std::size_t>, class Allocator = st
         requires (not xstd::simple_allocator<Compare>) and xstd::simple_allocator<Allocator>
 basic_bit_set(std::initializer_list<Key>, Compare = Compare(), Allocator = Allocator()) -> basic_bit_set<std::size_t, std::vector<typename Allocator::value_type, Allocator>, std::dynamic_extent, bit_key_mapping<std::size_t>, Compare>;
 
-template<std::input_iterator InputIterator, class Allocator>
-        requires xstd::simple_allocator<Allocator>
+template<class InputIterator, class Allocator>
+        requires bits::detail::input_iterator_pair<InputIterator, InputIterator> and xstd::simple_allocator<Allocator>
 basic_bit_set(InputIterator, InputIterator, Allocator) -> basic_bit_set<std::size_t, std::vector<typename Allocator::value_type, Allocator>>;
 
 template<std::ranges::input_range R, class Allocator>
