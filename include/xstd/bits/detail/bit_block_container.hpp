@@ -45,7 +45,7 @@
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
 #include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_const_t, remove_reference_t
-#include <utility>                                           // exchange, forward, move, pair
+#include <utility>                                           // exchange, forward, index_sequence, make_index_sequence, move, pair
 
 namespace xstd::bits::detail {
 
@@ -117,7 +117,6 @@ protected:
         [[XSTD_NO_UNIQUE_ADDRESS]]
         Width m_size{};
 
-        // An NSDMI, not extent-constrained constructors: an array starts zeroed and a vector empty.
         Blocks m_blocks{};
 
 public:
@@ -130,6 +129,30 @@ public:
         {}
 
         [[nodiscard]] friend auto operator==(bit_members const&, bit_members const&) -> bool = default;
+};
+
+// An array at a static width: no initializer on either member, so the layout is trivially default-constructible.
+template<class Width, class Blocks>
+class static_bit_members : public bits::detail::allocator_base_type<Blocks>
+{
+protected:
+        [[XSTD_NO_UNIQUE_ADDRESS]]
+        Width m_size;
+
+        // No NSDMI: a nontrivial default constructor makes GCC's constant evaluator drop T()'s zeroes.
+        Blocks m_blocks;
+
+public:
+        // As std::array's: T() zeroes the blocks and T t; leaves them unwritten.
+        [[nodiscard]] static_bit_members() = default;
+
+        template<class W, class... Args>
+        [[nodiscard]] constexpr explicit static_bit_members(W&& w, Args&&... args) noexcept(std::is_nothrow_constructible_v<Blocks, Args...>)
+                : m_size(std::forward<W>(w))
+                , m_blocks(std::forward<Args>(args)...)
+        {}
+
+        [[nodiscard]] friend auto operator==(static_bit_members const&, static_bit_members const&) -> bool = default;
 };
 
 // A capacity of nought: both members empty and overlapping, and uninitialized, which [inplace.vector.overview] asks.
@@ -181,14 +204,23 @@ inline constexpr bool structural_blocks_v = false;
 template<xstd::unsigned_integer Block, std::size_t K, std::size_t N>
 inline constexpr bool structural_blocks_v<std::array<Block, K>, N> = (N == xstd::bit_blocks_extent_v<std::array<Block, K>>);
 
+// Blocks held inline at a static width, which a layout with no initializer leaves as std::array leaves them.
+template<class Blocks>
+inline constexpr bool array_blocks_v = false;
+
+template<xstd::unsigned_integer Block, std::size_t K>
+inline constexpr bool array_blocks_v<std::array<Block, K>> = true;
+
 // The members with no invariant to keep: public only so that the owner is structural, not for direct use.
 template<class Width, class Blocks>
 struct structural_bit_members : bits::detail::allocator_base_type<Blocks>
 {
+        // A static width's tag, with no NSDMI, so that the default constructor stays trivial.
         [[XSTD_NO_UNIQUE_ADDRESS]]
-        Width m_size{};
+        Width m_size;
 
-        Blocks m_blocks{};
+        // Trivially default-constructible, as std::array is: T() zeroes the blocks and T t; leaves them unwritten.
+        Blocks m_blocks;
 
         [[nodiscard]] structural_bit_members() = default;
 
@@ -237,7 +269,10 @@ using bit_members_t = std::conditional_t<
         std::conditional_t<
                 Counted,
                 counted_bit_members<width_member_t<Blocks, N>, Blocks>,
-                bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>>>;
+                std::conditional_t<
+                        array_blocks_v<Blocks>,
+                        static_bit_members<width_member_t<Blocks, N>, Blocks>,
+                        bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>>>>;
 
 // The one vehicle: it owns the unused-tail invariant, and the key count where it keeps one, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>, bool Counted = false>
@@ -361,7 +396,7 @@ public:
                 recount();
         }
 
-        // Any bits of a layout this width reads, assigned position by position; for Blocks itself, adopting wins.
+        // Any bits of a layout this width reads, assigned over unwritten blocks; for Blocks itself, adopting wins.
         template<class Bits>
                 requires exchanges_bits<Bits>
         [[nodiscard]] constexpr bit_block_container(xstd::from_blocks_t, Bits const& bits) noexcept
@@ -622,8 +657,11 @@ public:
         {
                 if constexpr (fixed_blocks_source<Bits, bit_extent> and std::same_as<std::ranges::range_value_t<decltype(block_span(b))>, block_type>) {
                         // Block for block, as GCC does not fold a copy of byte_count<N> bytes back into whole blocks.
-                        std::ranges::fill(m_blocks, zero);
-                        std::ranges::copy(block_span(b).template first<static_num_blocks>(), std::ranges::begin(m_blocks));
+                        auto const source = block_span(b);
+                        // A fold and not a loop: constant indices let GCC's early inliner see each block as a register.
+                        [&]<std::size_t... I>(std::index_sequence<I...>) -> void {
+                                ((m_blocks[I] = source[I]), ...);
+                        }(std::make_index_sequence<static_num_blocks>());
                         erase_unused();
                 } else {
                         assign_bytes(bit_bytes<bit_extent>(b));
@@ -711,7 +749,12 @@ public:
         [[nodiscard]] constexpr auto find_first() const noexcept
                 -> std::size_t
         {
-                return inclusive_find_next(0UZ);
+                // One whole block: countr_zero of an empty block is the block's width, which is size() itself.
+                if constexpr (has_static_size and static_num_blocks == 1 and N == bits_per_block) {
+                        return bits::detail::countr_zero(m_blocks[0]);
+                } else {
+                        return inclusive_find_next(0UZ);
+                }
         }
 
         // The primitive: inclusive, so both derivations are + 1 and nothing wraps.
@@ -758,6 +801,45 @@ public:
         {
                 assert(is_valid(n));
                 return inclusive_find_next(n + 1);
+        }
+
+        // The two ends of a non-empty container, deliberately NOT total: no empty case to answer.
+        [[nodiscard]] constexpr auto find_front() const noexcept
+                -> std::size_t
+        {
+                assert(any());
+                if constexpr (has_static_size and static_num_blocks == 1) {
+                        return bits::detail::countr_zero(m_blocks[0]);
+                } else if constexpr (has_static_size and static_num_blocks == 2) {
+                        return m_blocks[0] != zero ? bits::detail::countr_zero(m_blocks[0]) : bits::detail::countr_zero(m_blocks[1]) + bits_per_block;
+                } else {
+                        // A while, not a for: any() makes a for's exit untestable.
+                        auto i = 0UZ;
+                        while (m_blocks[i] == zero) {
+                                assert(i != last_block());
+                                ++i;
+                        }
+                        return (bits_per_block * i) + bits::detail::countr_zero(m_blocks[i]);
+                }
+        }
+
+        [[nodiscard]] constexpr auto find_back() const noexcept
+                -> std::size_t
+        {
+                assert(any());
+                if constexpr (has_static_size and static_num_blocks == 1) {
+                        return last_bit() - bits::detail::countl_zero(m_blocks[0]);
+                } else if constexpr (has_static_size and static_num_blocks == 2) {
+                        return m_blocks[1] != zero ? last_bit() - bits::detail::countl_zero(m_blocks[1]) : left_bit - bits::detail::countl_zero(m_blocks[0]);
+                } else {
+                        // The mirror of find_front, counting up from block i's base to drop the reversed range's term.
+                        auto i = last_block();
+                        while (m_blocks[i] == zero) {
+                                assert(i != 0);
+                                --i;
+                        }
+                        return (bits_per_block * i) + left_bit - bits::detail::countl_zero(m_blocks[i]);
+                }
         }
 
         // Deliberately NOT total: three instructions cheaper, and rend() supplies the guard.
@@ -1621,6 +1703,12 @@ private:
                 -> std::size_t
         {
                 return num_blocks() - 1UZ;
+        }
+
+        [[nodiscard]] constexpr auto last_bit() const noexcept
+                -> std::size_t
+        {
+                return (num_blocks() * bits_per_block) - 1UZ;
         }
 
         // The blocks a range of positions spans, each with its mask: whole blocks, a partial one at the end.

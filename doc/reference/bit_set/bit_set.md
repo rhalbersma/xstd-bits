@@ -94,9 +94,16 @@ As [[set]](https://eel.is/c++draft/set) for `set<Key, Compare>`, over the blocks
   one.
 - **Out of range.** `contains`, `count`, `find`, `lower_bound`, `upper_bound`, `equal_range` and `erase(const
   key_type&)` are total, as on `set`: a key outside the universe, or a value that is no key at all, is absent, and
-  where `Key` is totally ordered the bounds place it among the keys by that order. `insert`, `emplace`, the ranged
-  forms and an enumerator's `|=` and `^=` throw `out_of_range` for a value the mapping ranks at or past
-  `KeyMapping::size`; a key of an open universe throws `length_error` past what the storage can count.
+  where `Key` is totally ordered the bounds place it among the keys by that order. `insert`, `emplace` and the
+  ranged forms throw `out_of_range` for a value the mapping ranks at or past `KeyMapping::size`; a key of an open
+  universe throws `length_error` past what the storage can count.
+- **Unchecked.** The operators are the unchecked doors, as `bitset`'s `operator[]` is beside `set`, and the named
+  members and `xstd::shl` and `xstd::shr` the checked or total ones. For the operators with an enumerator, `|=`,
+  `^=`, `-=`, `&=` and the non-members over them, and for `operator[](const key_type&) const`, which returns `bool`,
+  a position below `max_size()` is the precondition; for `<<= n` and `>>= n`, `n < max_size()` is. At a run-time
+  width a position past the current width reads as absent, and `|=` and `^=` grow to it, the width being capacity
+  and never value. Each writes as the storage's `set`, `flip`, `reset`, one-position `&=` or shift does, and a
+  hardened build checks the precondition.
 - *Set algebra:* The compound operators combine with a set of the same type at any two widths, a block at a time:
   `&=` keeps the common keys, `|=` adds the other's, `^=` keeps those in one alone, `-=` removes the other's. `|=`
   and `^=` grow the width to the other's highest key. `<<= n` adds `n` to every key, growing the width towards
@@ -117,6 +124,6 @@ As [[set]](https://eel.is/c++draft/set) for `set<Key, Compare>`, over the blocks
   the block of the allocator, `vector<size_t>` where none is given.
 - **Enumerator operands.** Where `Key` is an enumeration and `KeyMapping` does not read it as a mask, an enumerator
   is the one-element set holding it: `&=`, `|=`, `^=` and `-=` take one on the right, and on an owner `&`, `|`, `^`
-  and `-` take one on either side. The enumeration itself gains no operator. `|=` and `^=` throw as `insert` does.
+  and `-` take one on either side. The enumeration itself gains no operator. They are unchecked, as above.
 - The Boost.Hash2 hook appends the keys in iteration order, then their count, exactly as Hash2 writes the
   `set<Key, Compare>` of the same keys.

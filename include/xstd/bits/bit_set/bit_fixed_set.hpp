@@ -12,6 +12,7 @@
 #include <xstd/bits/bit_ranges/from_blocks.hpp>               // from_blocks, from_blocks_t
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>              // bit_key_mapping
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp>           // admits_width, key_direction, set_adaptor
+#include <xstd/bits/bit_set/indeterminate.hpp>                // indeterminate_t
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>    // bit_blocks_extent_v
 #include <xstd/bits/bit_type_traits/bit_least.hpp>            // least_block_t
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container
@@ -68,8 +69,11 @@ public:
         {}
 
         [[nodiscard]] constexpr explicit basic_bit_fixed_set(key_compare const& /* comp */) noexcept
-                : base_type()
+                : base_type(key_compare())
         {}
+
+        // Not in [set.cons]: blocks left default-initialized, after which only assignment and destruction are valid.
+        [[nodiscard]] constexpr explicit basic_bit_fixed_set(indeterminate_t) noexcept {}
 
         template<class InputIterator>
                 requires bits::detail::input_iterator_pair<InputIterator, InputIterator>
@@ -84,6 +88,7 @@ public:
 
         // A mask's list is the union of its values, so {m} is the conversion from m and {a, b} two one-bit values.
         [[nodiscard]] constexpr basic_bit_fixed_set(std::initializer_list<value_type> il, key_compare const& /* comp */ = key_compare()) noexcept(is_mask)
+                : base_type(key_compare())
         {
                 if constexpr (is_mask) {
                         for (auto const& mask : il) {

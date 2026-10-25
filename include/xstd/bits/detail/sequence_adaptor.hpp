@@ -696,9 +696,9 @@ public:
         // std::array's aggregate initialization as a constructor: what is listed leads, the rest stays false.
         constexpr sequence_adaptor(std::initializer_list<value_type> il)
                 requires is_owner and (not can_grow)
-                : members_type(std::in_place)
         {
                 assert(il.size() <= size());
+                m_bits.reset();
                 std::ranges::copy(il, begin());
         }
 

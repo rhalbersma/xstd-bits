@@ -7,10 +7,11 @@
 #define XSTD_BITS_BIT_ARRAY_BIT_ARRAY_HPP
 
 #include <xstd/bits/bit_ranges/from_blocks.hpp>            // from_blocks, from_blocks_t
+#include <xstd/bits/bit_set/indeterminate.hpp>             // indeterminate_t
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
 #include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container
 #include <xstd/bits/detail/num_blocks.hpp>                 // holds_width, num_blocks_v
-#include <xstd/bits/detail/ownership.hpp>                  // storage, window
+#include <xstd/bits/detail/ownership.hpp>                  // storage, storage_access, window
 #include <xstd/bits/detail/rebind.hpp>                     // rebind
 #include <xstd/bits/detail/sequence_adaptor.hpp>           // sequence_adaptor
 #include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
@@ -32,8 +33,14 @@ class basic_bit_array : public bits::detail::sequence_adaptor<bits::detail::bit_
 public:
         using typename base_type::value_type;
 
-        // std::array is an aggregate and declares none: these are what its initialization does, as constructors.
-        [[nodiscard]] basic_bit_array() = default;
+        // std::array's initialization as constructors; the default zeroes, since writing one bool reads its block.
+        [[nodiscard]] constexpr basic_bit_array() noexcept
+        {
+                bits::detail::storage_access::bits(*this).reset();
+        }
+
+        // Not in [array]: blocks left default-initialized, after which only assignment and destruction are valid.
+        [[nodiscard]] constexpr explicit basic_bit_array(indeterminate_t) noexcept {}
 
         // What is listed leads, the rest stays false.
         constexpr basic_bit_array(std::initializer_list<value_type> il)
@@ -45,6 +52,7 @@ public:
                 requires (M == N)
         [[nodiscard]] constexpr explicit basic_bit_array(value_type const (&a)[M]) noexcept // NOLINT(modernize-avoid-c-arrays): a built-in array is what it converts.
         {
+                bits::detail::storage_access::bits(*this).reset();
                 std::ranges::copy(a, this->begin());
         }
 

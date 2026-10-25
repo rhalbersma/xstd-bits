@@ -11,6 +11,7 @@
 #include <test/set/primitives.hpp>                     // heterogeneous_key
 #include <test/spec/random.hpp>                        // engine, seed
 #include <xstd/bits/bit/bit_convert.hpp>               // bit_convert
+#include <xstd/bits/bit/shl.hpp>                       // shl
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>    // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>    // bit_includes
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp>  // bit_intersects
@@ -569,22 +570,6 @@ auto admits_at_every_door(X const& a, Model const& model, typename X::key_type v
         BOOST_CHECK(modelled<Model>(from_range) == Model{v});
 }
 
-// An enumerator is a one-element set: the operators that write it refuse it, and the two that only read it answer.
-template<class X>
-auto meets_it_as_an_empty_set_or_refuses(X const& a, typename X::key_type v)
-        -> void
-{
-        auto x = a;
-        check_refuses([&] -> void { x |= v; });
-        check_refuses([&] -> void { x ^= v; });
-        check_refuses([&] -> void { static_cast<void>(x | v); });
-        check_refuses([&] -> void { static_cast<void>(v ^ x); });
-        check_refuses([&] -> void { static_cast<void>(v - x); });
-        BOOST_CHECK(x == a);
-        auto const met = a & v;
-        BOOST_CHECK(met.empty() and (a - v) == a);
-}
-
 // An enumerator is a one-element set, and each operator meets a key as the model's set algebra does.
 template<class X, class Model>
 auto meets_it_as_a_one_element_set(X const& a, Model const& model, typename X::key_type v)
@@ -624,6 +609,9 @@ BOOST_AUTO_TEST_CASE(EveryOwnerAdmitsAKeyAndRefusesAValueThatIsNoKey)
                 auto const keys   = universe<X>();
                 auto const a      = X({keys.front(), keys.back()});
                 auto const model  = std::set<key_type, typename X::key_compare>(a.begin(), a.end());
+                // The first key alone, whose run-time width leaves the operators keys past it to meet.
+                auto const narrow       = X({keys.front()});
+                auto const narrow_model = std::set<key_type, typename X::key_compare>(narrow.begin(), narrow.end());
                 for (auto const v : offered<key_type>()) {
                         BOOST_TEST_CONTEXT("value: " << int{std::to_underlying(v)})
                         {
@@ -632,12 +620,10 @@ BOOST_AUTO_TEST_CASE(EveryOwnerAdmitsAKeyAndRefusesAValueThatIsNoKey)
                                         admits_at_every_door(a, model, v);
                                         if constexpr (not xstd::bit_mask_mapping<key_mapping, key_type>) {
                                                 meets_it_as_a_one_element_set(a, model, v);
+                                                meets_it_as_a_one_element_set(narrow, narrow_model, v);
                                         }
                                 } else {
                                         refuses_at_every_door(a, v);
-                                        if constexpr (not xstd::bit_mask_mapping<key_mapping, key_type>) {
-                                                meets_it_as_an_empty_set_or_refuses(a, v);
-                                        }
                                 }
                         }
                 }
@@ -658,6 +644,9 @@ BOOST_AUTO_TEST_CASE(EveryOwnerHoldsAtMostItsUniverse)
                 BOOST_CHECK_EQUAL(x.size(), key_mapping::size - 1UZ);
                 BOOST_CHECK(not x.contains(keys.front()));
                 BOOST_CHECK(std::ranges::all_of(x, [](key_type k) -> bool { return key_mapping::is_key(k); }));
+                auto top = X({keys.back()});
+                top <<= 1UZ;
+                BOOST_CHECK(top.empty());
         });
 }
 
@@ -689,21 +678,22 @@ BOOST_AUTO_TEST_CASE(ALeftShiftDropsTheKeysItCarriesPastMaxSize)
         shifted <<= 64UZ;
         BOOST_CHECK_EQUAL(shifted.size(), 1UZ);
         BOOST_CHECK(shifted.contains(64UZ));
-        for (auto const n : {shifted.max_size() - 64UZ, top - 64UZ, top}) {
-                auto emptied = shifted;
-                emptied <<= n;
-                BOOST_CHECK(emptied.empty());
+        auto emptied = shifted;
+        emptied <<= shifted.max_size() - 64UZ;
+        BOOST_CHECK(emptied.empty());
+        for (auto const n : {top - 64UZ, top}) {
+                BOOST_CHECK(xstd::shl(shifted, n).empty());
         }
 }
 
-// back() has a non-empty set as its precondition, and a zero width has no non-empty state to ask it in.
-BOOST_AUTO_TEST_CASE(AZeroWidthAnswersBackWithoutScanning)
+// A zero width has no non-empty state, so front() and back(), whose precondition that is, are never asked of it.
+BOOST_AUTO_TEST_CASE(AZeroWidthIsAlwaysEmpty)
 {
         auto const z = xstd::bit_fixed_set<0>();
 
         BOOST_CHECK(z.empty());
         BOOST_CHECK_EQUAL(z.size(), 0UZ);
-        BOOST_CHECK_EQUAL(static_cast<std::size_t>(z.back()), 0UZ);
+        BOOST_CHECK(z.begin() == z.end());
 }
 
 // Across two run-time widths the set operations ask whole blocks, with padding clear above them by invariant.
