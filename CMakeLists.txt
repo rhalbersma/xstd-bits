@@ -30,7 +30,7 @@ if(NOT xstd-ints_FOUND)
         xstd-ints
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-ints.git
         # Pinned to a commit on xstd-ints' main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 790a41c78867c3116b07fa85c6b1b886d961eaf1
+        GIT_TAG 2762980d657f3482059ca9cefc350dd6ff1674a8
     )
     FetchContent_MakeAvailable(xstd-ints)
 endif()
