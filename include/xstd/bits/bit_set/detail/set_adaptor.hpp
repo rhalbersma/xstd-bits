@@ -798,6 +798,31 @@ public:
                 return last;
         }
 
+        // front() and back() removed, with their precondition: each is one step of a walk, on the first block holding a key.
+        constexpr auto pop_front(this non_volatile auto&& self) noexcept
+                -> void
+                requires requires { self.bits().pop_front(); }
+        {
+                XSTD_BITS_ASSERT(not self.empty());
+                if constexpr (is_descending) {
+                        self.bits().pop_back();
+                } else {
+                        self.bits().pop_front();
+                }
+        }
+
+        constexpr auto pop_back(this non_volatile auto&& self) noexcept
+                -> void
+                requires requires { self.bits().pop_back(); }
+        {
+                XSTD_BITS_ASSERT(not self.empty());
+                if constexpr (is_descending) {
+                        self.bits().pop_front();
+                } else {
+                        self.bits().pop_back();
+                }
+        }
+
         // The blocks a from_blocks constructor takes, and what an owner's replace and extract trade in.
         using block_container_type = Bits::block_container_type;
 
