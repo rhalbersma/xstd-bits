@@ -656,7 +656,8 @@ public:
                 if constexpr (bits_type::has_stored_count) {
                         return size() == 0UZ;
                 } else {
-                        return begin() == end();
+                        // On the blocks, as begin() == end() leaves a countr_zero that GCC does not fold away.
+                        return bits().none();
                 }
         }
 
