@@ -334,6 +334,9 @@ public:
         // Zero where the width is carried at run time, so an algorithm unrolls only what the type fixes.
         static constexpr auto static_num_blocks = has_static_size ? whole_blocks_width_v<block_type, N> / bits_per_block : 0UZ;
 
+        // Reductions fold up to eight static blocks: over 500 byte blocks, the folds took GCC 15 from 0.7 GB to 14 GB.
+        static constexpr bool folds_blocks = has_static_size and static_num_blocks <= 8UZ;
+
 private:
         // The width is this container's, so a dynamic one answers zero here rather than compute byte_count of SIZE_MAX.
         static constexpr auto bit_extent = has_static_size ? N : 0UZ;
@@ -531,13 +534,13 @@ public:
 
         // Memberwise, width first, unused bits clear; noexcept by choice, as std::array's and std::vector's == are not.
         [[nodiscard]] friend auto operator==(bit_block_container const&, bit_block_container const&) noexcept -> bool
-                requires (not has_static_size)
+                requires (not folds_blocks)
         = default;
 
-        // A static width has no width to compare: every block's xor or-ed together, tested once, where memcmp branches.
+        // A few static blocks: every block's xor or-ed together and tested once, where memcmp branches per block.
         [[nodiscard]] friend constexpr auto operator==(bit_block_container const& lhs, bit_block_container const& rhs) noexcept
                 -> bool
-                requires has_static_size
+                requires folds_blocks
         {
                 return [&]<std::size_t... I>(std::index_sequence<I...>) -> bool {
                         return static_cast<block_type>((zero | ... | static_cast<block_type>(lhs.m_blocks[I] ^ rhs.m_blocks[I]))) == zero;
@@ -862,7 +865,7 @@ public:
                 }
         }
 
-        // The lowest set position cleared, by the walk's own step on the first block that holds one; the set is not empty.
+        // The lowest set position cleared by the walk's own step, on the first block that holds one; not empty.
         constexpr auto pop_front() noexcept
                 -> void
         {
@@ -1433,13 +1436,13 @@ public:
         [[nodiscard]] constexpr auto all() const noexcept
                 -> bool
         {
-                if constexpr (has_static_size) {
+                if constexpr (folds_blocks) {
                         // Every block and-ed together with its padding filled in, and tested once: no branch per block.
                         return [&]<std::size_t... I>(std::index_sequence<I...>) -> bool {
                                 return static_cast<block_type>((ones & ... & static_cast<block_type>(m_blocks[I] | (I == static_last_block ? static_unused_bits : zero)))) == ones;
                         }(std::make_index_sequence<static_num_blocks>());
                 } else {
-                        // A run-time width may be long, and stops at its first block that is not all ones.
+                        // Many blocks, or a run-time width: stop at the first block that is not all ones.
                         return num_blocks() == 0UZ or (all_but_last_are_ones() and m_blocks[last_block()] == used_bits());
                 }
         }
@@ -1453,13 +1456,13 @@ public:
         [[nodiscard]] constexpr auto none() const noexcept
                 -> bool
         {
-                if constexpr (has_static_size) {
+                if constexpr (folds_blocks) {
                         // Every block or-ed together and tested once, where all_of branches on each block.
                         return [&]<std::size_t... I>(std::index_sequence<I...>) -> bool {
                                 return static_cast<block_type>((zero | ... | m_blocks[I])) == zero;
                         }(std::make_index_sequence<static_num_blocks>());
                 } else {
-                        // A run-time width may be long, and stops at its first set block.
+                        // Many blocks, or a run-time width: stop at the first set block.
                         return std::ranges::all_of(m_blocks, [](auto block) -> bool { return block == zero; });
                 }
         }

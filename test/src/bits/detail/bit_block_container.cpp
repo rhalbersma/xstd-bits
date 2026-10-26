@@ -127,7 +127,7 @@ public:
                 disagree(m_x == m_y, m_mx == m_my);
         }
 
-        // find_front, find_back and exclusive_find_prev assert a position; find_first is total and answers size().
+        // The scans and the pops that take a non-empty set, then the total ones: find_first and total_find_prev.
         auto scans()
                 -> void
         {
@@ -143,6 +143,31 @@ public:
                         unequal(m_x.find_front(), front);
                         unequal(m_x.find_back(), back);
                         unequal(m_x.exclusive_find_prev(m_n), back);
+
+                        // Each pop clears the one end its scan names, and the count steps down with it.
+                        auto& popped_front = fresh_x();
+                        popped_front.pop_front();
+                        auto without_front   = m_mx;
+                        without_front[front] = false;
+                        same(without_front, popped_front);
+
+                        auto& popped_back = fresh_x();
+                        popped_back.pop_back();
+                        auto without_back  = m_mx;
+                        without_back[back] = false;
+                        same(without_back, popped_back);
+                }
+
+                // The total backward scan over its whole domain: size() where nothing lies below, n == 0 included.
+                for (auto const i : std::views::iota(0UZ, m_n + 1UZ)) {
+                        auto below = m_n;
+                        for (auto j = i - 1UZ; j < i; --j) {
+                                if (m_mx[j]) {
+                                        below = j;
+                                        break;
+                                }
+                        }
+                        unequal(m_x.total_find_prev(i), below);
                 }
 
                 auto first = 0UZ;
