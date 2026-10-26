@@ -866,7 +866,7 @@ public:
         }
 
         // The lowest set position cleared by the walk's own step, on the first block that holds one; not empty.
-        constexpr auto pop_front() noexcept
+        constexpr auto drop_front() noexcept
                 -> void
         {
                 assert(any());
@@ -888,7 +888,7 @@ public:
         }
 
         // The highest set position cleared, mirrored from the last block down; the set is not empty.
-        constexpr auto pop_back() noexcept
+        constexpr auto drop_back() noexcept
                 -> void
         {
                 assert(any());

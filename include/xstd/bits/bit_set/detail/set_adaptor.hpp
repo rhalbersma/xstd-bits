@@ -801,25 +801,25 @@ public:
         // front() and back() removed, with their precondition: each is one step of a walk, on the first block holding a key.
         constexpr auto pop_front(this non_volatile auto&& self) noexcept
                 -> void
-                requires requires { self.bits().pop_front(); }
+                requires requires { self.bits().drop_front(); }
         {
                 XSTD_BITS_ASSERT(not self.empty());
                 if constexpr (is_descending) {
-                        self.bits().pop_back();
+                        self.bits().drop_back();
                 } else {
-                        self.bits().pop_front();
+                        self.bits().drop_front();
                 }
         }
 
         constexpr auto pop_back(this non_volatile auto&& self) noexcept
                 -> void
-                requires requires { self.bits().pop_back(); }
+                requires requires { self.bits().drop_back(); }
         {
                 XSTD_BITS_ASSERT(not self.empty());
                 if constexpr (is_descending) {
-                        self.bits().pop_front();
+                        self.bits().drop_front();
                 } else {
-                        self.bits().pop_back();
+                        self.bits().drop_back();
                 }
         }
 

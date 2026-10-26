@@ -127,7 +127,7 @@ public:
                 disagree(m_x == m_y, m_mx == m_my);
         }
 
-        // The scans and the pops that take a non-empty set, then the total ones: find_first and total_find_prev.
+        // The scans and the drops that take a non-empty set, then the total ones: find_first and total_find_prev.
         auto scans()
                 -> void
         {
@@ -144,18 +144,18 @@ public:
                         unequal(m_x.find_back(), back);
                         unequal(m_x.exclusive_find_prev(m_n), back);
 
-                        // Each pop clears the one end its scan names, and the count steps down with it.
-                        auto& popped_front = fresh_x();
-                        popped_front.pop_front();
+                        // Each drop clears the one end its scan names, and the count steps down with it.
+                        auto& dropped_front = fresh_x();
+                        dropped_front.drop_front();
                         auto without_front   = m_mx;
                         without_front[front] = false;
-                        same(without_front, popped_front);
+                        same(without_front, dropped_front);
 
-                        auto& popped_back = fresh_x();
-                        popped_back.pop_back();
+                        auto& dropped_back = fresh_x();
+                        dropped_back.drop_back();
                         auto without_back  = m_mx;
                         without_back[back] = false;
-                        same(without_back, popped_back);
+                        same(without_back, dropped_back);
                 }
 
                 // The total backward scan over its whole domain: size() where nothing lies below, n == 0 included.
