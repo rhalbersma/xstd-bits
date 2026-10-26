@@ -789,12 +789,15 @@ public:
 
         constexpr auto erase(this non_volatile auto&& self, const_iterator first, const_iterator last) noexcept
                 -> iterator
-                requires requires (std::size_t pos) { self.bits().assign(pos, false); }
+                requires requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, false); }
         {
-                // A range, not two positions: reversed, the walk steps past last into a scan nothing answers.
+                // A range, not two positions: reversed, the span between them runs backwards.
                 assert(is_descending ? (last == self.end() or KeyMapping::to_index(*last) <= KeyMapping::to_index(*first)) : KeyMapping::to_index(*first) <= KeyMapping::to_index(*last));
-                while (first != last) {
-                        self.bits().assign(KeyMapping::to_index(*first++), false);
+                if (first != last) {
+                        // Its keys are the set positions between its ends, so the span clears a block at a time.
+                        auto const lo = is_descending ? (last == self.end() ? 0UZ : last.m_idx + 1UZ) : first.m_idx;
+                        auto const hi = is_descending ? first.m_idx + 1UZ : last.m_idx;
+                        self.bits().set(lo, hi - lo, false);
                 }
                 return last;
         }

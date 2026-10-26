@@ -1149,6 +1149,35 @@ BOOST_AUTO_TEST_CASE(PoppingTakesFrontAndBackInTheSetsOrder)
         drains(xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 200>{0UZ, 199UZ});
 }
 
+// A range erase clears the keys from its first up to its last, in the set's own order, and hands back last.
+BOOST_AUTO_TEST_CASE(ARangeEraseClearsTheKeysBetweenItsEnds)
+{
+        auto const erases_each_range = []<class Set>(Set const& s) -> void {
+                auto const order = std::vector<std::size_t>(s.begin(), s.end());
+                auto const n     = std::ssize(order);
+                for (auto const i : std::views::iota(0Z, n + 1)) {
+                        for (auto const j : std::views::iota(i, n + 1)) {
+                                auto erased         = s;
+                                auto const last     = std::ranges::next(erased.begin(), j);
+                                auto const returned = erased.erase(std::ranges::next(erased.begin(), i), last);
+                                auto kept           = order;
+                                kept.erase(kept.begin() + i, kept.begin() + j);
+                                BOOST_TEST_CONTEXT("erasing [" << i << ", " << j << ")")
+                                {
+                                        BOOST_CHECK(std::ranges::equal(erased, kept));
+                                        BOOST_CHECK_EQUAL(std::ranges::distance(erased.begin(), returned), i);
+                                }
+                        }
+                }
+        };
+        erases_each_range(xstd::bit_fixed_set<64>{3UZ, 40UZ, 41UZ, 63UZ});
+        erases_each_range(xstd::bit_fixed_set<300>{0UZ, 2UZ, 63UZ, 64UZ, 130UZ, 191UZ, 192UZ, 299UZ});
+        erases_each_range(descending_fixed{0UZ, 3UZ, 64UZ, 70UZ, 129UZ});
+        erases_each_range(dynamic_by<std::greater<std::size_t>>{5UZ, 63UZ, 64UZ, 300UZ});
+        erases_each_range(xstd::bit_set{7UZ, 8UZ, 1'000UZ});
+        erases_each_range(xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 200>{0UZ, 127UZ, 128UZ, 199UZ});
+}
+
 // The guides carry a comparator through, as std::set's do.
 BOOST_AUTO_TEST_CASE(TheGuidesDeduceTheComparator)
 {

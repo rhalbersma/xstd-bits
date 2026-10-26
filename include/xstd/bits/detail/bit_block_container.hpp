@@ -730,13 +730,30 @@ public:
                 }
         }
 
-        // boost's ranged forms through block_at; the precondition is a subtraction, n + len being what wraps.
+        // boost's ranged forms; the precondition is a subtraction, n + len being what wraps.
         constexpr auto set(std::size_t n, std::size_t len, bool value) noexcept
                 -> bit_block_container&
         {
                 assert(n <= size() and len <= size() - n);
                 auto const before = counted_in(n, len);
-                for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(pos, value ? ones : zero, mask); });
+                if (len != 0UZ) {
+                        // The first and last blocks masked, the whole blocks between them stored; one block is both ends.
+                        auto const [first, head] = index_offset(n);
+                        auto const [last, tail]  = index_offset(n + len - 1UZ);
+                        auto const write         = [&](std::size_t index, block_type mask) -> void {
+                                m_blocks[index] = static_cast<block_type>(value ? (m_blocks[index] | mask) : (m_blocks[index] & static_cast<block_type>(~mask)));
+                        };
+                        auto const from_head = shl(ones, head);
+                        auto const to_tail   = shr(ones, left_bit - tail);
+                        if (first == last) {
+                                write(first, static_cast<block_type>(from_head & to_tail));
+                        } else {
+                                auto const blocks = std::ranges::begin(m_blocks);
+                                write(first, from_head);
+                                std::ranges::fill(blocks + static_cast<std::ptrdiff_t>(first + 1UZ), blocks + static_cast<std::ptrdiff_t>(last), value ? ones : zero);
+                                write(last, to_tail);
+                        }
+                }
                 store_count(stored_count() - before + (len * static_cast<std::size_t>(value)));
                 return *this;
         }
