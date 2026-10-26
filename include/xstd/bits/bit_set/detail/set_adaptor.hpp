@@ -1142,7 +1142,12 @@ public:
                         auto const pos = KeyMapping::to_index(x);
                         return {&bits(), bits().total_find_prev(pos < bits().size() ? pos + 1UZ : bits().size())};
                 } else {
-                        return contains(x) ? const_iterator{&bits(), KeyMapping::to_index(x)} : upper_bound(x);
+                        // One scan from x's position, which answers x itself when it is present.
+                        auto const pos = KeyMapping::to_index(x);
+                        if (pos >= bits().size()) {
+                                return end();
+                        }
+                        return {&bits(), detail::is_key<KeyMapping>(x) ? bits().inclusive_find_next(pos) : bits().exclusive_find_next(pos)};
                 }
         }
 
