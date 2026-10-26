@@ -1150,7 +1150,7 @@ public:
                         if (pos >= bits().size()) {
                                 return end();
                         }
-                        return {&bits(), detail::is_key<KeyMapping>(x) ? bits().inclusive_find_next(pos) : bits().exclusive_find_next(pos)};
+                        return {&bits(), bits().inclusive_find_next(pos)};
                 }
         }
 
