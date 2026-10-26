@@ -969,36 +969,28 @@ public:
                 -> std::size_t
         {
                 assert(n <= size());
-                if constexpr (has_static_size and static_num_blocks == 1) {
-                        if (n != 0UZ) {
-                                if (auto const block = shl(m_blocks[0], left_bit - (n - 1UZ)); block != zero) {
-                                        return n - 1UZ - bits::detail::countl_zero(block);
-                                }
+                if constexpr (has_static_size and N == 0) {
+                        return size();
+                } else {
+                        if (n == 0UZ) {
+                                return size();
                         }
-                } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        if (n != 0UZ) {
-                                auto const [index, offset] = index_offset(n - 1UZ);
-                                if (auto const block = shl(m_blocks[index], left_bit - offset); block != zero) {
-                                        return n - 1UZ - bits::detail::countl_zero(block);
-                                }
-                                if (index == 1UZ and m_blocks[0] != zero) {
-                                        return left_bit - bits::detail::countl_zero(m_blocks[0]);
-                                }
+                        // n - 1's own block first; one block, as at K = 1, leaves no block below it to scan.
+                        auto const [index, offset] = index_offset(n - 1UZ);
+                        if (auto const block = shl(m_blocks[index], left_bit - offset); block != zero) {
+                                return n - 1UZ - bits::detail::countl_zero(block);
                         }
-                } else if constexpr (not(has_static_size and N == 0)) {
-                        if (n != 0UZ) {
-                                auto const [index, offset] = index_offset(n - 1UZ);
-                                if (auto const block = shl(m_blocks[index], left_bit - offset); block != zero) {
-                                        return n - 1UZ - bits::detail::countl_zero(block);
-                                }
+                        if constexpr (has_static_size and static_num_blocks == 2) {
+                                return index == 1UZ and m_blocks[0] != zero ? left_bit - bits::detail::countl_zero(m_blocks[0]) : size();
+                        } else {
                                 for (auto i = index - 1UZ; i < index; --i) {
                                         if (m_blocks[i] != zero) {
                                                 return (bits_per_block * i) + left_bit - bits::detail::countl_zero(m_blocks[i]);
                                         }
                                 }
+                                return size();
                         }
                 }
-                return size();
         }
 
         // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.

@@ -127,8 +127,8 @@ public:
                 disagree(m_x == m_y, m_mx == m_my);
         }
 
-        // The scans and the drops that take a non-empty set, then the total ones: find_first and total_find_prev.
-        auto scans()
+        // The scans and the drops that take a non-empty set: each end, and the one a drop clears.
+        auto ends()
                 -> void
         {
                 if (m_cardinality != 0) {
@@ -157,7 +157,12 @@ public:
                         without_back[back] = false;
                         same(without_back, dropped_back);
                 }
+        }
 
+        // The total scans: total_find_prev, find_first and exclusive_find_next.
+        auto scans()
+                -> void
+        {
                 // The total backward scan over its whole domain: size() where nothing lies below, n == 0 included.
                 for (auto const i : std::views::iota(0UZ, m_n + 1UZ)) {
                         auto below = m_n;
@@ -435,6 +440,7 @@ auto check_ops(BB const& x, BB const& y, int& disagreements)
         auto b = y;
         auto c = checker<BB>(x, y, a, b, disagreements);
         c.width();
+        c.ends();
         c.scans();
         c.relational();
         c.bitwise();
