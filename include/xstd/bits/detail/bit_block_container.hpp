@@ -543,7 +543,10 @@ public:
                 requires folds_blocks
         {
                 return [&]<std::size_t... I>(std::index_sequence<I...>) -> bool {
-                        return static_cast<block_type>((zero | ... | static_cast<block_type>(lhs.m_blocks[I] ^ rhs.m_blocks[I]))) == zero;
+                        // Compound assignment keeps each step a block, where a fold's | hands the next step an int.
+                        auto differ = zero;
+                        ((differ |= static_cast<block_type>(lhs.m_blocks[I] ^ rhs.m_blocks[I])), ...);
+                        return differ == zero;
                 }(std::make_index_sequence<static_num_blocks>());
         }
 
@@ -1449,7 +1452,9 @@ public:
                 if constexpr (folds_blocks) {
                         // Every block and-ed together with its padding filled in, and tested once: no branch per block.
                         return [&]<std::size_t... I>(std::index_sequence<I...>) -> bool {
-                                return static_cast<block_type>((ones & ... & static_cast<block_type>(m_blocks[I] | (I == static_last_block ? static_unused_bits : zero)))) == ones;
+                                auto every = ones;
+                                ((every &= static_cast<block_type>(m_blocks[I] | (I == static_last_block ? static_unused_bits : zero))), ...);
+                                return every == ones;
                         }(std::make_index_sequence<static_num_blocks>());
                 } else {
                         // Many blocks, or a run-time width: stop at the first block that is not all ones.
@@ -1469,7 +1474,9 @@ public:
                 if constexpr (folds_blocks) {
                         // Every block or-ed together and tested once, where all_of branches on each block.
                         return [&]<std::size_t... I>(std::index_sequence<I...>) -> bool {
-                                return static_cast<block_type>((zero | ... | m_blocks[I])) == zero;
+                                auto some = zero;
+                                ((some |= m_blocks[I]), ...);
+                                return some == zero;
                         }(std::make_index_sequence<static_num_blocks>());
                 } else {
                         // Many blocks, or a run-time width: stop at the first set block.
