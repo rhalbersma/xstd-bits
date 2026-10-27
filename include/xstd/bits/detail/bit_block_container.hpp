@@ -740,7 +740,8 @@ public:
                         // The first and last blocks masked, the whole blocks between them stored; one block is both ends.
                         auto const [first, head] = index_offset(n);
                         auto const [last, tail]  = index_offset(n + len - 1UZ);
-                        auto const write         = [&](std::size_t index, block_type mask) -> void {
+                        assert(head < bits_per_block and tail < bits_per_block);
+                        auto const write        = [&](std::size_t index, block_type mask) -> void {
                                 m_blocks[index] = static_cast<block_type>(value ? (m_blocks[index] | mask) : (m_blocks[index] & static_cast<block_type>(~mask)));
                         };
                         auto const from_head = shl(ones, head);
