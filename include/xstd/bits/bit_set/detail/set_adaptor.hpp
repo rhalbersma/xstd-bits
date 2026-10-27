@@ -802,7 +802,7 @@ public:
                 return last;
         }
 
-        // front() and back() removed, with their precondition: each is one step of a walk, on the first block holding a key.
+        // front() and back() removed, with their precondition: one step of a walk, on the first block holding a key.
         constexpr auto pop_front(this non_volatile auto&& self) noexcept
                 -> void
                 requires requires { self.bits().drop_front(); }

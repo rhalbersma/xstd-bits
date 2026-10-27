@@ -740,7 +740,7 @@ public:
                 assert(n <= size() and len <= size() - n);
                 auto const before = counted_in(n, len);
                 if (len != 0UZ) {
-                        // The first and last blocks masked, the whole blocks between them stored; one block is both ends.
+                        // The first and last blocks masked, the whole blocks between stored; one block is both ends.
                         auto const [first, head] = index_offset(n);
                         auto const [last, tail]  = index_offset(n + len - 1UZ);
                         assert(head < bits_per_block and tail < bits_per_block);
