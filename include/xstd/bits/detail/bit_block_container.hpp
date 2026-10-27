@@ -744,7 +744,7 @@ public:
                         auto const [first, head] = index_offset(n);
                         auto const [last, tail]  = index_offset(n + len - 1UZ);
                         assert(head < bits_per_block and tail < bits_per_block);
-                        auto const write        = [&](std::size_t index, block_type mask) -> void {
+                        auto const write = [&](std::size_t index, block_type mask) -> void {
                                 m_blocks[index] = static_cast<block_type>(value ? (m_blocks[index] | mask) : (m_blocks[index] & static_cast<block_type>(~mask)));
                         };
                         auto const from_head = shl(ones, head);
@@ -801,7 +801,7 @@ public:
                 }
         }
 
-        // The primitive: inclusive, so both derivations are + 1 and nothing wraps.
+        // Inclusive, as find_first and a lower bound ask: size() is in its domain, so it guards the end.
         [[nodiscard]] constexpr auto inclusive_find_next(std::size_t n) const noexcept
                 -> std::size_t
         {
@@ -840,11 +840,33 @@ public:
                 return size();
         }
 
+        // A mask over n's own block, not a scan from n + 1: ~1 << offset is defined at every offset, so no end guard.
         [[nodiscard]] constexpr auto exclusive_find_next(std::size_t n) const noexcept
                 -> std::size_t
         {
                 assert(is_valid(n));
-                return inclusive_find_next(n + 1);
+                auto const [index, offset] = index_offset(n);
+                auto const block           = static_cast<block_type>(m_blocks[index] & shl(static_cast<block_type>(~unit), offset));
+                if constexpr (has_static_size and static_num_blocks == 1 and N == bits_per_block) {
+                        // An empty block counts every digit, which is size() here.
+                        return bits::detail::countr_zero(block);
+                } else {
+                        if (block != zero) {
+                                return (bits_per_block * index) + bits::detail::countr_zero(block);
+                        }
+                        if constexpr (has_static_size and static_num_blocks == 1) {
+                                return size();
+                        } else if constexpr (has_static_size and static_num_blocks == 2) {
+                                return index == 0UZ and m_blocks[1] != zero ? bits_per_block + bits::detail::countr_zero(m_blocks[1]) : size();
+                        } else {
+                                for (auto const i : std::views::iota(index + 1UZ, num_blocks())) {
+                                        if (auto const later = m_blocks[i]; later != zero) {
+                                                return (bits_per_block * i) + bits::detail::countr_zero(later);
+                                        }
+                                }
+                                return size();
+                        }
+                }
         }
 
         // The two ends of a non-empty container, deliberately NOT total: no empty case to answer.
