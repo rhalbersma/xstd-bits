@@ -334,8 +334,8 @@ public:
         // Zero where the width is carried at run time, so an algorithm unrolls only what the type fixes.
         static constexpr auto static_num_blocks = has_static_size ? whole_blocks_width_v<block_type, N> / bits_per_block : 0UZ;
 
-        // Reductions fold up to eight static blocks: over 500 byte blocks, the folds took GCC 15 from 0.7 GB to 14 GB.
-        static constexpr bool folds_blocks = has_static_size and static_num_blocks <= 8UZ;
+        // Reductions fold one to eight static blocks: over 500 byte blocks, the folds took GCC 15 from 0.7 GB to 14 GB.
+        static constexpr bool folds_blocks = has_static_size and 0UZ < static_num_blocks and static_num_blocks <= 8UZ;
 
 private:
         // The width is this container's, so a dynamic one answers zero here rather than compute byte_count of SIZE_MAX.
