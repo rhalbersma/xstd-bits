@@ -544,9 +544,10 @@ public:
         {
                 return [&]<std::size_t... I>(std::index_sequence<I...>) -> bool {
                         // Each step cast to a block: a fold passes on an int, and absl::uint128's |= is not constexpr.
-                        auto differ = zero;
+                        // block_type{}, as MSVC finds no static data member from a generic lambda in a hidden friend.
+                        auto differ = block_type{};
                         ((differ = static_cast<block_type>(differ | static_cast<block_type>(lhs.m_blocks[I] ^ rhs.m_blocks[I]))), ...);
-                        return differ == zero;
+                        return differ == block_type{};
                 }(std::make_index_sequence<static_num_blocks>());
         }
 
