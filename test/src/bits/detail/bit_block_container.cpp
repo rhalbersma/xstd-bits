@@ -166,7 +166,8 @@ public:
                 // The total backward scan over its whole domain: size() where nothing lies below, n == 0 included.
                 for (auto const i : std::views::iota(0UZ, m_n + 1UZ)) {
                         auto below = m_n;
-                        for (auto j = i - 1UZ; j < i; --j) {
+                        auto j     = i;
+                        while (j-- > 0) {
                                 if (m_mx[j]) {
                                         below = j;
                                         break;
