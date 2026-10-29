@@ -74,17 +74,6 @@ jobs:
       build_types: Release
       cxx_flags: -D_GLIBCXX_ASSERTIONS
 
-  # The hardware kernels: x86-64-v3 makes PDEP fast, which takes the hash's expansion of a block off the byte table
-  # that every other leg runs. One rung and one build type suffice, the instructions being the processor's.
-  gcc_bmi2:
-    needs: changes
-    if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@acbf0f0b3ed85dcabf95cd0d4806c0fa7c451ecf # main after rhalbersma/cpp-ci#83, with the std_test_suite adapters of rhalbersma/cpp-ci#82
-    with:
-      tiers: stable
-      build_types: Release
-      cxx_flags: -march=x86-64-v3
-
   # The name branch protection requires: green when the ladder passed, or when the pull request changes nothing it builds.
   all:
     name: gcc / all

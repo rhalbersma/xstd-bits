@@ -34,7 +34,7 @@ cmake="${HOME:-/root}/.local/bin/cmake"
 readonly cmake
 
 readonly all_legs=(gcc-15 gcc-16 gcc-17 cxx26-16 cxx26-17 clang-22 clang-23 clang-24 libcxx-22 i686
-                   hardened-gcc hardened-libcxx gcc-bmi2 clang-bmi2 tidy-22 tidy-23 tidy-24 coverage codegen format audit)
+                   hardened-gcc hardened-libcxx tidy-22 tidy-23 tidy-24 coverage codegen format audit)
 
 # Each clang uses the libstdc++ of its own rung, as on the runners, rather than the newest GCC installed.
 gcc_for_clang() {
@@ -166,9 +166,6 @@ run_leg() {
                 i686) suite "$1" g++-15 "-m32" Debug -DCMAKE_PREFIX_PATH=/usr/local/i686 ;;
                 # One rung in Release against each hardened standard library, as the hardened jobs run them.
                 hardened-gcc) suite "$1" g++-15 "-D_GLIBCXX_ASSERTIONS" Release ;;
-                # One rung in Release at x86-64-v3, as the bmi2 jobs run it, where PDEP expands the hash's blocks.
-                gcc-bmi2) suite "$1" g++-15 "-march=x86-64-v3" Release ;;
-                clang-bmi2) suite "$1" clang++-22 "$(gcc_for_clang 22) -march=x86-64-v3" Release ;;
                 hardened-libcxx)
                         boost_test="$(boost_test_for libcxx-22 clang++-22 -stdlib=libc++)" || return 1
                         suite "$1" clang++-22 "-stdlib=libc++ -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST" Release \

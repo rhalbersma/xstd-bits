@@ -215,7 +215,7 @@ cmake -S . -B build/codegen -DCMAKE_CXX_COMPILER=g++-15 -DBUILD_TESTING=OFF -DXS
 ctest --test-dir build/codegen --output-on-failure
 ```
 
-`tools/ci-local.sh codegen` runs both compilers' stable rungs, as the [Codegen workflow](.github/workflows/codegen.yml) does. The expectations are written for x86-64 under GCC and Clang. The `gcc_bmi2` and `clang_bmi2` jobs run the unit tests at `-march=x86-64-v3`, so the PDEP branch is executed as well as inspected; no job runs AVX-512 code, since GitHub's hosted runners do not guarantee AVX-512BW.
+`tools/ci-local.sh codegen` runs both compilers' stable rungs, as the [Codegen workflow](.github/workflows/codegen.yml) does. The expectations are written for x86-64 under GCC and Clang. The unit tests compile with `-march=native`, so each leg executes the branch its runner's processor selects, which GitHub does not fix; the codegen tests are what pin every branch.
 
 ## Required status checks
 
