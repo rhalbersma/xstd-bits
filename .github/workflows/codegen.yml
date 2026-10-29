@@ -1,0 +1,124 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+name: Codegen
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  # The stable rung of each compiler, on x86-64, where the expectations are written. The tests compile to assembly and
+  # link nothing, so a leg's time is the toolchain and the dependencies, which the vcpkg cache keeps to seconds.
+  codegen:
+    name: codegen ${{ matrix.compiler }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: g++-15
+            cxx_flags: ""
+          - compiler: clang++-22
+            cxx_flags: --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/15
+    env:
+      TRIPLET: x64-linux-gcc
+      VCPKG_BINARY_SOURCES: "clear;default,readwrite"
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-cache
+      # The dependencies are built by GCC 15, whose libstdc++ the clang leg compiles against too.
+      VCPKG_GCC_VERSION: "15"
+      VCPKG_CACHE_KEY: vcpkg-codegen-gcc-15-
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: rhalbersma/cpp-ci/.github/actions/apt-retry@196a3cb571dbf0e9e7b104b4586694753299553a
+
+      - name: Install GCC
+        uses: rhalbersma/cpp-ci/.github/actions/install-gcc@196a3cb571dbf0e9e7b104b4586694753299553a
+        with:
+          version: "15"
+          trunk: false
+
+      - name: Install Clang
+        if: startsWith(matrix.compiler, 'clang')
+        uses: rhalbersma/cpp-ci/.github/actions/install-clang@196a3cb571dbf0e9e7b104b4586694753299553a
+        with:
+          version: "22"
+          llvm_suffix: "-22"
+
+      - name: Install CMake and FileCheck
+        run: |
+          set -euo pipefail
+          for requirements in tools/cmake-requirements.txt tools/filecheck-requirements.txt; do
+            pip install --quiet --user --break-system-packages --require-hashes -r "${requirements}"
+          done
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+
+      - name: Locate the overlay triplets
+        id: overlay
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-overlay@196a3cb571dbf0e9e7b104b4586694753299553a
+
+      - name: Restore vcpkg binary cache
+        id: vcpkg-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: ${{ env.VCPKG_CACHE_KEY }}
+          restore-keys: ${{ env.VCPKG_CACHE_KEY }}
+
+      - name: Check out vcpkg at the pinned commit
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-setup@196a3cb571dbf0e9e7b104b4586694753299553a
+
+      - name: Install the dependencies
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-install@196a3cb571dbf0e9e7b104b4586694753299553a
+        with:
+          triplet: ${{ env.TRIPLET }}
+          overlay_triplets: ${{ steps.overlay.outputs.triplets }}
+
+      - name: Save vcpkg binary cache
+        if: >-
+          hashFiles('vcpkg-cache/**') != '' &&
+          steps.vcpkg-cache.outputs.cache-matched-key !=
+          format('{0}{1}', env.VCPKG_CACHE_KEY, hashFiles('vcpkg-cache/**'))
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: ${{ env.VCPKG_CACHE_KEY }}${{ hashFiles('vcpkg-cache/**') }}
+
+      - name: Configure
+        env:
+          CXX: ${{ matrix.compiler }}
+          CXX_FLAGS: ${{ matrix.cxx_flags }}
+          OVERLAY_TRIPLETS: ${{ steps.overlay.outputs.triplets }}
+        run: |
+          cmake -S . -B build -DCMAKE_CXX_COMPILER="${CXX}" -DCMAKE_CXX_FLAGS="${CXX_FLAGS}" \
+            -DCMAKE_TOOLCHAIN_FILE="${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_TARGET_TRIPLET="${TRIPLET}" -DVCPKG_OVERLAY_TRIPLETS="${OVERLAY_TRIPLETS}" \
+            -DBUILD_TESTING=OFF -DXSTD_BITS_BUILD_CODEGEN_TESTS=ON
+
+      - name: Check the assembly
+        run: ctest --test-dir build --output-on-failure
+
+  # The one name branch protection requires, red unless every leg above succeeded.
+  all:
+    name: codegen / all
+    if: always()
+    needs: codegen
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Every leg succeeded
+        env:
+          RESULT: ${{ needs.codegen.result }}
+        run: test "${RESULT}" = success

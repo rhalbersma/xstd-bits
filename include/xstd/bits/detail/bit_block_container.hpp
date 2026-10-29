@@ -1445,8 +1445,9 @@ public:
                 -> bool
         {
                 assert(is_valid(n));
-                auto&& [block, mask] = block_mask(n);
-                return bits::detail::block_intersects(block, mask);
+                // The block shifted down to its low bit, which x86-64 tests with one bt where a built mask takes two.
+                auto const [index, offset] = index_offset(n);
+                return bits::detail::block_intersects(shr(m_blocks[index], offset), unit);
         }
 
         [[nodiscard]] constexpr auto count() const noexcept

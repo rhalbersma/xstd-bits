@@ -202,6 +202,21 @@ Coverage shows a line runs; [`tools/mutate.py`](tools/mutate.py) shows a test wo
 
 [doc/mutation.md](doc/mutation.md) also gives the commands. The [Mutation workflow](.github/workflows/mutation.yml) reruns the scope weekly and by hand, and fails on a survivor the page does not list and on a listed one that a test now kills or the code no longer contains. It takes some three hours of a Linux runner, so it is not a required check.
 
+## Codegen tests
+
+The unit tests show that a kernel computes the right values, but not which instructions it takes to do so. A branch chosen by the preprocessor, such as the hash's expansion of a block into bools, is right on every leg whichever branch the build picked, so a detection that stops firing passes every test. [`test/codegen/`](test/codegen) compiles small `extern "C"` wrappers to assembly once per target and reads the result two ways:
+
+- **FileCheck directives** above a wrapper, under a prefix per target configuration. They require the expansion's PDEP at `-march=x86-64-v3`, its single masked store at `-march=x86-64-v4`, and the byte table where PDEP is slow or absent, and they forbid a branch in the folded reductions and in taking a set's lowest key.
+- **Pairs of wrappers** that must compile to the same instructions: each operation on one- and two-block `bit_fixed_set`s beside the same operation written by hand on the words it holds. A pair that drifts apart is the library doing worse than hand-written code.
+
+```bash
+pip install --user --break-system-packages --require-hashes -r tools/filecheck-requirements.txt
+cmake -S . -B build/codegen -DCMAKE_CXX_COMPILER=g++-15 -DBUILD_TESTING=OFF -DXSTD_BITS_BUILD_CODEGEN_TESTS=ON
+ctest --test-dir build/codegen --output-on-failure
+```
+
+`tools/ci-local.sh codegen` runs both compilers' stable rungs, as the [Codegen workflow](.github/workflows/codegen.yml) does. The expectations are written for x86-64 under GCC and Clang. The `gcc_bmi2` and `clang_bmi2` jobs run the unit tests at `-march=x86-64-v3`, so the PDEP branch is executed as well as inspected; no job runs AVX-512 code, since GitHub's hosted runners do not guarantee AVX-512BW.
+
 ## Required status checks
 
 The names to tick under branch protection, exactly as GitHub reports them:
@@ -216,6 +231,7 @@ The names to tick under branch protection, exactly as GitHub reports them:
 | `clang_format / clang-format` | `clang-format --dry-run --Werror` against [`.clang-format`](.clang-format) |
 | `clang_libcxx / all` | Clang 22, 23, 24-SVN with libc++ |
 | `clang_tidy / all` | clang-tidy on all three rungs |
+| `codegen / all` | the assembly of `test/codegen/` under GCC 15 and Clang 22 |
 | `codeql / Analyze` | `security-extended` |
 | `consumption / Consume` | the three CMake consumption models |
 | `coverage / gcovr` | 100% of lines and branches |
@@ -227,7 +243,7 @@ The names to tick under branch protection, exactly as GitHub reports them:
 
 Codecov posts two more, `codecov/project` and `codecov/patch`, which carry the same 100% bar for the whole tree and for the diff.
 
-Each ladder's required `all` is this repository's own job, carrying the name beside the shared ladder it waits for. On a pull request, [`changes.yml`](.github/workflows/changes.yml) first compares the diff with the paths no ladder builds: prose, the README included, since no README example is compiled; `doc/`; `tools/`; `test/fuzz/`, which ClusterFuzzLite alone builds; `mkdocs.yml`; and the workflows that are not ladders. `benchmark/` and `examples/` are not among them: the GCC ladder smoke-runs the one, and `test/` compiles against the other's `include/`. When every changed file is one of those, the ladder is skipped and its gate passes; any other file, a new directory included, runs the ladder, reduced for a compiler ladder as above, and the gate passes only if every leg did. Any other event, a manual run and the canary's nightly dispatch among them, always builds. The names under branch protection do not change.
+Each ladder's required `all` is this repository's own job, carrying the name beside the shared ladder it waits for. On a pull request, [`changes.yml`](.github/workflows/changes.yml) first compares the diff with the paths no ladder builds: prose, the README included, since no README example is compiled; `doc/`; `tools/`; `test/fuzz/`, which ClusterFuzzLite alone builds; `test/codegen/`, which its own workflow compiles to assembly; `mkdocs.yml`; and the workflows that are not ladders. `benchmark/` and `examples/` are not among them: the GCC ladder smoke-runs the one, and `test/` compiles against the other's `include/`. When every changed file is one of those, the ladder is skipped and its gate passes; any other file, a new directory included, runs the ladder, reduced for a compiler ladder as above, and the gate passes only if every leg did. Any other event, a manual run and the canary's nightly dispatch among them, always builds. The names under branch protection do not change.
 
 ## License
 
