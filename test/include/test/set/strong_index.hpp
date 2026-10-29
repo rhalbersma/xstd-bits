@@ -8,6 +8,7 @@
 
 #include <xstd/bits/bit_algorithm/bit_for_each.hpp> // bit_for_each
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
+#include <xstd/bits/bit_set/erase_if.hpp>           // erase_if
 #include <boost/test/unit_test.hpp>                 // BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                // ranges::equal
 #include <compare>                                  // strong_ordering
@@ -104,10 +105,10 @@ auto constructs_and_walks_as_std_set(std::vector<strong_index> const& keys, std:
         }
 
         auto walked = std::vector<strong_index>();
-        static_cast<void>(xstd::bit_for_each(a, [&](strong_index k) -> void { walked.push_back(k); }));
+        static_cast<void>(xstd::ranges::bit_for_each(a, [&](strong_index k) -> void { walked.push_back(k); }));
         BOOST_CHECK(std::ranges::equal(walked, model));
         walked.clear();
-        static_cast<void>(xstd::bit_for_each(std::views::reverse(a), [&](strong_index k) -> void { walked.push_back(k); }));
+        static_cast<void>(xstd::ranges::bit_for_each(std::views::reverse(a), [&](strong_index k) -> void { walked.push_back(k); }));
         BOOST_CHECK(std::ranges::equal(walked, model | std::views::reverse));
 }
 

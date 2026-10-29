@@ -33,7 +33,7 @@ template<class X, class Y>
         auto wrong = 0;
         for (auto const& x : xs) {
                 for (auto const& y : ys) {
-                        wrong += static_cast<int>(xstd::bit_less()(x, y) != std::is_lt(xstd::bit_lexicographical_compare_three_way(x, y)));
+                        wrong += static_cast<int>(xstd::bit_less()(x, y) != std::is_lt(xstd::ranges::bit_lexicographical_compare_three_way(x, y)));
                 }
         }
         return wrong;
@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(ComparesWhatBitEqualToComparesAlone)
 {
         static_assert(std::same_as<xstd::bit_less::is_transparent, void>);
         static_assert(xstd::bit_less()(xstd::bit_fixed_set<70>{1UZ}, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 70>{1UZ, 65UZ}));
-        static_assert(std::invocable<xstd::bit_less, xstd::bit_vector, xstd::basic_bit_vector<std::uint8_t>>);
+        static_assert(std::invocable<xstd::bit_less, xstd::bit_vector, xstd::basic_bit_vector<std::vector<std::uint8_t>>>);
         static_assert(not std::invocable<xstd::bit_less, xstd::bit_array<8>, xstd::bit_vector> and not std::invocable<xstd::bit_less, xstd::bit_fixed_set<8>, xstd::bit_set>);
         static_assert(not std::invocable<xstd::bit_less, xstd::bit_fixed_set<8>, xstd::bit_array<8>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"

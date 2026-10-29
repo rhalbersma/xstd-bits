@@ -14,6 +14,7 @@
 #include <memory_resource>          // polymorphic_allocator
 #include <ranges>                   // range_value_t
 #include <scoped_allocator>         // scoped_allocator_adaptor
+#include <span>                     // dynamic_extent
 #include <type_traits>              // is_nothrow_copy_assignable_v, is_nothrow_copy_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v, is_trivially_copyable_v
 #include <utility>                  // declval, move, swap
 #include <vector>                   // vector
@@ -124,11 +125,11 @@ BOOST_AUTO_TEST_CASE(TheMovesAreAsNothrowAsTheStorages)
 {
         using allocator_type = std::pmr::polymorphic_allocator<std::size_t>;
 
-        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, allocator_type>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
-        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_vector<std::size_t, allocator_type>>);
+        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_set<std::size_t, std::vector<std::size_t, allocator_type>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+        static_assert(std::is_nothrow_move_constructible_v<xstd::basic_bit_vector<std::vector<std::size_t, allocator_type>>>);
 
-        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, allocator_type>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
-        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_vector<std::size_t, allocator_type>>);
+        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_set<std::size_t, std::vector<std::size_t, allocator_type>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+        static_assert(not std::is_nothrow_move_assignable_v<xstd::basic_bit_vector<std::vector<std::size_t, allocator_type>>>);
 
         // The static column stays trivial, as its blocks are.
         static_assert(std::is_trivially_copyable_v<xstd::bit_fixed_set<N>>);
@@ -159,8 +160,8 @@ BOOST_AUTO_TEST_CASE(TheFreeSwapIsTheLibrarysAndNotStdSwap)
         using block_type     = std::size_t;
         using allocator_type = std::scoped_allocator_adaptor<std::pmr::polymorphic_allocator<block_type>>;
 
-        static_assert(free_swap_is_not_std_swap<xstd::basic_bit_set<std::size_t, block_type, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, allocator_type>>()); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
-        static_assert(free_swap_is_not_std_swap<xstd::basic_bit_vector<block_type, allocator_type>>());
+        static_assert(free_swap_is_not_std_swap<xstd::basic_bit_set<std::size_t, std::vector<block_type, allocator_type>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>>()); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+        static_assert(free_swap_is_not_std_swap<xstd::basic_bit_vector<std::vector<block_type, allocator_type>>>());
         BOOST_CHECK(true);
 }
 

@@ -5,16 +5,17 @@
 
 #include <test/bit_exchange.hpp>                   // converts_between, exchanges_from_bits
 #include <test/block_types.hpp>                    // graded_extents
+#include <test/endian.hpp>                         // IWYU pragma: keep; TEST_BYTES_ARE_POSITIONS
 #include <test/set/ascending.hpp>                  // yields_ascending_keys
 #include <test/set/strong_index.hpp>               // agrees_with_std_set_of_strong_indices, offset_mapping, strong_index
 #include <test/value_reference.hpp>                // value_reference
 #include <xstd/bits/bit/bit_convert.hpp>           // bit_convert
+#include <xstd/bits/bit_ranges/from_blocks.hpp>    // from_blocks
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>     // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>   // bit_key_mapping
 #include <xstd/bits/bit_type_traits/bit_align.hpp> // bit_align
 #include <xstd/bits/bit_type_traits/bit_fast.hpp>  // bit_fast
 #include <xstd/bits/bit_type_traits/bit_least.hpp> // bit_least, least_block_t
-#include <xstd/bits/from_blocks.hpp>               // from_blocks
 #include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                               // ranges::equal
 #include <array>                                   // array
@@ -369,8 +370,21 @@ BOOST_AUTO_TEST_CASE(AStrongIndexWithItsOwnMappingKeysItAsStdSetIsKeyed)
 
         // The positions are the keys less 10, which is what the blocks hold.
         auto const x = X({test::set::strong_index{.value = 10UZ}, test::set::strong_index{.value = 19UZ}});
+#ifdef TEST_BYTES_ARE_POSITIONS
         BOOST_CHECK(xstd::bit_convert<std::bitset<20>>(x) == std::bitset<20>(0x201ULL));
+#endif
         BOOST_CHECK_THROW(static_cast<void>(X({test::set::strong_index{.value = 30UZ}})), std::out_of_range);
+}
+
+// The subscript is the unchecked lookup: inside the width it reads what contains reads, and it throws nothing.
+BOOST_AUTO_TEST_CASE(TheSubscriptReadsWhatContainsReads)
+{
+        auto const s = xstd::bit_fixed_set<100>({3UZ, 64UZ, 99UZ});
+        static_assert(noexcept(s[0UZ]));
+        static_assert(std::same_as<decltype(s[0UZ]), bool>);
+        for (auto const i : std::views::iota(0UZ, xstd::bit_fixed_set<100>::max_size())) {
+                BOOST_CHECK_EQUAL(s[i], s.contains(i));
+        }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

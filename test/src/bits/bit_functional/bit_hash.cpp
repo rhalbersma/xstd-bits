@@ -8,15 +8,16 @@
 #include <xstd/bits/bit_array.hpp>                  // bit_array
 #include <xstd/bits/bit_functional/bit_hash.hpp>    // bit_hash, bit_hash_append
 #include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
+#include <xstd/bits/bit_ranges/from_blocks.hpp>     // from_blocks
+#include <xstd/bits/bit_set.hpp>                    // hash
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
-#include <xstd/bits/bit_span.hpp>                   // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>          // bit_span
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <xstd/bits/from_blocks.hpp>                // from_blocks
 #include <xstd/misc/concepts/hash_algorithm.hpp>    // hash_algorithm
 #include <xstd/misc/functional/hash.hpp>            // hash
 #include <boost/hash2/flavor.hpp>                   // default_flavor, little_endian_flavor
@@ -28,6 +29,7 @@
 #include <boost/hash2/xxhash.hpp>                   // xxhash_64
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                    // array
+#include <bit>                                      // endian
 #include <concepts>                                 // invocable, same_as
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint64_t, uint8_t
@@ -44,6 +46,9 @@
 BOOST_AUTO_TEST_SUITE(BitHash)
 
 namespace {
+
+// The storage is the string where its object bytes are little-endian, as the flavor writes them.
+constexpr auto storage_is_string = std::endian::native == std::endian::little;
 
 using byte_string = std::vector<unsigned char>;
 
@@ -145,8 +150,8 @@ template<class Hash>
 
 // Blocks of one width on every target, so that a message depends on the flavor alone.
 using fixed_set   = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 10>;
-using dynamic_set = xstd::basic_bit_set<std::size_t, std::uint64_t>;
-using sequence    = xstd::basic_bit_vector<std::uint64_t>;
+using dynamic_set = xstd::basic_bit_set<std::size_t, std::vector<std::uint64_t>>;
+using sequence    = xstd::basic_bit_vector<std::vector<std::uint64_t>>;
 
 // Every other position set, from the first on.
 template<class T>
@@ -317,10 +322,10 @@ BOOST_AUTO_TEST_CASE(EqualBitsHashEqualAcrossBlockTypes)
 
         // A run-time width at the narrowest and the widest word-sized block.
         test::for_each_type<std::tuple<std::uint8_t, std::uint64_t>>([]<class Block> -> void {
-                auto const growing = xstd::basic_bit_set<std::size_t, Block>({1, 64, 199});
+                auto const growing = xstd::basic_bit_set<std::size_t, std::vector<Block>>({1, 64, 199});
                 BOOST_CHECK_EQUAL(little_endian_digest<boost::hash2::fnv1a_64>(growing), 0x4EAC'991A'7BBE'935BULL);
 
-                auto const bools = alternating(xstd::basic_bit_vector<Block>(130));
+                auto const bools = alternating(xstd::basic_bit_vector<std::vector<Block>>(130));
                 BOOST_CHECK_EQUAL(little_endian_digest<boost::hash2::fnv1a_64>(bools), 0x6F6F'BA15'A239'791EULL);
         });
 }
@@ -344,7 +349,9 @@ BOOST_AUTO_TEST_CASE(TheAssembledStringIsTheStorage)
 // Where the storage is the string, one update takes it all, and only a run-time width adds a second.
 BOOST_AUTO_TEST_CASE(TheStorageGoesInAsOneUpdate)
 {
-        BOOST_CHECK_EQUAL(counted_bits<boost::hash2::fnv1a_64>(long_set<std::uint64_t>(long_keys)).updates, 1UZ);
+        if constexpr (storage_is_string) {
+                BOOST_CHECK_EQUAL(counted_bits<boost::hash2::fnv1a_64>(long_set<std::uint64_t>(long_keys)).updates, 1UZ);
+        }
         BOOST_CHECK_EQUAL(counted_bits<boost::hash2::fnv1a_64>(alternating(sequence(130))).updates, 2UZ);
         BOOST_CHECK_EQUAL(counted_bits<boost::hash2::fnv1a_64>(dynamic_set({1, 64, 199})).updates, 2UZ);
 }
@@ -361,7 +368,9 @@ BOOST_AUTO_TEST_CASE(AnAggregateOfFullPlanesIsOneString)
 
         // Each side's array is one update, and two updates of the halves are one of the whole.
         auto const h = counted<hash_type>(p);
-        BOOST_CHECK_EQUAL(h.updates, 2UZ);
+        if constexpr (storage_is_string) {
+                BOOST_CHECK_EQUAL(h.updates, 2UZ);
+        }
         auto copy = h;
         BOOST_CHECK_EQUAL(copy.result(), string_digest<hash_type>(message));
         auto whole = string_hash<hash_type>(message);
@@ -376,13 +385,17 @@ BOOST_AUTO_TEST_CASE(AnAggregateOfFullPlanesIsOneString)
                 nested[1][k] = nested_std[1][k] = p.white[k];
         }
         for (auto updated : {counted_bits<hash_type>(nested), counted_bits<hash_type>(nested_std)}) {
-                BOOST_CHECK_EQUAL(updated.updates, 1UZ);
+                if constexpr (storage_is_string) {
+                        BOOST_CHECK_EQUAL(updated.updates, 1UZ);
+                }
                 BOOST_CHECK_EQUAL(updated.result(), string_digest<hash_type>(message));
         }
 
         // A flat array, also one update; the two in turn digest as the nested one does.
         auto const flat = counted_bits<hash_type>(p.black);
-        BOOST_CHECK_EQUAL(flat.updates, 1UZ);
+        if constexpr (storage_is_string) {
+                BOOST_CHECK_EQUAL(flat.updates, 1UZ);
+        }
         auto in_turn = hash_type();
         xstd::bit_hash_append(in_turn, boost::hash2::little_endian_flavor(), nested[0]);
         xstd::bit_hash_append(in_turn, boost::hash2::little_endian_flavor(), nested[1]);
@@ -421,7 +434,9 @@ BOOST_AUTO_TEST_CASE(ARunTimeCountFollowsThePlanes)
         auto const half = planes_string<64>(kinds);
 
         auto const dynamic = counted_bits<hash_type>(std::span<plane<64> const>(p.black));
-        BOOST_CHECK_EQUAL(dynamic.updates, 2UZ);
+        if constexpr (storage_is_string) {
+                BOOST_CHECK_EQUAL(dynamic.updates, 2UZ);
+        }
         auto copy = dynamic;
         BOOST_CHECK_EQUAL(copy.result(), string_digest<hash_type>(half, kinds));
 
@@ -431,7 +446,9 @@ BOOST_AUTO_TEST_CASE(ARunTimeCountFollowsThePlanes)
         BOOST_CHECK_EQUAL(none_copy.result(), string_digest<hash_type>(byte_string(), 0UZ));
 
         auto const static_span = counted_bits<hash_type>(std::span<plane<64> const, kinds>(p.black));
-        BOOST_CHECK_EQUAL(static_span.updates, 1UZ);
+        if constexpr (storage_is_string) {
+                BOOST_CHECK_EQUAL(static_span.updates, 1UZ);
+        }
         auto static_copy = static_span;
         BOOST_CHECK_EQUAL(static_copy.result(), string_digest<hash_type>(half));
 

@@ -6,13 +6,13 @@
 #include <test/array_storage.hpp>                     // array_storage
 #include <test/block_types.hpp>                       // block_types, digits_v, graded_extents
 #include <test/uint128.hpp>                           // IWYU pragma: keep; TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit_ranges/from_blocks.hpp>       // from_blocks
 #include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container
 #include <xstd/bits/detail/comparisons.hpp>           // set_equal, three_way
 #include <xstd/bits/detail/inplace_blocks.hpp>        // inplace_blocks
 #include <xstd/bits/detail/owned_bit_blocks.hpp>      // owned_bit_blocks
 #include <xstd/bits/detail/ownership.hpp>             // sequence_reading_tag, set_reading_tag
 #include <xstd/bits/detail/range_const_reference.hpp> // fallback::range_const_reference_t, range_const_reference_t
-#include <xstd/bits/from_blocks.hpp>                  // from_blocks
 #include <xstd/ints/memory.hpp>                       // align_up
 #include <boost/test/unit_test.hpp>                   // BOOST_CHECK_EQUAL, BOOST_CHECK_LE, BOOST_CHECK_LT, BOOST_CHECK_THROW, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <algorithm>                                  // all_of, any_of, count, lexicographical_compare_three_way, min, reverse
@@ -127,16 +127,53 @@ public:
                 disagree(m_x == m_y, m_mx == m_my);
         }
 
-        // find_first is total and answers size(); the scan back from size() asserts there is a position.
-        auto scans()
+        // The scans and the drops that take a non-empty set: each end, and the one a drop clears.
+        auto ends()
                 -> void
         {
                 if (m_cardinality != 0) {
+                        auto front = 0UZ;
+                        while (not m_mx[front]) {
+                                ++front;
+                        }
                         auto back = m_n - 1;
                         while (not m_mx[back]) {
                                 --back;
                         }
+                        unequal(m_x.find_front(), front);
+                        unequal(m_x.find_back(), back);
                         unequal(m_x.exclusive_find_prev(m_n), back);
+
+                        // Each drop clears the one end its scan names, and the count steps down with it.
+                        auto& dropped_front = fresh_x();
+                        dropped_front.drop_front();
+                        auto without_front   = m_mx;
+                        without_front[front] = false;
+                        same(without_front, dropped_front);
+
+                        auto& dropped_back = fresh_x();
+                        dropped_back.drop_back();
+                        auto without_back  = m_mx;
+                        without_back[back] = false;
+                        same(without_back, dropped_back);
+                }
+        }
+
+        // The total scans: total_find_prev, find_first and exclusive_find_next.
+        auto scans()
+                -> void
+        {
+                // The total backward scan over its whole domain: size() where nothing lies below, n == 0 included.
+                for (auto const i : std::views::iota(0UZ, m_n + 1UZ)) {
+                        auto below = m_n;
+                        auto j     = i;
+                        while (j-- > 0) {
+                                if (m_mx[j]) {
+                                        below = j;
+                                        break;
+                                }
+                        }
+                        unequal(m_x.total_find_prev(i), below);
                 }
 
                 auto first = 0UZ;
@@ -404,6 +441,7 @@ auto check_ops(BB const& x, BB const& y, int& disagreements)
         auto b = y;
         auto c = checker<BB>(x, y, a, b, disagreements);
         c.width();
+        c.ends();
         c.scans();
         c.relational();
         c.bitwise();
@@ -709,6 +747,17 @@ BOOST_AUTO_TEST_CASE(AStaticWidthAddsNothingToItsBlocks)
 
         static_assert(xstd::bits::detail::bit_block_container<std::array<std::size_t, 1>, 64>::has_static_size);
         static_assert(not xstd::bits::detail::bit_block_container<std::vector<std::size_t>>::has_static_size);
+}
+
+// As std::array: trivially default-constructible, so T() zeroes the blocks, in GCC's constant evaluator too.
+BOOST_AUTO_TEST_CASE(AStaticWidthIsTriviallyDefaultConstructible)
+{
+        using aligned = xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 2>, 128>;
+        using padded  = xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 2>, 100>;
+        static_assert(std::is_trivially_default_constructible_v<aligned> and std::is_trivially_default_constructible_v<padded>);
+        static_assert(not std::is_trivially_default_constructible_v<xstd::bits::detail::bit_block_container<std::vector<std::uint64_t>>>);
+        static_assert(aligned().none() and padded().none());
+        BOOST_CHECK(padded().none());
 }
 
 // Both widths permute in a constant expression, the run-time one over C++20 constexpr allocation.
@@ -1118,9 +1167,9 @@ BOOST_AUTO_TEST_CASE(TheWidthFillsWhatWouldOtherwisePadTheBlocks)
 
 #ifdef TEST_HAS_UINT128
 
-        // The one cell that reaches an over-aligned storage: the width is a block there, and pays nothing for it.
+        // The one cell whose storage the ABI may over-align: the width is a block there, and pays nothing for it.
         static_assert(tiles(sizeof(xstd::bits::detail::bit_block_container<xstd::bits::detail::inplace_blocks<xstd::uint128, 3>, 384>), sizeof(xstd::bits::detail::inplace_blocks<xstd::uint128, 3>), alignof(xstd::bits::detail::inplace_blocks<xstd::uint128, 3>)));
-        static_assert(alignof(xstd::bits::detail::inplace_blocks<xstd::uint128, 3>) > alignof(std::size_t));
+        static_assert(alignof(xstd::bits::detail::inplace_blocks<xstd::uint128, 3>) == alignof(xstd::uint128));
 
         // The heap column never reaches it: a vector is a pointer's alignment whatever it holds.
         static_assert(sizeof(xstd::bits::detail::bit_block_container<std::vector<xstd::uint128>>) == sizeof(xstd::bits::detail::bit_block_container<std::vector<std::uint64_t>>));

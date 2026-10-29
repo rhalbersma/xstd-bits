@@ -6,13 +6,13 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_REVERSE_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_REVERSE_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // whole_sequence
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <ranges>                                       // borrowed_iterator_t, end
+#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // whole_sequence
+#include <xstd/bits/detail/ownership.hpp>              // storage_access
+#include <ranges>                                      // borrowed_iterator_t, end
 
-namespace xstd {
+namespace xstd::ranges {
 
-// std::ranges::reverse(r), a block at a time: the blocks end for end, each block's bits too, then the padding shifted out.
+// std::ranges::reverse(r), a block at a time: blocks end for end, each one's bits too, then the padding shifted out.
 template<bits::detail::whole_sequence R>
         requires requires (R& r) { bits::detail::storage_access::bits(r).reverse(); }
 constexpr auto bit_reverse(R&& r) noexcept
@@ -22,6 +22,6 @@ constexpr auto bit_reverse(R&& r) noexcept
         return std::ranges::borrowed_iterator_t<R>(std::ranges::end(r));
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_REVERSE_HPP

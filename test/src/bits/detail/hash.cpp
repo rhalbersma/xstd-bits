@@ -6,6 +6,8 @@
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
 #include <xstd/bits/bit_functional/bit_hash.hpp>    // bit_hash
 #include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
+#include <xstd/bits/bit_ranges/from_blocks.hpp>     // from_blocks
+#include <xstd/bits/bit_set.hpp>                    // hash
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
@@ -14,7 +16,6 @@
 #include <xstd/bits/detail/intrinsic.hpp>           // bools_per_block, byte_bools, expand_block, expand_block_by_table
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <xstd/bits/from_blocks.hpp>                // from_blocks
 #include <xstd/misc/functional/hash.hpp>            // hash
 #include <boost/hash2/flavor.hpp>                   // big_endian_flavor, default_flavor, little_endian_flavor
 #include <boost/hash2/fnv1a.hpp>                    // fnv1a_64
@@ -50,8 +51,8 @@ using set_type = xstd::bit_fixed_set<8>;
 
 // Blocks of a width fixed on every target, so that a message's bytes depend on the flavor alone.
 using fixed_set   = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 10>;
-using dynamic_set = xstd::basic_bit_set<std::size_t, std::uint64_t>;
-using sequence    = xstd::basic_bit_vector<std::uint64_t>;
+using dynamic_set = xstd::basic_bit_set<std::size_t, std::vector<std::uint64_t>>;
+using sequence    = xstd::basic_bit_vector<std::vector<std::uint64_t>>;
 
 // A hash that keeps the bytes it is given and counts the calls that gave them.
 struct recorder
@@ -296,7 +297,7 @@ BOOST_AUTO_TEST_CASE(EqualValuesHashEqualUnderTheDefaultAcrossStorages)
 
         // The set reading at a run-time width: every resizable owner, and a view over one.
         auto const dynamic_set_digests = [](std::initializer_list<std::size_t> keys) -> std::array<std::size_t, 4> {
-                auto const growing      = xstd::basic_bit_set<std::size_t, std::uint8_t>(keys);
+                auto const growing      = xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>(keys);
                 auto const inplace      = xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 256>(keys);
                 auto const inline_first = xstd::basic_bit_small_set<std::size_t, std::uint64_t, 256>(keys);
                 auto const view         = xstd::bit_set_view(growing);
@@ -308,7 +309,7 @@ BOOST_AUTO_TEST_CASE(EqualValuesHashEqualUnderTheDefaultAcrossStorages)
 
         // The sequence reading at a run-time width, every owner; a static one is std::array's and has no size.
         auto const sequence_digests = []<std::size_t N> -> std::array<std::size_t, 3> {
-                auto const growing      = alternating(xstd::basic_bit_vector<std::uint8_t>(N));
+                auto const growing      = alternating(xstd::basic_bit_vector<std::vector<std::uint8_t>>(N));
                 auto const inplace      = alternating(xstd::basic_bit_inplace_vector<std::uint64_t, 256>(N));
                 auto const inline_first = alternating(xstd::basic_bit_small_vector<std::uint64_t, 256>(N));
                 return {default_digest(growing), default_digest(inplace), default_digest(inline_first)};

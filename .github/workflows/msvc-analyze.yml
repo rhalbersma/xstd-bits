@@ -18,8 +18,27 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Whether this pull request can reach what the ladders build; see changes.yml.
+  changes:
+    uses: ./.github/workflows/changes.yml
+
   # MSVC's /analyze, in the role clang-tidy.yml fills for Clang, the flag compiling the whole tree. All three rungs, the 2022 one back for the reason msvc.yml states.
-  msvc_analyze:
-    uses: rhalbersma/cpp-ci/.github/workflows/msvc-analyze.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+  msvc_analyze_ladder:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
+    uses: rhalbersma/cpp-ci/.github/workflows/msvc-analyze.yml@acbf0f0b3ed85dcabf95cd0d4806c0fa7c451ecf # main after rhalbersma/cpp-ci#83, with the std_test_suite adapters of rhalbersma/cpp-ci#82
     with:
       tiers: stable,qualification,development
+
+  # The name branch protection requires: green when the ladder passed, or when the pull request changes nothing it builds.
+  all:
+    name: msvc_analyze / all
+    needs: [ changes, msvc_analyze_ladder ]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Every leg succeeded, or none was needed
+        env:
+          BUILD: ${{ needs.changes.outputs.build }}
+          RESULT: ${{ needs.msvc_analyze_ladder.result }}
+        run: test "${BUILD}" = false || test "${RESULT}" = success

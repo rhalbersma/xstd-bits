@@ -28,7 +28,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TREES = ["include", "test", "benchmark", "fuzz", "examples"]
+TREES = ["include", "test", "benchmark", "examples"]
 SOURCES = {".hpp", ".cpp", ".h"}
 
 INCLUDE = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]\s*(?://\s*(.*))?$')

@@ -14,7 +14,7 @@
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>                             // bit_key_mapping
 #include <xstd/bits/bit_set/bit_set.hpp>                                     // bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>                                // bit_set_view
-#include <xstd/bits/bit_span.hpp>                                            // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>                                   // bit_span
 #include <xstd/bits/bit_vector.hpp>                                          // basic_bit_vector, bit_vector
 #include <boost/test/unit_test.hpp>                                          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                                         // lexicographical_compare_three_way
@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_SUITE(BitLexicographicalCompareThreeWay)
 namespace {
 
 template<class R1, class R2>
-concept comparable = requires (R1 const& r1, R2 const& r2) { xstd::bit_lexicographical_compare_three_way(r1, r2); };
+concept comparable = requires (R1 const& r1, R2 const& r2) { xstd::ranges::bit_lexicographical_compare_three_way(r1, r2); };
 
 // The algorithm and std::lexicographical_compare_three_way over the elements in iteration order, either way round.
 template<class R1, class R2>
@@ -40,7 +40,7 @@ template<class R1, class R2>
         auto const model = [](auto const& a, auto const& b) -> std::strong_ordering { return std::lexicographical_compare_three_way(a.begin(), a.end(), b.begin(), b.end()); };
         auto const x     = std::vector<std::ranges::range_value_t<R1>>(r1.begin(), r1.end());
         auto const y     = std::vector<std::ranges::range_value_t<R2>>(r2.begin(), r2.end());
-        return xstd::bit_lexicographical_compare_three_way(r1, r2) == model(x, y) and xstd::bit_lexicographical_compare_three_way(r2, r1) == model(y, x);
+        return xstd::ranges::bit_lexicographical_compare_three_way(r1, r2) == model(x, y) and xstd::ranges::bit_lexicographical_compare_three_way(r2, r1) == model(y, x);
 }
 
 // Every input of X against every input of Y.
@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE(AgreesWithRangesLexicographicalCompareThreeWayOverEverySetC
 BOOST_AUTO_TEST_CASE(WindowsAndViewsCompareTheirOwnElements)
 {
         auto const a = test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>());
-        auto const v = test::algorithm::patterned(xstd::basic_bit_vector<std::uint64_t>(21UZ));
+        auto const v = test::algorithm::patterned(xstd::basic_bit_vector<std::vector<std::uint64_t>>(21UZ));
         auto wrong   = 0;
         test::algorithm::for_each_window(xstd::bit_span(a), [&](auto const& w) -> void {
                 test::algorithm::for_each_window(xstd::bit_span(v), [&](auto const& u) -> void { wrong += static_cast<int>(not agrees(w, u)); });
@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(ComparesOneReadingAndOneWidthKindAlone)
 {
         static_assert(agrees(test::algorithm::patterned(xstd::bit_array<70>()), test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 70>())));
         static_assert(agrees(xstd::bit_fixed_set<70>{1UZ, 65UZ}, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 70>{1UZ, 66UZ}));
-        static_assert(comparable<xstd::bit_array<8>, xstd::basic_bit_array<std::uint8_t, 8>> and comparable<xstd::bit_vector, xstd::basic_bit_vector<std::uint8_t>>);
+        static_assert(comparable<xstd::bit_array<8>, xstd::basic_bit_array<std::uint8_t, 8>> and comparable<xstd::bit_vector, xstd::basic_bit_vector<std::vector<std::uint8_t>>>);
         static_assert(comparable<xstd::bit_fixed_set<8>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 8>>);
         static_assert(not comparable<xstd::bit_array<8>, xstd::bit_vector> and not comparable<xstd::bit_array<8>, xstd::bit_array<9>> and not comparable<xstd::bit_fixed_set<8>, xstd::bit_set>);
         static_assert(not comparable<xstd::bit_array<8>, xstd::bit_fixed_set<8>> and not comparable<std::vector<bool>, std::vector<bool>>);

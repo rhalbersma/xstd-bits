@@ -4,16 +4,19 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/bit_exchange.hpp>                       // converts_from, converts_to
+#include <test/endian.hpp>                             // IWYU pragma: keep; TEST_BYTES_ARE_POSITIONS
 #include <test/for_each_type.hpp>                      // for_each_type
 #include <test/set/enums.hpp>                          // day, level, piece, sign
 #include <test/set/lookup.hpp>                         // lookup_mismatches
 #include <test/set/primitives.hpp>                     // heterogeneous_key
 #include <test/spec/random.hpp>                        // engine, seed
 #include <xstd/bits/bit/bit_convert.hpp>               // bit_convert
+#include <xstd/bits/bit/shl.hpp>                       // shl
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>    // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>    // bit_includes
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp>  // bit_intersects
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp> // bit_mask_mapping
+#include <xstd/bits/bit_set.hpp>                       // erase_if
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>         // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_flag_mapping.hpp>      // bit_flag_mapping
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>       // basic_bit_inplace_set
@@ -36,8 +39,9 @@
 #include <initializer_list>                            // initializer_list
 #include <iterator>                                    // ranges::distance
 #include <limits>                                      // numeric_limits
-#include <ranges>                                      // bidirectional_range, from_range, iota, ranges::to, transform
+#include <ranges>                                      // bidirectional_range, from_range, iota, ranges::to, reverse, transform
 #include <set>                                         // set
+#include <span>                                        // dynamic_extent
 #include <stdexcept>                                   // length_error, out_of_range
 #include <tuple>                                       // tuple, tuple_cat
 #include <type_traits>                                 // underlying_type_t
@@ -60,6 +64,9 @@ constexpr bool can_erase = requires (S s) { s.erase(0UZ); };
 
 template<class S>
 constexpr bool can_clear = requires (S s) { s.clear(); };
+
+template<class S>
+constexpr bool can_pop = requires (S s) { s.pop_front(); s.pop_back(); };
 
 template<class S>
 constexpr bool can_swap = requires (S s) { s.swap(s); };
@@ -134,9 +141,9 @@ constexpr bool compares_with = requires (X const& x, Y const& y) { x == y; };
 BOOST_AUTO_TEST_CASE(AnOwnerIsATypeOfItsOwnOverItsStorage)
 {
         static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 20>>, xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>, 20>>);
-        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_set<std::size_t, std::uint32_t>>, xstd::bits::detail::set_bits_t<std::vector<std::uint32_t>>>);
+        static_assert(std::same_as<xstd::bits::detail::owned_bits_t<xstd::basic_bit_set<std::size_t, std::vector<std::uint32_t>>>, xstd::bits::detail::set_bits_t<std::vector<std::uint32_t>>>);
         static_assert(not compares_with<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 24>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>>>>);
-        static_assert(not compares_with<xstd::basic_bit_set<std::size_t, std::uint32_t>, xstd::bits::detail::set_adaptor<xstd::bits::detail::set_bits_t<std::vector<std::uint32_t>>>>);
+        static_assert(not compares_with<xstd::basic_bit_set<std::size_t, std::vector<std::uint32_t>>, xstd::bits::detail::set_adaptor<xstd::bits::detail::set_bits_t<std::vector<std::uint32_t>>>>);
         BOOST_CHECK(true);
 }
 
@@ -155,12 +162,12 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
 // Where the trait does not let this handle write, the member is not there to call.
 BOOST_AUTO_TEST_CASE(WritingIsGatedByTheStorageNotByThisConst)
 {
-        static_assert(can_insert<View> and can_erase<View> and can_clear<View>);
-        static_assert(can_insert<View const> and can_erase<View const> and can_clear<View const>);
-        static_assert(can_insert<Owner> and can_swap<Owner> and has_complement<Owner>);
+        static_assert(can_insert<View> and can_erase<View> and can_clear<View> and can_pop<View>);
+        static_assert(can_insert<View const> and can_erase<View const> and can_clear<View const> and can_pop<View const>);
+        static_assert(can_insert<Owner> and can_swap<Owner> and has_complement<Owner> and can_pop<Owner>);
 
-        static_assert(not can_insert<Reader> and not can_erase<Reader> and not can_clear<Reader>);
-        static_assert(not can_insert<Owner const> and not can_erase<Owner const> and not can_clear<Owner const>);
+        static_assert(not can_insert<Reader> and not can_erase<Reader> and not can_clear<Reader> and not can_pop<Reader>);
+        static_assert(not can_insert<Owner const> and not can_erase<Owner const> and not can_clear<Owner const> and not can_pop<Owner const>);
         static_assert(not can_swap<View> and not has_complement<View>);
 }
 
@@ -187,6 +194,9 @@ BOOST_AUTO_TEST_CASE(AViewWritesThroughToWhatItViews)
         BOOST_CHECK(*v.erase(v.find(7UZ)) == 9UZ);
         BOOST_CHECK(v.erase(v.find(11UZ), v.find(19UZ)) == v.find(19UZ));
         BOOST_CHECK(keys(v) == std::set<std::size_t>({3, 9, 19}));
+        v.pop_front();
+        v.pop_back();
+        BOOST_CHECK(keys(v) == std::set<std::size_t>({9}) and c.test(9) and not c.test(3) and not c.test(19));
 
         v.clear();
         BOOST_CHECK(c.none());
@@ -205,7 +215,7 @@ BOOST_AUTO_TEST_CASE(AViewIsShallow)
 
         Reader const r(c);
         BOOST_CHECK(r.contains(42UZ) and keys(r) == keys(v));
-        BOOST_CHECK(xstd::bit_includes(r, r) and xstd::bit_intersects(r, r));
+        BOOST_CHECK(xstd::ranges::bit_includes(r, r) and xstd::ranges::bit_intersects(r, r));
 }
 
 BOOST_AUTO_TEST_CASE(TheViewsAnswerEveryReadOverEveryStorage)
@@ -263,13 +273,13 @@ BOOST_AUTO_TEST_CASE(TheSetPredicatesAgreeAcrossStorages)
         auto const x = S(a);
         auto const y = S(b);
 
-        BOOST_CHECK(xstd::bit_includes(y, x) and not xstd::bit_includes(x, y));
-        BOOST_CHECK(xstd::bit_intersects(x, y) and xstd::bit_disjoint(x, S(e)));
+        BOOST_CHECK(xstd::ranges::bit_includes(y, x) and not xstd::ranges::bit_includes(x, y));
+        BOOST_CHECK(xstd::ranges::bit_intersects(x, y) and xstd::ranges::bit_disjoint(x, S(e)));
         BOOST_CHECK(x != y and x < y);
         BOOST_CHECK((x <=> y) == std::strong_ordering::less);
 
         x.insert(3UZ);
-        BOOST_CHECK(x == y and xstd::bit_includes(x, y) and xstd::bit_includes(y, x));
+        BOOST_CHECK(x == y and xstd::ranges::bit_includes(x, y) and xstd::ranges::bit_includes(y, x));
 }
 
 // The ordering invariant: the block-wise entry and the iterators agree, and the fallback is the invariant itself.
@@ -482,7 +492,7 @@ enum class flag : std::uint8_t
 
 // Every owning column over one closed mapping, as wide as its keys: a width, the heap, a capacity and inline blocks.
 template<class Key, std::size_t N, class KeyMapping = xstd::bit_key_mapping<Key>>
-using closed_columns = std::tuple<xstd::basic_bit_fixed_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::uint8_t, KeyMapping>, xstd::basic_bit_inplace_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_small_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::uint8_t, KeyMapping, std::greater<>>>;
+using closed_columns = std::tuple<xstd::basic_bit_fixed_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::vector<std::uint8_t>, std::dynamic_extent, KeyMapping>, xstd::basic_bit_inplace_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_small_set<Key, std::uint8_t, N, KeyMapping>, xstd::basic_bit_set<Key, std::vector<std::uint8_t>, std::dynamic_extent, KeyMapping, std::greater<>>>;
 
 // A range from zero with padding, one from a negative value, a list with gaps, a list across zero, and one-bit values.
 using closed_owners = decltype(std::tuple_cat(std::declval<closed_columns<test::set::day, 5UZ>>(), std::declval<closed_columns<test::set::level, 3UZ>>(), std::declval<closed_columns<test::set::piece, 6UZ>>(), std::declval<closed_columns<test::set::sign, 3UZ>>(), std::declval<closed_columns<flag, 6UZ, xstd::bit_flag_mapping<flag, 6UZ>>>()));
@@ -566,22 +576,6 @@ auto admits_at_every_door(X const& a, Model const& model, typename X::key_type v
         BOOST_CHECK(modelled<Model>(from_range) == Model{v});
 }
 
-// An enumerator is a one-element set: the operators that write it refuse it, and the two that only read it answer.
-template<class X>
-auto meets_it_as_an_empty_set_or_refuses(X const& a, typename X::key_type v)
-        -> void
-{
-        auto x = a;
-        check_refuses([&] -> void { x |= v; });
-        check_refuses([&] -> void { x ^= v; });
-        check_refuses([&] -> void { static_cast<void>(x | v); });
-        check_refuses([&] -> void { static_cast<void>(v ^ x); });
-        check_refuses([&] -> void { static_cast<void>(v - x); });
-        BOOST_CHECK(x == a);
-        auto const met = a & v;
-        BOOST_CHECK(met.empty() and (a - v) == a);
-}
-
 // An enumerator is a one-element set, and each operator meets a key as the model's set algebra does.
 template<class X, class Model>
 auto meets_it_as_a_one_element_set(X const& a, Model const& model, typename X::key_type v)
@@ -621,6 +615,9 @@ BOOST_AUTO_TEST_CASE(EveryOwnerAdmitsAKeyAndRefusesAValueThatIsNoKey)
                 auto const keys   = universe<X>();
                 auto const a      = X({keys.front(), keys.back()});
                 auto const model  = std::set<key_type, typename X::key_compare>(a.begin(), a.end());
+                // The first key alone, whose run-time width leaves the operators keys past it to meet.
+                auto const narrow       = X({keys.front()});
+                auto const narrow_model = std::set<key_type, typename X::key_compare>(narrow.begin(), narrow.end());
                 for (auto const v : offered<key_type>()) {
                         BOOST_TEST_CONTEXT("value: " << int{std::to_underlying(v)})
                         {
@@ -629,12 +626,10 @@ BOOST_AUTO_TEST_CASE(EveryOwnerAdmitsAKeyAndRefusesAValueThatIsNoKey)
                                         admits_at_every_door(a, model, v);
                                         if constexpr (not xstd::bit_mask_mapping<key_mapping, key_type>) {
                                                 meets_it_as_a_one_element_set(a, model, v);
+                                                meets_it_as_a_one_element_set(narrow, narrow_model, v);
                                         }
                                 } else {
                                         refuses_at_every_door(a, v);
-                                        if constexpr (not xstd::bit_mask_mapping<key_mapping, key_type>) {
-                                                meets_it_as_an_empty_set_or_refuses(a, v);
-                                        }
                                 }
                         }
                 }
@@ -655,6 +650,9 @@ BOOST_AUTO_TEST_CASE(EveryOwnerHoldsAtMostItsUniverse)
                 BOOST_CHECK_EQUAL(x.size(), key_mapping::size - 1UZ);
                 BOOST_CHECK(not x.contains(keys.front()));
                 BOOST_CHECK(std::ranges::all_of(x, [](key_type k) -> bool { return key_mapping::is_key(k); }));
+                auto top = X({keys.back()});
+                top <<= 1UZ;
+                BOOST_CHECK(top.empty());
         });
 }
 
@@ -686,21 +684,22 @@ BOOST_AUTO_TEST_CASE(ALeftShiftDropsTheKeysItCarriesPastMaxSize)
         shifted <<= 64UZ;
         BOOST_CHECK_EQUAL(shifted.size(), 1UZ);
         BOOST_CHECK(shifted.contains(64UZ));
-        for (auto const n : {shifted.max_size() - 64UZ, top - 64UZ, top}) {
-                auto emptied = shifted;
-                emptied <<= n;
-                BOOST_CHECK(emptied.empty());
+        auto emptied = shifted;
+        emptied <<= shifted.max_size() - 64UZ;
+        BOOST_CHECK(emptied.empty());
+        for (auto const n : {top - 64UZ, top}) {
+                BOOST_CHECK(xstd::shl(shifted, n).empty());
         }
 }
 
-// back() has a non-empty set as its precondition, and a zero width has no non-empty state to ask it in.
-BOOST_AUTO_TEST_CASE(AZeroWidthAnswersBackWithoutScanning)
+// A zero width has no non-empty state, so front() and back(), whose precondition that is, are never asked of it.
+BOOST_AUTO_TEST_CASE(AZeroWidthIsAlwaysEmpty)
 {
         auto const z = xstd::bit_fixed_set<0>();
 
         BOOST_CHECK(z.empty());
         BOOST_CHECK_EQUAL(z.size(), 0UZ);
-        BOOST_CHECK_EQUAL(static_cast<std::size_t>(z.back()), 0UZ);
+        BOOST_CHECK(z.begin() == z.end());
 }
 
 // Across two run-time widths the set operations ask whole blocks, with padding clear above them by invariant.
@@ -774,27 +773,27 @@ BOOST_AUTO_TEST_CASE(SubsetAndIntersectionAcrossWidthsCompareBlocks)
         auto const wide   = grown_to(300UZ, {1UZ, 5UZ, 59UZ, 280UZ});
 
         // Ours inside theirs: nothing of ours lies above their last block, so the remainder is empty.
-        BOOST_CHECK(xstd::bit_includes(wide, narrow));
+        BOOST_CHECK(xstd::ranges::bit_includes(wide, narrow));
 
         // Theirs is not inside ours: 280 lives above our last block, which the remainder check catches.
-        BOOST_CHECK(not xstd::bit_includes(narrow, wide));
+        BOOST_CHECK(not xstd::ranges::bit_includes(narrow, wide));
 
         // A wider operand whose remainder IS clear still fails on the shared blocks when it holds more there.
         auto const wide_low = grown_to(300UZ, {1UZ, 5UZ, 59UZ});
-        BOOST_CHECK(not xstd::bit_includes(narrow, wide_low));
-        BOOST_CHECK(xstd::bit_includes(wide_low, narrow));
+        BOOST_CHECK(not xstd::ranges::bit_includes(narrow, wide_low));
+        BOOST_CHECK(xstd::ranges::bit_includes(wide_low, narrow));
 
         // And succeeds when the shared blocks agree and the remainder is clear.
         auto const wide_same = grown_to(300UZ, {1UZ, 5UZ});
-        BOOST_CHECK(xstd::bit_includes(narrow, wide_same));
+        BOOST_CHECK(xstd::ranges::bit_includes(narrow, wide_same));
 
         // Meeting in a shared block, and not meeting at all.
-        BOOST_CHECK(xstd::bit_intersects(narrow, wide));
-        BOOST_CHECK(xstd::bit_intersects(wide, narrow));
+        BOOST_CHECK(xstd::ranges::bit_intersects(narrow, wide));
+        BOOST_CHECK(xstd::ranges::bit_intersects(wide, narrow));
 
         auto const elsewhere = grown_to(300UZ, {7UZ, 280UZ});
-        BOOST_CHECK(xstd::bit_disjoint(narrow, elsewhere));
-        BOOST_CHECK(xstd::bit_disjoint(elsewhere, narrow));
+        BOOST_CHECK(xstd::ranges::bit_disjoint(narrow, elsewhere));
+        BOOST_CHECK(xstd::ranges::bit_disjoint(elsewhere, narrow));
 }
 
 // The ordering turns on one position, the lowest at which the two sets disagree, in both operand orders.
@@ -884,6 +883,7 @@ BOOST_AUTO_TEST_CASE(TheCompoundOperatorsAcrossWidthsWorkOnBlocks)
         BOOST_CHECK_EQUAL(width_of(h), 61UZ);
 }
 
+#ifdef TEST_BYTES_ARE_POSITIONS
 // A set view converts too, reaching the storage through the accessor rather than the member, as a Bits* requires.
 BOOST_AUTO_TEST_CASE(ASetViewExchangesThroughTheBitsItRefersTo)
 {
@@ -914,6 +914,7 @@ BOOST_AUTO_TEST_CASE(ASetViewExchangesThroughTheBitsItRefersTo)
                 return xstd::bit_convert<std::bitset<N>>(v).count() == 1UZ;
         }());
 }
+#endif
 
 namespace {
 
@@ -921,7 +922,7 @@ template<class Compare, std::size_t N>
 using fixed_by = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, N, xstd::bit_key_mapping<std::size_t>, Compare>;
 
 template<class Compare>
-using dynamic_by = xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, Compare>;
+using dynamic_by = xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, Compare>;
 
 using descending_fixed = fixed_by<std::greater<std::size_t>, 130>;
 
@@ -936,7 +937,7 @@ template<class Compare>
 constexpr bool small_takes = requires { typename xstd::basic_bit_small_set<std::size_t, std::uint8_t, 8, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
 
 template<class Compare>
-constexpr bool dynamic_takes = requires { typename xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
+constexpr bool dynamic_takes = requires { typename xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, Compare>; }; // NOLINT(readability-redundant-typename): a type-requirement is spelled with it
 
 template<class Compare>
 constexpr bool every_owner_takes = fixed_takes<Compare> and inplace_takes<Compare> and small_takes<Compare> and dynamic_takes<Compare>;
@@ -1120,12 +1121,69 @@ BOOST_AUTO_TEST_CASE(AViewOverADescendingOwnerAscends)
         BOOST_CHECK(std::ranges::equal(owner, std::vector<std::size_t>{129UZ, 70UZ, 3UZ}));
 }
 
+// front() and back() leave one at a time, in the set's own order, until the set is empty.
+BOOST_AUTO_TEST_CASE(PoppingTakesFrontAndBackInTheSetsOrder)
+{
+        auto const drains = []<class Set>(Set const& s) -> void {
+                auto const order = std::vector<std::size_t>(s.begin(), s.end());
+                auto from_front  = s;
+                for (auto const k : order) {
+                        BOOST_CHECK_EQUAL(static_cast<std::size_t>(from_front.front()), k);
+                        from_front.pop_front();
+                }
+                BOOST_CHECK(from_front.empty());
+                auto from_back = s;
+                for (auto const k : order | std::views::reverse) {
+                        BOOST_CHECK_EQUAL(static_cast<std::size_t>(from_back.back()), k);
+                        from_back.pop_back();
+                }
+                BOOST_CHECK(from_back.empty());
+        };
+        drains(xstd::bit_fixed_set<64>{3UZ, 40UZ, 63UZ});
+        drains(xstd::bit_fixed_set<128>{0UZ, 63UZ, 64UZ, 127UZ});
+        drains(xstd::bit_fixed_set<100>{1UZ, 64UZ, 99UZ});
+        drains(xstd::bit_fixed_set<300>{2UZ, 130UZ, 299UZ});
+        drains(descending_fixed{3UZ, 70UZ, 129UZ});
+        drains(dynamic_by<std::greater<std::size_t>>{5UZ, 300UZ});
+        drains(xstd::bit_set{7UZ, 1'000UZ});
+        drains(xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 200>{0UZ, 199UZ});
+}
+
+// A range erase clears the keys from its first up to its last, in the set's own order, and hands back last.
+BOOST_AUTO_TEST_CASE(ARangeEraseClearsTheKeysBetweenItsEnds)
+{
+        auto const erases_each_range = []<class Set>(Set const& s) -> void {
+                auto const order = std::vector<std::size_t>(s.begin(), s.end());
+                auto const n     = std::ssize(order);
+                for (auto const i : std::views::iota(0Z, n + 1)) {
+                        for (auto const j : std::views::iota(i, n + 1)) {
+                                auto erased         = s;
+                                auto const last     = std::ranges::next(erased.begin(), j);
+                                auto const returned = erased.erase(std::ranges::next(erased.begin(), i), last);
+                                auto kept           = order;
+                                kept.erase(kept.begin() + i, kept.begin() + j);
+                                BOOST_TEST_CONTEXT("erasing [" << i << ", " << j << ")")
+                                {
+                                        BOOST_CHECK(std::ranges::equal(erased, kept));
+                                        BOOST_CHECK_EQUAL(std::ranges::distance(erased.begin(), returned), i);
+                                }
+                        }
+                }
+        };
+        erases_each_range(xstd::bit_fixed_set<64>{3UZ, 40UZ, 41UZ, 63UZ});
+        erases_each_range(xstd::bit_fixed_set<300>{0UZ, 2UZ, 63UZ, 64UZ, 130UZ, 191UZ, 192UZ, 299UZ});
+        erases_each_range(descending_fixed{0UZ, 3UZ, 64UZ, 70UZ, 129UZ});
+        erases_each_range(dynamic_by<std::greater<std::size_t>>{5UZ, 63UZ, 64UZ, 300UZ});
+        erases_each_range(xstd::bit_set{7UZ, 8UZ, 1'000UZ});
+        erases_each_range(xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 200>{0UZ, 127UZ, 128UZ, 199UZ});
+}
+
 // The guides carry a comparator through, as std::set's do.
 BOOST_AUTO_TEST_CASE(TheGuidesDeduceTheComparator)
 {
         auto const keys = std::vector<std::size_t>{2UZ, 9UZ, 4UZ};
         auto const s    = xstd::basic_bit_set(keys.begin(), keys.end(), std::greater<std::size_t>()); // NOLINT(modernize-use-transparent-functors): the key-typed form is the one deduced
-        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::size_t, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>> const>);
+        static_assert(std::same_as<decltype(s), xstd::basic_bit_set<std::size_t, std::vector<std::size_t>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>> const>);
         BOOST_CHECK(std::ranges::equal(s, std::vector<std::size_t>{9UZ, 4UZ, 2UZ}));
 }
 
@@ -1166,7 +1224,7 @@ template<class X>
 auto query_mismatches(X const& x, X const& y)
         -> std::size_t
 {
-        return static_cast<std::size_t>(xstd::bit_includes(x, y) != std::ranges::includes(x, y, x.key_comp()));
+        return static_cast<std::size_t>(xstd::ranges::bit_includes(x, y) != std::ranges::includes(x, y, x.key_comp()));
 }
 
 // Every pair of subsets of the first width positions, owned and, where the owner can be viewed, viewed.
@@ -1189,7 +1247,7 @@ auto query_mismatches_over_pairs(std::size_t width)
 }
 
 using small_descending_fixed = xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 6, xstd::bit_key_mapping<std::size_t>, std::greater<>>;
-using small_descending_set   = xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::greater<>>;
+using small_descending_set   = xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::greater<>>;
 
 } // namespace
 
@@ -1209,10 +1267,10 @@ BOOST_AUTO_TEST_CASE(DisjointIsNotIntersectsAndTheSupersetIsTheSubsetReadTheOthe
         auto const wide   = xstd::bit_set({1UZ, 100UZ});
         auto const narrow = xstd::bit_set({1UZ});
         auto const empty  = xstd::bit_set();
-        BOOST_CHECK(xstd::bit_includes(wide, narrow) and not xstd::bit_includes(narrow, wide) and xstd::bit_intersects(wide, narrow));
-        BOOST_CHECK(xstd::bit_includes(narrow, empty) and not xstd::bit_includes(empty, narrow) and xstd::bit_disjoint(narrow, empty));
-        BOOST_CHECK(xstd::bit_includes(empty, empty));
-        static_assert(noexcept(xstd::bit_disjoint(wide, narrow)) and noexcept(xstd::bit_includes(wide, narrow)));
+        BOOST_CHECK(xstd::ranges::bit_includes(wide, narrow) and not xstd::ranges::bit_includes(narrow, wide) and xstd::ranges::bit_intersects(wide, narrow));
+        BOOST_CHECK(xstd::ranges::bit_includes(narrow, empty) and not xstd::ranges::bit_includes(empty, narrow) and xstd::ranges::bit_disjoint(narrow, empty));
+        BOOST_CHECK(xstd::ranges::bit_includes(empty, empty));
+        static_assert(noexcept(xstd::ranges::bit_disjoint(wide, narrow)) and noexcept(xstd::ranges::bit_includes(wide, narrow)));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

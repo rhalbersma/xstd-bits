@@ -9,30 +9,29 @@
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>       // bit_index_mapping
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp>        // bit_mask_mapping
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
+#include <xstd/bits/bit_ranges/from_blocks.hpp>               // from_blocks, from_blocks_t
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>              // bit_key_mapping
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp>           // admits_width, key_direction, set_adaptor
+#include <xstd/bits/bit_set/indeterminate.hpp>                // indeterminate_t
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>    // bit_blocks_extent_v
 #include <xstd/bits/bit_type_traits/bit_least.hpp>            // least_block_t
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container
 #include <xstd/bits/detail/bit_layout.hpp>                    // byte_count, bytes_bits
+#include <xstd/bits/detail/input_iterator_pair.hpp>           // input_iterator_pair
 #include <xstd/bits/detail/num_blocks.hpp>                    // holds_width, num_blocks_v
 #include <xstd/bits/detail/ownership.hpp>                     // storage, storage_access
 #include <xstd/bits/detail/rebind.hpp>                        // rebind
 #include <xstd/bits/detail/shift.hpp>                         // shr
-#include <xstd/bits/from_blocks.hpp>                          // from_blocks, from_blocks_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
 #include <xstd/misc/concepts/container_compatible_range.hpp>  // container_compatible_range
-#include <boost/container_hash/is_range.hpp>                  // is_range
-#include <boost/container_hash/is_tuple_like.hpp>             // is_tuple_like
 #include <array>                                              // array
 #include <cassert>                                            // assert
 #include <concepts>                                           // constructible_from, same_as
 #include <cstddef>                                            // size_t
-#include <functional>                                         // hash, less
+#include <functional>                                         // less
 #include <initializer_list>                                   // initializer_list
-#include <iterator>                                           // input_iterator
 #include <ranges>                                             // from_range, from_range_t
-#include <type_traits>                                        // conditional_t, false_type, is_enum_v
+#include <type_traits>                                        // conditional_t, is_enum_v
 #include <utility>                                            // forward
 
 namespace xstd {
@@ -70,10 +69,14 @@ public:
         {}
 
         [[nodiscard]] constexpr explicit basic_bit_fixed_set(key_compare const& /* comp */) noexcept
-                : base_type()
+                : base_type(key_compare())
         {}
 
-        template<std::input_iterator InputIterator>
+        // Not in [set.cons]: blocks left default-initialized, after which only assignment and destruction are valid.
+        [[nodiscard]] constexpr explicit basic_bit_fixed_set(indeterminate_t) noexcept {}
+
+        template<class InputIterator>
+                requires bits::detail::input_iterator_pair<InputIterator, InputIterator>
         [[nodiscard]] constexpr basic_bit_fixed_set(InputIterator first, InputIterator last, key_compare const& /* comp */ = key_compare())
                 : base_type(first, last)
         {}
@@ -85,6 +88,7 @@ public:
 
         // A mask's list is the union of its values, so {m} is the conversion from m and {a, b} two one-bit values.
         [[nodiscard]] constexpr basic_bit_fixed_set(std::initializer_list<value_type> il, key_compare const& /* comp */ = key_compare()) noexcept(is_mask)
+                : base_type(key_compare())
         {
                 if constexpr (is_mask) {
                         for (auto const& mask : il) {
@@ -294,30 +298,5 @@ struct bits::detail::rebind<basic_bit_fixed_set<Key, Block, N, KeyMapping, Compa
 };
 
 } // namespace xstd
-
-namespace boost::container_hash {
-
-// A reading with iterators says it is neither range nor tuple, so Boost hashes it as the value it is.
-template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
-struct is_range<xstd::basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>> : std::false_type
-{};
-
-template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
-struct is_tuple_like<xstd::basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>> : std::false_type
-{};
-
-} // namespace boost::container_hash
-
-// NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
-
-namespace std {
-
-template<class Key, class Block, std::size_t N, class KeyMapping, class Compare>
-struct hash<xstd::basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>> : hash<typename xstd::basic_bit_fixed_set<Key, Block, N, KeyMapping, Compare>::adaptor_type>
-{};
-
-} // namespace std
-
-// NOLINTEND(bugprone-std-namespace-modification)
 
 #endif // XSTD_BITS_BIT_SET_BIT_FIXED_SET_HPP

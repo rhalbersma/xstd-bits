@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_array.hpp>                  // bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // bit_fixed_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
-#include <xstd/bits/bit_span.hpp>                   // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>          // bit_span
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <benchmark/benchmark.h>                    // DoNotOptimize, BENCHMARK_TEMPLATE, BENCHMARK_MAIN, State
 #include <array>                                    // array
@@ -106,7 +106,7 @@ auto sequence_count_owner(benchmark::State& state)
         auto v = filled<N, xstd::bit_array<N>>();
         benchmark::DoNotOptimize(&v);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::bit_count(v));
+                benchmark::DoNotOptimize(xstd::ranges::bit_count(v, true));
         }
 }
 
@@ -118,7 +118,7 @@ auto sequence_count_view_of_storage(benchmark::State& state)
         benchmark::DoNotOptimize(&blocks);
         auto const v = xstd::bit_span(blocks);
         for (auto _ : state) {
-                benchmark::DoNotOptimize(xstd::bit_count(v));
+                benchmark::DoNotOptimize(xstd::ranges::bit_count(v, true));
         }
 }
 

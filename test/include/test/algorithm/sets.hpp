@@ -34,7 +34,7 @@
 namespace test::algorithm {
 
 // The descending column of ours, at a static width either side of a block boundary and at a run-time one.
-using descending_sets = std::tuple<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_mapping<std::size_t>, std::greater<>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::greater<>>>;
+using descending_sets = std::tuple<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_mapping<std::size_t>, std::greater<>>, xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::greater<>>>;
 
 // Every column of ours the set clauses sweep, their standard models left out, and the descending ones besides.
 using sets = decltype(std::tuple_cat(std::declval<test::spec::set::fixed>(), std::declval<test::spec::set::dynamic>(), std::declval<test::spec::set::inplace>(), std::declval<test::spec::set::small>(), std::declval<test::spec::set::user_storage>(), std::declval<descending_sets>()));

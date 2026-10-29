@@ -3,6 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/endian.hpp>                               // IWYU pragma: keep; TEST_BYTES_ARE_POSITIONS, bytes_are_positions
 #include <test/whole_blocks.hpp>                         // whole_blocks
 #include <xstd/bits/bit_array.hpp>                       // bit_array
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp> // bit_convertible_to
@@ -64,13 +65,13 @@ BOOST_AUTO_TEST_CASE(ADynamicBitsetConvertsInKeepingItsSizeAndPositions)
         auto const v = xstd::bit_convert<xstd::bit_vector>(narrow);
         BOOST_CHECK_EQUAL(v.size(), 13UZ);
         BOOST_CHECK(positions(v) == keys);
-        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(narrow)) == keys);
-        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::uint16_t>>(narrow)) == keys);
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(narrow)) == keys);
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_set<std::size_t, std::vector<std::uint16_t>>>(narrow)) == keys);
 
         // A set target takes whole blocks of its own, and a wider source block lands on narrower ones.
         auto const wide = make<std::uint64_t>(70, {0, 69});
         BOOST_CHECK_EQUAL(xstd::bit_convert<xstd::bit_vector>(xstd::bit_convert<xstd::bit_set>(wide)).size(), test::whole_blocks(70UZ));
-        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(wide)) == (std::vector<std::size_t>{0, 69}));
+        BOOST_CHECK(positions(xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(wide)) == (std::vector<std::size_t>{0, 69}));
 
         // An empty one is an empty sequence.
         BOOST_CHECK(xstd::bit_convert<xstd::bit_vector>(boost::dynamic_bitset<>()).empty());
@@ -89,12 +90,14 @@ BOOST_AUTO_TEST_CASE(AnOwnerConvertsOutKeepingItsWidthAndPositions)
         BOOST_CHECK(positions(xstd::bit_convert<boost::dynamic_bitset<std::uint8_t>>(v)) == (std::vector<std::size_t>{0, 69}));
 
         // A narrower source block is gathered into a wider target one, as far as the source reaches.
-        auto const octets = xstd::bit_convert<xstd::basic_bit_vector<std::uint8_t>>(make<std::uint8_t>(13, {12}));
+        auto const octets = xstd::bit_convert<xstd::basic_bit_vector<std::vector<std::uint8_t>>>(make<std::uint8_t>(13, {12}));
         BOOST_CHECK(positions(xstd::bit_convert<boost::dynamic_bitset<std::uint64_t>>(octets)) == (std::vector<std::size_t>{12}));
 
         BOOST_CHECK_EQUAL(xstd::bit_convert<boost::dynamic_bitset<>>(xstd::bit_set{3, 64, 129}).size(), test::whole_blocks(130UZ));
         BOOST_CHECK(xstd::bit_convert<boost::dynamic_bitset<>>(xstd::bit_vector()).empty());
+#ifdef TEST_BYTES_ARE_POSITIONS
         BOOST_CHECK(positions(xstd::bit_convert<boost::dynamic_bitset<std::uint16_t>>(std::bitset<70>(0b101))) == (std::vector<std::size_t>{0, 2}));
+#endif
 
         // And back: the round trip is the identity.
         auto const original = make<std::uint8_t>(13, {0, 5, 12});
@@ -105,8 +108,10 @@ BOOST_AUTO_TEST_CASE(AnOwnerConvertsOutKeepingItsWidthAndPositions)
 BOOST_AUTO_TEST_CASE(AFixedTargetTakesADynamicBitsetByValue)
 {
         BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint64_t>(make<std::uint8_t>(13, {0, 12})), (1ULL << 12U) | 1ULL);
+#ifdef TEST_BYTES_ARE_POSITIONS
         BOOST_CHECK(xstd::bit_convert<std::bitset<70>>(make<std::uint64_t>(70, {69})).test(69));
         BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<std::bitset<64>>(make<std::uint64_t>(70, {69}))), std::overflow_error);
+#endif
         BOOST_CHECK(positions(xstd::bit_convert<boost::dynamic_bitset<std::uint8_t>>(xstd::bit_array<20>{true})) == (std::vector<std::size_t>{0}));
         BOOST_CHECK_EQUAL(xstd::bit_convert<boost::dynamic_bitset<std::uint8_t>>(xstd::bit_array<20>()).size(), 20UZ);
 }
@@ -115,7 +120,7 @@ BOOST_AUTO_TEST_CASE(AFixedTargetTakesADynamicBitsetByValue)
 BOOST_AUTO_TEST_CASE(BothDirectionsAreBitConvertible)
 {
         static_assert(xstd::bit_convertible_to<boost::dynamic_bitset<>, xstd::bit_vector> and xstd::bit_convertible_to<xstd::bit_set, boost::dynamic_bitset<>>);
-        static_assert(xstd::bit_convertible_to<boost::dynamic_bitset<>, std::uint64_t> and xstd::bit_convertible_to<std::bitset<70>, boost::dynamic_bitset<>>);
+        static_assert(xstd::bit_convertible_to<boost::dynamic_bitset<>, std::uint64_t> and xstd::bit_convertible_to<std::bitset<70>, boost::dynamic_bitset<>> == test::bytes_are_positions);
         static_assert(not xstd::bit_convertible_to<boost::dynamic_bitset<std::uint8_t>, boost::dynamic_bitset<>>);
         BOOST_CHECK(true);
 }

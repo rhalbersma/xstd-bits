@@ -51,7 +51,8 @@ ClusterFuzzLite and Codecov's `patch`. CONTRIBUTING.md's table lists the ones br
      supports.
 5. **A failure inside xstd-ints or xstd-misc is fixed there.** This repository pins both by commit. The fix goes to
    that repository's queue, and a repin follows here once it merges. A workaround here is only for the interval.
-6. **Validate, then push once.** The full `tools/ci-local.sh` run passes before every push. Then update the body.
+6. **Validate, then push once.** The `tools/ci-local.sh` legs the change can break pass before every push, and the
+   rest too where the full run can finish, as CLAUDE.md's "Checking your work" sets out. Then update the body.
 
 **Never get to green by losing a check.** That rules out:
 - skipping, disabling or loosening a test;
@@ -77,7 +78,7 @@ A re-run is only for a leg that died before any test ran, such as a lost runner 
 
 - Merge `origin/main` into the branch and resolve the conflict.
 - Never rebase, amend or force-push a branch that has a pull request.
-- Run the full `ci-local.sh` run again, then push.
+- Run the `ci-local.sh` legs the merge can break again, then push.
 
 ## Review comments
 

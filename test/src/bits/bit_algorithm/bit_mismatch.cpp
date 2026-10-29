@@ -6,7 +6,7 @@
 #include <test/algorithm/sequences.hpp>             // for_each_window, patterned
 #include <xstd/bits/bit_algorithm/bit_mismatch.hpp> // bit_mismatch
 #include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_span.hpp>                   // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>          // bit_span
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                // mismatch, mismatch_result
@@ -21,14 +21,14 @@ BOOST_AUTO_TEST_SUITE(BitMismatch)
 namespace {
 
 template<class R1, class R2>
-concept comparable = requires (R1 const& r1, R2 const& r2) { xstd::bit_mismatch(r1, r2); };
+concept comparable = requires (R1 const& r1, R2 const& r2) { xstd::ranges::bit_mismatch(r1, r2); };
 
 // Both iterators of the algorithm's answer where std::ranges::mismatch puts them, as offsets from each begin.
 template<class R>
 [[nodiscard]] constexpr auto agrees(R const& r1, R const& r2)
         -> bool
 {
-        auto const got  = xstd::bit_mismatch(r1, r2);
+        auto const got  = xstd::ranges::bit_mismatch(r1, r2);
         auto const want = std::ranges::mismatch(r1, r2);
         return got.in1 - std::ranges::begin(r1) == want.in1 - std::ranges::begin(r1) and got.in2 - std::ranges::begin(r2) == want.in2 - std::ranges::begin(r2);
 }
@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE(AgreesWithRangesMismatchAtEveryPosition)
 {
         auto wrong = 0;
         for (auto const n : {0UZ, 1UZ, 8UZ, 21UZ, 64UZ, 130UZ}) {
-                auto const v = test::algorithm::patterned(xstd::basic_bit_vector<std::uint8_t>(n));
+                auto const v = test::algorithm::patterned(xstd::basic_bit_vector<std::vector<std::uint8_t>>(n));
                 wrong += static_cast<int>(not agrees(v, v));
                 for (auto const i : std::views::iota(0UZ, n)) {
                         auto w = v;
@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE(WindowsCompareAsRangesMismatch)
 BOOST_AUTO_TEST_CASE(AnswersAsRangesMismatchDoes)
 {
         using A = xstd::bit_array<8>;
-        static_assert(std::same_as<decltype(xstd::bit_mismatch(A(), std::declval<A&>())), std::ranges::mismatch_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_mismatch(A(), std::declval<A&>())), std::ranges::mismatch_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
         static_assert(agrees(test::algorithm::patterned(xstd::bit_array<70>()), xstd::bit_array<70>()));
         static_assert(comparable<A, A> and not comparable<A, xstd::bit_array<9>> and not comparable<std::vector<bool>, std::vector<bool>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"

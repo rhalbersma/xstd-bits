@@ -5,8 +5,8 @@
 
 #include <xstd/bits/bit_algorithm.hpp>        // bit_all_of, bit_count, bit_fill, bit_none_of
 #include <xstd/bits/bit_set/bit_set_view.hpp> // bit_set_view
-#include <xstd/bits/bit_span.hpp>             // bit_span
-#include <xstd/bits/bit_subspan.hpp>          // bit_subspan
+#include <xstd/bits/bit_span/bit_span.hpp>    // bit_span
+#include <xstd/bits/bit_span/bit_subspan.hpp> // bit_subspan
 #include <boost/test/unit_test.hpp>           // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                          // ranges::equal, ranges::find, ranges::reverse
 #include <array>                              // array
@@ -63,7 +63,7 @@ template<class W, class R>
                         from_sequence.push_back(n);
                 }
         }
-        return forward == expected and backward == expected and from_sequence == expected and set.size() == expected.size() and static_cast<std::size_t>(xstd::bit_count(seq)) == expected.size();
+        return forward == expected and backward == expected and from_sequence == expected and set.size() == expected.size() and static_cast<std::size_t>(xstd::ranges::bit_count(seq, true)) == expected.size();
 }
 
 template<class W>
@@ -115,9 +115,9 @@ BOOST_AUTO_TEST_CASE(AnArrayOfBlocksIsAStaticWidth)
         BOOST_CHECK(readings_agree_with(two, two));
         BOOST_CHECK(readings_agree_with(four, four));
 
-        static_cast<void>(xstd::bit_fill(xstd::bit_span(four), true));
+        static_cast<void>(xstd::ranges::bit_fill(xstd::bit_span(four), true));
         BOOST_CHECK(std::ranges::equal(four, std::array<std::uint32_t, 4>{~0U, ~0U, ~0U, ~0U}));
-        BOOST_CHECK(xstd::bit_all_of(xstd::bit_span(four)));
+        BOOST_CHECK(xstd::ranges::bit_all_of(xstd::bit_span(four)));
 }
 
 // A contiguous range of blocks that does not subscript is no bit storage, so no view lends it.
@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE(AVectorOfBlocksIsARunTimeWidth)
         // A window reaches across the block boundary and writes only its own positions.
         auto const window = seq.subspan(30, 20);
         BOOST_CHECK(static_cast<bool>(window[10]));
-        static_cast<void>(xstd::bit_fill(window, true));
+        static_cast<void>(xstd::ranges::bit_fill(window, true));
         BOOST_CHECK_EQUAL(blocks[0], 0xC000'0001U);
         BOOST_CHECK_EQUAL(blocks[1], 0x8003'FFFFU);
         BOOST_CHECK(readings_agree_with(blocks, blocks));
@@ -199,8 +199,8 @@ BOOST_AUTO_TEST_CASE(NoBlocksIsWidthZero)
         BOOST_CHECK(xstd::bit_set_view(blocks).empty());
         BOOST_CHECK(xstd::bit_set_view(blocks).begin() == xstd::bit_set_view(blocks).end());
         BOOST_CHECK(xstd::bit_span(blocks).empty());
-        BOOST_CHECK(xstd::bit_all_of(xstd::bit_span(blocks)));
-        BOOST_CHECK(xstd::bit_none_of(xstd::bit_span(blocks)));
+        BOOST_CHECK(xstd::ranges::bit_all_of(xstd::bit_span(blocks)));
+        BOOST_CHECK(xstd::ranges::bit_none_of(xstd::bit_span(blocks)));
 }
 
 // A view over const blocks reads them and cannot write, and one over the same blocks unqualified sees what it writes.
@@ -261,7 +261,7 @@ BOOST_AUTO_TEST_CASE(AViewIsNamedByItsBlocks)
         auto const seq = xstd::bit_span(blocks);
         seq[33]        = true;
         BOOST_CHECK_EQUAL(blocks[1], 0x02U);
-        static_cast<void>(xstd::bit_fill(xstd::bit_span(fixed).first<4>(), true));
+        static_cast<void>(xstd::ranges::bit_fill(xstd::bit_span(fixed).first<4>(), true));
         BOOST_CHECK_EQUAL(fixed[0], 0x000FU);
 }
 

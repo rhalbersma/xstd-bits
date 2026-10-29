@@ -11,6 +11,7 @@
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp>        // bit_mask_mapping
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
 #include <xstd/bits/bit_functional/bit_hash.hpp>              // bit_hash
+#include <xstd/bits/bit_ranges/from_blocks.hpp>               // from_blocks_t
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>              // bit_key_mapping
 #include <xstd/bits/bit_set/detail/is_key.hpp>                // is_key
 #include <xstd/bits/detail/adapted_bits.hpp>                  // adapted_bits
@@ -20,11 +21,11 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>                 // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                   // numeric_three_way, set_equal, three_way
 #include <xstd/bits/detail/hash.hpp>                          // hash_append_keys
+#include <xstd/bits/detail/input_iterator_pair.hpp>           // input_iterator_pair
 #include <xstd/bits/detail/non_volatile.hpp>                  // non_volatile
 #include <xstd/bits/detail/owner_members.hpp>                 // owner_members
 #include <xstd/bits/detail/ownership.hpp>                     // owned_storage, owner_of, owns, reads, set_reading_tag, storage, storage_access
 #include <xstd/bits/detail/storage_ptr.hpp>                   // storage_ptr_t, storage_ref_t
-#include <xstd/bits/from_blocks.hpp>                          // from_blocks_t
 #include <xstd/misc/concepts/specialization_of.hpp>           // specialization_of
 #include <xstd/misc/type_traits/empty_base_type.hpp>          // empty_base_type
 #include <boost/container_hash/is_range.hpp>                  // is_range
@@ -38,7 +39,7 @@
 #include <format>                                             // format, formatter
 #include <functional>                                         // greater, hash, less
 #include <initializer_list>                                   // initializer_list
-#include <iterator>                                           // bidirectional_iterator_tag, input_iterator, iter_reference_t, make_reverse_iterator, reverse_iterator, sentinel_for
+#include <iterator>                                           // bidirectional_iterator_tag, iter_reference_t, make_reverse_iterator, reverse_iterator
 #include <ranges>                                             // begin, enable_borrowed_range, enable_view, end, input_range, iota, iota_view, range_reference_t, from_range_t, subrange
 #include <source_location>                                    // source_location
 #include <span>                                               // dynamic_extent
@@ -375,6 +376,7 @@ public:
 
         static constexpr bool owns_storage     = is_owner;
         static constexpr bool has_static_width = (Bits::extent != std::dynamic_extent);
+        static constexpr bool has_closed_width = (set::static_max_size<Bits, Store>() != std::dynamic_extent);
 
         // types
         using key_type               = Key;
@@ -407,10 +409,12 @@ public:
                 requires is_owner
         = default;
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
+        // Built key by key over blocks reset first: default-initialized ones are unwritten, and inserting reads them.
+        template<class I, class S>
+                requires bits::detail::input_iterator_pair<I, S> and is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr set_adaptor(I first, S last)
         {
+                m_bits.reset();
                 insert(first, last);
         }
 
@@ -418,22 +422,26 @@ public:
                 requires is_owner and std::constructible_from<value_type, std::ranges::range_reference_t<R>>
         [[nodiscard]] constexpr set_adaptor(std::from_range_t, R&& rg)
         {
+                m_bits.reset();
                 insert(std::ranges::begin(rg), std::ranges::end(rg));
         }
 
         [[nodiscard]] constexpr set_adaptor(std::initializer_list<value_type> il)
                 requires is_owner
         {
+                m_bits.reset();
                 insert(il.begin(), il.end());
         }
 
         // [set.cons]'s comparator arguments, taken and dropped: each key_compare a set reading admits has no state.
         [[nodiscard]] constexpr explicit set_adaptor(key_compare const& /* comp */) noexcept(std::is_nothrow_default_constructible_v<Bits>)
                 requires is_owner
-        {}
+        {
+                m_bits.reset();
+        }
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
+        template<class I, class S>
+                requires bits::detail::input_iterator_pair<I, S> and is_owner and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr set_adaptor(I first, S last, key_compare const& /* comp */)
                 : set_adaptor(first, last)
         {}
@@ -460,16 +468,16 @@ public:
                 : members_type(std::in_place, alloc)
         {}
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires is_owner and is_allocator_aware and std::constructible_from<value_type, std::iter_reference_t<I>>
+        template<class I, class S>
+                requires bits::detail::input_iterator_pair<I, S> and is_owner and is_allocator_aware and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr set_adaptor(I first, S last, allocator_param const& alloc)
                 : members_type(std::in_place, alloc)
         {
                 insert(first, last);
         }
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
-                requires is_owner and is_allocator_aware and std::constructible_from<value_type, std::iter_reference_t<I>>
+        template<class I, class S>
+                requires bits::detail::input_iterator_pair<I, S> and is_owner and is_allocator_aware and std::constructible_from<value_type, std::iter_reference_t<I>>
         [[nodiscard]] constexpr set_adaptor(I first, S last, key_compare const& /* comp */, allocator_param const& alloc)
                 : set_adaptor(first, last, alloc)
         {}
@@ -648,7 +656,8 @@ public:
                 if constexpr (bits_type::has_stored_count) {
                         return size() == 0UZ;
                 } else {
-                        return begin() == end();
+                        // On the blocks, as begin() == end() leaves a countr_zero that GCC does not fold away.
+                        return bits().none();
                 }
         }
 
@@ -660,24 +669,19 @@ public:
 
         using members_type::max_size;
 
-        // element access, both with a non-empty set as their precondition.
+        // element access, both with a non-empty set as their precondition, so neither scan answers an empty one.
         [[nodiscard]] constexpr auto front() const noexcept
                 -> const_reference
         {
-                return *begin();
+                XSTD_BITS_ASSERT(not empty());
+                return {&bits(), is_descending ? bits().find_back() : bits().find_front()};
         }
 
-        // A zero width has no position to scan back from, and exclusive_find_prev asserts there.
         [[nodiscard]] constexpr auto back() const noexcept
                 -> const_reference
         {
-                if constexpr (is_zero_width) {
-                        return {&bits(), 0UZ};
-                } else if constexpr (is_descending) {
-                        return {&bits(), bits().find_first()};
-                } else {
-                        return {&bits(), bits().exclusive_find_prev(bits().size())};
-                }
+                XSTD_BITS_ASSERT(not empty());
+                return {&bits(), is_descending ? bits().find_front() : bits().find_back()};
         }
 
         // modifiers; each writes through the storage, so each exists exactly where the storage lets this handle write.
@@ -712,10 +716,10 @@ public:
                 return self.do_insert(position, KeyMapping::to_index(x));
         }
 
-        template<std::input_iterator I, std::sentinel_for<I> S>
+        template<class I, class S>
         constexpr auto insert(this non_volatile auto&& self, I first, S last)
                 -> void
-                requires std::constructible_from<value_type, std::iter_reference_t<I>> and requires { self.bits().growing_insert(KeyMapping::to_index(static_cast<value_type>(*first))); }
+                requires bits::detail::input_iterator_pair<I, S> and std::constructible_from<value_type, std::iter_reference_t<I>> and requires { self.bits().growing_insert(KeyMapping::to_index(static_cast<value_type>(*first))); }
         {
                 for (; first != last; ++first) {
                         auto const x = KeyMapping::to_index(static_cast<value_type>(*first));
@@ -768,28 +772,59 @@ public:
                 return nrv;
         }
 
-        // Total over key_type, as std::set's is: an absent key is the no-op returning zero.
+        // Total over key_type, as std::set's is: a value that is no key ranks past the width, where nothing is stored.
         constexpr auto erase(this non_volatile auto&& self, key_type const& x) noexcept
                 -> size_type
-                requires requires { self.bits().assign(KeyMapping::to_index(x), false); }
+                requires requires { self.bits().erase(KeyMapping::to_index(x)); }
         {
-                if (not self.contains(x)) {
+                if (not detail::is_key<KeyMapping>(x)) {
                         return 0UZ;
                 }
-                self.bits().assign(KeyMapping::to_index(x), false);
-                return 1UZ;
+                auto const pos = KeyMapping::to_index(x);
+                if (pos >= self.bits().size()) {
+                        return 0UZ;
+                }
+                return static_cast<size_type>(self.bits().erase(pos));
         }
 
         constexpr auto erase(this non_volatile auto&& self, const_iterator first, const_iterator last) noexcept
                 -> iterator
-                requires requires (std::size_t pos) { self.bits().assign(pos, false); }
+                requires requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, false); }
         {
-                // A range, not two positions: reversed, the walk steps past last into a scan nothing answers.
+                // A range, not two positions: reversed, the span between them runs backwards.
                 assert(is_descending ? (last == self.end() or KeyMapping::to_index(*last) <= KeyMapping::to_index(*first)) : KeyMapping::to_index(*first) <= KeyMapping::to_index(*last));
-                while (first != last) {
-                        self.bits().assign(KeyMapping::to_index(*first++), false);
+                if (first != last) {
+                        // Its keys are the set positions between its ends, so the span clears a block at a time.
+                        auto const lo = is_descending ? (last == self.end() ? 0UZ : last.m_idx + 1UZ) : first.m_idx;
+                        auto const hi = is_descending ? first.m_idx + 1UZ : last.m_idx;
+                        self.bits().set(lo, hi - lo, false);
                 }
                 return last;
+        }
+
+        // front() and back() removed, with their precondition: one step of a walk, on the first block holding a key.
+        constexpr auto pop_front(this non_volatile auto&& self) noexcept
+                -> void
+                requires requires { self.bits().drop_front(); }
+        {
+                XSTD_BITS_ASSERT(not self.empty());
+                if constexpr (is_descending) {
+                        self.bits().drop_back();
+                } else {
+                        self.bits().drop_front();
+                }
+        }
+
+        constexpr auto pop_back(this non_volatile auto&& self) noexcept
+                -> void
+                requires requires { self.bits().drop_back(); }
+        {
+                XSTD_BITS_ASSERT(not self.empty());
+                if constexpr (is_descending) {
+                        self.bits().drop_front();
+                } else {
+                        self.bits().drop_back();
+                }
         }
 
         // The blocks a from_blocks constructor takes, and what an owner's replace and extract trade in.
@@ -881,24 +916,36 @@ public:
                 -> auto&
                 requires enumerator_is_one_key and requires { self.clear(); self.bits().assign(KeyMapping::to_index(x), true); }
         {
-                auto const kept = self.contains(x);
-                self.clear();
-                if (kept) {
-                        self.bits().assign(KeyMapping::to_index(x), true);
+                auto const pos = KeyMapping::to_index(x);
+                if constexpr (has_static_width and std::default_initializable<bits_type>) {
+                        // The storage's own &= with the one-position mask: a test and an assign fold to a cmov instead.
+                        XSTD_BITS_ASSERT(pos < self.bits().size());
+                        auto mask = bits_type();
+                        mask.reset().set(pos);
+                        self.bits() &= mask;
+                } else {
+                        XSTD_BITS_ASSERT(pos < self.max_size());
+                        auto const kept = pos < self.bits().size() and self.bits().test(pos);
+                        self.clear();
+                        if (kept) {
+                                self.bits().assign(pos, true);
+                        }
                 }
                 return self;
         }
 
-        // Not noexcept: an enumerator outside the listed values throws here, as insert does.
-        constexpr auto operator|=(this non_volatile auto&& self, key_type x)
+        // The operators with a key are the unchecked doors, as std::bitset's operator[] is beside set(pos).
+        constexpr auto operator|=(this non_volatile auto&& self, key_type x) noexcept(has_static_width)
                 -> auto&
-                requires enumerator_is_one_key and requires { self.insert(x); }
+                requires enumerator_is_one_key and requires { self.bits().growing_insert(KeyMapping::to_index(x)); }
         {
-                static_cast<void>(self.insert(x));
+                auto const pos = KeyMapping::to_index(x);
+                self.require_key(pos);
+                static_cast<void>(self.bits().growing_insert(pos));
                 return self;
         }
 
-        constexpr auto operator^=(this non_volatile auto&& self, key_type x)
+        constexpr auto operator^=(this non_volatile auto&& self, key_type x) noexcept(has_static_width)
                 -> auto&
                 requires enumerator_is_one_key and requires { self.complement(x); }
         {
@@ -908,9 +955,18 @@ public:
 
         constexpr auto operator-=(this non_volatile auto&& self, key_type x) noexcept
                 -> auto&
-                requires enumerator_is_one_key and requires { self.erase(x); }
+                requires enumerator_is_one_key and requires { self.bits().erase(KeyMapping::to_index(x)); }
         {
-                static_cast<void>(self.erase(x));
+                auto const pos = KeyMapping::to_index(x);
+                if constexpr (has_static_width) {
+                        XSTD_BITS_ASSERT(pos < self.bits().size());
+                        static_cast<void>(self.bits().erase(pos));
+                } else {
+                        XSTD_BITS_ASSERT(pos < self.max_size());
+                        if (pos < self.bits().size()) {
+                                static_cast<void>(self.bits().erase(pos));
+                        }
+                }
                 return self;
         }
 
@@ -931,7 +987,7 @@ public:
                 return rhs & lhs;
         }
 
-        [[nodiscard]] friend constexpr auto operator|(set_adaptor const& lhs, key_type rhs)
+        [[nodiscard]] friend constexpr auto operator|(set_adaptor const& lhs, key_type rhs) noexcept(has_static_width)
                 -> derived_type
                 requires is_owner and enumerator_is_one_key
         {
@@ -940,14 +996,14 @@ public:
                 return nrv;
         }
 
-        [[nodiscard]] friend constexpr auto operator|(key_type lhs, set_adaptor const& rhs)
+        [[nodiscard]] friend constexpr auto operator|(key_type lhs, set_adaptor const& rhs) noexcept(has_static_width)
                 -> derived_type
                 requires is_owner and enumerator_is_one_key
         {
                 return rhs | lhs;
         }
 
-        [[nodiscard]] friend constexpr auto operator^(set_adaptor const& lhs, key_type rhs)
+        [[nodiscard]] friend constexpr auto operator^(set_adaptor const& lhs, key_type rhs) noexcept(has_static_width)
                 -> derived_type
                 requires is_owner and enumerator_is_one_key
         {
@@ -956,7 +1012,7 @@ public:
                 return nrv;
         }
 
-        [[nodiscard]] friend constexpr auto operator^(key_type lhs, set_adaptor const& rhs)
+        [[nodiscard]] friend constexpr auto operator^(key_type lhs, set_adaptor const& rhs) noexcept(has_static_width)
                 -> derived_type
                 requires is_owner and enumerator_is_one_key
         {
@@ -983,27 +1039,26 @@ public:
                 return nrv;
         }
 
-        // The shifts translate the set and keep the keys below max_size(); a run-time width grows towards it first.
+        // The shifts translate the set, n < max_size() their precondition; a dynamic width grows towards it first.
         constexpr auto operator<<=(this non_volatile auto&& self, std::size_t n) noexcept(has_static_width or bits_type::has_static_capacity)
                 -> auto&
                 requires requires { self.bits() <<= n; } and (has_static_width or requires { self.bits().resize(n); })
         {
                 if constexpr (has_static_width) {
-                        // The storage's shift has n < size() as its precondition; a constant n folds the test away.
-                        if (n < self.bits().size()) {
-                                self.bits() <<= n;
-                        } else {
-                                self.bits().fill(false);
-                        }
+                        XSTD_BITS_ASSERT(n < self.bits().size());
+                        self.bits() <<= n;
                 } else if constexpr (bits_type::has_zero_capacity) {
                         // A capacity of nought holds no element, so there is nothing to translate.
-                } else if (auto const lowest = self.bits().find_first(), width = self.bits().size(), top = self.max_size(); lowest == width or n >= top - lowest) {
-                        // No key lands below max_size(): the set empties at its width and asks for no growth.
-                        self.bits().fill(false);
                 } else {
-                        // width + n saturates and stops at max_size(); the storage's shift drops what passes the width.
-                        self.bits().resize(std::ranges::min(bits_type::width_sum(width, n), top));
-                        self.bits() <<= n;
+                        XSTD_BITS_ASSERT(n < self.max_size());
+                        if (auto const lowest = self.bits().find_first(), width = self.bits().size(), top = self.max_size(); lowest == width or n >= top - lowest) {
+                                // No key lands below max_size(): the set empties at its width and asks for no growth.
+                                self.bits().fill(false);
+                        } else {
+                                // width + n stops at max_size(); the storage's shift drops what passes the width.
+                                self.bits().resize(std::ranges::min(bits_type::width_sum(width, n), top));
+                                self.bits() <<= n;
+                        }
                 }
                 return self;
         }
@@ -1012,10 +1067,16 @@ public:
                 -> auto&
                 requires requires { self.bits() >>= n; }
         {
-                if (n < self.bits().size()) {
+                if constexpr (has_static_width) {
+                        XSTD_BITS_ASSERT(n < self.bits().size());
                         self.bits() >>= n;
                 } else {
-                        self.bits().fill(false);
+                        XSTD_BITS_ASSERT(n < self.max_size());
+                        if (n < self.bits().size()) {
+                                self.bits() >>= n;
+                        } else {
+                                self.bits().fill(false);
+                        }
                 }
                 return self;
         }
@@ -1031,6 +1092,20 @@ public:
                 -> value_compare
         {
                 return {};
+        }
+
+        // The unchecked lookup beside contains, as std::bitset's operator[] is beside test(pos).
+        [[nodiscard]] constexpr auto operator[](key_type const& x) const noexcept
+                -> bool
+        {
+                auto const pos = KeyMapping::to_index(x);
+                if constexpr (has_static_width) {
+                        XSTD_BITS_ASSERT(pos < bits().size());
+                        return bits().test(pos);
+                } else {
+                        XSTD_BITS_ASSERT(pos < max_size());
+                        return pos < bits().size() and bits().test(pos);
+                }
         }
 
         // set operations, total over key_type as std::set's are; is_key and the width are the guards, test() the read.
@@ -1070,7 +1145,12 @@ public:
                         auto const pos = KeyMapping::to_index(x);
                         return {&bits(), bits().total_find_prev(pos < bits().size() ? pos + 1UZ : bits().size())};
                 } else {
-                        return contains(x) ? const_iterator{&bits(), KeyMapping::to_index(x)} : upper_bound(x);
+                        // One scan from x's position, which answers x itself when it is present.
+                        auto const pos = KeyMapping::to_index(x);
+                        if (pos >= bits().size()) {
+                                return end();
+                        }
+                        return {&bits(), bits().inclusive_find_next(pos)};
                 }
         }
 
@@ -1179,13 +1259,13 @@ public:
         }
 
 private:
-        // Toggling one key, growing where insert grows; not noexcept, since growing allocates.
-        constexpr auto complement(this non_volatile auto&& self, value_type x)
+        // Toggling one key, growing where insert grows: the storage's flip inside the width.
+        constexpr auto complement(this non_volatile auto&& self, value_type x) noexcept(has_static_width)
                 -> void
                 requires requires { self.bits().assign(KeyMapping::to_index(x), true); }
         {
                 auto const pos = KeyMapping::to_index(x);
-                self.guard_key(pos);
+                self.require_key(pos);
                 if constexpr (not has_static_width and requires { self.bits().growing_insert(pos); }) {
                         if (pos >= self.bits().size()) {
                                 static_cast<void>(self.bits().growing_insert(pos));
@@ -1193,7 +1273,7 @@ private:
                         }
                 }
                 assert(pos < self.bits().size());
-                self.bits().assign(pos, not self.bits().test(pos));
+                self.bits().flip(pos);
         }
 
         // The whole-set complement, at a static width alone: complementing needs a universe, which N is.
@@ -1254,7 +1334,7 @@ private:
                 return static_cast<derived_type&>(*this);
         }
 
-        // Where a write is refused: past a closed universe at any width, and past what the storage can ever hold.
+        // Where a named write refuses a key: past a closed universe at any width, and past what storage can hold.
         constexpr auto guard_key(std::size_t x) const
                 -> void
         {
@@ -1282,6 +1362,22 @@ private:
                                 loc.file_name(), loc.line(), loc.column(), loc.function_name(), x, max_size()
                         )
                 );
+        }
+
+        // The operators' key: past a closed universe or a fixed width a precondition, as an index past std::array's.
+        constexpr auto require_key(std::size_t x) const noexcept(has_closed_width)
+                -> void
+        {
+                // A value that is no key ranks at or past the universe's size.
+                if constexpr (sized_bit_index_mapping<KeyMapping, Key>) {
+                        XSTD_BITS_ASSERT(x < static_cast<std::size_t>(KeyMapping::size));
+                }
+                if constexpr (has_closed_width) {
+                        XSTD_BITS_ASSERT(x < max_size());
+                } else {
+                        // Past what a heap can count is length_error.
+                        static_cast<void>(bits_type::check_width(bits_type::width_sum(x, 1UZ)));
+                }
         }
 
         // growing_insert reports whether the bit was new, so one walk answers where two did.
@@ -1314,22 +1410,6 @@ struct owned_storage<set_adaptor<Bits, storage::owned, Derived, Key, KeyMapping,
 };
 
 // NOLINTBEGIN(readability-redundant-parentheses): a call is no primary expression, so the clause needs them.
-
-// 23.4.6.3 Erasure                                                [set.erasure]
-template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare, class Predicate>
-constexpr auto erase_if(set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>& c, Predicate pred)
-        -> set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>::size_type
-{
-        auto const original_size = c.size();
-        for (auto i = c.begin(), last = c.end(); i != last;) {
-                if (pred(*i)) {
-                        i = c.erase(i);
-                } else {
-                        ++i;
-                }
-        }
-        return original_size - c.size();
-}
 
 // The non-member forms copy, so they are the owner's alone: a copied view would write through.
 template<class Bits, storage Store, class Derived, class Key, class KeyMapping, class Compare>

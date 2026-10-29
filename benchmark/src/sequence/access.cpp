@@ -74,7 +74,7 @@ auto bm_sequential_count(benchmark::State& state)
         state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(n / 8UZ));
 }
 
-// The same sweep asked through xstd::bit_count: one popcount per block, and the loop is ours either way.
+// The same sweep asked through xstd::ranges::bit_count: one popcount per block, and the loop is ours either way.
 template<class T>
 auto bm_sequential_bit_count(benchmark::State& state)
         -> void
@@ -82,7 +82,7 @@ auto bm_sequential_bit_count(benchmark::State& state)
         auto const n = bits(state);
         auto const v = filled<T>(n);
         for (auto _ : state) {
-                auto c = xstd::bit_count(v);
+                auto c = xstd::ranges::bit_count(v, true);
                 benchmark::DoNotOptimize(c);
         }
         state.SetBytesProcessed(state.iterations() * static_cast<std::int64_t>(n / 8UZ));

@@ -6,14 +6,14 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_FOR_EACH_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_FOR_EACH_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // reads_bools, reads_keys
-#include <xstd/bits/bit_algorithm/detail/walk.hpp>      // reversed_base_t, reversed_reading, walk
-#include <algorithm>                                    // for_each_result
-#include <concepts>                                     // invocable
-#include <ranges>                                       // borrowed_iterator_t, end, range_value_t
-#include <utility>                                      // move
+#include <xstd/bits/bit_algorithm/detail/walk.hpp> // reversed_base_t, reversed_reading, walk
+#include <xstd/bits/detail/ownership.hpp>          // reads_bools, reads_keys
+#include <algorithm>                               // for_each_result
+#include <concepts>                                // invocable
+#include <ranges>                                  // borrowed_iterator_t, end, range_value_t
+#include <utility>                                 // move
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::for_each(r, f), a block at a time: f takes each key or bool by value, in the order r iterates.
 template<class R, class F>
@@ -35,6 +35,6 @@ constexpr auto bit_for_each(R&& r, F f)
         return {std::ranges::borrowed_iterator_t<R>(std::ranges::end(r)), std::move(f)};
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_FOR_EACH_HPP

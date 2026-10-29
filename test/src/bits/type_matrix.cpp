@@ -8,11 +8,9 @@
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp>   // bit_convertible_to
 #include <xstd/bits/bit_functional/bit_hash.hpp>           // bit_hash
 #include <xstd/bits/bit_inplace_vector.hpp>                // basic_bit_inplace_vector
-#include <xstd/bits/bit_set/bit_fixed_set.hpp>             // basic_bit_fixed_set
-#include <xstd/bits/bit_set/bit_inplace_set.hpp>           // basic_bit_inplace_set
-#include <xstd/bits/bit_set/bit_set.hpp>                   // basic_bit_set
-#include <xstd/bits/bit_set/bit_set_view.hpp>              // bit_set_view
-#include <xstd/bits/bit_span.hpp>                          // bit_span
+#include <xstd/bits/bit_ranges/from_blocks.hpp>            // from_blocks_t
+#include <xstd/bits/bit_set.hpp>                           // basic_bit_fixed_set, basic_bit_inplace_set, basic_bit_set, bit_set_view
+#include <xstd/bits/bit_span/bit_span.hpp>                 // bit_span
 #include <xstd/bits/bit_type_traits/bit_rebind.hpp>        // bit_rebind
 #include <xstd/bits/bit_type_traits/bit_resize.hpp>        // bit_resize
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // basic_bit_fixed_valarray
@@ -22,7 +20,6 @@
 #include <xstd/bits/ext/boost/bit_small_set.hpp>           // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_valarray.hpp>      // basic_bit_small_valarray
 #include <xstd/bits/ext/boost/bit_small_vector.hpp>        // basic_bit_small_vector
-#include <xstd/bits/from_blocks.hpp>                       // from_blocks_t
 #include <xstd/ints/cstdint/bit_int.hpp>                   // bit_uint
 #include <boost/test/unit_test.hpp>                        // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK_MESSAGE
 #include <algorithm>                                       // min
@@ -59,7 +56,7 @@ concept sequence = std::same_as<typename value_of<T>::value_type, bool>;
 
 // The other owner of the same reading and block, whose width is a run-time one: what a cross-type column asks about.
 template<class Block, class T>
-using other_owner_t = std::conditional_t<sequence<T>, xstd::basic_bit_vector<Block>, xstd::basic_bit_set<std::size_t, Block>>;
+using other_owner_t = std::conditional_t<sequence<T>, xstd::basic_bit_vector<std::vector<Block>>, xstd::basic_bit_set<std::size_t, std::vector<Block>>>;
 
 // The columns, each one capability a type has or lacks.
 constexpr auto column_names = std::array<std::string_view, 19>{
@@ -132,9 +129,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EveryTypeAnswersItsRow, Block, matrix_block_types)
 {
         constexpr auto N = 40UZ;
         using array      = xstd::basic_bit_array<Block, N>;
-        using vector     = xstd::basic_bit_vector<Block>;
+        using vector     = xstd::basic_bit_vector<std::vector<Block>>;
         using fixed_set  = xstd::basic_bit_fixed_set<std::size_t, Block, N>;
-        using set        = xstd::basic_bit_set<std::size_t, Block>;
+        using set        = xstd::basic_bit_set<std::size_t, std::vector<Block>>;
 
         // Owners: a sequence takes bools and a set keys, each compares with its own type alone, and a set combines too.
         check_row<Block, array>("bit_array", "11.11111....1111111");
@@ -150,7 +147,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(EveryTypeAnswersItsRow, Block, matrix_block_types)
         check_row<Block, xstd::basic_bit_fixed_valarray<Block, N>>("bit_fixed_valarray", "11.11111..1.....111");
         check_row<Block, xstd::basic_bit_inplace_valarray<Block, N>>("bit_inplace_valarray", "11.11111..1.....111");
         check_row<Block, xstd::basic_bit_small_valarray<Block, N>>("bit_small_valarray", "11.11111..1.....111");
-        check_row<Block, xstd::basic_bit_valarray<Block>>("bit_valarray", "11.1111...1.....111");
+        check_row<Block, xstd::basic_bit_valarray<std::vector<Block>>>("bit_valarray", "11.1111...1.....111");
 
         // Sequence views: read out by bit_convert, and neither combined nor compared, as span.
         using span = decltype(xstd::bit_span(std::declval<array&>()));

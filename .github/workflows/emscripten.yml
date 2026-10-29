@@ -15,10 +15,10 @@ concurrency:
 on:
   pull_request:
     branches: [ main ]
-  # canary.yml dispatches this weekly on main, the run its README badge shows.
+  # canary.yml dispatches this nightly on main, the run its README badge shows.
   workflow_dispatch:
 
 jobs:
   # wasm32 under node: a 32-bit size_t like i686, but 8-byte alignment for 64-bit integers and a native __int128, so it catches what i686 cannot.
   wasm32:
-    uses: rhalbersma/cpp-ci/.github/workflows/emscripten.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    uses: rhalbersma/cpp-ci/.github/workflows/emscripten.yml@acbf0f0b3ed85dcabf95cd0d4806c0fa7c451ecf # main after rhalbersma/cpp-ci#83, with the std_test_suite adapters of rhalbersma/cpp-ci#82

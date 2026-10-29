@@ -6,9 +6,10 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_ALL_OF_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_ALL_OF_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // all_true, reads_bools
+#include <xstd/bits/bit_algorithm/detail/count.hpp> // all_true
+#include <xstd/bits/detail/ownership.hpp>           // reads_bools
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::all_of(r, std::identity()), a block at a time: true on an empty sequence.
 template<bits::detail::reads_bools R>
@@ -18,6 +19,6 @@ template<bits::detail::reads_bools R>
         return bits::detail::all_true(r);
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_ALL_OF_HPP

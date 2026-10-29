@@ -6,33 +6,31 @@
 #ifndef TEST_SPEC_SET_HPP
 #define TEST_SPEC_SET_HPP
 
-#include <test/container/allocator.hpp>             // non_propagating
-#include <test/flat_set.hpp>                        // IWYU pragma: keep; TEST_HAS_FLAT_SET, flat_set
-#include <test/minimal_blocks.hpp>                  // minimal_blocks
-#include <test/set/exhaustive.hpp>                  // L1, L2, L3, L4, limit_v, on0, on1, on2, on3, on4, static_capacity, static_width
-#include <test/spec/input.hpp>                      // edge, exhaustive, key_list, key_vector, keyed, listed, memo, one, rebuilt, three, two
-#include <test/spec/random.hpp>                     // block_digits_v, key_samples, keyed_samples, pair_samples, triple_samples, width
-#include <test/spec/view.hpp>                       // input_t, owner_t, view_traits, view_type, viewed
-#include <test/uint128.hpp>                         // TEST_HAS_UINT128, uint128
-#include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set
-#include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
-#include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
-#include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set
-#include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
-#include <xstd/bits/bit_set/detail/set_adaptor.hpp> // set_adaptor
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/ownership.hpp>           // owned_storage, storage
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <algorithm>                                // sort
-#include <array>                                    // array
-#include <cstddef>                                  // size_t
-#include <cstdint>                                  // uint8_t, uint16_t, uint32_t, uint64_t
-#include <functional>                               // greater, less
-#include <set>                                      // set
-#include <span>                                     // dynamic_extent
-#include <tuple>                                    // tuple, tuple_cat
-#include <utility>                                  // declval, move, pair
-#include <vector>                                   // vector
+#include <test/container/allocator.hpp>                    // non_propagating
+#include <test/flat_set.hpp>                               // IWYU pragma: keep; TEST_HAS_FLAT_SET, flat_set
+#include <test/minimal_blocks.hpp>                         // minimal_blocks
+#include <test/set/exhaustive.hpp>                         // L1, L2, L3, L4, limit_v, on0, on1, on2, on3, on4, static_capacity, static_width
+#include <test/spec/input.hpp>                             // edge, exhaustive, key_list, key_vector, keyed, listed, memo, one, rebuilt, three, two
+#include <test/spec/random.hpp>                            // block_digits_v, key_samples, keyed_samples, pair_samples, triple_samples, width
+#include <test/spec/view.hpp>                              // input_t, owner_t, view_traits, view_type, viewed
+#include <test/uint128.hpp>                                // TEST_HAS_UINT128, uint128
+#include <xstd/bits/bit_set.hpp>                           // basic_bit_fixed_set, basic_bit_inplace_set, basic_bit_set, bit_key_mapping, bit_set_view
+#include <xstd/bits/bit_set/detail/set_adaptor.hpp>        // set_adaptor
+#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
+#include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container
+#include <xstd/bits/detail/ownership.hpp>                  // owned_storage, storage
+#include <xstd/bits/ext/boost/bit_small_set.hpp>           // basic_bit_small_set
+#include <boost/container/small_vector.hpp>                // small_vector
+#include <algorithm>                                       // sort
+#include <array>                                           // array
+#include <cstddef>                                         // size_t
+#include <cstdint>                                         // uint8_t, uint16_t, uint32_t, uint64_t
+#include <functional>                                      // greater, less
+#include <set>                                             // set
+#include <span>                                            // dynamic_extent
+#include <tuple>                                           // tuple, tuple_cat
+#include <utility>                                         // declval, move, pair
+#include <vector>                                          // vector
 
 // The candidates for the set reading, the standard library's models first, and the inputs a clause checks them over.
 namespace test::spec::set {
@@ -56,7 +54,7 @@ using fixed = std::tuple<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 0>
 #endif
                          >;
 
-using dynamic = std::tuple<xstd::basic_bit_set<std::size_t, std::uint8_t>, xstd::basic_bit_set<std::size_t, std::uint64_t>>;
+using dynamic = std::tuple<xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>, xstd::basic_bit_set<std::size_t, std::vector<std::uint64_t>>>;
 
 using inplace = std::tuple<xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 0>, xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 9>, xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 17>, xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 24>, xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 24>, xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 65>, xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 4097>>;
 
@@ -67,7 +65,7 @@ using small = std::tuple<xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9>
 using user_storage = std::tuple<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<test::minimal_blocks<std::uint8_t>>>>;
 
 // The columns once more under std::greater, std::set's model first: an empty width, across blocks, and growing.
-using descending = std::tuple<std::set<std::size_t, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 0, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<test::minimal_blocks<std::uint8_t>>, xstd::bits::detail::storage::owned, void, std::size_t, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>>; // NOLINT(modernize-use-transparent-functors): std::set<std::size_t, std::greater<std::size_t>>'s comparator, as written
+using descending = std::tuple<std::set<std::size_t, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 0, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 65, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_inplace_set<std::size_t, std::uint8_t, 17, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>, xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<test::minimal_blocks<std::uint8_t>>, xstd::bits::detail::storage::owned, void, std::size_t, xstd::bit_key_mapping<std::size_t>, std::greater<std::size_t>>>; // NOLINT(modernize-use-transparent-functors): std::set<std::size_t, std::greater<std::size_t>>'s comparator, as written
 
 // Everything that owns the keys it holds, which is what [container.requirements] and a constructor ask for.
 using owners = decltype(std::tuple_cat(std::declval<models>(), std::declval<fixed>(), std::declval<dynamic>(), std::declval<inplace>(), std::declval<small>(), std::declval<user_storage>(), std::declval<descending>()));
@@ -81,7 +79,7 @@ using all = decltype(std::tuple_cat(std::declval<owners>(), std::declval<views>(
 using const_views = std::tuple<xstd::bit_set_view<std::array<std::uint8_t, 3> const, 17>, xstd::bit_set_view<std::vector<std::uint64_t> const>>;
 
 // The owners that take an allocator, under one that keeps a ledger and refuses on request, std::set first.
-using ledgered = std::tuple<std::set<std::size_t, std::less<>, test::container::non_propagating<std::size_t>>, xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_set<std::size_t, std::uint64_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint64_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint64_t>>>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
+using ledgered = std::tuple<std::set<std::size_t, std::less<>, test::container::non_propagating<std::size_t>>, xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t, test::container::non_propagating<std::uint8_t>>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>, xstd::basic_bit_set<std::size_t, std::vector<std::uint64_t, test::container::non_propagating<std::uint64_t>>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>, xstd::basic_bit_small_set<std::size_t, std::uint8_t, 9, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint8_t>>, xstd::basic_bit_small_set<std::size_t, std::uint64_t, 64, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, test::container::non_propagating<std::uint64_t>>>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
 
 } // namespace test::spec::set
 
@@ -102,7 +100,7 @@ struct view_traits<xstd::bit_set_view<std::array<Block, K>, N>>
 template<class Block, class Allocator>
 struct view_traits<xstd::bit_set_view<std::vector<Block, Allocator>, std::dynamic_extent>>
 {
-        using owner_type = xstd::basic_bit_set<std::size_t, Block, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, Allocator>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
+        using owner_type = xstd::basic_bit_set<std::size_t, std::vector<Block, Allocator>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>; // NOLINT(modernize-use-transparent-functors): the default comparator, named to reach the allocator
 
         [[nodiscard]] static auto view(owner_type& owner, std::size_t)
         {
@@ -127,8 +125,8 @@ inline constexpr auto held_width_v = [] -> std::size_t {
         }
 }();
 
-template<class Block, std::size_t N, class Compare, class Allocator>
-inline constexpr auto held_width_v<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_mapping<std::size_t>, Compare, Allocator>> = N;
+template<class Block, std::size_t K, class Allocator, class Compare>
+inline constexpr auto held_width_v<xstd::basic_bit_set<std::size_t, boost::container::small_vector<Block, K, Allocator>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, Compare>> = K * xstd::bit_blocks_extent_v<Block>;
 
 #ifdef __clang__
 

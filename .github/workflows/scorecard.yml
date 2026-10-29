@@ -28,4 +28,4 @@ jobs:
       security-events: write
       id-token: write
       actions: read
-    uses: rhalbersma/cpp-ci/.github/workflows/scorecard.yml@2a7b3577168d22d62a9119b1913c6e0122e78994 # main after rhalbersma/cpp-ci#76, whose ladders size their build by memory; tools/ci-local.sh runs its clang-tidy and gcovr scripts too
+    uses: rhalbersma/cpp-ci/.github/workflows/scorecard.yml@acbf0f0b3ed85dcabf95cd0d4806c0fa7c451ecf # main after rhalbersma/cpp-ci#83, with the std_test_suite adapters of rhalbersma/cpp-ci#82

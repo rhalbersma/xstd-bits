@@ -6,6 +6,7 @@
 #include <xstd/bits/bit.hpp>                   // bit_convert
 #include <xstd/bits/bit_algorithm.hpp>         // bit_count, bit_reverse, bit_rotate
 #include <xstd/bits/bit_array.hpp>             // basic_bit_array
+#include <xstd/bits/bit_set.hpp>               // hash
 #include <xstd/bits/bit_set/bit_fixed_set.hpp> // basic_bit_fixed_set
 #include <xstd/bits/bit_vector.hpp>            // basic_bit_vector
 #include <xstd/ints/cstdint/bit_int.hpp>       // bit_uint
@@ -16,6 +17,7 @@
 #include <ranges>                              // iota
 #include <tuple>                               // tuple
 #include <type_traits>                         // integral_constant
+#include <vector>                              // vector
 
 BOOST_AUTO_TEST_SUITE(BitPreciseBlocks)
 
@@ -51,7 +53,7 @@ auto check_array()
                 a[i] = in_pattern<N>(i);
                 b[i] = in_pattern<N>(i);
         }
-        BOOST_CHECK_EQUAL(xstd::bit_count(a), xstd::bit_count(b));
+        BOOST_CHECK_EQUAL(xstd::ranges::bit_count(a, true), xstd::ranges::bit_count(b, true));
         BOOST_CHECK(xstd::bit_convert<byte>(a) == b);
         BOOST_CHECK(xstd::bit_convert<odd>(b) == a);
         BOOST_CHECK_EQUAL(std::hash<odd>()(a), std::hash<byte>()(b));
@@ -62,12 +64,12 @@ auto check_array()
         d[0]   = not d[0];
         BOOST_CHECK((a <=> c) == (b <=> d));
 
-        xstd::bit_reverse(a);
-        xstd::bit_reverse(b);
+        xstd::ranges::bit_reverse(a);
+        xstd::ranges::bit_reverse(b);
         BOOST_CHECK(xstd::bit_convert<byte>(a) == b);
 
-        xstd::bit_rotate(a, a.begin() + (N / 2UZ));
-        xstd::bit_rotate(b, b.begin() + (N / 2UZ));
+        xstd::ranges::bit_rotate(a, a.begin() + (N / 2UZ));
+        xstd::ranges::bit_rotate(b, b.begin() + (N / 2UZ));
         BOOST_CHECK(xstd::bit_convert<byte>(a) == b);
 }
 
@@ -107,7 +109,7 @@ template<std::size_t W, std::size_t N>
 concept set_admits = requires { typename xstd::basic_bit_fixed_set<std::size_t, xstd::bit_uint<W>, N>; };
 
 template<std::size_t W>
-concept vector_admits = requires { typename xstd::basic_bit_vector<xstd::bit_uint<W>>; };
+concept vector_admits = requires { typename xstd::basic_bit_vector<std::vector<xstd::bit_uint<W>>>; };
 
 } // namespace
 

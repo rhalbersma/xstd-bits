@@ -6,11 +6,12 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_LEXICOGRAPHICAL_COMPARE_THREE_WAY_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_LEXICOGRAPHICAL_COMPARE_THREE_WAY_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // comparable_readings, reads_keys
-#include <xstd/bits/bit_algorithm/detail/compare.hpp>   // three_way_bools, three_way_keys
-#include <compare>                                      // strong_ordering
+#include <xstd/bits/bit_algorithm/detail/comparable.hpp> // comparable_readings
+#include <xstd/bits/bit_algorithm/detail/compare.hpp>    // three_way_bools, three_way_keys
+#include <xstd/bits/detail/ownership.hpp>                // reads_keys
+#include <compare>                                       // strong_ordering
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::lexicographical_compare_three_way over two of one reading's elements, a block at a time, as std::set orders.
 template<class R1, class R2>
@@ -25,6 +26,6 @@ template<class R1, class R2>
         }
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_LEXICOGRAPHICAL_COMPARE_THREE_WAY_HPP

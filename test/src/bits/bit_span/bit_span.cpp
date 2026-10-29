@@ -1,0 +1,205 @@
+//          Copyright Rein Halbersma 2014-2026.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE_1_0.txt or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
+
+#include <test/sequence/ordering.hpp>               // ordering_agrees_with_vector_bool
+#include <test/sequence/rotation.hpp>               // permutation_sweep
+#include <xstd/bits/bit_algorithm/bit_reverse.hpp>  // bit_reverse
+#include <xstd/bits/bit_algorithm/bit_rotate.hpp>   // bit_rotate
+#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>      // bit_fixed_set
+#include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
+#include <xstd/bits/bit_span/bit_span.hpp>          // bit_span
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <xstd/bits/detail/ownership.hpp>           // storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
+#include <boost/test/unit_test.hpp>                 // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <array>                                    // array
+#include <compare>                                  // strong_ordering
+#include <concepts>                                 // constructible_from, convertible_to, derived_from, equality_comparable, same_as, totally_ordered
+#include <cstddef>                                  // size_t
+#include <cstdint>                                  // uint64_t, uint8_t
+#include <ranges>                                   // iota
+#include <utility>                                  // declval
+#include <vector>                                   // vector
+
+BOOST_AUTO_TEST_SUITE(BitSpan)
+
+namespace {
+
+using Storage = xstd::bits::detail::bit_block_container<std::array<std::size_t, 1>, 8>;
+using Blocks  = std::array<std::size_t, 1>;
+
+template<class T>
+using view_of = decltype(xstd::bit_span(std::declval<T&>()));
+
+template<class T, class U>
+concept combines_with = requires (T& t, U const& u) { t &= u; t |= u; t ^= u; };
+
+// The view over whatever a test hands it, blocks or an owner: what the permutations are applied through.
+struct as_span
+{
+        template<class B>
+        [[nodiscard]] auto operator()(B& b) const noexcept
+        {
+                return xstd::bit_span(b);
+        }
+};
+
+// Named rather than a lambda, so the conversion happens at a call boundary the way a caller would meet it.
+constexpr auto takes_a_span(xstd::bit_span<Blocks, 8> v) noexcept
+        -> bool
+{
+        return v[3];
+}
+
+} // namespace
+
+// The view is the referring adaptor under another name, and over an owner it refers into the storage the owner wraps.
+BOOST_AUTO_TEST_CASE(TheViewIsTheReferringAdaptor)
+{
+        static_assert(std::derived_from<xstd::bit_span<Blocks, 8>, xstd::bits::detail::sequence_adaptor<Storage, xstd::bits::detail::storage::borrowed, xstd::bits::detail::window::all, xstd::bit_span<Blocks, 8>>>);
+        static_assert(std::same_as<view_of<Storage>, xstd::bit_span<Blocks, 8>>);
+        static_assert(std::same_as<view_of<Storage const>, xstd::bit_span<Blocks const, 8>>);
+        static_assert(std::same_as<view_of<xstd::bit_array<8>>, xstd::bit_span<Blocks, 8>>);
+        static_assert(std::same_as<view_of<xstd::bit_array<8> const>, xstd::bit_span<Blocks const, 8>>);
+}
+
+// A sequence owner is committed to the sequence reading and a set owner to the set one; only the first is spanned.
+BOOST_AUTO_TEST_CASE(TheReadingsDoNotMix)
+{
+        static_assert(std::same_as<decltype(xstd::bit_set_view(std::declval<xstd::bit_fixed_set<8>&>())), xstd::bit_set_view<Blocks, 8>>);
+        static_assert(std::constructible_from<xstd::bit_span<Blocks, 8>, xstd::bit_array<8>&>);
+        static_assert(not std::constructible_from<xstd::bit_span<Blocks, 8>, xstd::bit_fixed_set<8>&>);
+}
+
+// Viewing an owner is implicit and viewing raw storage is not, which is where span draws the line.
+BOOST_AUTO_TEST_CASE(ViewingAnOwnerIsImplicit)
+{
+        static_assert(std::convertible_to<xstd::bit_array<8>&, xstd::bit_span<Blocks, 8>>);
+        static_assert(std::convertible_to<xstd::bit_array<8> const&, xstd::bit_span<Blocks const, 8>>);
+        static_assert(not std::convertible_to<xstd::bit_array<8> const&, xstd::bit_span<Blocks, 8>>);
+
+        static_assert(not std::convertible_to<xstd::bit_array<8>, xstd::bit_span<Blocks, 8>>);
+        static_assert(not std::convertible_to<xstd::bit_array<8>&&, xstd::bit_span<Blocks, 8>>);
+
+        static_assert(std::constructible_from<xstd::bit_span<Blocks, 8>, Storage&>);
+        static_assert(not std::convertible_to<Storage&, xstd::bit_span<Blocks, 8>>);
+
+        auto a = xstd::bit_array<8>();
+        a[3]   = true;
+        BOOST_CHECK(takes_a_span(a));
+}
+
+// Its iterators order by position, each way round and against themselves.
+BOOST_AUTO_TEST_CASE(ItsIteratorsOrderByPosition)
+{
+        auto block       = std::uint8_t{};
+        auto const s     = xstd::bit_span(block);
+        auto const first = s.begin();
+        auto const last  = s.end();
+        BOOST_CHECK((first <=> last) == std::strong_ordering::less);
+        BOOST_CHECK((last <=> first) == std::strong_ordering::greater);
+        BOOST_CHECK((first <=> first) == std::strong_ordering::equal);
+}
+
+// Like span it neither compares nor orders, where the owner it views does both.
+BOOST_AUTO_TEST_CASE(TheViewNeitherComparesNorOrders)
+{
+        static_assert(not std::equality_comparable<view_of<Storage>>);
+        static_assert(not std::totally_ordered<view_of<Storage>>);
+}
+
+// As std::span, a view of mutable bits is implicitly one of const bits, and a window keeps span's rule between extents.
+BOOST_AUTO_TEST_CASE(AViewOfMutableBitsIsAViewOfConstBits)
+{
+        static_assert(std::convertible_to<xstd::bit_span<Blocks, 8>, xstd::bit_span<Blocks const, 8>>);
+        static_assert(not std::convertible_to<xstd::bit_span<Blocks const, 8>, xstd::bit_span<Blocks, 8>>);
+        static_assert(std::convertible_to<view_of<std::uint64_t>, view_of<std::uint64_t const>>);
+
+        using window              = decltype(std::declval<xstd::bit_span<Blocks, 8>&>().subspan(0UZ, 4UZ));
+        using const_window        = decltype(std::declval<xstd::bit_span<Blocks const, 8>&>().subspan(0UZ, 4UZ));
+        using static_window       = decltype(std::declval<xstd::bit_span<Blocks, 8>&>().subspan<0, 4>());
+        using const_static_window = decltype(std::declval<xstd::bit_span<Blocks const, 8>&>().subspan<0, 4>());
+        static_assert(std::convertible_to<window, const_window> and not std::convertible_to<const_window, window>);
+        static_assert(std::convertible_to<static_window, const_static_window> and std::convertible_to<static_window, const_window>);
+        static_assert(std::constructible_from<const_static_window, window> and not std::convertible_to<window, const_static_window>);
+
+        auto a                                  = xstd::bit_array<8>();
+        a[3]                                    = true;
+        xstd::bit_span<Blocks const, 8> const c = xstd::bit_span(a);
+        const_window const w                    = xstd::bit_span(a).subspan(2UZ, 4UZ);
+        BOOST_CHECK(c[3] and w[1]);
+}
+
+// Like std::span it has no bitwise operators, and neither has the owner: elementwise logic is a valarray's.
+BOOST_AUTO_TEST_CASE(NeitherTheViewNorTheOwnerCombines)
+{
+        static_assert(not combines_with<view_of<xstd::bit_array<8>>, xstd::bit_array<8>> and not combines_with<view_of<xstd::bit_array<8>>, view_of<xstd::bit_array<8> const>>);
+        static_assert(not combines_with<xstd::bit_array<8>, xstd::bit_array<8>> and not combines_with<view_of<xstd::bit_array<8>>, view_of<xstd::bit_array<8>>>);
+        BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// A view is mutable through: writing a position through the view writes the bit.
+BOOST_AUTO_TEST_CASE(WritingThroughTheViewWritesTheBits)
+{
+        auto packed     = std::uint8_t{};
+        auto const view = xstd::bit_span(packed);
+
+        view[3] = true;
+        BOOST_CHECK_EQUAL(packed, std::uint8_t{0b1000});
+
+        view[3] = false;
+        BOOST_CHECK_EQUAL(packed, std::uint8_t{0});
+}
+
+// The same reading over the type this library packs, so bit_array's operator[] and the view agree position by position.
+BOOST_AUTO_TEST_CASE(APackedArrayAgreesWithItsOwnView)
+{
+        auto packed = xstd::basic_bit_array<unsigned char, 8>{};
+        packed[1]   = true;
+        packed[6]   = true;
+
+        auto const view = xstd::bit_span(packed);
+        for (auto const k : std::views::iota(0UZ, 8UZ)) {
+                BOOST_CHECK_EQUAL(static_cast<bool>(view[k]), static_cast<bool>(packed[k]));
+        }
+
+        // Both directions, through both proxies.
+        packed[1] = false;
+        BOOST_CHECK(not static_cast<bool>(packed[1]));
+        BOOST_CHECK(not static_cast<bool>(view[1]));
+
+        view[6] = false;
+        BOOST_CHECK(not static_cast<bool>(packed[6]));
+
+        view[0] = true;
+        BOOST_CHECK(static_cast<bool>(packed[0]));
+}
+
+// The sequence reading against std::vector<bool>, through the iterators the view hands out, for every viewed type.
+BOOST_AUTO_TEST_CASE(EveryViewedTypeReadsLikeAVectorBool)
+{
+        test::sequence::ordering_agrees_with_vector_bool<std::uint8_t>();
+        test::sequence::ordering_agrees_with_vector_bool<std::array<std::uint8_t, 1>>();
+        test::sequence::ordering_agrees_with_vector_bool<std::vector<std::uint64_t>>();
+        test::sequence::ordering_agrees_with_vector_bool<xstd::bit_array<8>>();
+}
+
+// Rotated and reversed through the view: one block, a static and a run-time count of them, and an owner's padded bits.
+BOOST_AUTO_TEST_CASE(ItRotatesAndReversesWhatItViews)
+{
+        auto block       = std::uint8_t{};
+        auto const whole = xstd::bit_span(block);
+        static_assert(noexcept(xstd::ranges::bit_rotate(whole, whole.begin())) and noexcept(xstd::ranges::bit_reverse(whole)));
+
+        BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::uint8_t{}, as_span()), 0);
+        BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::array<std::uint8_t, 3>(), as_span()), 0);
+        for (auto const k : std::views::iota(0UZ, 4UZ)) {
+                BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(std::vector<std::uint64_t>(k), as_span()), 0);
+        }
+        BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(xstd::basic_bit_array<std::uint8_t, 13>(), as_span()), 0);
+}
+
+BOOST_AUTO_TEST_SUITE_END()

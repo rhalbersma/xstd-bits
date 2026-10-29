@@ -6,26 +6,27 @@
 #ifndef TEST_SEQUENCE_PRIMITIVES_HPP
 #define TEST_SEQUENCE_PRIMITIVES_HPP
 
-#include <test/dynamic.hpp>          // dynamic
-#include <test/inplace_vector.hpp>   // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/sanitizer.hpp>        // has_address_sanitizer
-#include <test/sequence/factory.hpp> // model_of, static_capacity
-#include <boost/test/unit_test.hpp>  // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_GE, BOOST_CHECK_NE, BOOST_CHECK_NO_THROW, BOOST_CHECK_THROW
-#include <algorithm>                 // ranges::all_of, ranges::count, ranges::equal, ranges::min
-#include <concepts>                  // derived_from, same_as
-#include <cstddef>                   // ptrdiff_t, size_t
-#include <format>                    // format, formattable
-#include <initializer_list>          // initializer_list
-#include <iterator>                  // distance, forward_iterator, input_iterator_tag, iter_value_t, iterator_traits, prev, random_access_iterator_tag
-#include <memory>                    // addressof
-#include <new>                       // bad_alloc
-#include <ranges>                    // begin, distance, end, filter, forward_range, from_range, from_range_t, iota, subrange, take, transform
-#include <stdexcept>                 // length_error, out_of_range
-#include <string>                    // string
-#include <string_view>               // string_view
-#include <type_traits>               // type_identity
-#include <utility>                   // declval
-#include <vector>                    // erase_if, vector
+#include <test/dynamic.hpp>                  // dynamic
+#include <test/inplace_vector.hpp>           // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/sanitizer.hpp>                // has_address_sanitizer
+#include <test/sequence/factory.hpp>         // model_of, static_capacity
+#include <xstd/bits/bit_vector/erase_if.hpp> // erase, erase_if
+#include <boost/test/unit_test.hpp>          // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_GE, BOOST_CHECK_NE, BOOST_CHECK_NO_THROW, BOOST_CHECK_THROW
+#include <algorithm>                         // ranges::all_of, ranges::count, ranges::equal, ranges::min
+#include <concepts>                          // derived_from, same_as
+#include <cstddef>                           // ptrdiff_t, size_t
+#include <format>                            // format, formattable
+#include <initializer_list>                  // initializer_list
+#include <iterator>                          // distance, forward_iterator, input_iterator_tag, iter_value_t, iterator_traits, prev, random_access_iterator_tag
+#include <memory>                            // addressof
+#include <new>                               // bad_alloc
+#include <ranges>                            // begin, distance, end, filter, forward_range, from_range, from_range_t, iota, subrange, take, transform
+#include <stdexcept>                         // length_error, out_of_range
+#include <string>                            // string
+#include <string_view>                       // string_view
+#include <type_traits>                       // type_identity
+#include <utility>                           // declval
+#include <vector>                            // erase_if, vector
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 

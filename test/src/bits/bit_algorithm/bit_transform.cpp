@@ -7,7 +7,7 @@
 #include <test/for_each_type.hpp>                    // for_each_type
 #include <xstd/bits/bit_algorithm/bit_transform.hpp> // bit_transform
 #include <xstd/bits/bit_array.hpp>                   // basic_bit_array, bit_array
-#include <xstd/bits/bit_span.hpp>                    // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>           // bit_span
 #include <xstd/bits/bit_vector.hpp>                  // bit_vector
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                 // binary_transform_result, transform, unary_transform_result
@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_SUITE(BitTransform)
 namespace {
 
 template<class R, class O, class F>
-concept transformable = requires (R const& r, O out, F f) { xstd::bit_transform(r, out, f); };
+concept transformable = requires (R const& r, O out, F f) { xstd::ranges::bit_transform(r, out, f); };
 
 // Every function of one bool, each spelled as a caller would.
 constexpr auto unary_functions = std::tuple([](bool) -> bool { return false; }, [](bool) -> bool { return true; }, std::identity(), std::logical_not<>(), [](bool b) -> int { return b ? 0 : 7; });
@@ -44,7 +44,7 @@ template<class Block, class R, class F>
         auto model        = test::algorithm::bools_of(dst);
         auto const d      = static_cast<std::ptrdiff_t>(offset);
         auto const want   = std::ranges::transform(source, model.begin() + d, f);
-        auto const got    = xstd::bit_transform(r, dst.begin() + d, f);
+        auto const got    = xstd::ranges::bit_transform(r, dst.begin() + d, f);
         return got.in == std::ranges::end(r) and got.out - dst.begin() == want.out - model.begin() and test::algorithm::bools_of(dst) == model;
 }
 
@@ -60,7 +60,7 @@ template<class Block, class R, class F>
         auto model      = test::algorithm::bools_of(dst);
         auto const d    = static_cast<std::ptrdiff_t>(offset);
         auto const want = std::ranges::transform(xm, ym, model.begin() + d, f);
-        auto const got  = xstd::bit_transform(r, y, dst.begin() + d, f);
+        auto const got  = xstd::ranges::bit_transform(r, y, dst.begin() + d, f);
         return got.in1 - std::ranges::begin(r) == want.in1 - xm.begin() and got.in2 - y.begin() == want.in2 - ym.begin() and got.out - dst.begin() == want.out - model.begin() and test::algorithm::bools_of(dst) == model;
 }
 
@@ -126,11 +126,11 @@ BOOST_AUTO_TEST_CASE(TransformsInPlace)
         auto v     = test::algorithm::patterned(xstd::bit_vector(130UZ));
         auto model = test::algorithm::bools_of(v);
         std::ranges::transform(model, model.begin(), std::logical_not<>());
-        static_cast<void>(xstd::bit_transform(v, v.begin(), std::logical_not<>()));
+        static_cast<void>(xstd::ranges::bit_transform(v, v.begin(), std::logical_not<>()));
         BOOST_CHECK(test::algorithm::bools_of(v) == model);
         auto const w = test::algorithm::patterned(xstd::bit_vector(70UZ));
         std::ranges::transform(model, test::algorithm::bools_of(w), model.begin(), std::bit_xor<>());
-        static_cast<void>(xstd::bit_transform(v, w, v.begin(), std::bit_xor<>()));
+        static_cast<void>(xstd::ranges::bit_transform(v, w, v.begin(), std::bit_xor<>()));
         BOOST_CHECK(test::algorithm::bools_of(v) == model);
 }
 
@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE(TransformsBetweenOurSequencesAlone)
 {
         static_assert([] -> bool {
                 auto a       = test::algorithm::patterned(xstd::bit_array<70>());
-                auto const r = xstd::bit_transform(a, a, a.begin(), std::bit_xor<>());
+                auto const r = xstd::ranges::bit_transform(a, a, a.begin(), std::bit_xor<>());
                 return r.out == a.end() and test::algorithm::bools_of(a) == test::algorithm::bools_of(xstd::bit_array<70>());
         }());
         using A   = xstd::bit_array<8>;
@@ -147,8 +147,8 @@ BOOST_AUTO_TEST_CASE(TransformsBetweenOurSequencesAlone)
         using Not = std::logical_not<>;
         static_assert(transformable<A, It, Not> and not transformable<A, std::ranges::iterator_t<A const>, Not> and not transformable<std::vector<bool>, It, Not>);
         static_assert(not transformable<A, It, decltype([](bool) -> std::string { return {}; })> and not transformable<A, It, decltype([](bool&) -> bool { return true; })>);
-        static_assert(std::same_as<decltype(xstd::bit_transform(A(), std::declval<It>(), Not())), std::ranges::unary_transform_result<std::ranges::dangling, It>>);
-        static_assert(std::same_as<decltype(xstd::bit_transform(A(), std::declval<A&>(), std::declval<It>(), std::bit_and<>())), std::ranges::binary_transform_result<std::ranges::dangling, It, It>>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_transform(A(), std::declval<It>(), Not())), std::ranges::unary_transform_result<std::ranges::dangling, It>>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_transform(A(), std::declval<A&>(), std::declval<It>(), std::bit_and<>())), std::ranges::binary_transform_result<std::ranges::dangling, It, It>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

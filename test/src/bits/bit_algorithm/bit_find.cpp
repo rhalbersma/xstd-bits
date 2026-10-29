@@ -8,7 +8,7 @@
 #include <xstd/bits/bit_algorithm/bit_find.hpp> // bit_find
 #include <xstd/bits/bit_array.hpp>              // basic_bit_array, bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>  // bit_fixed_set
-#include <xstd/bits/bit_span.hpp>               // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>      // bit_span
 #include <boost/test/unit_test.hpp>             // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                            // all_of, find
 #include <array>                                // array
@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_SUITE(BitFind)
 namespace {
 
 template<class R>
-concept findable = requires (R const& r) { xstd::bit_find(r, true); };
+concept findable = requires (R const& r) { xstd::ranges::bit_find(r, true); };
 
 // The algorithm and std::ranges::find on the same bools, for either value, as offsets from each begin.
 template<class R>
@@ -30,7 +30,7 @@ template<class R>
         -> bool
 {
         auto const model = std::vector<bool>(std::ranges::begin(r), std::ranges::end(r));
-        return std::ranges::all_of(std::array{false, true}, [&](bool value) -> bool { return xstd::bit_find(r, value) - std::ranges::begin(r) == std::ranges::find(model, value) - model.begin(); });
+        return std::ranges::all_of(std::array{false, true}, [&](bool value) -> bool { return xstd::ranges::bit_find(r, value) - std::ranges::begin(r) == std::ranges::find(model, value) - model.begin(); });
 }
 
 } // namespace
@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE(AnswersAsRangesFindDoes)
 {
         static_assert(agrees(test::algorithm::patterned(xstd::bit_array<70>())));
         static_assert(findable<xstd::bit_array<8>> and not findable<std::vector<bool>> and not findable<xstd::bit_fixed_set<8>>);
-        static_assert(std::same_as<decltype(xstd::bit_find(xstd::bit_array<8>(), true)), std::ranges::dangling>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_find(xstd::bit_array<8>(), true)), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

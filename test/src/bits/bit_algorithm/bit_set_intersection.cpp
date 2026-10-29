@@ -27,9 +27,9 @@ BOOST_AUTO_TEST_SUITE(BitSetIntersection)
 namespace {
 
 template<class S1, class S2>
-concept askable = requires (S1 const& s1, S2 const& s2) { xstd::bit_set_intersection(s1, s2); };
+concept askable = requires (S1 const& s1, S2 const& s2) { xstd::ranges::bit_set_intersection(s1, s2); };
 
-constexpr auto algorithm = [](auto const& s1, auto const& s2) { return xstd::bit_set_intersection(s1, s2); };
+constexpr auto algorithm = [](auto const& s1, auto const& s2) { return xstd::ranges::bit_set_intersection(s1, s2); };
 constexpr auto view      = [](auto const& s1, auto const& s2, auto comp) { return ::ranges::views::set_intersection(s1, s2, comp); };
 constexpr auto op        = std::bit_and<>();
 
@@ -50,17 +50,17 @@ BOOST_AUTO_TEST_CASE(TwoRunTimeWidthsCombineTheirKeys)
         auto const narrow = xstd::bit_set({1UZ, 3UZ});
         auto const wide   = xstd::bit_set({3UZ, 200UZ});
         auto const keys   = [](xstd::bit_set const& s) -> std::set<std::size_t> { return {s.begin(), s.end()}; };
-        BOOST_CHECK(keys(xstd::bit_set_intersection(narrow, wide)) == (view(keys(narrow), keys(wide), std::less<>()) | std::ranges::to<std::set<std::size_t>>()));
-        BOOST_CHECK(keys(xstd::bit_set_intersection(wide, narrow)) == (view(keys(wide), keys(narrow), std::less<>()) | std::ranges::to<std::set<std::size_t>>()));
+        BOOST_CHECK(keys(xstd::ranges::bit_set_intersection(narrow, wide)) == (view(keys(narrow), keys(wide), std::less<>()) | std::ranges::to<std::set<std::size_t>>()));
+        BOOST_CHECK(keys(xstd::ranges::bit_set_intersection(wide, narrow)) == (view(keys(wide), keys(narrow), std::less<>()) | std::ranges::to<std::set<std::size_t>>()));
 }
 
 // The result has the first argument's type, a flag converts as the second; views, sequences and mixed sets are refused.
 BOOST_AUTO_TEST_CASE(WhatItTakesAndGives)
 {
-        static_assert(xstd::bit_set_intersection(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2, 3}) == xstd::bit_fixed_set<8>{2});
-        static_assert(std::same_as<decltype(xstd::bit_set_intersection(xstd::bit_set(), xstd::bit_set())), xstd::bit_set>);
+        static_assert(xstd::ranges::bit_set_intersection(xstd::bit_fixed_set<8>{1, 2}, xstd::bit_fixed_set<8>{2, 3}) == xstd::bit_fixed_set<8>{2});
+        static_assert(std::same_as<decltype(xstd::ranges::bit_set_intersection(xstd::bit_set(), xstd::bit_set())), xstd::bit_set>);
         using perms = xstd::bit_flag_set<std::filesystem::perms, 16>;
-        BOOST_CHECK(xstd::bit_set_intersection(perms(std::filesystem::perms::owner_all), std::filesystem::perms::owner_read) == perms(std::filesystem::perms::owner_read));
+        BOOST_CHECK(xstd::ranges::bit_set_intersection(perms(std::filesystem::perms::owner_all), std::filesystem::perms::owner_read) == perms(std::filesystem::perms::owner_read));
         using view_type = decltype(xstd::bit_set_view(std::declval<std::uint64_t&>()));
         static_assert(not askable<view_type, view_type>);
         static_assert(askable<xstd::bit_fixed_set<8>, xstd::bit_fixed_set<8>> and not askable<xstd::bit_fixed_set<8>, xstd::bit_fixed_set<9>>);

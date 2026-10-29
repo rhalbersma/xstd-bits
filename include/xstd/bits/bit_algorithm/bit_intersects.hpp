@@ -6,16 +6,14 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_INTERSECTS_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_INTERSECTS_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // reads_keys
-#include <xstd/bits/detail/block_intersects.hpp>        // block_intersects
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <algorithm>                                    // any_of
-#include <ranges>                                       // zip
-#include <type_traits>                                  // remove_cvref_t, type_identity_t
+#include <xstd/bits/detail/block_intersects.hpp> // block_intersects
+#include <xstd/bits/detail/ownership.hpp>        // reads_keys, storage_access
+#include <algorithm>                             // any_of
+#include <ranges>                                // zip
+#include <type_traits>                           // remove_cvref_t, type_identity_t
 
-namespace xstd {
+namespace xstd::ranges {
 
-// Whether std::ranges::set_intersection(s1, s2) would write a key, a block at a time; s2 converts to s1's type.
 // Whether std::ranges::set_intersection(s1, s2) would write a key, a block at a time; s2 converts to s1's type.
 template<bits::detail::reads_keys S>
 [[nodiscard]] constexpr auto bit_intersects(S const& s1, std::type_identity_t<S> const& s2) noexcept
@@ -39,6 +37,6 @@ template<bits::detail::reads_keys S>
         }
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_INTERSECTS_HPP

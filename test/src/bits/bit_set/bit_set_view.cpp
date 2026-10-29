@@ -5,11 +5,12 @@
 
 #include <test/set/ordering.hpp>                    // ordering_agrees_with_std_set
 #include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_set.hpp>                    // hash
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // bit_fixed_set
 #include <xstd/bits/bit_set/bit_set.hpp>            // bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp> // set_adaptor
-#include <xstd/bits/bit_span.hpp>                   // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>          // bit_span
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
 #include <xstd/bits/detail/ownership.hpp>           // storage
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
@@ -244,7 +245,7 @@ BOOST_AUTO_TEST_CASE(TheOrderingSpansBlocksAndNotJustPositions)
 
         // Three blocks, where "anything above" has to look past the next block as well as into it.
         test::set::ordering_agrees_with_std_set_sampled<xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 18>>(18UZ, 20000UZ);
-        test::set::ordering_agrees_with_std_set_sampled<xstd::basic_bit_set<std::size_t, std::uint8_t>>(18UZ, 20000UZ);
+        test::set::ordering_agrees_with_std_set_sampled<xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>>(18UZ, 20000UZ);
 }
 
 // A view of keys composes with the lazy set algebra; the block-wise operators are the owner's shortcut.

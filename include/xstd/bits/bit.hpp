@@ -6,7 +6,11 @@
 #ifndef XSTD_BITS_BIT_HPP
 #define XSTD_BITS_BIT_HPP
 
-// The conversion between everything that has bit storage, and the concept that constrains it.
+// [bit.cast], function template bit_cast, whose counterpart across bit storages is bit_convert
 #include <xstd/bits/bit/bit_convert.hpp> // IWYU pragma: export; bit_convert
+
+// [bit.rotate], rotating, beside which P3793R2's shl and shr shift a set's keys by any count
+#include <xstd/bits/bit/shl.hpp> // IWYU pragma: export; shl
+#include <xstd/bits/bit/shr.hpp> // IWYU pragma: export; shr
 
 #endif // XSTD_BITS_BIT_HPP

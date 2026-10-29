@@ -8,7 +8,7 @@
 #include <xstd/bits/bit_algorithm/bit_partition_point.hpp> // bit_partition_point
 #include <xstd/bits/bit_array.hpp>                         // basic_bit_array, bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>             // bit_fixed_set
-#include <xstd/bits/bit_span.hpp>                          // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>                 // bit_span
 #include <boost/test/unit_test.hpp>                        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                       // is_partitioned, partition_point
 #include <concepts>                                        // same_as
@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_SUITE(BitPartitionPoint)
 namespace {
 
 template<class R>
-concept askable = requires (R const& r) { xstd::bit_partition_point(r); };
+concept askable = requires (R const& r) { xstd::ranges::bit_partition_point(r); };
 
 // The algorithm and std::ranges::partition_point(model, std::identity()), where the bools are partitioned at all.
 template<class R>
@@ -33,7 +33,7 @@ template<class R>
         if (not std::ranges::is_partitioned(model, std::identity())) {
                 return true;
         }
-        return xstd::bit_partition_point(r) - std::ranges::begin(r) == std::ranges::partition_point(model, std::identity()) - model.begin();
+        return xstd::ranges::bit_partition_point(r) - std::ranges::begin(r) == std::ranges::partition_point(model, std::identity()) - model.begin();
 }
 
 } // namespace
@@ -68,11 +68,11 @@ BOOST_AUTO_TEST_CASE(AnswersAsRangesPartitionPointDoes)
                 for (auto const i : {0UZ, 1UZ, 2UZ}) {
                         a[i] = true;
                 }
-                return agrees(a) and xstd::bit_partition_point(a) == a.begin() + 3;
+                return agrees(a) and xstd::ranges::bit_partition_point(a) == a.begin() + 3;
         }());
         static_assert(agrees(test::algorithm::sorted(xstd::bit_array<70>(), 0UZ)));
         static_assert(askable<xstd::bit_array<8>> and not askable<std::vector<bool>> and not askable<xstd::bit_fixed_set<8>>);
-        static_assert(std::same_as<decltype(xstd::bit_partition_point(xstd::bit_array<8>())), std::ranges::dangling>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_partition_point(xstd::bit_array<8>())), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 

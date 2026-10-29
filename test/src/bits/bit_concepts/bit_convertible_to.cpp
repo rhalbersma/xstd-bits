@@ -3,14 +3,15 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/endian.hpp>                               // bytes_are_positions
 #include <xstd/bits/bit_array.hpp>                       // bit_array
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp> // bit_convertible_to
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>           // bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>         // bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>                 // bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>            // bit_set_view
-#include <xstd/bits/bit_span.hpp>                        // bit_span
-#include <xstd/bits/bit_subspan.hpp>                     // bit_subspan
+#include <xstd/bits/bit_span/bit_span.hpp>               // bit_span
+#include <xstd/bits/bit_span/bit_subspan.hpp>            // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                      // bit_vector
 #include <xstd/bits/ext/boost/bit_small_vector.hpp>      // bit_small_vector
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
@@ -33,17 +34,20 @@ using two_volatile_blocks = std::uint32_t volatile[2]; // NOLINT(modernize-avoid
 // Every width converts: fixed into at least as wide, run-time into fixed, and anything into a run-time width.
 BOOST_AUTO_TEST_CASE(BitConvertibleToNamesEveryWidthButAViewTarget)
 {
-        static_assert(xstd::bit_convertible_to<xstd::bit_fixed_set<64>, std::uint64_t> and xstd::bit_convertible_to<std::bitset<20>, xstd::bit_array<20>>);
-        static_assert(xstd::bit_convertible_to<std::array<std::uint8_t, 3>, xstd::bit_fixed_set<24>> and xstd::bit_convertible_to<xstd::bit_array<64>, std::bitset<64>>);
+        static_assert(xstd::bit_convertible_to<xstd::bit_fixed_set<64>, std::uint64_t> and xstd::bit_convertible_to<std::array<std::uint8_t, 3>, xstd::bit_fixed_set<24>>);
         static_assert(xstd::bit_convertible_to<xstd::bit_set_view<std::uint64_t>, std::uint64_t> and xstd::bit_convertible_to<xstd::bit_span<std::array<std::uint8_t, 3>>, xstd::bit_vector>);
-        static_assert(xstd::bit_convertible_to<xstd::bit_set, std::uint64_t> and xstd::bit_convertible_to<xstd::bit_vector, std::bitset<70>>);
+        static_assert(xstd::bit_convertible_to<xstd::bit_set, std::uint64_t>);
         static_assert(xstd::bit_convertible_to<xstd::bit_vector, xstd::bit_array<64>> and xstd::bit_convertible_to<xstd::bit_inplace_set<64>, xstd::bit_fixed_set<10>>);
-        static_assert(xstd::bit_convertible_to<xstd::bit_array<64>, xstd::bit_vector> and xstd::bit_convertible_to<std::bitset<70>, xstd::bit_small_vector<64>>);
+        static_assert(xstd::bit_convertible_to<xstd::bit_array<64>, xstd::bit_vector>);
         static_assert(xstd::bit_convertible_to<xstd::bit_vector, xstd::bit_inplace_set<64>> and xstd::bit_convertible_to<std::uint64_t, xstd::bit_set>);
         static_assert(xstd::bit_convertible_to<xstd::bit_span<std::vector<std::uint64_t>>, xstd::bit_vector> and xstd::bit_convertible_to<xstd::bit_set_view<std::vector<std::uint64_t> const>, xstd::bit_array<64>>);
 
         // A reference or a const source is the same conversion as the type it names.
         static_assert(xstd::bit_convertible_to<xstd::bit_set const&, xstd::bit_vector> and xstd::bit_convertible_to<xstd::bit_set&&, xstd::bit_vector>);
+
+        // A std::bitset crosses as its bytes, which are its positions on a little-endian target alone, either way.
+        static_assert(xstd::bit_convertible_to<std::bitset<20>, xstd::bit_array<20>> == test::bytes_are_positions and xstd::bit_convertible_to<xstd::bit_array<64>, std::bitset<64>> == test::bytes_are_positions);
+        static_assert(xstd::bit_convertible_to<xstd::bit_vector, std::bitset<70>> == test::bytes_are_positions and xstd::bit_convertible_to<std::bitset<70>, xstd::bit_small_vector<64>> == test::bytes_are_positions);
 
         // A fixed width widens into a wider one, and narrowing it would truncate, so that is no conversion at all.
         static_assert(xstd::bit_convertible_to<xstd::bit_array<5>, std::uint8_t> and xstd::bit_convertible_to<xstd::bit_fixed_set<64>, xstd::bit_fixed_set<65>>);
@@ -69,7 +73,7 @@ BOOST_AUTO_TEST_CASE(BitConvertibleToNamesEveryWidthButAViewTarget)
 // cv-transparent: a cv target converts as the bare one, into the bare type; a volatile source is read as a scalar only.
 BOOST_AUTO_TEST_CASE(ACvTargetIsTheBareOneAndAVolatileSourceIsOneRead)
 {
-        static_assert(xstd::bit_convertible_to<xstd::bit_array<64>, std::uint64_t const> and xstd::bit_convertible_to<xstd::bit_array<64>, std::bitset<64> volatile>);
+        static_assert(xstd::bit_convertible_to<xstd::bit_array<64>, std::uint64_t const> and xstd::bit_convertible_to<xstd::bit_array<64>, std::bitset<64> volatile> == test::bytes_are_positions);
         static_assert(xstd::bit_convertible_to<xstd::bit_vector, xstd::bit_set const> and not xstd::bit_convertible_to<xstd::bit_array<9>, std::uint8_t const>);
 
         // A register is one volatile load, after which its value converts as any block does.

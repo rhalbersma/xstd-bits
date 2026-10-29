@@ -6,12 +6,12 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_IS_PARTITIONED_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_IS_PARTITIONED_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // first_position, reads_bools
-#include <xstd/bits/bit_algorithm/detail/find.hpp>      // find_value
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <ranges>                                       // size
+#include <xstd/bits/bit_algorithm/detail/find.hpp>     // find_value
+#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // first_position
+#include <xstd/bits/detail/ownership.hpp>              // reads_bools, storage_access
+#include <ranges>                                      // size
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::is_partitioned(r, std::identity()), a block at a time: no true after the first false.
 template<bits::detail::reads_bools R>
@@ -25,6 +25,6 @@ template<bits::detail::reads_bools R>
         return bits::detail::find_value(c, first + zero, n - zero, true) == n - zero;
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_IS_PARTITIONED_HPP

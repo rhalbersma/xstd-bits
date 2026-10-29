@@ -44,5 +44,5 @@ jobs:
 
       - name: Kill or classify every mutant
         run: |
-          mapfile -t headers < <(cd include && find xstd/bits/bit_algorithm -name '*.hpp' | sort)
+          mapfile -t headers < <(cd include && find xstd/bits/bit_algorithm xstd/bits/bit_iterator -name '*.hpp' | sort)
           python3 tools/mutate.py "${headers[@]}" --build build/mutate --jobs "$(nproc)"

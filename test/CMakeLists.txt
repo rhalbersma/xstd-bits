@@ -35,6 +35,9 @@ set(cxx_compile_options_warnings
         -Wno-lifetime-safety-intra-tu-suggestions             # Clang trunk (23-SVN); suggests [[clang::lifetimebound]] across xstd::bits::detail::bidirectional_bit_iterator - not yet acted on
         -Wno-lifetime-safety-intra-tu-constructor-suggestions # ditto, for constructors
         -Wno-lifetime-safety-invalidation                     # ditto; false positive on a.clear() in test/include/test/set/primitives.hpp treating the container itself as invalidated
+        -Wno-lifetime-safety-experimental-invalidation        # ditto, the name trunk gives it from 2026-10-21
+        -Wno-lifetime-safety-experimental-field-origin-escape # Clang trunk (24-SVN); indirect_selection::index() returns a lambda over the indices its array refers to, as [template.indirect.array] specifies
+        -Wno-experimental-lifetime-safety-field-origin-escape # ditto, the name trunk gave it before 2026-10-21
         -Wno-c++98-compat
         -Wno-c++98-compat-pedantic
         -Wno-c++20-compat
@@ -242,6 +245,11 @@ if(${project_option_prefix}_BUILD_HARDENED_TESTS)
         xstd::bits
     )
 
+    target_include_directories(
+        test.hardened.precondition PRIVATE
+        ${current_include_dir}
+    )
+
     target_compile_definitions(
         test.hardened.precondition PRIVATE
         NDEBUG
@@ -254,7 +262,7 @@ if(${project_option_prefix}_BUILD_HARDENED_TESTS)
         ${cxx_compile_options_optimization}
     )
 
-    foreach(violation subscript front back pop_back erase_end erase_reversed insert_past_end first last subspan valarray_subscript set_erase_end)
+    foreach(violation subscript front back pop_back erase_end erase_reversed insert_past_end first last subspan valarray_subscript set_erase_end set_front set_back set_subscript set_join set_toggle set_remove set_meet)
         add_test(NAME test.hardened.precondition.${violation} COMMAND test.hardened.precondition ${violation})
         # Each run ends in one abort within milliseconds, so a run still going after a minute is a hang to fail.
         set_tests_properties(test.hardened.precondition.${violation} PROPERTIES TIMEOUT 60)

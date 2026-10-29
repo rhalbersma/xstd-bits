@@ -17,11 +17,11 @@ struct bit_compare_three_way
         using is_transparent = void;
 
         template<class T, class U>
-                requires requires (T const& x, U const& y) { xstd::bit_lexicographical_compare_three_way(x, y); }
+                requires requires (T const& x, U const& y) { xstd::ranges::bit_lexicographical_compare_three_way(x, y); }
         [[nodiscard]] constexpr auto operator()(T const& x, U const& y) const noexcept
                 -> std::strong_ordering
         {
-                return xstd::bit_lexicographical_compare_three_way(x, y);
+                return xstd::ranges::bit_lexicographical_compare_three_way(x, y);
         }
 };
 

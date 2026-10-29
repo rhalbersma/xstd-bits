@@ -4,14 +4,15 @@
 
 This repository enforces its quality bar through CI rather than through review discretion. A PR is mergeable once every required check below is green.
 
-- **Every compiler/platform leg passes.** See the table in [README.md](README.md) for the current matrix (GCC, Clang, Clang libc++, Clang-CL, MSVC, MinGW, Apple Clang). Every leg counts, including every `Development` leg (`17-SVN`, `24-SVN`, `2026-Preview`), the `libc++` legs, and the `Clang-CL` VS 2022 legs; none of them are advisory. Each ladder workflow ends in an `all` job that is red unless every one of its legs succeeded, and that gate is what branch protection requires: a leg name changes whenever a rung moves, the gate name does not.
+- **Every compiler/platform leg passes.** See the table in [README.md](README.md) for the current matrix (GCC, Clang, Clang libc++, Clang-CL, MSVC, MinGW, Apple Clang). Every leg counts, including every `Development` leg (`17-SVN`, `24-SVN`, `2026-Preview`), the `libc++` legs, and the `Clang-CL` VS 2022 legs; none of them are advisory. Each ladder workflow ends in an `all` job that is red unless every one of its legs succeeded, and that gate is what branch protection requires: a leg name changes whenever a rung moves, the gate name does not. On a pull request each ladder builds only its floor and ceiling rungs, in Debug, while the single-purpose legs beside it run as they are; the nightly canary builds every rung and build type on `main`.
 - **`clang-tidy` is clean.** [`.clang-tidy`](.clang-tidy) sets `WarningsAsErrors: '*'`, so any finding over the public headers fails the job outright. The Standard clauses under `test/src/spec/` run without the static analyzer, whose cost grows with every declaration a clause checks over every type; the library stays under it through `test/src/bits/`.
 - **`clang-format` is clean.** The [Clang-Format workflow](.github/workflows/clang-format.yml) runs `clang-format --dry-run --Werror` over every header, test and benchmark source against [`.clang-format`](.clang-format), so any diff fails the job. Run `clang-format -i` on changed files before pushing, with **version 22 or newer**: before 22, clang-format reads `{ a * b }` in a requires-expression as a pointer declaration. The style file is [xstd-misc](https://github.com/rhalbersma/xstd-misc/blob/main/.clang-format)'s and [xstd-ints](https://github.com/rhalbersma/xstd-ints/blob/main/.clang-format)'s, the three repositories sharing one format; `AccessModifierOffset` is the only key those two do not exercise, neither having an access specifier anywhere. Match the surrounding code's style by eye where `.clang-format` doesn't have an opinion, including the Boost Software License header comment at the top of every source and workflow file. The one-time reformat that adopted this style is listed in [`.git-blame-ignore-revs`](.git-blame-ignore-revs); `git config blame.ignoreRevsFile .git-blame-ignore-revs` makes a local `git blame` skip it, which GitHub's blame view does unasked.
 - **MSVC's `/analyze` is clean.** The [MSVC-Analyze workflow](.github/workflows/msvc-analyze.yml) fills the same role on the MSVC side, on the two Visual Studio 2026 rungs the `msvc` ladder covers.
 - **No sanitizer failures.** The [Sanitizers workflow](.github/workflows/sanitizers.yml) runs ASan+LSan, UBSan and the implicit-conversion sanitizer, against both libstdc++ and libc++. Leak detection is on.
 - **The public headers stay self-sufficient.** Each header is compiled as its own translation unit (see `test/CMakeLists.txt`); don't rely on include order from another header.
 - **Every cited paragraph is inventoried, and every inventoried one is accounted for.** The [Audit workflow](.github/workflows/audit.yml) runs `python3 tools/audit.py`, which checks the paragraph inventories under [`doc/audit/`](doc/audit) against the citations under `test/`: an answered row needs a citation, a cited paragraph needs a row, and a paragraph not answered needs a note saying why.
-- **Every name an include's comment lists is used.** The same job runs `python3 tools/include_comments.py`, which fails on a name in an include's trailing comment that the file's code does not use, over `include/`, `test/`, `benchmark/`, `fuzz/` and `examples/`. `misc-include-cleaner` checks the include itself, and only over the public headers. An `IWYU pragma: export` or `IWYU pragma: keep` line lists what the include provides rather than what the file spells, and is exempt.
+- **Every name an include's comment lists is used.** The same job runs `python3 tools/include_comments.py`, which fails on a name in an include's trailing comment that the file's code does not use, over `include/`, `test/`, `benchmark/` and `examples/`. `misc-include-cleaner` checks the include itself, and only over the public headers. An `IWYU pragma: export` or `IWYU pragma: keep` line lists what the include provides rather than what the file spells, and is exempt.
+- **Every `ranges::` says whose ranges it means.** The same job runs `python3 tools/qualified_ranges.py`, which fails on a `ranges::` in the code of those trees that is not written `std::ranges::`, `xstd::ranges::` or `::ranges::` (range-v3). Inside `namespace xstd`, an unqualified `ranges::` finds this library's `xstd::ranges` before either of the others.
 - **Workflow files pass `actionlint`.** The [Actionlint workflow](.github/workflows/actionlint.yml) validates GitHub Actions syntax and expressions.
 - **The documented consumption methods work.** The [Consumption workflow](.github/workflows/consumption.yml) builds a consumer using `find_package`, `add_subdirectory`, and `FetchContent`.
 - **CodeQL analysis is clean.** The [CodeQL workflow](.github/workflows/codeql.yml) runs the C/C++ `security-extended` query suite.
@@ -149,7 +150,7 @@ The samples draw K of N keys by Floyd's algorithm from `std::mt19937_64`, reduci
 
 **The harness sits outside the library, on purpose.** It is a top-level `namespace test`, reached as `<test/...>`, with no `xstd` above it. Nested inside `xstd` — where it used to be — an unqualified name in a harness header falls back to the library and finds *our* overload for every candidate, `std::` ones included, at which point the sweep quietly stops comparing implementations and starts confirming ours. That is not a discipline to keep up; there is now no enclosing namespace to fall back to.
 
-It was not hypothetical. `set/composable.hpp` wrote `ranges::views::set_union` meaning range-v3's, and got it only because that header happens to sort before the one declaring `xstd::ranges` in all three sources that include it. Re-order the includes and it would have found `xstd::ranges` instead and stopped compiling. It says `::ranges` now, and the arrangement no longer depends on either.
+It was not hypothetical. `set/composable.hpp` wrote `ranges::views::set_union` meaning range-v3's, and got it only because that header happens to sort before the one declaring `xstd::ranges` in all three sources that include it. Re-order the includes and it would have found `xstd::ranges` instead and stopped compiling. It says `::ranges` now, the arrangement no longer depends on either, and `tools/qualified_ranges.py` fails on a `ranges::` that names no namespace.
 
 Boost is worth knowing here, because it splits both ways: Boost.Unordered puts its harness in a top-level `namespace test` with no `using namespace boost` anywhere, while Boost.Container and Abseil nest theirs in the library namespace — and Boost.Container's tests show the cost, naming its own container unqualified 45 times against an always-spelled-out `std::`.
 
@@ -173,7 +174,7 @@ The [Scorecard workflow](.github/workflows/scorecard.yml) cannot be required: it
 
 ## Fuzzing
 
-The tests check each operation on its own; the libFuzzer targets under [`fuzz/`](fuzz) check *sequences* of them. Each target decodes its input bytes into operations, applies them to two owners of one type and to a model of each side by side, and after every step compares the two; on a divergence it prints the operation's index and name and aborts. Keys and positions are reduced into range, so every input is valid.
+The tests check each operation on its own; the libFuzzer targets under [`test/fuzz/`](test/fuzz) check *sequences* of them. Each target decodes its input bytes into operations, applies them to two owners of one type and to a model of each side by side, and after every step compares the two; on a divergence it prints the operation's index and name and aborts. Keys and positions are reduced into range, so every input is valid.
 
 | Target | xstd owners | Model |
 | :--- | :--- | :--- |
@@ -188,10 +189,10 @@ They need clang, which is what ships libFuzzer. `XSTD_BITS_BUILD_FUZZERS` is off
 ```sh
 cmake -S . -B build-fuzz -DCMAKE_CXX_COMPILER=clang++-22 -DBUILD_TESTING=OFF -DXSTD_BITS_BUILD_FUZZERS=ON
 cmake --build build-fuzz --parallel 2
-mkdir -p corpus && build-fuzz/fuzz/fuzz_set -max_total_time=120 corpus fuzz/corpus/fuzz_set
+mkdir -p corpus && build-fuzz/test/fuzz/fuzz_set -max_total_time=120 corpus test/fuzz/corpus/fuzz_set
 ```
 
-The targets are built with ASan and UBSan, and `XSTD_BITS_FUZZ_COMPILE_OPTIONS` and `XSTD_BITS_FUZZ_LINK_OPTIONS` replace those flags. The first directory on the command line receives what the run discovers; the checked-in seeds under `fuzz/corpus/<target>/` are read but left alone. A crash is written as `crash-<sha1>` in the working directory, and reproduces by passing that file to the target binary. With `BUILD_TESTING` on as well, CTest replays each seed corpus once as `fuzz.<target>`. A seed named `regression-...` is a minimized input that once found a bug, and stays to keep it found.
+The targets are built with ASan and UBSan, and `XSTD_BITS_FUZZ_COMPILE_OPTIONS` and `XSTD_BITS_FUZZ_LINK_OPTIONS` replace those flags. The first directory on the command line receives what the run discovers; the checked-in seeds under `test/fuzz/corpus/<target>/` are read but left alone. A crash is written as `crash-<sha1>` in the working directory, and reproduces by passing that file to the target binary. With `BUILD_TESTING` on as well, CTest replays each seed corpus once as `fuzz.<target>`. A seed named `regression-...` is a minimized input that once found a bug, and stays to keep it found.
 
 [ClusterFuzzLite](https://google.github.io/clusterfuzzlite/) runs the same targets in CI, built by [`.clusterfuzzlite/build.sh`](.clusterfuzzlite/build.sh) in the OSS-Fuzz builder image: [`cflite_pr.yml`](.github/workflows/cflite_pr.yml) for five minutes on every pull request, under ASan and UBSan, and [`cflite_batch.yml`](.github/workflows/cflite_batch.yml) nightly for half an hour, keeping the corpus it grows. A crash fails the job and is uploaded as an artifact.
 
@@ -209,7 +210,7 @@ The names to tick under branch protection, exactly as GitHub reports them:
 | :--- | :--- |
 | `actionlint / actionlint` | workflow syntax |
 | `apple_clang / all` | Xcode 16.4 and 26.6, Debug and Release |
-| `audit` | `tools/audit.py` over `doc/audit/`, and `tools/include_comments.py` over the sources |
+| `audit` | `tools/audit.py` over `doc/audit/`, and `tools/include_comments.py` and `tools/qualified_ranges.py` over the sources |
 | `clang / all` | Clang 22, 23, 24-SVN with libstdc++ |
 | `clang_cl / all` | clang-cl on VS 2022, 2026, 2026-Preview |
 | `clang_format / clang-format` | `clang-format --dry-run --Werror` against [`.clang-format`](.clang-format) |
@@ -225,6 +226,8 @@ The names to tick under branch protection, exactly as GitHub reports them:
 | `sanitizers / all` | all fifteen sanitizer legs |
 
 Codecov posts two more, `codecov/project` and `codecov/patch`, which carry the same 100% bar for the whole tree and for the diff.
+
+Each ladder's required `all` is this repository's own job, carrying the name beside the shared ladder it waits for. On a pull request, [`changes.yml`](.github/workflows/changes.yml) first compares the diff with the paths no ladder builds: prose, the README included, since no README example is compiled; `doc/`; `tools/`; `test/fuzz/`, which ClusterFuzzLite alone builds; `mkdocs.yml`; and the workflows that are not ladders. `benchmark/` and `examples/` are not among them: the GCC ladder smoke-runs the one, and `test/` compiles against the other's `include/`. When every changed file is one of those, the ladder is skipped and its gate passes; any other file, a new directory included, runs the ladder, reduced for a compiler ladder as above, and the gate passes only if every leg did. Any other event, a manual run and the canary's nightly dispatch among them, always builds. The names under branch protection do not change.
 
 ## License
 

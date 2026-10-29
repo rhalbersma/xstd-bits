@@ -6,13 +6,13 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_ROTATE_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_ROTATE_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // whole_sequence
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <cassert>                                      // assert
-#include <cstddef>                                      // size_t
-#include <ranges>                                       // begin, borrowed_subrange_t, end, iterator_t
+#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // whole_sequence
+#include <xstd/bits/detail/ownership.hpp>              // storage_access
+#include <cassert>                                     // assert
+#include <cstddef>                                     // size_t
+#include <ranges>                                      // begin, borrowed_subrange_t, end, iterator_t
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::rotate(r, middle), a block at a time: bit i takes bit (i + n) % size(), for n = middle - begin.
 template<bits::detail::whole_sequence R>
@@ -27,6 +27,6 @@ constexpr auto bit_rotate(R&& r, std::ranges::iterator_t<R> middle) noexcept
         return std::ranges::borrowed_subrange_t<R>(first + (last - middle), last);
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_ROTATE_HPP

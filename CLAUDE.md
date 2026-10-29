@@ -48,8 +48,11 @@ you. A file that already deviates is a file to fix, not the convention speaking.
 file publishes a surface rather than naming what it needs, and its order is the one a reader
 should meet it in: a macro before what expands it, a type before the functions returning it, and
 whatever grouping the comments mark. Alphabetizing that throws away the argument it was making.
-Where no such dependency orders a run of peers, they are alphabetical: the sequence a paper or a
-proposal lists them in is not an argument the header makes.
+An umbrella over the counterparts of one standard header follows that header's synopsis: a section
+per subclause it mirrors, titled by the synopsis's own comment or the subclause's stable name, as
+`// [comparisons], comparisons`, and its entries in the synopsis's order. A name with no counterpart
+sits beside its nearest kin, and the title says so. Elsewhere, where no dependency orders a run of
+peers, they are alphabetical.
 
 A trailing `//` names what each include is for, and that comment, an `IWYU pragma` and a `NOLINT`
 belong to the line rather than to the position: move the whole line or none of it. Reordering
@@ -237,6 +240,42 @@ cases users will meet and the pitfalls they will fall into, never against a cons
 A fixture that runs a component over a user-shaped argument such as `test::set::strong_index` and its
 `offset_mapping` probes no concept, and stays.
 
+## Where tests live
+
+Everything that checks the code lives under `test/`: the unit tests in `test/src/`, whose `bits/` mirrors
+`include/xstd/bits/` and whose `spec/` follows the standard's clauses, their shared helpers in `test/include/`, and each
+suite with a CMake option or a workflow of its own in a directory beside them, as `test/consumer/`, `test/fuzz/` and
+`test/hardened/` are. A new suite goes there too, never at the top level. What measures or demonstrates rather than
+passes or fails, as `benchmark/` and `examples/` do, stays outside. `changes.yml` counts a path under `test/` as built,
+so a suite that no compiler ladder builds is listed there as unbuilt, as `test/fuzz/` is, or each change to it runs the
+full matrix.
+
+## The relation table
+
+The reference's relation table, in `doc/reference/index.md`, relates every public entity to the working draft, a row
+per entity or family. Its rules are the same across the xstd libraries, so that a reader of one table can read the
+others:
+
+- **Clause first.** The Counterpart cell leads with the clause of the draft that specifies the counterpart, as
+  `[[set]](https://eel.is/c++draft/set)`, then says only how the entity extends or generalizes it. The clause already
+  names the standard facility, so the cell does not name it again. Several clauses go in the draft's order.
+- **The draft's order.** Rows follow the draft's numbering of their leading clause, as eel.is shows it, and the names
+  within a row follow the draft's order of their counterparts: `bit_all_of`, `bit_any_of`, `bit_none_of`, not the
+  alphabet. A row with no counterpart sits beside its nearest kin, citing the kin's clause where one is shared, and
+  its names are alphabetical.
+- **One clause for a family.** Where a family's counterparts share a tight parent subclause, it is cited once, as
+  `[alg.set.operations]` and `[numarray]` are. The algorithms split by the sections their umbrella cites.
+- **Permission is no counterpart.** A clause cited only as a license, such as `[namespace.std]` for a `formatter`
+  specialization, stays in the description and decides nothing about the row's place.
+- **Customization is new.** A standard-named type generalizes its counterpart; the `basic_` templates and the other
+  storages that choose its block type, storage or allocator take a row of their own, of kind New, led by the same
+  clause.
+- **Standard backends only.** The storages related are the ones a standard container provides: fixed over `array`,
+  inplace over `inplace_vector`, and dynamic over `vector`. An alias over another library's container, under `ext/`,
+  takes no row; its own reference page relates it, and the `basic_` template it instantiates already has its row.
+- **Words kept for elsewhere.** `bitset` belongs to the migration guide, not this table, and "bit string" is kept for
+  a future `bit_string`.
+
 ## Checking your work
 
 Break things here, not on CI's runners, where a push waits hours for its first result. Two scripts make that
@@ -247,8 +286,9 @@ possible, and the work relies on them rather than on whatever happens to be inst
   coverage job's gcovr, the CMake the workflows pin and the Boost CI resolves. Run it once per container; it is
   idempotent.
 - [`tools/ci-local.sh`](tools/ci-local.sh) runs the ladders' Linux legs on that toolchain. Run the legs a change can
-  break while iterating, and every leg before a push. Push only what it reports green: CI is there to confirm,
-  not to discover.
+  break while iterating and again before a push, and push only what they report green: CI is there to confirm, not
+  to discover. Add the rest of the legs where the full run can finish. Where it cannot, as in a container that may
+  not outlive its hours, the legs the change can break are the bar, and CI runs the others.
 
 Never build with whatever `g++` or `clang++` happen to resolve to. Ubuntu 24.04 ships GCC 13, which rejects
 `-std=c++2c` outright, so the default compiler cannot build this library at all, and a check that quietly falls
@@ -267,17 +307,20 @@ change is meant to be comment-only, and that every marker still sits on the line
 
 ## Pull requests and CI
 
-A push to a pull request runs the whole matrix, dozens of jobs; a merge into `main` does not, as the weekly canary
-runs it there. Pull requests in this repository whose CI runs side by side finish no sooner for it: each waits
-longer for its first result, and every merge makes the others' runs stale. CI is therefore a queue, one pull request
-long, in each repository.
+A push to a pull request runs dozens of jobs, though each compiler ladder builds only its floor and ceiling rungs,
+in Debug; a merge into `main` runs none of them, as the nightly canary runs the full matrix there. Pull requests whose
+CI runs side by side finish no sooner for it: each waits longer for its first result, and every merge makes the
+others' runs stale. CI is therefore a queue, one pull request long, across xstd-ints, xstd-bits, xstd-misc and cpp-ci,
+which draw on one account's runners.
 
-- **One run in flight in this repository.** Before opening a pull request, or pushing to one, check that no other
-  pull request here has a run queued or in progress. If one has, finish the change locally and push only the
+- **One run in flight across the four repositories.** Before opening a pull request, or pushing to one, check that
+  xstd-ints, xstd-bits, xstd-misc and cpp-ci have no run queued or in progress, on a pull request or from a push to
+  `main`, as a merge's push runs take the same runners. If one has, finish the change locally and push only the
   branch, which runs nothing; open the pull request when the queue is empty.
 - **A pull request is what merges or reverts as one.** Changes that touch the same files, or that are only tests or
-  only documentation, go in one pull request rather than one per issue. A documentation-only change costs the full
-  matrix like any other, so it rides along with the next pull request instead of going alone.
+  only documentation, go in one pull request rather than one per issue. A pull request that changes only paths no
+  ladder builds, which `.github/workflows/changes.yml` lists, skips the ladders and costs minutes rather than hours,
+  so it may open beside a long run.
 - **Neither stack nor fan out.** Each pull request branches off `main` and waits there. Its turn starts by merging
   `main` into it, never rebasing, so its one run is against the `main` it will land on. A stack costs the same runs
   and adds a restack whenever a lower pull request changes; pull requests in parallel make every merge put the rest

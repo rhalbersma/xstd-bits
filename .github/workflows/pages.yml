@@ -1,0 +1,61 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+name: Pages
+
+permissions:
+  contents: read
+
+# A pull request's build is superseded by its next push; a deployment from main runs to the end, so the site never
+# stops halfway between two versions.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  # MkDocs in --strict mode fails the build on a link to a page or an anchor that does not exist.
+  site:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install MkDocs Material, pinned by hash
+        run: |
+          python3 -m venv "${RUNNER_TEMP}/mkdocs"
+          "${RUNNER_TEMP}/mkdocs/bin/pip" install --quiet --require-hashes -r tools/mkdocs-requirements.txt
+
+      - name: Build the site
+        env:
+          PYTHONDONTWRITEBYTECODE: 1
+        run: '"${RUNNER_TEMP}/mkdocs/bin/mkdocs" build --strict --site-dir "${RUNNER_TEMP}/site"'
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: ${{ runner.temp }}/site
+
+  # Only main deploys: the github-pages environment admits no other branch.
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: site
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

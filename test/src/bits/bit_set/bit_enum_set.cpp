@@ -8,13 +8,13 @@
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp> // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp> // bit_includes
 #include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_ranges/from_blocks.hpp>     // from_blocks
 #include <xstd/bits/bit_set/bit_enum_set.hpp>       // bit_enum_set
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping, bit_range_mapping, enum_traits
 #include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set
 #include <xstd/bits/bit_type_traits/bit_least.hpp>  // bit_least
-#include <xstd/bits/from_blocks.hpp>                // from_blocks
-#include <xstd/misc/concepts.hpp>                   // proxy_iterator, proxy_reference
+#include <xstd/misc/concepts.hpp>                   // proxy_reference, proxy_semi_iterator, proxy_semi_reference
 #include <xstd/misc/utility/to_underlying.hpp>      // to_underlying
 #include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                // max, min, ranges::equal, ranges::includes
@@ -240,7 +240,7 @@ auto query_mismatches_over_pairs()
                 for (auto const rhs : std::views::iota(0UZ, 1UZ << n)) {
                         auto const ym     = split<M>(rhs).first;
                         auto const y      = X(ym.begin(), ym.end());
-                        auto const all_of = xstd::bit_includes(x, y);
+                        auto const all_of = xstd::ranges::bit_includes(x, y);
                         mismatches += static_cast<std::size_t>(all_of != std::ranges::includes(x, y, x.key_comp()));
                         mismatches += static_cast<std::size_t>(all_of != std::ranges::includes(xm, ym, xm.key_comp()));
                 }
@@ -353,6 +353,22 @@ BOOST_AUTO_TEST_CASE(ACountClosesTheUniverseWithNothingElseDeclared)
         BOOST_CHECK(x.empty());
 }
 
+// The operators with a key are the unchecked doors, as std::bitset's operator[] is: at a fixed width none throws.
+BOOST_AUTO_TEST_CASE(TheOperatorsWithAKeyThrowNothing)
+{
+        using test::set::piece;
+        auto x = xstd::bit_enum_set<piece>();
+        static_assert(noexcept(x |= piece::pawn) and noexcept(x ^= piece::pawn) and noexcept(x -= piece::pawn) and noexcept(x &= piece::pawn));
+        static_assert(noexcept(x | piece::pawn) and noexcept(x ^ piece::pawn) and noexcept(x - piece::pawn) and noexcept(x & piece::pawn));
+        static_assert(not noexcept(x.insert(piece::pawn)));
+        x |= piece::rook;
+        x ^= piece::pawn;
+        x -= piece::rook;
+        BOOST_CHECK(std::ranges::equal(x, std::set<piece>{piece::pawn}));
+        x &= piece::king;
+        BOOST_CHECK(x.empty());
+}
+
 // Gaps cost no bit: the universe is the six pieces, and the complement of none is all six.
 BOOST_AUTO_TEST_CASE(TheUniverseIsTheListedValuesWithoutTheGaps)
 {
@@ -362,12 +378,11 @@ BOOST_AUTO_TEST_CASE(TheUniverseIsTheListedValuesWithoutTheGaps)
         static_assert(sizeof(X) == 1UZ);
         BOOST_CHECK(std::ranges::equal(~X(), xstd::enum_traits<piece>::values));
 
-        // A value in a gap is in no set, and one cannot be put there.
+        // A value in a gap is in no set, and insert refuses to put it there.
         constexpr auto gap = std::bit_cast<piece>(std::uint8_t{2});
         auto x             = X{piece::pawn};
         BOOST_CHECK(not x.contains(gap));
         BOOST_CHECK_THROW(static_cast<void>(x.insert(gap)), std::out_of_range);
-        BOOST_CHECK_THROW(x |= gap, std::out_of_range);
         BOOST_CHECK(std::ranges::equal(x, std::set<piece>{piece::pawn}));
 }
 
@@ -397,7 +412,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(DisjointIsNotIntersectsAndTheSupersetIsTheSubsetRe
         } else {
                 auto const none = xstd::bit_enum_set<E>();
                 auto const all  = ~none;
-                BOOST_CHECK(not xstd::bit_includes(none, all) and xstd::bit_includes(all, none) and xstd::bit_disjoint(none, all));
+                BOOST_CHECK(not xstd::ranges::bit_includes(none, all) and xstd::ranges::bit_includes(all, none) and xstd::ranges::bit_disjoint(none, all));
         }
 }
 
@@ -433,17 +448,18 @@ BOOST_AUTO_TEST_CASE(AnEnumSetFormatsItsEnumeratorsByName)
         BOOST_CHECK_EQUAL(std::format("{}", xstd::bit_enum_set<piece>()), "{}");
 }
 
-// The element proxy is a proxy reference, so the qualified to_underlying reads the key through it in either order.
-BOOST_AUTO_TEST_CASE(ToUnderlyingReadsTheKeyThroughTheProxy)
+// The element proxy is read-only, so it is a semi-proxy for the key, and to_underlying reads the key it converts to.
+BOOST_AUTO_TEST_CASE(ToUnderlyingReadsTheKeyTheProxyConvertsTo)
 {
         using test::set::piece;
         using underlying = std::underlying_type_t<piece>;
-        static_assert(xstd::proxy_iterator<std::ranges::iterator_t<xstd::bit_enum_set<piece>>>);
-        static_assert(xstd::proxy_reference<std::ranges::range_reference_t<xstd::bit_enum_set<piece>>>);
-        static_assert(std::same_as<decltype(xstd::to_underlying(*xstd::bit_enum_set<piece>().begin())), underlying>);
+        using reference  = std::ranges::range_reference_t<xstd::bit_enum_set<piece>>;
+        static_assert(xstd::proxy_semi_iterator<std::ranges::iterator_t<xstd::bit_enum_set<piece>>>);
+        static_assert(xstd::proxy_semi_reference<reference, piece>);
+        static_assert(not xstd::proxy_reference<reference>);
         static_assert([] -> underlying {
                 auto const s = xstd::bit_enum_set<piece>{piece::king};
-                return xstd::to_underlying(*s.begin());
+                return xstd::to_underlying(static_cast<piece>(*s.begin()));
         }() == xstd::to_underlying(piece::king));
 
         auto const keys = std::vector{piece::pawn, piece::bishop, piece::king};
@@ -453,20 +469,20 @@ BOOST_AUTO_TEST_CASE(ToUnderlyingReadsTheKeyThroughTheProxy)
         }
         auto const ascending = xstd::bit_enum_set<piece>{piece::king, piece::pawn, piece::bishop};
         auto seen            = std::vector<underlying>();
-        for (auto const key : ascending) {
+        for (piece const key : ascending) {
                 seen.push_back(xstd::to_underlying(key));
         }
         BOOST_CHECK(seen == expected);
 
         auto const descending = descending_set<piece>{piece::king, piece::pawn, piece::bishop};
         seen.clear();
-        for (auto const key : descending) {
+        for (piece const key : descending) {
                 seen.push_back(xstd::to_underlying(key));
         }
         BOOST_CHECK(std::ranges::equal(seen, expected | std::views::reverse));
 
-        // A std::size_t key's proxy and a sequence's bool proxy have no underlying value to give.
-        static_assert(takes_to_underlying<std::ranges::range_reference_t<xstd::bit_enum_set<piece>>>);
+        // No proxy here is passed as it is: an enum key's is read-only, a std::size_t key's and a bool's have no enum.
+        static_assert(not takes_to_underlying<reference>);
         static_assert(not takes_to_underlying<std::ranges::range_reference_t<xstd::bit_fixed_set<8>>>);
         static_assert(not takes_to_underlying<std::ranges::range_reference_t<xstd::bit_array<8>>>);
 }
@@ -475,7 +491,7 @@ BOOST_AUTO_TEST_CASE(ToUnderlyingReadsTheKeyThroughTheProxy)
 BOOST_AUTO_TEST_CASE(ADynamicWidthTogglesAnEnumeratorIn)
 {
         using test::set::piece;
-        auto x = xstd::basic_bit_set<piece, std::uint8_t>();
+        auto x = xstd::basic_bit_set<piece, std::vector<std::uint8_t>>();
         BOOST_CHECK(&(x ^= piece::king) == &x);
         BOOST_CHECK(x.contains(piece::king));
         BOOST_CHECK_EQUAL(x.size(), 1UZ);

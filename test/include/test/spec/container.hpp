@@ -10,17 +10,17 @@
 #include <test/minimal_blocks.hpp>                  // minimal_blocks
 #include <test/spec/sequence.hpp>                   // all, pairs, sequences
 #include <test/spec/set.hpp>                        // owners, pairs, pairs_with_doubletons, sets
-#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
-#include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp> // set_adaptor
+#include <xstd/bits/bit_vector/bit_vector.hpp>      // basic_bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/inplace_blocks.hpp>      // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_INPLACE
+#include <xstd/bits/detail/inplace_blocks.hpp>      // IWYU pragma: keep; XSTD_BITS_HAS_CONSTEXPR_INPLACE, inplace_blocks
 #include <xstd/bits/detail/ownership.hpp>           // storage
-#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
+#include <boost/container/small_vector.hpp>         // small_vector
 #include <cstddef>                                  // size_t
 #include <set>                                      // set
+#include <span>                                     // dynamic_extent
 #include <tuple>                                    // tuple_cat
 #include <utility>                                  // declval
 
@@ -48,22 +48,22 @@ inline constexpr auto constant_evaluable_v<std::flat_set<Key, Compare, KeyContai
 
 #endif
 
-template<class Block, std::size_t N, class Compare, class Allocator>
-inline constexpr auto constant_evaluable_v<xstd::basic_bit_small_set<std::size_t, Block, N, xstd::bit_key_mapping<std::size_t>, Compare, Allocator>> = false;
+template<class Block, std::size_t K, class Compare, class Allocator>
+inline constexpr auto constant_evaluable_v<xstd::basic_bit_set<std::size_t, boost::container::small_vector<Block, K, Allocator>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, Compare>> = false;
 
-template<class Block, std::size_t N, class Allocator>
-inline constexpr auto constant_evaluable_v<xstd::basic_bit_small_vector<Block, N, Allocator>> = false;
+template<class Block, std::size_t K, class Allocator>
+inline constexpr auto constant_evaluable_v<xstd::basic_bit_vector<boost::container::small_vector<Block, K, Allocator>>> = false;
 
 template<class Block, class Compare>
 inline constexpr auto constant_evaluable_v<xstd::bits::detail::set_adaptor<xstd::bits::detail::bit_block_container<test::minimal_blocks<Block>>, xstd::bits::detail::storage::owned, void, std::size_t, xstd::bit_key_mapping<std::size_t>, Compare>> = false;
 
 #ifndef XSTD_BITS_HAS_CONSTEXPR_INPLACE
 
-template<class Block, std::size_t N, class Compare>
-inline constexpr auto constant_evaluable_v<xstd::basic_bit_inplace_set<std::size_t, Block, N, xstd::bit_key_mapping<std::size_t>, Compare>> = false;
+template<class Block, std::size_t K, std::size_t N, class Compare>
+inline constexpr auto constant_evaluable_v<xstd::basic_bit_set<std::size_t, xstd::bits::detail::inplace_blocks<Block, K>, N, xstd::bit_key_mapping<std::size_t>, Compare>> = false;
 
-template<class Block, std::size_t N>
-inline constexpr auto constant_evaluable_v<xstd::basic_bit_inplace_vector<Block, N>> = false;
+template<class Block, std::size_t K, std::size_t N>
+inline constexpr auto constant_evaluable_v<xstd::basic_bit_vector<xstd::bits::detail::inplace_blocks<Block, K>, N>> = false;
 
 #endif
 

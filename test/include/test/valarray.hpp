@@ -6,6 +6,7 @@
 #ifndef TEST_VALARRAY_HPP
 #define TEST_VALARRAY_HPP
 
+#include <test/endian.hpp>                                 // bytes_are_positions
 #include <xstd/bits/bit/bit_convert.hpp>                   // bit_convert
 #include <xstd/bits/bit_algorithm/bit_all_of.hpp>          // bit_all_of
 #include <xstd/bits/bit_algorithm/bit_any_of.hpp>          // bit_any_of
@@ -14,14 +15,14 @@
 #include <xstd/bits/bit_algorithm/bit_none_of.hpp>         // bit_none_of
 #include <xstd/bits/bit_algorithm/bit_reverse.hpp>         // bit_reverse
 #include <xstd/bits/bit_algorithm/bit_rotate.hpp>          // bit_rotate
-#include <xstd/bits/bit_span.hpp>                          // bit_span
+#include <xstd/bits/bit_ranges/from_blocks.hpp>            // from_blocks, from_blocks_t
+#include <xstd/bits/bit_span/bit_span.hpp>                 // bit_span
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // basic_bit_fixed_valarray
 #include <xstd/bits/bit_valarray/bit_gslice.hpp>           // bit_gslice
 #include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp> // basic_bit_inplace_valarray
 #include <xstd/bits/bit_valarray/bit_slice.hpp>            // bit_slice
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>         // basic_bit_valarray
 #include <xstd/bits/bit_vector.hpp>                        // bit_vector
-#include <xstd/bits/from_blocks.hpp>                       // from_blocks, from_blocks_t
 #include <xstd/ints/limits.hpp>                            // numeric_limits
 #include <boost/test/unit_test.hpp>                        // BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_REQUIRE_EQUAL, BOOST_TEST_CONTEXT
 #include <algorithm>                                       // adjacent_find, all_of, count, equal, min, mismatch, reverse, sort
@@ -55,8 +56,9 @@ inline constexpr auto fixed_size<xstd::basic_bit_fixed_valarray<Block, N>> = N;
 template<class V>
 inline constexpr auto capacity = std::dynamic_extent;
 
-template<class Block, std::size_t N>
-inline constexpr auto capacity<xstd::basic_bit_inplace_valarray<Block, N>> = N;
+template<class Blocks, std::size_t N>
+        requires (N != std::dynamic_extent)
+inline constexpr auto capacity<xstd::basic_bit_valarray<Blocks, N>> = N;
 
 template<class V>
 inline constexpr bool is_fixed = fixed_size<V> != std::dynamic_extent;
@@ -136,7 +138,7 @@ auto check_equal(V const& v, model const& m)
 {
         BOOST_CHECK_EQUAL(v.size(), m.size());
         BOOST_CHECK(model_of(v) == m);
-        BOOST_CHECK_EQUAL(xstd::bit_count(v), std::ranges::count(m, true));
+        BOOST_CHECK_EQUAL(xstd::ranges::bit_count(v, true), std::ranges::count(m, true));
 }
 
 template<class F>
@@ -595,18 +597,18 @@ auto check_algorithms()
         for_each_pair<V>([](model const& a, model const& b) -> void {
                 auto const n = std::ranges::count(a, true);
                 auto v       = make<V>(a);
-                BOOST_CHECK_EQUAL(xstd::bit_count(v), n);
-                BOOST_CHECK_EQUAL(xstd::bit_all_of(v), n == std::ranges::ssize(a));
-                BOOST_CHECK_EQUAL(xstd::bit_any_of(v), n != 0);
-                BOOST_CHECK_EQUAL(xstd::bit_none_of(v), n == 0);
+                BOOST_CHECK_EQUAL(xstd::ranges::bit_count(v, true), n);
+                BOOST_CHECK_EQUAL(xstd::ranges::bit_all_of(v), n == std::ranges::ssize(a));
+                BOOST_CHECK_EQUAL(xstd::ranges::bit_any_of(v), n != 0);
+                BOOST_CHECK_EQUAL(xstd::ranges::bit_none_of(v), n == 0);
                 auto const w = make<V>(b);
-                BOOST_CHECK(xstd::bit_mismatch(v, w).in1 - std::ranges::begin(v) == std::ranges::mismatch(a, b).in1 - a.begin());
+                BOOST_CHECK(xstd::ranges::bit_mismatch(v, w).in1 - std::ranges::begin(v) == std::ranges::mismatch(a, b).in1 - a.begin());
                 auto m = a;
                 std::ranges::reverse(m);
-                xstd::bit_reverse(v);
+                xstd::ranges::bit_reverse(v);
                 check_equal(v, m);
                 if (not a.empty()) {
-                        xstd::bit_rotate(v, std::ranges::begin(v) + 1);
+                        xstd::ranges::bit_rotate(v, std::ranges::begin(v) + 1);
                         check_equal(v, rotated(m, 1));
                 }
         });
@@ -621,7 +623,7 @@ auto check_interop()
                 auto v = make<V>(a);
                 check_equal(xstd::bit_convert<xstd::bit_vector>(v), a);
                 check_equal(xstd::bit_convert<V>(xstd::bit_convert<xstd::bit_vector>(v)), a);
-                if constexpr (is_fixed<V>) {
+                if constexpr (is_fixed<V> and test::bytes_are_positions) {
                         auto const b = xstd::bit_convert<std::bitset<fixed_size<V>>>(v);
                         for (auto const i : std::views::iota(0UZ, a.size())) {
                                 BOOST_CHECK_EQUAL(b[i], a[i]);
@@ -699,7 +701,7 @@ using block_t = std::ranges::range_value_t<typename V::block_container_type>;
 
 // The array a proxy is handed: any owner of the same blocks, here the one on the heap, which takes any size.
 template<class V>
-using operand_t = xstd::basic_bit_valarray<block_t<V>>;
+using operand_t = xstd::basic_bit_valarray<std::vector<block_t<V>>>;
 
 // What a const subscript gathers into: an owner of run-time size its own type, the fixed one the inplace one.
 template<class V>

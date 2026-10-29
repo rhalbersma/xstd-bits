@@ -6,13 +6,13 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_SHIFT_LEFT_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_SHIFT_LEFT_HPP
 
-#include <xstd/bits/bit_algorithm/detail/algorithm.hpp> // whole_sequence
-#include <xstd/bits/detail/ownership.hpp>               // storage_access
-#include <cassert>                                      // assert
-#include <cstddef>                                      // size_t
-#include <ranges>                                       // begin, borrowed_subrange_t, end, range_difference_t
+#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // whole_sequence
+#include <xstd/bits/detail/ownership.hpp>              // storage_access
+#include <cassert>                                     // assert
+#include <cstddef>                                     // size_t
+#include <ranges>                                      // begin, borrowed_subrange_t, end, range_difference_t
 
-namespace xstd {
+namespace xstd::ranges {
 
 // std::ranges::shift_left(r, n), a block at a time: bit i takes bit i + n, and the n past the new end read false.
 template<bits::detail::whole_sequence R>
@@ -34,6 +34,6 @@ constexpr auto bit_shift_left(R&& r, std::ranges::range_difference_t<R> n) noexc
         return {first, last - n};
 }
 
-} // namespace xstd
+} // namespace xstd::ranges
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_SHIFT_LEFT_HPP

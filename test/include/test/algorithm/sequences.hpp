@@ -13,17 +13,17 @@
 
 #endif
 
-#include <test/sequence/factory.hpp> // limit_v, make_sequence, static_width, stripes
-#include <test/spec/sequence.hpp>    // dynamic, fixed, inplace, small
-#include <xstd/bits/bit_span.hpp>    // bit_span
-#include <xstd/bits/bit_vector.hpp>  // basic_bit_vector
-#include <algorithm>                 // min
-#include <array>                     // array
-#include <cstddef>                   // ptrdiff_t, size_t
-#include <ranges>                    // begin, end, iota, size, subrange
-#include <tuple>                     // tuple_cat
-#include <utility>                   // declval
-#include <vector>                    // vector
+#include <test/sequence/factory.hpp>       // limit_v, make_sequence, static_width, stripes
+#include <test/spec/sequence.hpp>          // dynamic, fixed, inplace, small
+#include <xstd/bits/bit_span/bit_span.hpp> // bit_span
+#include <xstd/bits/bit_vector.hpp>        // basic_bit_vector
+#include <algorithm>                       // min
+#include <array>                           // array
+#include <cstddef>                         // ptrdiff_t, size_t
+#include <ranges>                          // begin, end, iota, size, subrange
+#include <tuple>                           // tuple_cat
+#include <utility>                         // declval
+#include <vector>                          // vector
 
 // Patterned sequences and their windows, for the algorithms to be checked against std::ranges over the same bools.
 namespace test::algorithm {
@@ -100,9 +100,9 @@ template<class A, class F, class G>
 // A destination of n bools over Block, striped so a write past its range or short of it shows.
 template<class Block>
 [[nodiscard]] auto striped_vector(std::size_t n)
-        -> xstd::basic_bit_vector<Block>
+        -> xstd::basic_bit_vector<std::vector<Block>>
 {
-        return test::sequence::make_sequence<xstd::basic_bit_vector<Block>>(n, [](std::size_t i) -> bool { return test::sequence::stripes(i); });
+        return test::sequence::make_sequence<xstd::basic_bit_vector<std::vector<Block>>>(n, [](std::size_t i) -> bool { return test::sequence::stripes(i); });
 }
 
 // The offsets a destination is written at: aligned, inside a narrow block, and either side of a wide one's boundary.

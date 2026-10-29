@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_SUITE(BitIntersects)
 namespace {
 
 template<class S1, class S2>
-concept askable = requires (S1 const& s1, S2 const& s2) { xstd::bit_intersects(s1, s2); };
+concept askable = requires (S1 const& s1, S2 const& s2) { xstd::ranges::bit_intersects(s1, s2); };
 
 // The model: whether std::ranges::set_intersection over the keys in the order the sets share finds one.
 template<class Set>
@@ -58,7 +58,7 @@ template<class S, std::size_t K>
                                         s2.insert(keys[i]);
                                 }
                         }
-                        wrong += static_cast<int>(xstd::bit_intersects(s1, s2) != model(std::set(s1.begin(), s1.end(), s1.key_comp()), std::set(s2.begin(), s2.end(), s1.key_comp())));
+                        wrong += static_cast<int>(xstd::ranges::bit_intersects(s1, s2) != model(std::set(s1.begin(), s1.end(), s1.key_comp()), std::set(s2.begin(), s2.end(), s1.key_comp())));
                 }
         }
         return wrong;
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE(AgreesWithTheModelOnStdSet)
 BOOST_AUTO_TEST_CASE(WidthZero)
 {
         auto const none = xstd::bit_fixed_set<0>();
-        BOOST_CHECK(not xstd::bit_intersects(none, none));
+        BOOST_CHECK(not xstd::ranges::bit_intersects(none, none));
 }
 
 // Run-time widths that differ: the shorter's missing blocks hold no key.
@@ -93,8 +93,8 @@ BOOST_AUTO_TEST_CASE(TwoRunTimeWidthsCompareTheirKeys)
         auto const model_of = [](xstd::bit_set const& s) -> std::set<std::size_t> { return {s.begin(), s.end()}; };
         for (auto const* a : {&narrow, &wide, &far}) {
                 for (auto const* b : {&narrow, &wide, &far}) {
-                        BOOST_CHECK_EQUAL(xstd::bit_intersects(*a, *b), model(model_of(*a), model_of(*b)));
-                        BOOST_CHECK_EQUAL(xstd::bit_intersects(*a, *b), not xstd::bit_disjoint(*a, *b));
+                        BOOST_CHECK_EQUAL(xstd::ranges::bit_intersects(*a, *b), model(model_of(*a), model_of(*b)));
+                        BOOST_CHECK_EQUAL(xstd::ranges::bit_intersects(*a, *b), not xstd::ranges::bit_disjoint(*a, *b));
                 }
         }
 }
@@ -105,10 +105,10 @@ BOOST_AUTO_TEST_CASE(WhatItAsks)
         auto blocks     = std::uint64_t{0b1010};
         auto const view = xstd::bit_set_view(blocks);
         auto const keys = std::set<std::size_t>({1UZ, 3UZ});
-        BOOST_CHECK_EQUAL(xstd::bit_intersects(view, view), model(keys, keys));
+        BOOST_CHECK_EQUAL(xstd::ranges::bit_intersects(view, view), model(keys, keys));
         using perms = xstd::bit_flag_set<std::filesystem::perms, 16>;
-        BOOST_CHECK(xstd::bit_intersects(perms(std::filesystem::perms::owner_all), std::filesystem::perms::owner_read));
-        BOOST_CHECK(not xstd::bit_intersects(perms(std::filesystem::perms::owner_all), std::filesystem::perms::others_read));
+        BOOST_CHECK(xstd::ranges::bit_intersects(perms(std::filesystem::perms::owner_all), std::filesystem::perms::owner_read));
+        BOOST_CHECK(not xstd::ranges::bit_intersects(perms(std::filesystem::perms::owner_all), std::filesystem::perms::others_read));
         static_assert(askable<xstd::bit_fixed_set<8>, xstd::bit_fixed_set<8>> and not askable<xstd::bit_fixed_set<8>, xstd::bit_fixed_set<9>>);
         static_assert(not askable<xstd::bit_array<8>, xstd::bit_array<8>> and not askable<std::set<int>, std::set<int>>);
 }

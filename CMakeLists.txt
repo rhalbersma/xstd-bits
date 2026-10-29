@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.30)
 project(
     xstd-bits
     VERSION 0.1.0
-    DESCRIPTION "Bit-packed C++ containers and views modelling their standard counterparts, with the bit-parallel operations packing makes possible"
+    DESCRIPTION "Bitwise extensions to the C++ Standard Library"
     # Spelled out: project()'s own arguments expand before it sets PROJECT_NAME, so ${PROJECT_NAME} here is empty.
     HOMEPAGE_URL https://github.com/rhalbersma/xstd-bits
     LANGUAGES CXX
@@ -30,7 +30,7 @@ if(NOT xstd-ints_FOUND)
         xstd-ints
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-ints.git
         # Pinned to a commit on xstd-ints' main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 790a41c78867c3116b07fa85c6b1b886d961eaf1
+        GIT_TAG 2762980d657f3482059ca9cefc350dd6ff1674a8
     )
     FetchContent_MakeAvailable(xstd-ints)
 endif()
@@ -43,7 +43,7 @@ if(NOT xstd-misc_FOUND)
         xstd-misc
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-misc.git
         # Pinned to a commit on xstd-misc's main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 254e41cd94bf70c0fbd50074c44a8cbba3982052
+        GIT_TAG 7154a9ee869ef1768b834ac419120baa4bec0098
     )
     FetchContent_MakeAvailable(xstd-misc)
 endif()
@@ -70,7 +70,9 @@ target_sources(
     FILES
         include/xstd/bits.hpp
         include/xstd/bits/detail/sequence_adaptor.hpp
+        include/xstd/bits/detail/sequence_erasure.hpp
         include/xstd/bits/bit_set/detail/set_adaptor.hpp
+        include/xstd/bits/bit_set/detail/erase_if.hpp
         include/xstd/bits/bit_valarray/detail/valarray_adaptor.hpp
         include/xstd/bits/bit_valarray/detail/valarray_proxy.hpp
         include/xstd/bits/bit_valarray/detail/gslice_index.hpp
@@ -79,18 +81,19 @@ target_sources(
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
         include/xstd/bits/bit_algorithm/detail/blit.hpp
+        include/xstd/bits/bit_algorithm/detail/comparable.hpp
         include/xstd/bits/bit_algorithm/detail/compare.hpp
+        include/xstd/bits/bit_algorithm/detail/count.hpp
         include/xstd/bits/bit_algorithm/detail/find.hpp
-        include/xstd/bits/bit_algorithm/detail/select.hpp
+        include/xstd/bits/bit_algorithm/detail/mismatch.hpp
+        include/xstd/bits/bit_algorithm/detail/sequence.hpp
         include/xstd/bits/bit_algorithm/detail/walk.hpp
-        include/xstd/bits/bit_algorithm/bit_advance.hpp
         include/xstd/bits/bit_algorithm/bit_all_of.hpp
         include/xstd/bits/bit_algorithm/bit_any_of.hpp
         include/xstd/bits/bit_algorithm/bit_copy.hpp
         include/xstd/bits/bit_algorithm/bit_copy_backward.hpp
         include/xstd/bits/bit_algorithm/bit_count.hpp
         include/xstd/bits/bit_algorithm/bit_disjoint.hpp
-        include/xstd/bits/bit_algorithm/bit_distance.hpp
         include/xstd/bits/bit_algorithm/bit_equal.hpp
         include/xstd/bits/bit_algorithm/bit_fill.hpp
         include/xstd/bits/bit_algorithm/bit_find.hpp
@@ -103,11 +106,9 @@ target_sources(
         include/xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp
         include/xstd/bits/bit_algorithm/bit_mismatch.hpp
         include/xstd/bits/bit_algorithm/bit_move.hpp
-        include/xstd/bits/bit_algorithm/bit_next.hpp
         include/xstd/bits/bit_algorithm/bit_none_of.hpp
         include/xstd/bits/bit_algorithm/bit_partition.hpp
         include/xstd/bits/bit_algorithm/bit_partition_point.hpp
-        include/xstd/bits/bit_algorithm/bit_prev.hpp
         include/xstd/bits/bit_algorithm/bit_reverse.hpp
         include/xstd/bits/bit_algorithm/bit_reverse_copy.hpp
         include/xstd/bits/bit_algorithm/bit_rotate.hpp
@@ -122,16 +123,28 @@ target_sources(
         include/xstd/bits/bit_algorithm/bit_swap_ranges.hpp
         include/xstd/bits/bit_algorithm/bit_transform.hpp
         include/xstd/bits/bit_array.hpp
+        include/xstd/bits/bit_array/bit_array.hpp
+        include/xstd/bits/bit_array/to_array.hpp
+        include/xstd/bits/bit_array/tuple_element.hpp
+        include/xstd/bits/bit_array/hash.hpp
+        include/xstd/bits/bit_array/container_hash.hpp
         include/xstd/bits/bit.hpp
         include/xstd/bits/bit/bit_convert.hpp
+        include/xstd/bits/bit/shl.hpp
+        include/xstd/bits/bit/shr.hpp
         include/xstd/bits/bit_concepts.hpp
         include/xstd/bits/bit_concepts/bit_blocks.hpp
+        include/xstd/bits/bit_concepts/bit_storage.hpp
         include/xstd/bits/bit_concepts/bit_constructible_from.hpp
         include/xstd/bits/bit_concepts/bit_convertible_to.hpp
         include/xstd/bits/bit_concepts/bit_index_mapping.hpp
         include/xstd/bits/bit_concepts/bit_mask_mapping.hpp
         include/xstd/bits/bit_concepts/sized_bit_index_mapping.hpp
         include/xstd/bits/bit_inplace_vector.hpp
+        include/xstd/bits/bit_inplace_vector/bit_inplace_vector.hpp
+        include/xstd/bits/bit_inplace_vector/erase_if.hpp
+        include/xstd/bits/bit_inplace_vector/hash.hpp
+        include/xstd/bits/bit_inplace_vector/container_hash.hpp
         include/xstd/bits/bit_functional.hpp
         include/xstd/bits/bit_functional/bit_compare_three_way.hpp
         include/xstd/bits/bit_functional/bit_digest.hpp
@@ -143,6 +156,15 @@ target_sources(
         include/xstd/bits/bit_functional/bit_less_equal.hpp
         include/xstd/bits/bit_functional/bit_not_equal_to.hpp
         include/xstd/bits/bit_functional/detail/bit_hasher.hpp
+        include/xstd/bits/bit_iterator.hpp
+        include/xstd/bits/bit_iterator/bit_advance.hpp
+        include/xstd/bits/bit_iterator/bit_distance.hpp
+        include/xstd/bits/bit_iterator/bit_next.hpp
+        include/xstd/bits/bit_iterator/bit_prev.hpp
+        include/xstd/bits/bit_iterator/detail/concepts.hpp
+        include/xstd/bits/bit_iterator/detail/select.hpp
+        include/xstd/bits/bit_ranges.hpp
+        include/xstd/bits/bit_ranges/from_blocks.hpp
         include/xstd/bits/bit_set.hpp
         include/xstd/bits/bit_set/bit_inplace_set.hpp
         include/xstd/bits/bit_set/bit_enum_set.hpp
@@ -152,11 +174,17 @@ target_sources(
         include/xstd/bits/bit_set/bit_set.hpp
         include/xstd/bits/bit_set/bit_set_view.hpp
         include/xstd/bits/bit_set/bit_fixed_set.hpp
+        include/xstd/bits/bit_set/indeterminate.hpp
+        include/xstd/bits/bit_set/erase_if.hpp
+        include/xstd/bits/bit_set/hash.hpp
+        include/xstd/bits/bit_set/container_hash.hpp
         include/xstd/bits/bit_span.hpp
-        include/xstd/bits/bit_subspan.hpp
+        include/xstd/bits/bit_span/bit_span.hpp
+        include/xstd/bits/bit_span/bit_subspan.hpp
         include/xstd/bits/bit_type_traits.hpp
         include/xstd/bits/bit_type_traits/bit_align.hpp
         include/xstd/bits/bit_type_traits/bit_blocks_extent.hpp
+        include/xstd/bits/bit_type_traits/bit_storage_rebind.hpp
         include/xstd/bits/bit_type_traits/bit_fast.hpp
         include/xstd/bits/bit_type_traits/bit_least.hpp
         include/xstd/bits/bit_type_traits/bit_rebind.hpp
@@ -173,8 +201,11 @@ target_sources(
         include/xstd/bits/bit_valarray/bit_mask_array.hpp
         include/xstd/bits/bit_valarray/bit_indirect_array.hpp
         include/xstd/bits/bit_vector.hpp
+        include/xstd/bits/bit_vector/bit_vector.hpp
+        include/xstd/bits/bit_vector/erase_if.hpp
+        include/xstd/bits/bit_vector/hash.hpp
+        include/xstd/bits/bit_vector/container_hash.hpp
         include/xstd/bits/detail/adapted_bits.hpp
-        include/xstd/bits/bit_algorithm/detail/algorithm.hpp
         include/xstd/bits/detail/allocator_base_type.hpp
         include/xstd/bits/detail/assert.hpp
         include/xstd/bits/detail/inplace_blocks.hpp
@@ -183,26 +214,30 @@ target_sources(
         include/xstd/bits/detail/comparisons.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp
         include/xstd/bits/detail/hash.hpp
+        include/xstd/bits/detail/input_iterator_pair.hpp
         include/xstd/bits/detail/intrinsic.hpp
         include/xstd/bits/bit_set/detail/flag_block.hpp
         include/xstd/bits/detail/ordinal.hpp
         include/xstd/bits/bit_set/detail/is_key.hpp
-        include/xstd/bits/from_blocks.hpp
         include/xstd/bits/ext/boost.hpp
         include/xstd/bits/ext/boost/bit_small_set.hpp
         include/xstd/bits/ext/boost/bit_small_vector.hpp
         include/xstd/bits/ext/boost/bit_small_valarray.hpp
         include/xstd/bits/ext/boost/dynamic_bitset.hpp
         include/xstd/bits/ext/boost/detail/dynamic_bitset.hpp
+        include/xstd/bits/ext/boost/detail/small_blocks.hpp
         include/xstd/bits/detail/bit_layout.hpp
         include/xstd/bits/bit/detail/bit_convertible.hpp
+        include/xstd/bits/bit/detail/shift_by.hpp
         include/xstd/bits/detail/bit_blocks_capacity.hpp
         include/xstd/bits/detail/bit_block_range.hpp
         include/xstd/bits/detail/owned_bit_blocks.hpp
         include/xstd/bits/detail/resizable_bit_blocks.hpp
+        include/xstd/bits/detail/storage_rebind.hpp
         include/xstd/bits/bit/detail/bit_width.hpp
         include/xstd/bits/detail/range_const_reference.hpp
         include/xstd/bits/detail/shift.hpp
+        include/xstd/bits/detail/walk_block.hpp
         include/xstd/bits/detail/storage_ptr.hpp
         include/xstd/bits/detail/views.hpp
         include/xstd/bits/detail/blocks.hpp
@@ -210,6 +245,7 @@ target_sources(
         include/xstd/bits/detail/non_volatile.hpp
         include/xstd/bits/detail/num_blocks.hpp
         include/xstd/bits/detail/owner_members.hpp
+        include/xstd/bits/detail/key_order.hpp
         include/xstd/bits/detail/ownership.hpp
         include/xstd/bits/detail/rebind.hpp
 )
@@ -273,8 +309,23 @@ if(PROJECT_IS_TOP_LEVEL)
         set(CMAKE_CXX_STANDARD ${${project_option_prefix}_CXX_STANDARD})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-        # Left ON, which is CMake's default, so the matrix compiles as gnu++23 where xstd and tabula compile as c++23. Stated rather than omitted, because the reason is specific and the difference is deliberate: <bit>'s functions take std::unsigned_integral alone, and libstdc++ and libc++ carry xstd::uint128 into that concept only outside __STRICT_ANSI__. Turning extensions off would drop the widest Block from every instantiation list rather than fail, which is the worse of the two outcomes.
-        set(CMAKE_CXX_EXTENSIONS ON)
+        # Strict, as xstd and tabula compile, except where strict mode would drop the widest Block: <bit>'s functions take std::unsigned_integral alone, and libstdc++ before 16 carries unsigned __int128 into that concept only outside __STRICT_ANSI__, where libc++ and libstdc++ 16 always do. The question is asked of the toolchain rather than of a version number, so a clang on libstdc++ 15 gets the answer that standard library gives, and MSVC and 32-bit targets, which have no unsigned __int128 to lose, stay strict.
+        set(CMAKE_CXX_EXTENSIONS OFF)
+        include(CheckCXXSourceCompiles)
+        check_cxx_source_compiles([[
+            #include <concepts>
+            #if !defined(__SIZEOF_INT128__) || defined(_MSC_VER)
+            #error "no unsigned __int128 to lose"
+            #endif
+            static_assert(not std::unsigned_integral<unsigned __int128>);
+            auto main() -> int { return 0; }
+        ]] ${project_option_prefix}_STRICT_DROPS_UINT128)
+        if(${project_option_prefix}_STRICT_DROPS_UINT128)
+            set(CMAKE_CXX_EXTENSIONS ON)
+            message(STATUS "Tests and benchmarks compile as gnu++${CMAKE_CXX_STANDARD}: strict mode drops unsigned __int128 from std::unsigned_integral here")
+        else()
+            message(STATUS "Tests and benchmarks compile as c++${CMAKE_CXX_STANDARD}")
+        endif()
 
         # Above both, and not inside test/: benchmark/ is configured first, so a target declared in test/ does not exist yet when the benchmarks ask for it. Both trees grade over the same two integer classes.
         include(${CMAKE_CURRENT_LIST_DIR}/cmake/int128.cmake)
@@ -297,13 +348,20 @@ if(PROJECT_IS_TOP_LEVEL)
         option(${project_option_prefix}_BUILD_HARDENED_TESTS "Build the test that breaks each precondition a hardened release checks" ON)
 
         add_subdirectory(test)
+
+        # Off by default, and one libc++ leg turns it on. The standard libraries' own test suites, written against the paragraphs by people who never saw this library, rewritten onto its spelling: a check whose authors have no stake in the answer. Needs git and Python 3.11.
+        option(${project_option_prefix}_BUILD_STD_TEST_SUITES "Run the standard libraries' test suites against the containers they mirror" OFF)
+
+        if(${project_option_prefix}_BUILD_STD_TEST_SUITES)
+            add_subdirectory(test/std-test-suite)
+        endif()
     endif()
 
     # Off by default, and outside BUILD_TESTING: ClusterFuzzLite builds the fuzz targets alone, without the test tree's Boost.Test and range-v3. Clang only, libFuzzer being clang's.
-    option(${project_option_prefix}_BUILD_FUZZERS "Build the libFuzzer differential targets under fuzz/" OFF)
+    option(${project_option_prefix}_BUILD_FUZZERS "Build the libFuzzer differential targets under test/fuzz/" OFF)
 
     if(${project_option_prefix}_BUILD_FUZZERS)
-        add_subdirectory(fuzz)
+        add_subdirectory(test/fuzz)
     endif()
 endif()
 

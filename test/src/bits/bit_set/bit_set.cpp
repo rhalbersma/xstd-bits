@@ -9,13 +9,15 @@
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>   // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>   // bit_includes
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp> // bit_intersects
-#include <xstd/bits/bit_set/bit_fixed_set.hpp>        // basic_bit_fixed_set
+#include <xstd/bits/bit_set.hpp>                      // hash
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>        // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>      // bit_key_mapping, bit_range_mapping
 #include <xstd/bits/bit_set/bit_set.hpp>              // bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>         // bit_set_view
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp>   // set_adaptor
 #include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container, set_bits_t
 #include <xstd/bits/detail/ownership.hpp>             // owned_bits_t, storage
+#include <boost/iterator/function_input_iterator.hpp> // make_function_input_iterator
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                  // equal, ranges::equal
 #include <array>                                      // array
@@ -27,23 +29,24 @@
 #include <format>                                     // format
 #include <functional>                                 // greater, hash, less
 #include <initializer_list>                           // initializer_list
-#include <iterator>                                   // iter_value_t
+#include <iterator>                                   // iter_value_t, sentinel_for
 #include <memory>                                     // allocator
 #include <ranges>                                     // equal, iota, reverse, to
 #include <set>                                        // set
+#include <span>                                       // dynamic_extent
 #include <type_traits>                                // is_constructible_v
 #include <utility>                                    // move
 #include <vector>                                     // vector
 
 BOOST_AUTO_TEST_SUITE(BitSet)
 
-using T = xstd::basic_bit_set<std::size_t, std::uint8_t>;
+using T = xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>;
 
 // The flagship: the set reading over a heap of blocks, built on the set adaptor.
 BOOST_AUTO_TEST_CASE(TheDynamicSetIsTheSetAdaptorOverAHeapOfBlocks)
 {
         static_assert(std::derived_from<T, xstd::bits::detail::set_adaptor<xstd::bits::detail::set_bits_t<std::vector<std::uint8_t>>, xstd::bits::detail::storage::owned, T>>);
-        static_assert(std::same_as<xstd::basic_bit_set<std::size_t, std::uint8_t, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>, std::allocator<std::uint8_t>>, T>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
+        static_assert(std::same_as<xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t, std::allocator<std::uint8_t>>, std::dynamic_extent, xstd::bit_key_mapping<std::size_t>, std::less<std::size_t>>, T>); // NOLINT(modernize-use-transparent-functors): the default comparator, spelled to reach the allocator
 }
 
 // [set.cons]'s allocator arguments, constructed rather than merely asked about in a requires-expression.
@@ -116,8 +119,8 @@ BOOST_AUTO_TEST_CASE(ItIsBuiltAndOrderedLikeAStdSet)
         auto t = s;
         t.insert(1);
         BOOST_CHECK(t < s);
-        BOOST_CHECK(xstd::bit_includes(t, s));
-        BOOST_CHECK(xstd::bit_intersects(t, s));
+        BOOST_CHECK(xstd::ranges::bit_includes(t, s));
+        BOOST_CHECK(xstd::ranges::bit_intersects(t, s));
 
         // The view over it refers into the owner's std::vector of blocks, as over every owner.
         auto const v = xstd::bit_set_view(t);
@@ -137,8 +140,8 @@ BOOST_AUTO_TEST_CASE(TheWidthIsCapacityNotValue)
         BOOST_CHECK(std::is_eq(narrow <=> wide));
         BOOST_CHECK_EQUAL(digest(narrow), digest(wide));
         BOOST_CHECK(digest(narrow) != digest(T({1})));
-        BOOST_CHECK(xstd::bit_includes(wide, narrow) and xstd::bit_includes(narrow, wide));
-        BOOST_CHECK(xstd::bit_intersects(narrow, wide));
+        BOOST_CHECK(xstd::ranges::bit_includes(wide, narrow) and xstd::ranges::bit_includes(narrow, wide));
+        BOOST_CHECK(xstd::ranges::bit_intersects(narrow, wide));
 }
 
 // The compound operators and predicates at two differing widths, against the answers over the elements.
@@ -155,12 +158,12 @@ BOOST_AUTO_TEST_CASE(TheSetOperationsIgnoreTheWidth)
         BOOST_CHECK((a - b) == T({1, 200}));
         BOOST_CHECK((b - a) == T({5}));
         BOOST_CHECK(a < b);
-        BOOST_CHECK(xstd::bit_includes(a | b, b) and not xstd::bit_includes(b, a | b));
-        BOOST_CHECK(xstd::bit_intersects(a | b, b));
-        BOOST_CHECK(not xstd::bit_includes(a, b) and not xstd::bit_includes(b, a));
+        BOOST_CHECK(xstd::ranges::bit_includes(a | b, b) and not xstd::ranges::bit_includes(b, a | b));
+        BOOST_CHECK(xstd::ranges::bit_intersects(a | b, b));
+        BOOST_CHECK(not xstd::ranges::bit_includes(a, b) and not xstd::ranges::bit_includes(b, a));
         auto const both = a | b;
-        BOOST_CHECK(xstd::bit_includes(both, b) and xstd::bit_includes(both, a) and not xstd::bit_includes(b, both));
-        BOOST_CHECK(xstd::bit_disjoint(T({5}), a) and xstd::bit_disjoint(a, T({5})));
+        BOOST_CHECK(xstd::ranges::bit_includes(both, b) and xstd::ranges::bit_includes(both, a) and not xstd::ranges::bit_includes(b, both));
+        BOOST_CHECK(xstd::ranges::bit_disjoint(T({5}), a) and xstd::ranges::bit_disjoint(a, T({5})));
 }
 
 // The shifts translate: left grows the width to hold the result, right empties past it, neither preconditioned.
@@ -224,26 +227,48 @@ BOOST_AUTO_TEST_CASE(ItDeducesAsStdSetDoes)
         auto const a = xstd::basic_bit_set(keys.begin(), keys.end());
         static_assert(std::same_as<decltype(a), xstd::bit_set const>);
         auto const b = xstd::basic_bit_set(keys.begin(), keys.end(), alloc);
-        static_assert(std::same_as<decltype(b), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
+        static_assert(std::same_as<decltype(b), xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>> const>);
         auto const c = xstd::basic_bit_set(std::from_range, keys);
         static_assert(std::same_as<decltype(c), xstd::bit_set const>);
         auto const d = xstd::basic_bit_set(std::from_range, keys, alloc);
-        static_assert(std::same_as<decltype(d), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
+        static_assert(std::same_as<decltype(d), xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>> const>);
         auto const e = xstd::basic_bit_set({3UZ, 1UZ, 4UZ});
         static_assert(std::same_as<decltype(e), xstd::bit_set const>);
         auto const f = xstd::basic_bit_set({3UZ, 1UZ, 4UZ}, alloc);
-        static_assert(std::same_as<decltype(f), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
+        static_assert(std::same_as<decltype(f), xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>> const>);
         auto const g = xstd::basic_bit_set(b, alloc);
-        static_assert(std::same_as<decltype(g), xstd::basic_bit_set<std::size_t, std::uint8_t> const>);
+        static_assert(std::same_as<decltype(g), xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>> const>);
 
         BOOST_CHECK(a == c and c == e);
         BOOST_CHECK(std::ranges::equal(b, a) and std::ranges::equal(d, a) and std::ranges::equal(f, a) and g == b);
 }
 
+// Boost's function_input_iterator has no default constructor, so no sentinel_for, yet std::set takes it.
+BOOST_AUTO_TEST_CASE(ItTakesACpp17InputIteratorPairAsStdSetDoes)
+{
+        auto multiples_of_three = [k = 0UZ] mutable -> std::size_t { return 3UZ * k++; };
+        auto const first        = boost::make_function_input_iterator(multiples_of_three, 0);
+        auto const last         = boost::make_function_input_iterator(multiples_of_three, 4);
+        static_assert(not std::sentinel_for<decltype(first), decltype(first)>);
+
+        auto s = xstd::basic_bit_set(first, last);
+        static_assert(std::same_as<decltype(s), xstd::bit_set>);
+        BOOST_CHECK(s == (xstd::bit_set{0UZ, 3UZ, 6UZ, 9UZ}));
+
+        auto ones = [] -> std::size_t { return 1UZ; };
+        s.insert(boost::make_function_input_iterator(ones, 0), boost::make_function_input_iterator(ones, 2));
+        BOOST_CHECK(s == (xstd::bit_set{0UZ, 1UZ, 3UZ, 6UZ, 9UZ}));
+
+        auto const t = xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t>>(boost::make_function_input_iterator(ones, 0), boost::make_function_input_iterator(ones, 1), std::allocator<std::uint8_t>());
+        BOOST_CHECK(std::ranges::equal(t, std::array{1UZ}));
+        auto const u = xstd::bit_fixed_set<8>(boost::make_function_input_iterator(ones, 0), boost::make_function_input_iterator(ones, 1));
+        BOOST_CHECK(std::ranges::equal(u, std::array{1UZ}));
+}
+
 // A strong index keys the set through bit_key_mapping, and the set answers as std::set<strong_index> does.
 BOOST_AUTO_TEST_CASE(AStrongIndexKeysItAsStdSetIsKeyed)
 {
-        using X = xstd::basic_bit_set<test::set::strong_index, std::uint8_t>;
+        using X = xstd::basic_bit_set<test::set::strong_index, std::vector<std::uint8_t>>;
         static_assert(std::same_as<X::key_type, test::set::strong_index>);
         static_assert(std::same_as<X::value_type, test::set::strong_index>);
         static_assert(std::same_as<X::key_mapping_type, xstd::bit_key_mapping<test::set::strong_index>>);
@@ -258,8 +283,8 @@ BOOST_AUTO_TEST_CASE(AStrongIndexKeysItAsStdSetIsKeyed)
 // Any unsigned key, narrower or wider than std::size_t, keys the set as std::set<Key> is keyed, in either direction.
 BOOST_AUTO_TEST_CASE_TEMPLATE(AnUnsignedKeyKeysItAsStdSetIsKeyed, Key, test::all_block_types)
 {
-        using X = xstd::basic_bit_set<Key, std::uint8_t>;
-        using Y = xstd::basic_bit_set<Key, std::uint8_t, xstd::bit_key_mapping<Key>, std::greater<>>;
+        using X = xstd::basic_bit_set<Key, std::vector<std::uint8_t>>;
+        using Y = xstd::basic_bit_set<Key, std::vector<std::uint8_t>, std::dynamic_extent, xstd::bit_key_mapping<Key>, std::greater<>>;
         static_assert(std::same_as<typename X::key_type, Key>);
         static_assert(std::same_as<std::iter_value_t<typename X::iterator>, Key>);
 

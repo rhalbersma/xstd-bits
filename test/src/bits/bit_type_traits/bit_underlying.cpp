@@ -5,6 +5,7 @@
 
 #include <xstd/bits/bit/bit_convert.hpp>                // bit_convert
 #include <xstd/bits/bit_array.hpp>                      // bit_array
+#include <xstd/bits/bit_ranges/from_blocks.hpp>         // from_blocks
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>          // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_flag_mapping.hpp>       // bit_flag_mapping
 #include <xstd/bits/bit_set/bit_flag_set.hpp>           // bit_flag_set
@@ -13,7 +14,6 @@
 #include <xstd/bits/bit_type_traits/bit_fast.hpp>       // bit_fast
 #include <xstd/bits/bit_type_traits/bit_least.hpp>      // bit_least
 #include <xstd/bits/bit_type_traits/bit_underlying.hpp> // bit_underlying, underlying_block_t
-#include <xstd/bits/from_blocks.hpp>                    // from_blocks
 #include <boost/test/unit_test.hpp>                     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <array>                                        // array
 #include <bit>                                          // bit_cast
@@ -21,8 +21,10 @@
 #include <cstddef>                                      // size_t
 #include <cstdint>                                      // int16_t, int64_t, int8_t, uint16_t, uint32_t, uint64_t, uint8_t
 #include <functional>                                   // greater
+#include <span>                                         // dynamic_extent
 #include <type_traits>                                  // is_same_v
 #include <utility>                                      // to_underlying
+#include <vector>                                       // vector
 
 // Named rather than unnamed, as a concept reads these operators and the mapping without calling them.
 namespace wire {
@@ -187,7 +189,7 @@ BOOST_AUTO_TEST_CASE(OnlyASetOfEnumerationOrIntegerKeysHasAnUnderlyingBlock)
 {
         static_assert(underlying_rebinds<xstd::bit_flag_set<wire::flag>> and underlying_rebinds<xstd::bit_flag_set<wire::signed_flag, 3>>);
         static_assert(not underlying_rebinds<xstd::bit_array<9>> and std::is_same_v<xstd::bit_underlying<xstd::bit_set>, xstd::bit_set>);
-        static_assert(std::is_same_v<xstd::bit_underlying<xstd::basic_bit_set<wire::flag, std::uint8_t, xstd::bit_flag_mapping<wire::flag>, std::greater<wire::flag>>>, xstd::basic_bit_set<wire::flag, std::uint32_t, xstd::bit_flag_mapping<wire::flag>, std::greater<wire::flag>>>); // NOLINT(modernize-use-transparent-functors): the comparator the type names
+        static_assert(std::is_same_v<xstd::bit_underlying<xstd::basic_bit_set<wire::flag, std::vector<std::uint8_t>, std::dynamic_extent, xstd::bit_flag_mapping<wire::flag>, std::greater<wire::flag>>>, xstd::basic_bit_set<wire::flag, std::vector<std::uint32_t>, std::dynamic_extent, xstd::bit_flag_mapping<wire::flag>, std::greater<wire::flag>>>); // NOLINT(modernize-use-transparent-functors): the comparator the type names
         static_assert(std::is_same_v<xstd::bit_underlying<xstd::bit_least<xstd::bit_fixed_set<9>>>, xstd::bit_fixed_set<9>>);
         static_assert(not underlying_rebinds<xstd::bit_flag_set<std::bitset<16>>>);
         static_assert(not underlying_rebinds<xstd::basic_bit_fixed_set<wire::yes_no, std::uint8_t, 2, wire::yes_no_mapping>>);

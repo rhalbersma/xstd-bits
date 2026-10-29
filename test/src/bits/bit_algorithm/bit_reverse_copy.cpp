@@ -8,7 +8,7 @@
 #include <xstd/bits/bit_algorithm/bit_reverse_copy.hpp> // bit_reverse_copy
 #include <xstd/bits/bit_array.hpp>                      // basic_bit_array, bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>          // bit_fixed_set
-#include <xstd/bits/bit_span.hpp>                       // bit_span
+#include <xstd/bits/bit_span/bit_span.hpp>              // bit_span
 #include <xstd/bits/bit_vector.hpp>                     // bit_vector
 #include <boost/test/unit_test.hpp>                     // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                    // reverse, reverse_copy, reverse_copy_result
@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_SUITE(BitReverseCopy)
 namespace {
 
 template<class R, class O>
-concept copyable = requires (R const& r, O out) { xstd::bit_reverse_copy(r, out); };
+concept copyable = requires (R const& r, O out) { xstd::ranges::bit_reverse_copy(r, out); };
 
 // The algorithm and std::ranges::reverse_copy from r into a striped destination over Block at an offset.
 template<class Block, class R>
@@ -37,7 +37,7 @@ template<class Block, class R>
         auto model        = test::algorithm::bools_of(dst);
         auto const d      = static_cast<std::ptrdiff_t>(offset);
         auto const want   = std::ranges::reverse_copy(source, model.begin() + d);
-        auto const got    = xstd::bit_reverse_copy(r, dst.begin() + d);
+        auto const got    = xstd::ranges::bit_reverse_copy(r, dst.begin() + d);
         return got.in == std::ranges::end(r) and got.out - dst.begin() == want.out - model.begin() and test::algorithm::bools_of(dst) == model;
 }
 
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(ReversesBetweenOurSequencesAlone)
         static_assert([] -> bool {
                 auto const a  = test::algorithm::patterned(xstd::bit_array<70>());
                 auto b        = xstd::bit_array<75>();
-                auto const r  = xstd::bit_reverse_copy(a, b.begin() + 5);
+                auto const r  = xstd::ranges::bit_reverse_copy(a, b.begin() + 5);
                 auto reversed = test::algorithm::bools_of(a);
                 std::ranges::reverse(reversed);
                 return r.out == b.end() and test::algorithm::bools_of(xstd::bit_span(b).subspan(5UZ)) == reversed;
@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(ReversesBetweenOurSequencesAlone)
         static_assert(copyable<A, std::ranges::iterator_t<xstd::bit_vector>> and copyable<A, std::ranges::iterator_t<A>>);
         static_assert(not copyable<A, std::ranges::iterator_t<A const>> and not copyable<A, std::vector<bool>::iterator> and not copyable<A, std::back_insert_iterator<std::vector<bool>>>);
         static_assert(not copyable<std::vector<bool>, std::ranges::iterator_t<A>> and not copyable<xstd::bit_fixed_set<8>, std::ranges::iterator_t<A>>);
-        static_assert(std::same_as<decltype(xstd::bit_reverse_copy(A(), std::declval<std::ranges::iterator_t<A>>())), std::ranges::reverse_copy_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
+        static_assert(std::same_as<decltype(xstd::ranges::bit_reverse_copy(A(), std::declval<std::ranges::iterator_t<A>>())), std::ranges::reverse_copy_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
