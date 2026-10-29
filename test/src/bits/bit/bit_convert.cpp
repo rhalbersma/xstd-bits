@@ -237,6 +237,20 @@ BOOST_AUTO_TEST_CASE(OwnersOverOneBlockCrossBlockForBlock)
         static_assert(xstd::bit_convert<xstd::bit_array<0>>(xstd::bit_fixed_set<0>()) == xstd::bit_array<0>());
 }
 
+// An owner of one block reads as that block's own type, at a width short of the block too; split blocks go by bytes.
+BOOST_AUTO_TEST_CASE(AnOwnerOfOneBlockReadsAsItsBlock)
+{
+        using board     = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 64>;
+        using short_set = xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 10>;
+        using split_set = xstd::basic_bit_fixed_set<std::size_t, std::uint32_t, 64>;
+        static_assert(xstd::bits::detail::one_block_as_its_type<std::uint64_t, board> and xstd::bits::detail::one_block_as_its_type<std::uint64_t, short_set>);
+        static_assert(not xstd::bits::detail::one_block_as_its_type<std::uint64_t, split_set>);
+
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint64_t>(board{0, 5, 63}), (1ULL << 63U) | (1ULL << 5U) | 1ULL);
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint64_t>(short_set{1, 9}), (1ULL << 9U) | (1ULL << 1U));
+        BOOST_CHECK_EQUAL(xstd::bit_convert<std::uint64_t>(split_set{0, 5, 63}), (1ULL << 63U) | (1ULL << 5U) | 1ULL);
+}
+
 // A built-in array converts as the std::array of its blocks does, and is no target: no function returns one.
 BOOST_AUTO_TEST_CASE(ABuiltInArrayConvertsAsTheStdArrayOfItsBlocks)
 {

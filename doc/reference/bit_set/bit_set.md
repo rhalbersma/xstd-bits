@@ -32,9 +32,15 @@ public:
     noexcept(is_nothrow_move_constructible_v<block_container_type>);
   constexpr basic_bit_set(from_blocks_t, block_container_type blocks, const allocator_type& a);
 
+  // element access
+  constexpr auto front() const noexcept -> const_reference;
+  constexpr auto back() const noexcept -> const_reference;
+
   // modifiers: [set.modifiers]'s, with
   constexpr auto insert(value_type x) -> pair<iterator, bool>;
   constexpr auto insert(const_iterator position, value_type x) -> iterator;
+  constexpr auto pop_front() noexcept -> void;
+  constexpr auto pop_back() noexcept -> void;
   constexpr auto replace(block_container_type&& blocks) noexcept(see below) -> void;
   constexpr auto extract() && noexcept(see below) -> block_container_type;
 
@@ -92,6 +98,11 @@ As [[set]](https://eel.is/c++draft/set) for `set<Key, Compare>`, over the blocks
   grows the width; the width is capacity and never value.
 - `max_size()` answers the keys the storage could hold, and no more than `KeyMapping::size` where the mapping names
   one.
+- `front()` and `back()` return the first and the last key in the set's order, and `pop_front()` and `pop_back()`
+  remove them; *Preconditions:* `not empty()`, as for [[deque]](https://eel.is/c++draft/deque)'s. Each pop clears one
+  bit in the first block that holds a key, as a walk over the set steps, so `front()` then `pop_front()` compiles to an
+  integer's `countr_zero` and `w & (w - 1)` over one block. On a view they write through, where the storage lets the
+  view write.
 - **Out of range.** `contains`, `count`, `find`, `lower_bound`, `upper_bound`, `equal_range` and `erase(const
   key_type&)` are total, as on `set`: a key outside the universe, or a value that is no key at all, is absent, and
   where `Key` is totally ordered the bounds place it among the keys by that order. `insert`, `emplace` and the

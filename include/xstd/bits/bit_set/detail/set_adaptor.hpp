@@ -656,7 +656,8 @@ public:
                 if constexpr (bits_type::has_stored_count) {
                         return size() == 0UZ;
                 } else {
-                        return begin() == end();
+                        // On the blocks, as begin() == end() leaves a countr_zero that GCC does not fold away.
+                        return bits().none();
                 }
         }
 
@@ -788,14 +789,42 @@ public:
 
         constexpr auto erase(this non_volatile auto&& self, const_iterator first, const_iterator last) noexcept
                 -> iterator
-                requires requires (std::size_t pos) { self.bits().assign(pos, false); }
+                requires requires (std::size_t pos, std::size_t len) { self.bits().set(pos, len, false); }
         {
-                // A range, not two positions: reversed, the walk steps past last into a scan nothing answers.
+                // A range, not two positions: reversed, the span between them runs backwards.
                 assert(is_descending ? (last == self.end() or KeyMapping::to_index(*last) <= KeyMapping::to_index(*first)) : KeyMapping::to_index(*first) <= KeyMapping::to_index(*last));
-                while (first != last) {
-                        self.bits().assign(KeyMapping::to_index(*first++), false);
+                if (first != last) {
+                        // Its keys are the set positions between its ends, so the span clears a block at a time.
+                        auto const lo = is_descending ? (last == self.end() ? 0UZ : last.m_idx + 1UZ) : first.m_idx;
+                        auto const hi = is_descending ? first.m_idx + 1UZ : last.m_idx;
+                        self.bits().set(lo, hi - lo, false);
                 }
                 return last;
+        }
+
+        // front() and back() removed, with their precondition: one step of a walk, on the first block holding a key.
+        constexpr auto pop_front(this non_volatile auto&& self) noexcept
+                -> void
+                requires requires { self.bits().drop_front(); }
+        {
+                XSTD_BITS_ASSERT(not self.empty());
+                if constexpr (is_descending) {
+                        self.bits().drop_back();
+                } else {
+                        self.bits().drop_front();
+                }
+        }
+
+        constexpr auto pop_back(this non_volatile auto&& self) noexcept
+                -> void
+                requires requires { self.bits().drop_back(); }
+        {
+                XSTD_BITS_ASSERT(not self.empty());
+                if constexpr (is_descending) {
+                        self.bits().drop_front();
+                } else {
+                        self.bits().drop_back();
+                }
         }
 
         // The blocks a from_blocks constructor takes, and what an owner's replace and extract trade in.
@@ -1116,7 +1145,12 @@ public:
                         auto const pos = KeyMapping::to_index(x);
                         return {&bits(), bits().total_find_prev(pos < bits().size() ? pos + 1UZ : bits().size())};
                 } else {
-                        return contains(x) ? const_iterator{&bits(), KeyMapping::to_index(x)} : upper_bound(x);
+                        // One scan from x's position, which answers x itself when it is present.
+                        auto const pos = KeyMapping::to_index(x);
+                        if (pos >= bits().size()) {
+                                return end();
+                        }
+                        return {&bits(), bits().inclusive_find_next(pos)};
                 }
         }
 

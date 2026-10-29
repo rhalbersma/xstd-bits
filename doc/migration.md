@@ -322,6 +322,17 @@ with the sign bit set fails the flag type's assertion on the way in.
 
 itsy_bitsy offers the sequence reading alone, and takes the same destinations.
 
+Member by member, `std::bitset<N>` borrows from four standard interfaces and from an unsigned integer, and each
+borrowing has one home here:
+
+| `std::bitset<N>` | Borrowed from | Here |
+| :-- | :-- | :-- |
+| `test(pos)`, `set(pos)`, `reset(pos)`, `count()`, `any()`, `none()`, `all()`, and libstdc++'s `_Find_first` and `_Find_next` | [[set]](https://eel.is/c++draft/set): membership, and iteration over what is set | `bit_fixed_set<N>`: `contains`, `insert`, `erase`, `size`, `empty`, `begin`, `end`, `front`, `pop_front` |
+| `operator[]`, `set(pos, value)`, `size()` | [[array]](https://eel.is/c++draft/array) of `bool`: a value at each index | `bit_array<N>`, which also permutes |
+| `&`, `\|`, `^`, `~`, `<<`, `>>`, their compound forms, and `set()`, `reset()`, `flip()` | [[template.valarray]](https://eel.is/c++draft/template.valarray) of `bool`: a row combined whole | `bit_fixed_valarray<N>`, whose shifts keep `std::bitset`'s sense |
+| `to_string`, the string constructor, and `<<` and `>>` on streams | [[basic.string]](https://eel.is/c++draft/basic.string) of `'0'` and `'1'`: text, position 0 last | `std::format` writes any of the three; reading text back has no counterpart yet |
+| `to_ulong`, `to_ullong`, the `unsigned long long` constructor | an unsigned integer: one word's bits | `xstd::bit_convert` and the `from_blocks` tag, at any width |
+
 ### `std::bitset<N>` as a set of positions
 
 The positions become keys, and `std::bitset`'s verbs become `std::set`'s. The shifts are an integer's rather than
