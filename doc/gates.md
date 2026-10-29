@@ -3,10 +3,12 @@
 This page holds the two ledgers of [#456](https://github.com/rhalbersma/xstd-bits/issues/456). The bug ledger lists
 every bug this repository's history records, the check that found it first, and the cheapest check that would have
 found it sooner. The gate ledger lists what each CI workflow costs and what it caught. The bug ledger draws on the
-issues labelled bug or upstream report, the bugs pull request descriptions and commits record in passing, the pull
-requests from #28 to #468, and seven entries recorded on 17 and 18 October 2026, four of which the harvests already
-held. That is 219 rows: 238 harvested, 22 of them the same bug found twice, and three new entries. The gate ledger
-covers the last 50 pull-request runs of each workflow, from 2026-10-14 16:14 to 2026-10-18 21:14 UTC.
+issues labelled bug or upstream report, the bugs pull request descriptions, commits and CI runs record in passing,
+the pull requests from #28 to #507, and seven entries recorded on 17 and 18 October 2026, four of which the harvests
+already held. That is 271 rows. The pull requests up to #468 and the October entries give 219: 238 harvested, 22 of
+them the same bug found twice, and three new entries. The other 52 were recorded from 19 to 29 October 2026, in #471
+to #507 and the issues of those days. The gate ledger covers the last 50 pull-request runs of each workflow, from
+2026-10-18 21:14 to 2026-10-28 23:50 UTC.
 
 ## The bug ledger
 
@@ -19,7 +21,7 @@ CI configuration, or a toolchain or dependency upstream. Within a group the rows
   the record carries the date it merged.
 - **found by** is the first check that showed it, in the vocabulary below.
 - **cheapest check** is a proposal: an existing gate, or one that does not exist yet. A claim counts once it is
-  replayed: check out the fix's parent, run the check and show it fails, then show it passes on the fix. 44 claims
+  replayed: check out the fix's parent, run the check and show it fails, then show it passes on the fix. 45 claims
   have been replayed, and each cell says whether its claim was and how it came out.
 - **how much earlier** is the time from the introducing commit to the commit that records the finding, the most a
   check run at introduction could have saved. Where the bug was found inside a pull request that merged later, the
@@ -28,7 +30,7 @@ CI configuration, or a toolchain or dependency upstream. Within a group the rows
 
 | found by | meaning |
 | :--- | :--- |
-| `msvc`, `clang_cl`, `apple_clang`, `clang_libcxx`, `clang`, `gcc`, `mingw`, `msvc_analyze`, `clang_tidy`, `coverage`, `sanitizers`, `fuzz`, `consumption`, `audit`, `scorecard` | the CI job family of that name, the first leg to go red |
+| `msvc`, `clang_cl`, `apple_clang`, `clang_libcxx`, `clang`, `gcc`, `i686`, `mingw`, `msvc_analyze`, `wasm32`, `clang_tidy`, `clang_format`, `coverage`, `sanitizers`, `fuzz`, `consumption`, `audit`, `actionlint`, `scorecard` | the CI job family of that name, the first leg to go red |
 | `cpp-ci scan` | the Windows stack-ABI scan in the shared cpp-ci workflows |
 | `ci (unattributed)` | a CI run whose record names no single first leg |
 | `probe workflow` | a one-off diagnostic workflow, not a required gate |
@@ -49,7 +51,7 @@ self-test** feeds a gate an input it must reject and fails when the gate passes 
 
 ### Library
 
-103 rows.
+112 rows.
 
 | bug | kind | introduced | found | found by | cheapest check that would have caught it | how much earlier |
 | :--- | :--- | :--- | :--- | :--- | :--- | ---: |
@@ -156,10 +158,19 @@ self-test** feeds a gate an input it must reject and fails when the gate passes 
 | Ranged `count` calls unqualified `popcount`, which finds Boost.Int128's by ADL [#442](https://github.com/rhalbersma/xstd-bits/pull/442) | library | `28bd43c` (#378, 2026-10-11) | #442 (2026-10-14) | unknown | type-matrix compile table (Boost.Int128 blocks); replayed: fails at 9e296be, passes at 40081fc | 4 d |
 | Concepts and traits not cv-transparent [#447](https://github.com/rhalbersma/xstd-bits/pull/447) | library | not traced | #447 (merged 2026-10-16) | reviewer | type-matrix compile table (cv-qualified owners and spans); replayed: fails at 7dd8022, passes at e33c605 | — |
 | Sized appends reserve exactly, reallocating every call [#450](https://github.com/rhalbersma/xstd-bits/pull/450) | library | `bed313d` (#110, 2026-09-07) | #450 (merged 2026-10-17) | new instantiation | an allocation-counting test (found by it); unreplayed | 39 d |
+| `bit_subspan`'s deduction guides from an owner or a block container deduce a type no constructor builds (open) [#474](https://github.com/rhalbersma/xstd-bits/issues/474) | library | `44daf29` (#206, 2026-09-21) | issue #474 (2026-10-19) | reviewer | type-matrix compile table (each deduction guide spelled); unreplayed | — |
+| Big-endian `flag_mask` admits `std::bitset`, which `bit_flag_set` reads only as little-endian bytes [#479](https://github.com/rhalbersma/xstd-bits/issues/479) | library | `5fbb55c` (#351, 2026-10-07) | issue #479 (2026-10-20) | local run | a big-endian (s390x under QEMU) leg; unreplayed | — |
+| Capacity-0 inplace set keeps run-time-width arms no input takes: five unreachable branches [#497](https://github.com/rhalbersma/xstd-bits/pull/497) | library | inside #497, before merge | #497 (2026-10-23) | coverage | local gcovr (`tools/ci-local.sh coverage`); unreplayed | — |
+| `bit_vector`, `bit_set` and `bit_fixed_set` refuse the C++17 input iterators `std::vector<bool>` and `std::set` take [#501](https://github.com/rhalbersma/xstd-bits/pull/501) | library | not traced | #501 (merged 2026-10-23) | new instantiation | the vendor suite (libc++'s `vector.bool`, found by it); unreplayed | — |
+| `bit_vector`'s reference does not convert to its `const_reference` [#501](https://github.com/rhalbersma/xstd-bits/pull/501) | library | not traced | #501 (merged 2026-10-23) | new instantiation | the vendor suite (libc++'s `vector.bool`, found by it); unreplayed | — |
+| Folded `==` names the static member `zero` from a generic lambda in a hidden friend: C2065 on MSVC 17 and 18, in MSVC and MSVC-Analyze [#507](https://github.com/rhalbersma/xstd-bits/pull/507) | library | inside #507, before merge | #507 (2026-10-28) | msvc_analyze | the Windows leg that found it; nothing local reaches it; unreplayed | — |
+| `empty()` is `begin() == end()`: a `tzcnt` and a width compare in every emptiness test [#507](https://github.com/rhalbersma/xstd-bits/pull/507) | library | `67336a7` (#98, 2026-09-06) | #507 (merged 2026-10-29) | benchmark | an instruction-count check on the hot paths; unreplayed | 53 d |
+| `lower_bound` tests the key, then scans past it when absent [#507](https://github.com/rhalbersma/xstd-bits/pull/507) | library | `67336a7` (#98, 2026-09-06) | #507 (merged 2026-10-29) | benchmark | an instruction-count check on the hot paths; unreplayed | 53 d |
+| Ranged `set(n, len)` departs from clang-format [#507](https://github.com/rhalbersma/xstd-bits/pull/507) | library | inside #507, before merge | #507 (merged 2026-10-29) | local run | the local run that found it; none cheaper; unreplayed | — |
 
 ### Tests
 
-24 rows.
+42 rows.
 
 | bug | kind | introduced | found | found by | cheapest check that would have caught it | how much earlier |
 | :--- | :--- | :--- | :--- | :--- | :--- | ---: |
@@ -174,7 +185,7 @@ self-test** feeds a gate an input it must reject and fails when the gate passes 
 | Unqualified `numeric_limits` silently finds `xstd::numeric_limits` [#67](https://github.com/rhalbersma/xstd-bits/pull/67) | test | `d1f8940` (#66, 2026-09-02) | #67 (merged 2026-09-02) | ci (unattributed) | compile on every local compiler (`tools/ci-local.sh`); replayed: fails at 9e0281c, passes at 2335ad6 | 5 h |
 | Test target named `test..bits` [#67](https://github.com/rhalbersma/xstd-bits/pull/67) | test | `d1f8940` (#66, 2026-09-02) | #67 (merged 2026-09-02) | local run | the local run that found it; none cheaper; unreplayed | 5 h |
 | 36 includes arrive transitively through `ext/` adapters [#79](https://github.com/rhalbersma/xstd-bits/pull/79) | test | not traced | #79 (merged 2026-09-04) | clang_tidy | local clang-tidy (`tools/ci-local.sh tidy-*`); unreplayed | — |
-| 128-bit block gate keyed on `__GNUG__` [#85](https://github.com/rhalbersma/xstd-bits/pull/85) | test | not traced | #85 (merged 2026-09-04) | reviewer | type-matrix compile table (128-bit blocks under `-std=c++23`); replayed: fails at a659b82, passes at 59b4b72 (strict `-std=c++23` on libstdc++ only) | — |
+| 128-bit block gate keyed on `__GNUG__` [#85](https://github.com/rhalbersma/xstd-bits/pull/85) | test | not traced | #85 (merged 2026-09-04) | reviewer | type-matrix compile table (128-bit blocks under `-std=c++23`); replayed: fails at a659b82, passes at 59b4b72 (strict `-std=c++23` on libstdc++ 15 or earlier only) | — |
 | `mem_emplace` forwards arguments three times (use after move) [#125](https://github.com/rhalbersma/xstd-bits/pull/125) | test | `43636ef` (2018-12-23) | #125 (merged 2026-09-08) | local run | local clang-tidy (`tools/ci-local.sh tidy-*`) (over `test/include/`); unreplayed | 2,816 d |
 | `bugprone-signed-bitwise` on `lcg >> 11` sits on main unseen [#129](https://github.com/rhalbersma/xstd-bits/pull/129) | test | `865b9e6` (#125, 2026-09-08) | #129 (merged 2026-09-09) | clang_tidy | local clang-tidy (`tools/ci-local.sh tidy-*`) (`ci-local.sh tidy-24`); unreplayed | 10 h |
 | Fixture assumes `std::bitset` has no block access; MSVC's STL has `_Getword` [#130](https://github.com/rhalbersma/xstd-bits/pull/130) | test | inside #130, before merge | #130 (merged 2026-09-09) | msvc | the Windows leg that found it; nothing local reaches it; unreplayed | — |
@@ -187,6 +198,24 @@ self-test** feeds a gate an input it must reject and fails when the gate passes 
 | Tests assert capacity-0 bounded owners are empty types; the MSVC ABI gives them a byte [#371](https://github.com/rhalbersma/xstd-bits/pull/371) | test | inside #371, before merge | #371 (2026-10-09) | msvc | the Windows leg that found it; nothing local reaches it; unreplayed | — |
 | Tests assume 64-bit `size_t` blocks [#398](https://github.com/rhalbersma/xstd-bits/pull/398) | test | not traced | #398 (merged 2026-10-13) | local run | an i686 (`-m32`) leg; unreplayed | — |
 | Redundant `<cstddef>` for `std::dynamic_extent` in a test [#469](https://github.com/rhalbersma/xstd-bits/pull/469) | test | inside #469, before merge | #469 (2026-10-18) | local run | the local run that found it; none cheaper; unreplayed | — |
+| Set fuzzer calls the hash and `erase_if` the split moved out of the class header [#472](https://github.com/rhalbersma/xstd-bits/pull/472) | test | inside #472, before merge | #472 (2026-10-19) | fuzz | a local build of the fuzz targets (`XSTD_BITS_BUILD_FUZZERS=ON`); unreplayed | — |
+| `bit_set` hash test's declarations depart from clang-format [#472](https://github.com/rhalbersma/xstd-bits/pull/472) | test | inside #472, before merge | #472 (2026-10-19) | clang_format | the local format leg (`tools/ci-local.sh format`); unreplayed | — |
+| Two `static_assert`s join two true traits with `and` (`misc-redundant-expression`) [#472](https://github.com/rhalbersma/xstd-bits/pull/472) | test | inside #472, before merge | #472 (merged 2026-10-19) | local run | the local run that found it; none cheaper; unreplayed | — |
+| `bit_set` hash test's view could be `const` (`misc-const-correctness`, clang-tidy 23) [#472](https://github.com/rhalbersma/xstd-bits/pull/472) | test | inside #472, before merge | #472 (2026-10-19) | clang_tidy | local clang-tidy (`tools/ci-local.sh tidy-*`) (`tidy-23`); unreplayed | — |
+| `bit_layout`'s byte-copy asserts and `bit_hash`'s update counts assume little-endian [#479](https://github.com/rhalbersma/xstd-bits/issues/479) | test | not traced | issue #479 (2026-10-20) | local run | a big-endian (s390x under QEMU) leg; unreplayed | — |
+| Nine test files call the `std::bitset` byte conversion a big-endian target does not have [#495](https://github.com/rhalbersma/xstd-bits/pull/495) | test | not traced | issue #479 (2026-10-20) | local run | a big-endian (s390x under QEMU) leg; unreplayed | — |
+| 128-bit test gate keys on `__STRICT_ANSI__`; strict builds on libc++ and libstdc++ 16+ skip the 128-bit rows [#478](https://github.com/rhalbersma/xstd-bits/issues/478) | test | `59b4b72` (#85, 2026-09-04) | issue #478 (2026-10-20) | local run | a `static_assert` that the gate agrees with `std::unsigned_integral` (as the fix adds); unreplayed | — |
+| Inplace `uint128` storage test expects more than `size_t`'s alignment; s390x aligns a 128-bit integer at 8 bytes [#495](https://github.com/rhalbersma/xstd-bits/pull/495) | test | not traced | #495 (merged 2026-10-22) | local run | a big-endian (s390x under QEMU) leg; unreplayed | — |
+| Byte-order gate lets a wide `std::bitset` reach a `static_assert` past Clang's constant-evaluation step limit [#495](https://github.com/rhalbersma/xstd-bits/pull/495) | test | inside #495, before merge | #495 (merged 2026-10-22) | local run | the local run that found it; none cheaper; unreplayed | — |
+| Set helper `held_width_v` specializes on an alias whose `N` is not deducible; clang 22 alone accepts it [#497](https://github.com/rhalbersma/xstd-bits/pull/497) | test | inside #497, before merge | #497 (2026-10-22) | wasm32 | compile on every local compiler (`tools/ci-local.sh`) (`clang-23`, `clang-24`); unreplayed | — |
+| `bit_rebind` test expects a 64-bit `size_t` block [#497](https://github.com/rhalbersma/xstd-bits/pull/497) | test | inside #497, before merge | #497 (2026-10-22) | wasm32 | an i686 (`-m32`) leg (`tools/ci-local.sh i686`); unreplayed | — |
+| `bit_storage` test's arena-backed vector could be `const` (`misc-const-correctness`, clang-tidy 23 and 24) [#497](https://github.com/rhalbersma/xstd-bits/pull/497) | test | inside #497, before merge | #497 (2026-10-23) | clang_tidy | local clang-tidy (`tools/ci-local.sh tidy-*`) (`tidy-23`, `tidy-24`); unreplayed | — |
+| Two test findings in the iterator-pair tests: a redundant `()` on a lambda and a `const` the converted reference could carry [#501](https://github.com/rhalbersma/xstd-bits/pull/501) | test | inside #501, before merge | #501 (2026-10-23) | clang_tidy | local clang-tidy (`tools/ci-local.sh tidy-*`) (`tidy-23`, `tidy-24`); unreplayed | — |
+| Shift tests name `xstd::int128` and `xstd::uint128`, which i686 does not declare [#505](https://github.com/rhalbersma/xstd-bits/pull/505) | test | inside #505, before merge | #505 (2026-10-24) | i686 | an i686 (`-m32`) leg (`tools/ci-local.sh i686`); unreplayed | — |
+| Structural test asks MSVC to define a defaulted constructor inside a requires-expression [#505](https://github.com/rhalbersma/xstd-bits/pull/505) | test | inside #505, before merge | #505 (2026-10-24) | msvc | the Windows leg that found it; nothing local reaches it; unreplayed | — |
+| `indeterminate_array` test fills an array as a constant, which MSVC rejects ([class.temporary]/3) [#505](https://github.com/rhalbersma/xstd-bits/pull/505) | test | inside #505, before merge | #505 (2026-10-24) | msvc | the Windows leg that found it; nothing local reaches it; unreplayed | — |
+| Shift tests' view variable could be `const` (`misc-const-correctness`, clang-tidy 23 and 24) [#505](https://github.com/rhalbersma/xstd-bits/pull/505) | test | inside #505, before merge | #505 (2026-10-24) | clang_tidy | local clang-tidy (`tools/ci-local.sh tidy-*`) (`tidy-24`); unreplayed | — |
+| Descending counted `for` outside a template, hidden behind the C2065 until its fix: MSVC `/analyze` C6293 [#507](https://github.com/rhalbersma/xstd-bits/pull/507) | test | inside #507, before merge | #507 (2026-10-28) | msvc_analyze | the Windows leg that found it; nothing local reaches it; unreplayed | — |
 
 ### Benchmarks
 
@@ -203,7 +232,7 @@ self-test** feeds a gate an input it must reject and fails when the gate passes 
 
 ### Documentation
 
-10 rows.
+28 rows.
 
 | bug | kind | introduced | found | found by | cheapest check that would have caught it | how much earlier |
 | :--- | :--- | :--- | :--- | :--- | :--- | ---: |
@@ -217,10 +246,28 @@ self-test** feeds a gate an input it must reject and fails when the gate passes 
 | design.md's 47x `count` claim compares two libstdc++ columns [#121](https://github.com/rhalbersma/xstd-bits/issues/121) | doc | `0e8682c` (#130, 2026-09-09) | #162 (merged 2026-09-15) | benchmark | the benchmark on a libc++ leg; unreplayed | 6 d |
 | README describes the bit layout mirrored [#174](https://github.com/rhalbersma/xstd-bits/pull/174) | doc | not traced | #174 (merged 2026-09-18) | reviewer | a doc test that compiles the claim; unreplayed | — |
 | Include comments name 85 names their files do not use [#461](https://github.com/rhalbersma/xstd-bits/pull/461) | doc | not traced | #461 (merged 2026-10-17) | audit | the Audit workflow (`include_comments.py`, found by it); unreplayed | — |
+| README says every owner hashes; the valarrays specialize no hash [#472](https://github.com/rhalbersma/xstd-bits/pull/472) | doc | not traced | #472 (merged 2026-10-19) | reviewer | a doc test that compiles the claim; unreplayed | — |
+| README counts eleven containers where its own table lists twelve [#473](https://github.com/rhalbersma/xstd-bits/pull/473) | doc | not traced | #473 (merged 2026-10-19) | reviewer | none proposed | — |
+| README lists `find_first` and `find_next` as additions; no public container has them [#475](https://github.com/rhalbersma/xstd-bits/pull/475) | doc | not traced | #475 (merged 2026-10-20) | reviewer | a doc test that compiles the claim; unreplayed | — |
+| README describes the small storage the wrong way round [#475](https://github.com/rhalbersma/xstd-bits/pull/475) | doc | not traced | #475 (merged 2026-10-20) | reviewer | none proposed | — |
+| design.md gives every reading `extract` and `replace`; the valarrays have neither [#475](https://github.com/rhalbersma/xstd-bits/pull/475) | doc | not traced | #475 (merged 2026-10-20) | reviewer | a doc test that compiles the claim; unreplayed | — |
+| README promises each algorithm its counterpart's signature; none takes a projection, and four iterator-operation forms do not exist [#476](https://github.com/rhalbersma/xstd-bits/pull/476) | doc | not traced | #476 (merged 2026-10-20) | reviewer | a doc test that compiles the claim; unreplayed | — |
+| design.md equates `bit_includes` with `includes` under the default comparator; descending sets differ [#476](https://github.com/rhalbersma/xstd-bits/pull/476) | doc | not traced | #476 (merged 2026-10-20) | reviewer | a doc test that compiles the claim; unreplayed | — |
+| design.md prices `bit_advance` at `n / digits` blocks, true only of dense keys [#476](https://github.com/rhalbersma/xstd-bits/pull/476) | doc | not traced | #476 (merged 2026-10-20) | reviewer | none proposed | — |
+| Three algorithm headers repeat their first comment line [#476](https://github.com/rhalbersma/xstd-bits/pull/476) | doc | not traced | #476 (merged 2026-10-20) | reviewer | none proposed | — |
+| design.md says `bit_underlying` takes every owner; it takes the four sets [#477](https://github.com/rhalbersma/xstd-bits/pull/477) | doc | not traced | #477 (merged 2026-10-20) | reviewer | a doc test that compiles the claim; unreplayed | — |
+| design.md lists eight owners for `bit_rebind` where twelve define `with_block`, and six for the width transformations where nine do [#477](https://github.com/rhalbersma/xstd-bits/pull/477) | doc | not traced | #477 (merged 2026-10-20) | reviewer | a doc test that compiles the claim; unreplayed | — |
+| design.md says a window is no `bit_convert` source [#477](https://github.com/rhalbersma/xstd-bits/pull/477) | doc | not traced | #477 (merged 2026-10-20) | reviewer | a doc test that compiles the claim; unreplayed | — |
+| README's `bit_resize` row leaves out two valarrays [#477](https://github.com/rhalbersma/xstd-bits/pull/477) | doc | not traced | #477 (merged 2026-10-20) | reviewer | a doc test that compiles the claim; unreplayed | — |
+| README and the `bit_ranges` umbrella cite different clauses for `from_blocks` [#477](https://github.com/rhalbersma/xstd-bits/pull/477) | doc | not traced | #477 (merged 2026-10-20) | reviewer | none proposed | — |
+| design.md's two workflow links resolve against `doc/` and 404 [#477](https://github.com/rhalbersma/xstd-bits/pull/477) | doc | not traced | #477 (merged 2026-10-20) | reviewer | a link check over the Markdown; unreplayed | — |
+| Two-space sub-items in 16 pages render on the site as siblings of their parents [#489](https://github.com/rhalbersma/xstd-bits/pull/489) | doc | `2eaa1ef` (#477, 2026-10-20) | #489 (merged 2026-10-22) | unknown | the site build's nesting check under `--strict` (the fix's guard); unreplayed | 2 d |
+| design.md misstates the exceptions over Boost storage: `static_vector` throws its own `bad_alloc` [#497](https://github.com/rhalbersma/xstd-bits/pull/497) | doc | not traced | #497 (merged 2026-10-23) | reviewer | none proposed | — |
+| Two comments in the library headers run past 120 columns [#507](https://github.com/rhalbersma/xstd-bits/pull/507) | doc | inside #507, before merge | #507 (merged 2026-10-29) | reviewer | a comment-width lint (`.clang-format` sets `ColumnLimit: 0`); unreplayed | — |
 
 ### Gates
 
-14 rows.
+15 rows.
 
 | bug | kind | introduced | found | found by | cheapest check that would have caught it | how much earlier |
 | :--- | :--- | :--- | :--- | :--- | :--- | ---: |
@@ -238,10 +285,11 @@ self-test** feeds a gate an input it must reject and fails when the gate passes 
 | A pre-existing `NOLINT` on the wrong line [#199](https://github.com/rhalbersma/xstd-bits/pull/199) | gate | not traced | #199 (merged 2026-09-20) | reviewer | a lint that each `NOLINT` line raises its diagnostic without the marker; unreplayed | — |
 | Canary-called stubs share one concurrency group, so badges stay red [#405](https://github.com/rhalbersma/xstd-bits/issues/405) | gate | `662899c` (#75, 2026-09-03) | issue #405 (2026-10-13) | reviewer | a check that each canary-dispatched run concludes rather than cancels; unreplayed | — |
 | cpp-ci clang-tidy loop piped into `tee`: only the last header's status counts [#465](https://github.com/rhalbersma/xstd-bits/pull/465) | gate | in cpp-ci | #465 (merged 2026-10-18) | reviewer | a gate self-test that seeds a failing input; unreplayed | — |
+| `performance-unnecessary-value-param` flags iterators passed by value, as the standard's synopses pass them [#501](https://github.com/rhalbersma/xstd-bits/pull/501) | gate | inside #501, before merge | #501 (2026-10-23) | clang_tidy | local clang-tidy (`tools/ci-local.sh tidy-*`) (`tidy-23`, `tidy-24`); unreplayed | — |
 
 ### CI configuration
 
-14 rows.
+16 rows.
 
 | bug | kind | introduced | found | found by | cheapest check that would have caught it | how much earlier |
 | :--- | :--- | :--- | :--- | :--- | :--- | ---: |
@@ -259,10 +307,12 @@ self-test** feeds a gate an input it must reject and fails when the gate passes 
 | ASan libc++ leg killed mid-build running six Ninja jobs [#443](https://github.com/rhalbersma/xstd-bits/pull/443) | ci-config | in cpp-ci | #443 (merged 2026-10-15) | sanitizers | none proposed (runner capacity) | — |
 | libc++ Release legs killed at exit 143 (a TU peaks at 5.1 GiB) [#465](https://github.com/rhalbersma/xstd-bits/pull/465) | ci-config | in cpp-ci | #465 (merged 2026-10-18) | clang_libcxx | none proposed (runner capacity) | — |
 | Stale xstd-misc pin kept in `consumption.yml` by a file-wide conflict resolution [#465](https://github.com/rhalbersma/xstd-bits/pull/465) | ci-config | inside #465, before merge | #465 (merged 2026-10-18) | consumption | a pin check (consumption pins checked against CMakeLists.txt); unreplayed | — |
+| Audit step named with an unquoted `ranges::`, which YAML reads as a mapping; `audit.yml` does not parse [#471](https://github.com/rhalbersma/xstd-bits/pull/471) | ci-config | inside #471, before merge | #471 (2026-10-19) | actionlint | actionlint, run locally; replayed: fails at f07aa64, passes at c4ef151 | — |
+| A compiled Python file is committed; nothing keeps `__pycache__` out of the tree [#475](https://github.com/rhalbersma/xstd-bits/pull/475) | ci-config | `3c72596` (#461, 2026-10-17) | #475 (merged 2026-10-20) | reviewer | a check that the tree tracks no build artefacts; unreplayed | 2 d |
 
 ### Toolchains, upstream
 
-32 rows.
+34 rows.
 
 | bug | kind | introduced | found | found by | cheapest check that would have caught it | how much earlier |
 | :--- | :--- | :--- | :--- | :--- | :--- | ---: |
@@ -298,10 +348,12 @@ self-test** feeds a gate an input it must reject and fails when the gate passes 
 | libc++ `syntax_option_type` breaks the bitmask requirements [#358](https://github.com/rhalbersma/xstd-bits/pull/358) | toolchain-upstream | upstream | #358 (merged 2026-10-08) | new instantiation | the local run that found it; none cheaper; unreplayed | — |
 | GCC 15 mangles class-type template arguments without implicit zeros (PR c++/121231) [#396](https://github.com/rhalbersma/xstd-bits/issues/396) | toolchain-upstream | upstream | issue #396 (2026-10-12) | local run | an i686 (`-m32`) leg (running the structural test); unreplayed | — |
 | clang 23.1.4 lifetime-safety segfault on an explicit-object rvalue member call (open upstream) [#470](https://github.com/rhalbersma/xstd-bits/issues/470) | toolchain-upstream | upstream | #469 (2026-10-18) | sanitizers | compile on every local compiler (`tools/ci-local.sh`) (`ci-local.sh clang-23` on that test); replayed: fails at c447af8, passes at ae47094 | — |
+| Clang trunk's new field-origin-escape diagnostic flags `indirect_selection::index()`, whose reference [template.indirect.array] specifies [#483](https://github.com/rhalbersma/xstd-bits/pull/483) | toolchain-upstream | upstream | #483 (2026-10-20) | clang_libcxx | the trunk leg that found it; the local clang 24 snapshot predates the diagnostic; unreplayed | — |
+| Clang trunk renames its experimental lifetime-safety warnings; two suppressions match nothing [#487](https://github.com/rhalbersma/xstd-bits/pull/487) | toolchain-upstream | upstream | #487 (2026-10-21) | clang | the trunk leg that found it; the local clang 24 snapshot predates both spellings; unreplayed | — |
 
 ### Dependencies, upstream
 
-16 rows.
+18 rows.
 
 | bug | kind | introduced | found | found by | cheapest check that would have caught it | how much earlier |
 | :--- | :--- | :--- | :--- | :--- | :--- | ---: |
@@ -321,53 +373,65 @@ self-test** feeds a gate an input it must reject and fails when the gate passes 
 | Boost `dynamic_bitset::append(first, last)` gives only the basic guarantee for input iterators [#314](https://github.com/rhalbersma/xstd-bits/issues/314) | dependency-upstream | upstream | issue #314 (2026-10-02) | unknown | refusing-allocator harness; unreplayed | — |
 | `stdx::bitset` leaves unused high bits set and mishandles wide shifts (not a dependency) [#330](https://github.com/rhalbersma/xstd-bits/issues/330) | dependency-upstream | upstream | issue #330 (2026-10-03) | reviewer | none proposed | — |
 | cpp-ci `install-gcc` exits 0 when the PPA index fails [#450](https://github.com/rhalbersma/xstd-bits/pull/450) | dependency-upstream | upstream | #450 (merged 2026-10-17) | ci (unattributed) | none proposed (upstream infrastructure) | — |
+| cpp-ci v0.14.0's `install-gcc` fails once the PPA's mirror refuses five attempts [#490](https://github.com/rhalbersma/xstd-bits/pull/490) | dependency-upstream | upstream | comment on #489 (2026-10-21) | consumption | none proposed (upstream infrastructure) | — |
+| Boost.DynamicBitset's invariant check needs `capacity()` of its container, so debug builds over `std::deque` fail (open) [#493](https://github.com/rhalbersma/xstd-bits/issues/493) | dependency-upstream | upstream | issue #493 (2026-10-22) | new instantiation | the local run that found it; none cheaper; unreplayed | — |
+
 ## The gate ledger
 
 One row per workflow, ordered by runner minutes per pull request. A workflow that runs several job families names
-them all; the timings are per workflow run. The window is about four days and about 16 pull requests (#419 and #442
-to #469). The counts are incidents, not rates: a failure is one failed job attempt, including attempts in runs that
-were later cancelled.
+them all; the timings are per workflow run. The window is about ten days and 23 pull requests, from #469 to #507. The
+counts are incidents, not rates: a failure is one failed job attempt, including attempts in runs that were later
+cancelled.
 
 - **bugs found first** counts the bug-ledger rows whose finder is one of the workflow's job families, over the whole
   history, and those found on a pull request in the window.
 - **median queue**, **median run wall** and **median runner minutes per PR** are medians over runs that concluded in
-  success or failure. Runner minutes are summed job wall minutes, with no operating-system multiplier.
+  success or failure; the queue median is over those runs' jobs, from a job's creation to its start. Runner minutes
+  are summed job wall minutes, with no operating-system multiplier.
 - **red on the PR's own code** counts failed jobs whose cause was the pull request's change.
 - **red for another reason** counts the rest by cause: `mirror/network` (a package mirror failing), `runner/infra` (a
-  runner lost or killed), `gate-config` (the gate's own configuration), `upstream toolchain` (a compiler crash).
+  runner lost or killed), `gate-config` (the gate's own configuration), `upstream toolchain` (a compiler crash, or a
+  trunk snapshot's new or renamed diagnostic).
+
+On a pull request each of the ten compiler-ladder workflows builds only its floor and ceiling rungs, in Debug, and
+skips the build where nothing it builds changed. Each skipped its build on 10 of its concluded runs in the window,
+which enter the medians at a few seconds' cost; over the runs that built, a ladder's median runner minutes are 2% to
+20% higher.
 
 | workflow | job families | bugs found first, all history | of which in the window | median queue min | median run wall min | median runner min per PR | red on the PR's own code | red for another reason |
 | :--- | :--- | ---: | ---: | ---: | ---: | ---: | ---: | :--- |
-| Sanitizers | `sanitizers` | 4 | 2 | 83.7 | 174.9 | 456.6 | 0 | mirror/network 8, runner/infra 2, upstream toolchain 1 |
-| Clang-CL | `clang_cl` | 3 | 0 | 13.3 | 124.8 | 334.2 | 0 | — |
-| GCC | `gcc`, `gcc_cxx26`, `hardened`, `i686` | 1 | 0 | 58.9 | 193.0 | 331.1 | 0 | mirror/network 8 |
-| MSVC | `msvc` | 13 | 0 | 9.2 | 118.9 | 304.6 | 0 | — |
-| Clang-Tidy | `clang_tidy` | 15 | 0 | 23.3 | 178.2 | 283.3 | 7 | mirror/network 3 |
-| MinGW | `mingw`, `mingw_cxx26` | 2 | 0 | 18.7 | 123.0 | 225.1 | 0 | — |
-| Clang libc++ | `clang_libcxx`, `hardened` | 2 | 1 | 33.4 | 160.1 | 204.5 | 0 | runner/infra 4 |
-| MSVC-Analyze | `msvc_analyze` | 2 | 0 | 2.5 | 110.4 | 196.5 | 4 | — |
-| Clang | `clang` | 2 | 0 | 26.4 | 142.3 | 176.6 | 2 | mirror/network 4 |
-| Apple Clang | `apple_clang` | 5 | 0 | 3.2 | 67.5 | 105.4 | 1 | — |
-| CodeQL | `codeql` | 0 | 0 | 0.2 | 84.7 | 84.6 | 0 | mirror/network 2 |
-| Coverage | `coverage` | 9 | 0 | 0.8 | 35.8 | 33.7 | 3 | mirror/network 1 |
-| Emscripten | `wasm32` | 0 | 0 | 5.8 | 68.0 | 21.7 | 2 | — |
-| ClusterFuzzLite PR fuzzing | `fuzz` | 1 | 0 | 0.2 | 9.2 | 17.6 | 0 | — |
-| Consumption | `consumption` | 3 | 1 | 0.8 | 1.7 | 1.0 | 1 | gate-config 1, mirror/network 1 |
-| Actionlint | `actionlint` | 0 | 0 | 0.5 | 0.9 | 0.4 | 0 | — |
-| Clang-Format | `clang_format` | 0 | 0 | 0.4 | 0.8 | 0.4 | 0 | — |
-| Audit | `audit` | 6 | 1 | 0.5 | 0.6 | 0.1 | 0 | — |
+| Sanitizers | `sanitizers` | 4 | 0 | 42.6 | 117.5 | 490.5 | 0 | — |
+| Clang-Tidy | `clang_tidy` | 20 | 5 | 0.1 | 150.8 | 287.8 | 7 | — |
+| GCC | `gcc`, `gcc_cxx26`, `hardened`, `i686` | 2 | 1 | 7.0 | 100.7 | 246.3 | 2 | — |
+| MSVC-Analyze | `msvc_analyze` | 4 | 2 | 0.1 | 90.3 | 203.2 | 8 | mirror/network 1 |
+| MinGW | `mingw`, `mingw_cxx26` | 2 | 0 | 0.4 | 70.5 | 140.7 | 0 | — |
+| MSVC | `msvc` | 15 | 2 | 0.3 | 81.5 | 114.3 | 6 | — |
+| Clang-CL | `clang_cl` | 3 | 0 | 0.4 | 83.2 | 110.5 | 1 | — |
+| Clang libc++ | `clang_libcxx`, `hardened`, `std_test_suites` | 3 | 1 | 2.5 | 79.0 | 99.8 | 0 | upstream toolchain 1 |
+| CodeQL | `codeql` | 0 | 0 | 0.1 | 92.7 | 91.2 | 0 | mirror/network 2 |
+| Apple Clang | `apple_clang` | 5 | 0 | 0.6 | 61.7 | 51.8 | 2 | — |
+| Clang | `clang` | 3 | 1 | 1.9 | 68.7 | 49.5 | 0 | upstream toolchain 2 |
+| Coverage | `coverage` | 10 | 1 | 0.1 | 39.1 | 38.0 | 1 | — |
+| Emscripten | `wasm32` | 2 | 2 | 0.5 | 45.9 | 26.4 | 2 | — |
+| ClusterFuzzLite PR fuzzing | `fuzz` | 2 | 1 | 0.1 | 9.2 | 17.9 | 2 | — |
+| Consumption | `consumption` | 4 | 1 | 0.2 | 1.3 | 1.0 | 0 | mirror/network 2 |
+| Actionlint | `actionlint` | 1 | 1 | 0.1 | 0.5 | 0.4 | 1 | — |
+| Clang-Format | `clang_format` | 1 | 1 | 0.1 | 0.7 | 0.4 | 1 | — |
+| Pages | `site`, `deploy` | 0 | 0 | 0.0 | 0.4 | 0.3 | 0 | — |
+| Audit | `audit` | 6 | 0 | 0.1 | 0.2 | 0.1 | 0 | — |
 
 Five finders sit outside this table. Scorecard (1 bug) runs on pushes to `main` and on a schedule, so it has no
 pull-request runs. The mutation-testing find (1) was a local run, before the scheduled mutation workflow existed.
 The cpp-ci stack-ABI scan (1) runs inside cpp-ci's workflows, `ci (unattributed)` (8) names no workflow, and the
-probe workflow (1) no longer exists.
+probe workflow (1) no longer exists. Changes, the ladders' path filter, runs inside the ladder workflows as their
+`changes` job and has no runs of its own. Pages has 39 pull-request runs, all it has had since it began on 20 October.
 
-Of the 104,511 runner minutes the 900 listed runs used, 44,311 (42%) went to runs cancelled because a newer push
+Of the 71,228 runner minutes the 939 listed runs used, 14,571 (20%) went to runs cancelled because a newer push
 superseded them; the per-PR medians above exclude those runs.
 
 ## The replays
 
-Four checks were proposed most often, and 44 of their claims were replayed, one cell per bug, at the fix's parent and
+Four checks were proposed most often, and 45 of their claims were replayed, one cell per bug, at the fix's parent and
 at the fix. A replay *confirms* a claim when the cell fails at the parent and passes at the fix. It *reclassifies* one
 when a different check does that, and *withdraws* one when no check of the kind can.
 
@@ -378,8 +442,9 @@ when a different check does that, and *withdraws* one when no check of the kind 
 | an `-march=x86-64-v3` leg | 1 | 0 | 0 | 1 |
 | actionlint, run locally | 1 | 1 | 0 | 0 |
 
-The actionlint claim was replayed on a bug from after the ledger's window: #471's `audit.yml` named a step with an
-unquoted `ranges:: says`, which YAML reads as a mapping. actionlint fails at f07aa64 and passes at c4ef151.
+The actionlint claim is #471's row: `audit.yml` named a step with an unquoted `ranges:: says`, which YAML reads as a
+mapping. actionlint fails at f07aa64 and passes at c4ef151. Every other claim in the 52 rows recorded since 19
+October is unreplayed.
 
 What the replays say about each check:
 
@@ -391,7 +456,7 @@ What the replays say about each check:
   type that does not exist, one is two correct spellings with different meanings, one has no observable form before
   its own fix.
 - **A type-matrix cell has to compile as users do.** The 128-bit row replays only under a strict `-std=c++23` on
-  libstdc++; the CI builds use `gnu++23`, CMake's default, and pass.
+  libstdc++ 15 or earlier; the CI builds of the fix used `gnu++23`, CMake's default, and pass.
 - **Compile on every local compiler means every one, in both build types and against the CI's dependencies.** Its
   seven confirmed claims needed clang 23 (twice, a frontend crash), a Release build (twice, once on GCC 17 at `-O3`),
   clang beside GCC (once), Boost 1.92 from vcpkg (once) and plain compilation (once). The claim it lost needed a test
@@ -401,38 +466,42 @@ What the replays say about each check:
   there either. A lint that keeps `__BMI2__` inside xstd-ints, or a test that asserts which path a target selects,
   would have. `test/CMakeLists.txt` passes `-march=native` to every test, so which branch CI compiles depends on the
   runner's hardware.
-- **One replay found a live gap.** libc++ 22 counts `unsigned __int128` as `std::unsigned_integral` even under
-  `-std=c++23`, against the premise of the 128-bit row's fix. That fix's two-way `static_assert` fires on libc++ 22
-  strict; `main` has dropped the assertion and keeps the `#if`, so there the 128-bit row is silently left out.
+- **One replay found a live gap.** Under a strict `-std=c++23`, libc++ at every version and libstdc++ 16 and later
+  count `unsigned __int128` as `std::unsigned_integral`; only libstdc++ 15 and earlier drop it, and the 128-bit
+  test gate keyed on `__STRICT_ANSI__` as if every library did. Strict builds on the others skipped the 128-bit rows
+  silently. The gap is a ledger row, [#478](https://github.com/rhalbersma/xstd-bits/issues/478), fixed in #487 by a
+  gate that names the libraries and asserts its agreement with the concept.
 
 ## What the ledgers say so far
 
-- **Most bugs were found first outside CI.** Of the 219 rows, a CI gate found 78 first (36%, 6 of them the Audit
-  checks on their first run), a reviewer 65 (30%), a new instantiation 34 (16%) and a local run 23 (11%);
-  benchmarks, downstream users, mutation testing and a probe found 11, and for 8 the record does not say. For the 103
-  library bugs the split is sharper: a reviewer 44 (43%), a new instantiation 23 (22%), a local run 9 (9%) and a CI
-  gate 18 (17%).
-- **CI gates find upstream defects more than library ones.** They found 27 of the 48 toolchain and dependency
-  defects first (56%), 13 of them on the Windows and Apple legs, against 18 of the 103 library bugs.
-- **Where the time can be measured, the median is under a week.** Of the 60 rows with both ends dated, the median
-  latency is 5.7 days; 18 were found within a day and 28 after more than a week. Six waited more than a year,
+- **Most bugs were found first outside CI.** Of the 271 rows, a CI gate found 97 first (36%, 6 of them the Audit
+  checks on their first run), a reviewer 84 (31%), a new instantiation 37 (14%) and a local run 31 (11%);
+  benchmarks, downstream users, mutation testing and a probe found 13, and for 9 the record does not say. For the 112
+  library bugs the split is sharper: a reviewer 45 (40%), a new instantiation 25 (22%), a local run 11 (10%) and a CI
+  gate 20 (18%).
+- **CI gates find upstream defects more than library ones.** They found 30 of the 52 toolchain and dependency
+  defects first (58%), 13 of them on the Windows and Apple legs, against 20 of the 112 library bugs.
+- **Where the time can be measured, the median is under a week.** Of the 64 rows with both ends dated, the median
+  latency is 5.7 days; 18 were found within a day and 30 after more than a week. Six waited more than a year,
   the longest 2,816 days: a use-after-move in the test helpers, found by a local clang-tidy run over `test/include/`,
-  which the CI configuration's header filter hid. 28 bugs were introduced and fixed inside one pull request.
-- **One proposed check covers the most rows.** A type-matrix compile table is the cheapest check proposed for 35
-  rows, 34 of them library bugs, which reviewers (18) and new instantiations (12) found first. Replayed, it confirms 28
-  of them, and four more once its cells assert the clause and run.
-- **Several gates have no first find in the ledger.** Actionlint, Clang-Format, CodeQL and Emscripten found no
-  ledger bug first in the whole history, and GCC one. In the window, seven workflows failed no job for any reason:
-  Actionlint, Audit, ClusterFuzzLite, Clang-CL, Clang-Format, MinGW and MSVC.
-- **The bug ledger records few of the defects CI turns away inside a pull request.** In the window, 20 jobs went red
-  on the pull request's own code, for 14 distinct reasons across 7 pull requests: clang-tidy 7 jobs, MSVC-Analyze 4,
-  Coverage 3, Clang 2, Emscripten 2, Apple Clang 1, Consumption 1. One of them, the stale xstd-misc pin, is a ledger
-  row; the 11 ledger rows found in the window came first from a reviewer (2), the sanitizers (2), and one each from a
-  local run, a new instantiation, Audit, Clang libc++, Consumption, an unattributed CI run, and an unknown finder.
-- **Most red jobs in the window were not the pull request's fault.** Of 55 failed jobs, 35 failed for another reason:
-  27 on a package-mirror outage, all on #450; 6 on runners killed or lost, all on libc++ 22 legs; 1 on a gate's
-  configuration; and 1 on a compiler crash.
-- **Cost is concentrated.** The per-PR runner-minute medians sum to about 2,780 minutes. The four Windows workflows
-  (Clang-CL, MSVC, MinGW, MSVC-Analyze) take 1,060 of them (38%) and found 20 ledger bugs first, 9 of them upstream
-  defects; Sanitizers alone takes 457 (16%) and has the longest median queue, 84 minutes. A further 42% of all runner
+  which the CI configuration's header filter hid. 48 bugs were introduced and fixed inside one pull request.
+- **One proposed check covers the most rows.** A type-matrix compile table is the cheapest check proposed for 36
+  rows, 35 of them library bugs, which reviewers (19) and new instantiations (12) found first. Of the 35 claims
+  replayed, it confirms 28, and four more once its cells assert the clause and run.
+- **Few gates have no first find in the ledger.** CodeQL found no ledger bug first in the whole history, nor Pages
+  since it began on 20 October. Actionlint and Clang-Format each found their first in the window, a broken workflow
+  and a test that departs from clang-format. In the window, four workflows failed no job for any reason: Audit,
+  MinGW, Pages and Sanitizers.
+- **Every defect CI turned away inside a pull request in the window is a ledger row.** 33 jobs went red on the pull
+  request's own code, for 16 distinct reasons across 6 pull requests: MSVC-Analyze 8 jobs, Clang-Tidy 7, MSVC 6,
+  Apple Clang 2, ClusterFuzzLite 2, Emscripten 2, GCC 2, Actionlint 1, Clang-CL 1, Clang-Format 1, Coverage 1. Two
+  of the 16, the set fuzzer's missing include and a test that departs from clang-format in #472, appear in the CI
+  record and the commits but not in the description. Of the 52 rows found in the window, a CI gate found 19 first, a
+  reviewer 19, a local run 8, a new instantiation 3, a benchmark 2, and for 1 the record does not say.
+- **Most red jobs in the window were the pull request's fault.** Of 41 failed jobs, 8 failed for another reason: 4
+  on the toolchain PPA's mirror outage of 21 October, all on #489; 1 on a failed vcpkg download; and 3 on Clang trunk
+  snapshots, which added one lifetime-safety diagnostic and renamed two. No runner was lost or killed.
+- **Cost is concentrated.** The per-PR runner-minute medians sum to about 1,970 minutes. The four Windows workflows
+  (Clang-CL, MSVC, MinGW, MSVC-Analyze) take 569 of them (29%) and found 24 ledger bugs first, 9 of them upstream
+  defects; Sanitizers alone takes 491 (25%) and has the longest median queue, 43 minutes. A further 20% of all runner
   minutes went to superseded runs.
