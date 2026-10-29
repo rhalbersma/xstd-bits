@@ -7,6 +7,14 @@ namespace xstd {
       requires see below
     constexpr auto bit_convert(From&& from) noexcept(see below) -> remove_cv_t<To>;
 
+  // [bit.rotate], rotating, beside which P3793R2's shl and shr shift a set's keys by any count
+  template<class X, integer S>
+      requires see below
+    constexpr auto shl(X x, S s) noexcept(see below) -> X;
+  template<class X, integer S>
+      requires see below
+    constexpr auto shr(X x, S s) noexcept(see below) -> X;
+
   // [bit.permute], permutation, over two owners of one type as well as over one unsigned integer
   template<class T>
       requires see below
@@ -26,5 +34,7 @@ namespace xstd {
 | Header | Declares |
 | :----- | :------- |
 | [`<xstd/bits/bit/bit_convert.hpp>`](bit_convert.md) | `bit_convert` |
+| [`<xstd/bits/bit/shl.hpp>`](shl.md) | `shl` |
+| [`<xstd/bits/bit/shr.hpp>`](shl.md) | `shr` |
 | [`<xstd/bits/bit/bit_compress.hpp>`](bit_compress.md) | `bit_compress` |
 | [`<xstd/bits/bit/bit_expand.hpp>`](bit_expand.md) | `bit_expand` |

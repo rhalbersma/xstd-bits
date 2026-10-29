@@ -7,10 +7,10 @@
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_WALK_HPP
 
 #include <xstd/bits/bit_algorithm/detail/sequence.hpp> // first_position
-#include <xstd/bits/detail/intrinsic.hpp>              // countl_zero, countr_zero
 #include <xstd/bits/detail/key_order.hpp>              // descends
 #include <xstd/bits/detail/ownership.hpp>              // reads_keys, storage_access
-#include <xstd/bits/detail/shift.hpp>                  // shl, shr
+#include <xstd/bits/detail/shift.hpp>                  // shr
+#include <xstd/bits/detail/walk_block.hpp>             // walk_block_down, walk_block_up
 #include <xstd/misc/concepts/specialization_of.hpp>    // specialization_of
 #include <algorithm>                                   // min
 #include <cstddef>                                     // size_t
@@ -28,37 +28,28 @@ template<class T>
         return value;
 }
 
-// A set's keys, lowest position first: load once per block, then countr_zero for the position and clear it.
+// A set's keys, lowest position first, a block at a time; arms for one or two blocks compile to this same loop.
 template<class Key, class KeyMapping, class Bits, class F>
 constexpr auto walk_keys_up(Bits const& c, F& f)
         -> void
 {
-        using block_type      = Bits::block_type;
         constexpr auto digits = Bits::bits_per_block;
+        auto key              = [&](std::size_t n) -> void { f(decay_copy<Key>(KeyMapping::from_index(n))); };
         for (auto const index : std::views::iota(0UZ, c.num_blocks())) {
-                auto block = c[index];
-                while (block != block_type{}) {
-                        f(decay_copy<Key>(KeyMapping::from_index((digits * index) + countr_zero(block))));
-                        block = static_cast<block_type>(block & static_cast<block_type>(block - block_type{1}));
-                }
+                walk_block_up(c[index], digits * index, key);
         }
 }
 
-// The mirror. w & (w - 1) has no descending twin, so this clears the bit it just reported.
+// The mirror, highest position first.
 template<class Key, class KeyMapping, class Bits, class F>
 constexpr auto walk_keys_down(Bits const& c, F& f)
         -> void
 {
-        using block_type      = Bits::block_type;
         constexpr auto digits = Bits::bits_per_block;
+        auto key              = [&](std::size_t n) -> void { f(decay_copy<Key>(KeyMapping::from_index(n))); };
         auto const blocks     = c.num_blocks();
         for (auto index = blocks - 1UZ; index < blocks; --index) {
-                auto block = c[index];
-                while (block != block_type{}) {
-                        auto const offset = digits - 1UZ - countl_zero(block);
-                        f(decay_copy<Key>(KeyMapping::from_index((digits * index) + offset)));
-                        block = static_cast<block_type>(block ^ shl(block_type{1}, offset));
-                }
+                walk_block_down(c[index], digits * index, key);
         }
 }
 

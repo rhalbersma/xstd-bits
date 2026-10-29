@@ -120,4 +120,13 @@ BOOST_AUTO_TEST_CASE(TheKeyCountIsKeptOnBothSidesOfTheCapacity)
         BOOST_CHECK(s.empty());
 }
 
+// A shift that carries the lowest key to max_size() empties the set at its width, asking the heap for nothing.
+BOOST_AUTO_TEST_CASE(ALeftShiftPastMaxSizeEmptiesWithoutGrowing)
+{
+        auto s = SmallSet();
+        s.insert(64UZ);
+        s <<= s.max_size() - 64UZ;
+        BOOST_CHECK(s.empty());
+}
+
 BOOST_AUTO_TEST_SUITE_END()

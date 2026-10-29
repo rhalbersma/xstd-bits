@@ -30,7 +30,7 @@ if(NOT xstd-ints_FOUND)
         xstd-ints
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-ints.git
         # Pinned to a commit on xstd-ints' main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 790a41c78867c3116b07fa85c6b1b886d961eaf1
+        GIT_TAG 2762980d657f3482059ca9cefc350dd6ff1674a8
     )
     FetchContent_MakeAvailable(xstd-ints)
 endif()
@@ -43,7 +43,7 @@ if(NOT xstd-misc_FOUND)
         xstd-misc
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-misc.git
         # Pinned to a commit on xstd-misc's main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 6473bbf60186bdc72091f6556ba613ba7a99b3de
+        GIT_TAG 7154a9ee869ef1768b834ac419120baa4bec0098
     )
     FetchContent_MakeAvailable(xstd-misc)
 endif()
@@ -132,6 +132,8 @@ target_sources(
         include/xstd/bits/bit/bit_compress.hpp
         include/xstd/bits/bit/bit_convert.hpp
         include/xstd/bits/bit/bit_expand.hpp
+        include/xstd/bits/bit/shl.hpp
+        include/xstd/bits/bit/shr.hpp
         include/xstd/bits/bit_concepts.hpp
         include/xstd/bits/bit_concepts/bit_blocks.hpp
         include/xstd/bits/bit_concepts/bit_storage.hpp
@@ -174,6 +176,7 @@ target_sources(
         include/xstd/bits/bit_set/bit_set.hpp
         include/xstd/bits/bit_set/bit_set_view.hpp
         include/xstd/bits/bit_set/bit_fixed_set.hpp
+        include/xstd/bits/bit_set/indeterminate.hpp
         include/xstd/bits/bit_set/erase_if.hpp
         include/xstd/bits/bit_set/hash.hpp
         include/xstd/bits/bit_set/container_hash.hpp
@@ -213,6 +216,7 @@ target_sources(
         include/xstd/bits/detail/comparisons.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp
         include/xstd/bits/detail/hash.hpp
+        include/xstd/bits/detail/input_iterator_pair.hpp
         include/xstd/bits/detail/intrinsic.hpp
         include/xstd/bits/bit_set/detail/flag_block.hpp
         include/xstd/bits/detail/ordinal.hpp
@@ -227,6 +231,7 @@ target_sources(
         include/xstd/bits/detail/bit_layout.hpp
         include/xstd/bits/bit/detail/bit_convertible.hpp
         include/xstd/bits/bit/detail/bit_permute.hpp
+        include/xstd/bits/bit/detail/shift_by.hpp
         include/xstd/bits/detail/bit_blocks_capacity.hpp
         include/xstd/bits/detail/bit_block_range.hpp
         include/xstd/bits/detail/owned_bit_blocks.hpp
@@ -235,6 +240,7 @@ target_sources(
         include/xstd/bits/bit/detail/bit_width.hpp
         include/xstd/bits/detail/range_const_reference.hpp
         include/xstd/bits/detail/shift.hpp
+        include/xstd/bits/detail/walk_block.hpp
         include/xstd/bits/detail/storage_ptr.hpp
         include/xstd/bits/detail/views.hpp
         include/xstd/bits/detail/blocks.hpp
@@ -345,13 +351,20 @@ if(PROJECT_IS_TOP_LEVEL)
         option(${project_option_prefix}_BUILD_HARDENED_TESTS "Build the test that breaks each precondition a hardened release checks" ON)
 
         add_subdirectory(test)
+
+        # Off by default, and one libc++ leg turns it on. The standard libraries' own test suites, written against the paragraphs by people who never saw this library, rewritten onto its spelling: a check whose authors have no stake in the answer. Needs git and Python 3.11.
+        option(${project_option_prefix}_BUILD_STD_TEST_SUITES "Run the standard libraries' test suites against the containers they mirror" OFF)
+
+        if(${project_option_prefix}_BUILD_STD_TEST_SUITES)
+            add_subdirectory(test/std-test-suite)
+        endif()
     endif()
 
     # Off by default, and outside BUILD_TESTING: ClusterFuzzLite builds the fuzz targets alone, without the test tree's Boost.Test and range-v3. Clang only, libFuzzer being clang's.
-    option(${project_option_prefix}_BUILD_FUZZERS "Build the libFuzzer differential targets under fuzz/" OFF)
+    option(${project_option_prefix}_BUILD_FUZZERS "Build the libFuzzer differential targets under test/fuzz/" OFF)
 
     if(${project_option_prefix}_BUILD_FUZZERS)
-        add_subdirectory(fuzz)
+        add_subdirectory(test/fuzz)
     endif()
 endif()
 

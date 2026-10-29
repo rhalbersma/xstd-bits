@@ -72,6 +72,7 @@ clause where one is shared.
 
 | Entity | Kind | Counterpart |
 | :-- | :-- | :-- |
+| `indeterminate`<br>`indeterminate_array`<br>`indeterminate_t` | New | [[dcl.attr.indet]](https://eel.is/c++draft/dcl.attr.indet) as a constructor tag: a fixed set's blocks left unwritten, as the attribute leaves a variable's storage |
 | `bit_flag_set` | Generalizes | [[bitmask.types]](https://eel.is/c++draft/bitmask.types) as the set of a bitmask type's one-bit values |
 | `bit_enum_set` | New | none: the standard has no set of an enumeration's values |
 | `least_block_t`<br>`fast_block_t` | Generalizes | [[cstdint.syn]](https://eel.is/c++draft/cstdint.syn) chosen by a width rather than named by one |
@@ -86,6 +87,7 @@ clause where one is shared.
 | `is_range`<br>`is_tuple_like` | New | none in the standard: specializations of Boost.ContainerHash's traits |
 | `bit_convert` | Generalizes | [[bit.cast]](https://eel.is/c++draft/bit.cast) from [P0476R2](https://wg21.link/p0476r2): position for position across widths and readings, rather than byte for byte at one size |
 | `bit_convert` with `boost::dynamic_bitset` | New | none in the standard: conversion to and from Boost.DynamicBitset |
+| `shl`<br>`shr` | Proposed | [P3793R2](https://wg21.link/p3793r2)'s total shifts, beside [[bit.rotate]](https://eel.is/c++draft/bit.rotate): a set's keys moved by any count, where the set's own `<<` and `>>` take a count below a static width as their precondition |
 | `bit_compress`<br>`bit_expand` | Generalizes | [[bit.permute]](https://eel.is/c++draft/bit.permute) from [P3104R5](https://wg21.link/p3104r5), over two owners of one type and any width rather than one unsigned integer |
 | `bit_array` | Generalizes | [[array]](https://eel.is/c++draft/array) of `bool`, packed |
 | `basic_bit_array` | New | [[array]](https://eel.is/c++draft/array) customizing the block type |
@@ -189,4 +191,8 @@ in another language where that counterpart shares its purpose. A container that 
   Jabot, Eric Niebler, Casey Carter), whose `from_range` tag it mirrors. itsy_bitsy's
   [`bit_sequence`](https://github.com/ThePhD/itsy_bitsy/blob/d5b6bf9509bb2dff6235452d427f0b1c349d5f8b/include/itsy/bit_sequence.hpp)
   takes its storage through `std::in_place` instead.
+- **`indeterminate`:** [P2795R5](https://wg21.link/p2795r5), *Erroneous behaviour for uninitialized reads* (Thomas
+  Köppe), whose `[[indeterminate]]` the tag mirrors; [P1020R1](https://wg21.link/p1020r1), *Smart pointer creation
+  with default initialization* (Glen Fernandes, Peter Dimov), the standard's `for_overwrite`; and Boost.Container's
+  `default_init_t`.
 - **`bit_convert`:** [P0476R2](https://wg21.link/p0476r2), *Bit-casting object representations* (JF Bastien).

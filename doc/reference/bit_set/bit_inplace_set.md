@@ -24,9 +24,10 @@ A [`basic_bit_set`](bit_set.md) capped at `N`, with:
 - An alias deduces nothing, so blocks adopted whole are deduced through `basic_bit_set`:
   `basic_bit_set(from_blocks, blocks)` over `K` inline blocks is `basic_bit_inplace_set<size_t, Block, K * D>`.
 - `max_size` is a constant of the type, `N`; `size()` and `empty()` count the keys.
-- A key past the width grows the width up to `N`. A key whose position is `N` or more throws `bad_alloc`, as
-  `inplace_vector`'s growth does, where the mapping leaves the universe open, and `out_of_range` where the mapping
-  closes it.
+- A key past the width grows the width up to `N`. Through `insert`, `emplace` and the ranged forms, a key whose
+  position is `N` or more throws `bad_alloc`, as `inplace_vector`'s growth does, where the mapping leaves the
+  universe open, and `out_of_range` where the mapping closes it. An enumerator's operators take a position below `N`
+  as their precondition.
 - `<<= n` keeps the keys that land below `N`, asks for no storage past it, and is `noexcept`.
 - *`from_blocks` constructor, `replace`, `extract`:* As `basic_bit_set`'s, with the capacity as a precondition.
 - It is usable in a constant expression exactly where `XSTD_BITS_HAS_CONSTEXPR_INPLACE` is defined, and is not a

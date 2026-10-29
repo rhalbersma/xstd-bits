@@ -4,6 +4,8 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <fuzz/decoder.hpp>                           // checker, decoder, run, throws
+#include <xstd/bits/bit/shl.hpp>                      // shl
+#include <xstd/bits/bit/shr.hpp>                      // shr
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>   // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>   // bit_includes
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp> // bit_intersects
@@ -102,6 +104,21 @@ template<class X>
                         return in.below(keys + 70UZ);
                 }
         }
+}
+
+// The operators below max_size(), their precondition, and the total shl and shr from there on.
+template<class X>
+[[nodiscard]] auto shift_left(X const& x, std::size_t n)
+        -> X
+{
+        return n < x.max_size() ? x << n : xstd::shl(x, n);
+}
+
+template<class X>
+[[nodiscard]] auto shift_right(X const& x, std::size_t n)
+        -> X
+{
+        return n < x.max_size() ? x >> n : xstd::shr(x, n);
 }
 
 // A shift the fuzzer can afford: no key of a dynamic set may land past a few pages, unless none lands at all.
@@ -324,7 +341,11 @@ auto fuzz_one(fuzz::decoder& in)
                                 check.step("<<=");
                                 auto const n = shift_amount(in, m, keys, top);
                                 if (affordable<X>(m, n, top)) {
-                                        x <<= n;
+                                        if (n < top) {
+                                                x <<= n;
+                                        } else {
+                                                x = xstd::shl(x, n);
+                                        }
                                         m = shifted_left(m, n, top);
                                 }
                                 break;
@@ -332,16 +353,20 @@ auto fuzz_one(fuzz::decoder& in)
                         case 14: {
                                 check.step(">>=");
                                 auto const n = shift_amount(in, m, keys, top);
-                                x >>= n;
+                                if (n < top) {
+                                        x >>= n;
+                                } else {
+                                        x = xstd::shr(x, n);
+                                }
                                 m = shifted_right(m, n);
                                 break;
                         }
                         case 15: {
                                 check.step("<<, >>");
                                 auto const n = shift_amount(in, my, keys, top);
-                                expect_equal(check, y >> n, shifted_right(my, n));
+                                expect_equal(check, shift_right(y, n), shifted_right(my, n));
                                 if (affordable<X>(my, n, top)) {
-                                        expect_equal(check, y << n, shifted_left(my, n, top));
+                                        expect_equal(check, shift_left(y, n), shifted_left(my, n, top));
                                 }
                                 break;
                         }
