@@ -7,6 +7,11 @@ namespace xstd {
       requires see below
     constexpr auto bit_convert(From&& from) noexcept(see below) -> remove_cv_t<To>;
 
+  // [bit.pow.two], integral powers of 2, over one owner as well as over one unsigned integer
+  template<class T>
+      requires see below
+    constexpr auto has_single_bit(const T& x) noexcept -> bool;
+
   // [bit.rotate], rotating, beside which P3793R2's shl and shr shift a set's keys by any count
   template<class X, integer S>
       requires see below
@@ -34,6 +39,7 @@ namespace xstd {
 | Header | Declares |
 | :----- | :------- |
 | [`<xstd/bits/bit/bit_convert.hpp>`](bit_convert.md) | `bit_convert` |
+| [`<xstd/bits/bit/has_single_bit.hpp>`](has_single_bit.md) | `has_single_bit` |
 | [`<xstd/bits/bit/shl.hpp>`](shl.md) | `shl` |
 | [`<xstd/bits/bit/shr.hpp>`](shl.md) | `shr` |
 | [`<xstd/bits/bit/bit_compress.hpp>`](bit_compress.md) | `bit_compress` |

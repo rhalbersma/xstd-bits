@@ -132,6 +132,7 @@ target_sources(
         include/xstd/bits/bit/bit_compress.hpp
         include/xstd/bits/bit/bit_convert.hpp
         include/xstd/bits/bit/bit_expand.hpp
+        include/xstd/bits/bit/has_single_bit.hpp
         include/xstd/bits/bit/shl.hpp
         include/xstd/bits/bit/shr.hpp
         include/xstd/bits/bit_concepts.hpp
