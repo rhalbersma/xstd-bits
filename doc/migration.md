@@ -32,9 +32,27 @@ masks; the class takes the keys the code already has, and the shifts and masks b
 
 A word whose bits are positions, as a chess engine's bitboard or a flag word, becomes a `bit_fixed_set<64>`. The
 shift-and-mask primitives become `insert`, `erase` and `contains`, `std::popcount` becomes `size`, and the
-`w &= w - 1` loop over `std::countr_zero` becomes a range-for, lowest position first. The set's shifts translate its
-keys as the word's do, and `&`, `|` and `^` stay. A word read as a row of `bool`, indexed, rotated or reversed, is a
-`bit_array<64>` instead.
+`w &= w - 1` loop over `std::countr_zero` becomes a range-for, lowest position first. `&`, `|`, `^` and the shifts
+stay as the word's: the same precondition, `n < 64` for a shift, and the same instructions, so code that already
+works on the word keeps working and keeps its speed; `a & ~b` is also `a - b`. A word read as a row of `bool`,
+indexed, rotated or reversed, is a `bit_array<64>` instead.
+
+`std::bitset<64>` was the standard's own answer, and bit-twiddling code did not take it, for five reasons this set
+answers one by one:
+
+1. **`constexpr`.** Nothing in `std::bitset` was until C++23's [P2417R2](https://wg21.link/p2417r2); every member of
+   the set is.
+2. **Iteration.** `std::bitset` has no iterators, so a loop over the set bits needs libstdc++'s `_Find_first` and
+   `_Find_next`, which no other library has. The set is a bidirectional range, with `front()` and `back()`.
+3. **Shifts.** `std::bitset` defines a shift by `N` or more as empty, a compare on every shift. The set's shifts are the
+   word's, with `n < N` as their precondition, and `xstd::shl` and `xstd::shr` are the total forms to opt into.
+4. **Single bits.** `std::bitset`'s `set`, `reset`, `flip` and `test` with a position throw `out_of_range`. The set's
+   `|=`, `^=`, `-=`, `&=` and `[]` with a key are unchecked, as the word's shift-and-mask is, and a hardened build
+   checks their precondition; `insert` checks, and `contains` and `erase` are total, for code that wants either.
+5. **Initialization.** `std::bitset`'s default constructor zeroes every bit, and nothing skips it, though a word can be
+   left unwritten until it is assigned. The set is empty by default, as a set must be, and
+   `bit_fixed_set<64>(xstd::indeterminate)` writes nothing, for a field that is assigned before anything reads it;
+   `xstd::indeterminate_array` builds an array of them, as a per-ply state of bitboards holds.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>
@@ -304,9 +322,23 @@ with the sign bit set fails the flag type's assertion on the way in.
 
 itsy_bitsy offers the sequence reading alone, and takes the same destinations.
 
+Member by member, `std::bitset<N>` borrows from four standard interfaces and from an unsigned integer, and each
+borrowing has one home here:
+
+| `std::bitset<N>` | Borrowed from | Here |
+| :-- | :-- | :-- |
+| `test(pos)`, `set(pos)`, `reset(pos)`, `count()`, `any()`, `none()`, `all()`, and libstdc++'s `_Find_first` and `_Find_next` | [[set]](https://eel.is/c++draft/set): membership, and iteration over what is set | `bit_fixed_set<N>`: `contains`, `insert`, `erase`, `size`, `empty`, `begin`, `end`, `front`, `pop_front` |
+| `operator[]`, `set(pos, value)`, `size()` | [[array]](https://eel.is/c++draft/array) of `bool`: a value at each index | `bit_array<N>`, which also permutes |
+| `&`, `\|`, `^`, `~`, `<<`, `>>`, their compound forms, and `set()`, `reset()`, `flip()` | [[template.valarray]](https://eel.is/c++draft/template.valarray) of `bool`: a row combined whole | `bit_fixed_valarray<N>`, whose shifts keep `std::bitset`'s sense |
+| `to_string`, the string constructor, and `<<` and `>>` on streams | [[basic.string]](https://eel.is/c++draft/basic.string) of `'0'` and `'1'`: text, position 0 last | `std::format` writes any of the three; reading text back has no counterpart yet |
+| `to_ulong`, `to_ullong`, the `unsigned long long` constructor | an unsigned integer: one word's bits | `xstd::bit_convert` and the `from_blocks` tag, at any width |
+
 ### `std::bitset<N>` as a set of positions
 
-The positions become keys, and `std::bitset`'s verbs become `std::set`'s.
+The positions become keys, and `std::bitset`'s verbs become `std::set`'s. The shifts are an integer's rather than
+`std::bitset`'s: `b << n` empties a bitset once `n >= N`, while `s << n` takes `n < N` as its precondition, as a shift
+of a `std::uint64_t` does, and a hardened build checks it. Where the count can reach the width, `xstd::shl(s, n)` and
+`xstd::shr(s, n)` are the total forms, which empty the set there and shift the other way for a negative count.
 
 <table>
 <tr><th>Before</th><th>After</th></tr>

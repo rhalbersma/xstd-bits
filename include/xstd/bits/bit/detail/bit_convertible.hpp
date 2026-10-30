@@ -261,13 +261,20 @@ template<class To, class From>
 template<class To, class From>
 concept same_block_owners = owner<To> and owner<From> and std::same_as<typename owned_bits_t<To>::block_type, typename owned_bits_t<From>::block_type>;
 
+// An owner of a single static block, read as that block's own type: the block itself, its unused positions clear.
+template<class To, class From>
+concept one_block_as_its_type = owner<From> and std::same_as<To, typename owned_bits_t<From>::block_type> and (owned_bits_t<From>::static_num_blocks == 1UZ);
+
 // Into a fixed width at least as wide: the bytes cross whole into zeros, and nothing can be lost.
 template<fixed_target To, fixed_width From>
         requires (bit_width_v<From> <= bit_width_v<To>)
 [[nodiscard]] constexpr auto convert_fixed(From const& from) noexcept
         -> To
 {
-        if constexpr (same_block_owners<To, From>) {
+        if constexpr (one_block_as_its_type<To, From>) {
+                // GCC folds a byte-wise copy into one load only late, after its early inliner has sized it as a loop.
+                return storage_access::bits(from).blocks()[0];
+        } else if constexpr (same_block_owners<To, From>) {
                 // Block for block into zeros, as GCC does not fold a byte-wise copy back into whole blocks.
                 auto to = To();
                 std::ranges::copy(storage_access::bits(from).blocks(), storage_access::bits(to).blocks().begin());

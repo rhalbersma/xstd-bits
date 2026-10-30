@@ -29,6 +29,7 @@ nav:
     - bit.hpp:
       - reference/bit/index.md
       - bit_convert.hpp: reference/bit/bit_convert.md
+      - shl.hpp: reference/bit/shl.md
     - bit_algorithm.hpp:
       - reference/bit_algorithm/index.md
       - bit_all_of.hpp: reference/bit_algorithm/bit_all_of.md
@@ -120,6 +121,7 @@ nav:
       - container_hash.hpp: /xstd-bits/reference/bit_set/hash/
       - erase_if.hpp: reference/bit_set/erase_if.md
       - hash.hpp: reference/bit_set/hash.md
+      - indeterminate.hpp: reference/bit_set/indeterminate.md
     - bit_span.hpp:
       - reference/bit_span/index.md
       - bit_span.hpp: reference/bit_span/bit_span.md

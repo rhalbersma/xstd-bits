@@ -187,7 +187,10 @@ BOOST_AUTO_TEST_CASE(TheVehicleIsStructuralExactlyWhereItsBlocksFillTheWidth)
 {
         static_assert(test::structural<xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 2>, 128>>);
         static_assert(test::structural<xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 3>, 24>>);
-        static_assert(test::structural<xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 0>, 0>>);
+        using no_blocks = xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 0>, 0>;
+        // A constant no_blocks{} first: MSVC does not define a defaulted constructor for a requires-expression's sake.
+        static_assert(no_blocks{} == no_blocks{});
+        static_assert(test::structural<no_blocks>);
         static_assert(not test::structural<xstd::bits::detail::bit_block_container<std::array<std::uint64_t, 2>, 127>>);
         static_assert(not test::structural<xstd::bits::detail::bit_block_container<std::array<std::uint8_t, 1>, 0>>);
 }

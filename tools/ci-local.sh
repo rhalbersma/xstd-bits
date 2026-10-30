@@ -34,7 +34,7 @@ cmake="${HOME:-/root}/.local/bin/cmake"
 readonly cmake
 
 readonly all_legs=(gcc-15 gcc-16 gcc-17 cxx26-16 cxx26-17 clang-22 clang-23 clang-24 libcxx-22 i686
-                   hardened-gcc hardened-libcxx tidy-22 tidy-23 tidy-24 coverage format audit)
+                   hardened-gcc hardened-libcxx tidy-22 tidy-23 tidy-24 coverage codegen format audit)
 
 # Each clang uses the libstdc++ of its own rung, as on the runners, rather than the newest GCC installed.
 gcc_for_clang() {
@@ -115,6 +115,21 @@ coverage() {
                 && { [ "${keep}" = 1 ] || rm -rf "${dir}"; }
 }
 
+# The codegen job: each compiler's stable rung compiles test/codegen/ to assembly, which FileCheck reads.
+codegen() {
+        local cxx flags dir
+        for cxx in g++-15 clang++-22; do
+                flags=""
+                [ "${cxx}" = g++-15 ] || flags="$(gcc_for_clang 22)"
+                dir="${out}/codegen-${cxx}"
+                "${cmake}" -S "${root}" -B "${dir}" -G Ninja -DCMAKE_CXX_COMPILER="${cxx}" -DCMAKE_CXX_FLAGS="${flags}" \
+                        -DBUILD_TESTING=OFF -DXSTD_BITS_BUILD_CODEGEN_TESTS=ON \
+                        && ctest --test-dir "${dir}" --output-on-failure --parallel "${jobs}" \
+                        && { [ "${keep}" = 1 ] || rm -rf "${dir}"; } \
+                        || return 1
+        done
+}
+
 # The format gate: the stable rung's clang-format over the paths its job names, reporting rather than rewriting.
 format() {
         find "${root}/examples" "${root}/include" "${root}/test" "${root}/benchmark" -regex '.*\.\(hpp\|cpp\)' -print0 \
@@ -157,6 +172,7 @@ run_leg() {
                                 -DCMAKE_EXE_LINKER_FLAGS=-stdlib=libc++ "${boost_test}" ;;
                 tidy-2[234]) tidy "${1#tidy-}" ;;
                 coverage) coverage ;;
+                codegen) codegen ;;
                 format) format ;;
                 audit) audit ;;
                 *) echo "no leg named $1; tools/ci-local.sh --list names them" >&2; return 2 ;;

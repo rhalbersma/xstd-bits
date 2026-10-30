@@ -22,6 +22,7 @@
 #include <xstd/bits/detail/resizable_bit_blocks.hpp>         // resizable_bit_blocks
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl, shr
 #include <xstd/bits/detail/throw.hpp>                        // throw_exception, XSTD_BITS_HAS_EXCEPTIONS
+#include <xstd/bits/detail/walk_block.hpp>                   // drop_highest, drop_lowest
 #include <xstd/ints/concepts/unsigned_integer.hpp>           // unsigned_integer
 #include <xstd/ints/cstdlib/div.hpp>                         // div, div_result
 #include <xstd/ints/limits.hpp>                              // numeric_limits
@@ -46,7 +47,7 @@
 #include <span>                                              // dynamic_extent, span
 #include <stdexcept>                                         // length_error
 #include <type_traits>                                       // conditional_t, is_const_v, is_nothrow_constructible_v, is_nothrow_move_assignable_v, is_nothrow_move_constructible_v, remove_const_t, remove_reference_t
-#include <utility>                                           // exchange, forward, move, pair
+#include <utility>                                           // exchange, forward, index_sequence, make_index_sequence, move, pair
 
 namespace xstd::bits::detail {
 
@@ -118,7 +119,6 @@ protected:
         [[XSTD_NO_UNIQUE_ADDRESS]]
         Width m_size{};
 
-        // An NSDMI, not extent-constrained constructors: an array starts zeroed and a vector empty.
         Blocks m_blocks{};
 
 public:
@@ -131,6 +131,30 @@ public:
         {}
 
         [[nodiscard]] friend auto operator==(bit_members const&, bit_members const&) -> bool = default;
+};
+
+// An array at a static width: no initializer on either member, so the layout is trivially default-constructible.
+template<class Width, class Blocks>
+class static_bit_members : public bits::detail::allocator_base_type<Blocks>
+{
+protected:
+        [[XSTD_NO_UNIQUE_ADDRESS]]
+        Width m_size;
+
+        // No NSDMI: a nontrivial default constructor makes GCC's constant evaluator drop T()'s zeroes.
+        Blocks m_blocks;
+
+public:
+        // As std::array's: T() zeroes the blocks and T t; leaves them unwritten.
+        [[nodiscard]] static_bit_members() = default;
+
+        template<class W, class... Args>
+        [[nodiscard]] constexpr explicit static_bit_members(W&& w, Args&&... args) noexcept(std::is_nothrow_constructible_v<Blocks, Args...>)
+                : m_size(std::forward<W>(w))
+                , m_blocks(std::forward<Args>(args)...)
+        {}
+
+        [[nodiscard]] friend auto operator==(static_bit_members const&, static_bit_members const&) -> bool = default;
 };
 
 // A capacity of nought: both members empty and overlapping, and uninitialized, which [inplace.vector.overview] asks.
@@ -182,14 +206,23 @@ inline constexpr bool structural_blocks_v = false;
 template<xstd::unsigned_integer Block, std::size_t K, std::size_t N>
 inline constexpr bool structural_blocks_v<std::array<Block, K>, N> = (N == xstd::bit_blocks_extent_v<std::array<Block, K>>);
 
+// Blocks held inline at a static width, which a layout with no initializer leaves as std::array leaves them.
+template<class Blocks>
+inline constexpr bool array_blocks_v = false;
+
+template<xstd::unsigned_integer Block, std::size_t K>
+inline constexpr bool array_blocks_v<std::array<Block, K>> = true;
+
 // The members with no invariant to keep: public only so that the owner is structural, not for direct use.
 template<class Width, class Blocks>
 struct structural_bit_members : bits::detail::allocator_base_type<Blocks>
 {
+        // A static width's tag, with no NSDMI, so that the default constructor stays trivial.
         [[XSTD_NO_UNIQUE_ADDRESS]]
-        Width m_size{};
+        Width m_size;
 
-        Blocks m_blocks{};
+        // Trivially default-constructible, as std::array is: T() zeroes the blocks and T t; leaves them unwritten.
+        Blocks m_blocks;
 
         [[nodiscard]] structural_bit_members() = default;
 
@@ -238,7 +271,10 @@ using bit_members_t = std::conditional_t<
         std::conditional_t<
                 Counted,
                 counted_bit_members<width_member_t<Blocks, N>, Blocks>,
-                bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>>>;
+                std::conditional_t<
+                        array_blocks_v<Blocks>,
+                        static_bit_members<width_member_t<Blocks, N>, Blocks>,
+                        bit_members<width_member_t<Blocks, N>, Blocks, zero_capacity<Blocks, N>>>>>;
 
 // The one vehicle: it owns the unused-tail invariant, and the key count where it keeps one, and has no iterators.
 template<class Blocks, std::size_t N = default_extent_v<Blocks>, bool Counted = false>
@@ -298,6 +334,9 @@ public:
 
         // Zero where the width is carried at run time, so an algorithm unrolls only what the type fixes.
         static constexpr auto static_num_blocks = has_static_size ? whole_blocks_width_v<block_type, N> / bits_per_block : 0UZ;
+
+        // Reductions fold one to eight static blocks: over 500 byte blocks, the folds took GCC 15 from 0.7 GB to 14 GB.
+        static constexpr bool folds_blocks = has_static_size and 0UZ < static_num_blocks and static_num_blocks <= 8UZ;
 
 private:
         // The width is this container's, so a dynamic one answers zero here rather than compute byte_count of SIZE_MAX.
@@ -362,7 +401,7 @@ public:
                 recount();
         }
 
-        // Any bits of a layout this width reads, assigned position by position; for Blocks itself, adopting wins.
+        // Any bits of a layout this width reads, assigned over unwritten blocks; for Blocks itself, adopting wins.
         template<class Bits>
                 requires exchanges_bits<Bits>
         [[nodiscard]] constexpr bit_block_container(xstd::from_blocks_t, Bits const& bits) noexcept
@@ -495,7 +534,23 @@ public:
         }
 
         // Memberwise, width first, unused bits clear; noexcept by choice, as std::array's and std::vector's == are not.
-        [[nodiscard]] friend auto operator==(bit_block_container const&, bit_block_container const&) noexcept -> bool = default;
+        [[nodiscard]] friend auto operator==(bit_block_container const&, bit_block_container const&) noexcept -> bool
+                requires (not folds_blocks)
+        = default;
+
+        // A few static blocks: every block's xor or-ed together and tested once, where memcmp branches per block.
+        [[nodiscard]] friend constexpr auto operator==(bit_block_container const& lhs, bit_block_container const& rhs) noexcept
+                -> bool
+                requires folds_blocks
+        {
+                return [&]<std::size_t... I>(std::index_sequence<I...>) -> bool {
+                        // Each step cast to a block: a fold passes on an int, and absl::uint128's |= is not constexpr.
+                        // block_type{}, as MSVC finds no static data member from a generic lambda in a hidden friend.
+                        auto differ = block_type{};
+                        ((differ = static_cast<block_type>(differ | static_cast<block_type>(lhs.m_blocks[I] ^ rhs.m_blocks[I]))), ...);
+                        return differ == block_type{};
+                }(std::make_index_sequence<static_num_blocks>());
+        }
 
         // No operator<=>: the two readings order the same bits differently, so the storage picks none.
 
@@ -623,8 +678,16 @@ public:
         {
                 if constexpr (fixed_blocks_source<Bits, bit_extent> and std::same_as<std::ranges::range_value_t<decltype(block_span(b))>, block_type>) {
                         // Block for block, as GCC does not fold a copy of byte_count<N> bytes back into whole blocks.
-                        std::ranges::fill(m_blocks, zero);
-                        std::ranges::copy(block_span(b).template first<static_num_blocks>(), std::ranges::begin(m_blocks));
+                        auto const source = block_span(b);
+                        if constexpr (static_num_blocks <= 2) {
+                                // A fold: constant indices let GCC's early inliner see each block as a register.
+                                [&]<std::size_t... I>(std::index_sequence<I...>) -> void {
+                                        ((m_blocks[I] = source[I]), ...);
+                                }(std::make_index_sequence<static_num_blocks>());
+                        } else {
+                                // A copy vectorizes the tail that a fold of six blocks leaves scalar.
+                                std::ranges::copy(source.template first<static_num_blocks>(), std::ranges::begin(m_blocks));
+                        }
                         erase_unused();
                 } else {
                         assign_bytes(bit_bytes<bit_extent>(b));
@@ -672,13 +735,31 @@ public:
                 }
         }
 
-        // boost's ranged forms through block_at; the precondition is a subtraction, n + len being what wraps.
+        // boost's ranged forms; the precondition is a subtraction, n + len being what wraps.
         constexpr auto set(std::size_t n, std::size_t len, bool value) noexcept
                 -> bit_block_container&
         {
                 assert(n <= size() and len <= size() - n);
                 auto const before = counted_in(n, len);
-                for_each_block(n, len, [&](std::size_t pos, block_type mask) -> void { block_at(pos, value ? ones : zero, mask); });
+                if (len != 0UZ) {
+                        // The first and last blocks masked, the whole blocks between stored; one block is both ends.
+                        auto const [first, head] = index_offset(n);
+                        auto const [last, tail]  = index_offset(n + len - 1UZ);
+                        assert(head < bits_per_block and tail < bits_per_block);
+                        auto const write = [&](std::size_t index, block_type mask) -> void {
+                                m_blocks[index] = static_cast<block_type>(value ? (m_blocks[index] | mask) : (m_blocks[index] & static_cast<block_type>(~mask)));
+                        };
+                        auto const from_head = shl(ones, head);
+                        auto const to_tail   = shr(ones, left_bit - tail);
+                        if (first == last) {
+                                write(first, static_cast<block_type>(from_head & to_tail));
+                        } else {
+                                auto const blocks = std::ranges::begin(m_blocks);
+                                write(first, from_head);
+                                std::ranges::fill(blocks + static_cast<std::ptrdiff_t>(first + 1UZ), blocks + static_cast<std::ptrdiff_t>(last), value ? ones : zero);
+                                write(last, to_tail);
+                        }
+                }
                 store_count(stored_count() - before + (len * static_cast<std::size_t>(value)));
                 return *this;
         }
@@ -712,10 +793,17 @@ public:
         [[nodiscard]] constexpr auto find_first() const noexcept
                 -> std::size_t
         {
-                return inclusive_find_next(0UZ);
+                // Whole blocks: countr_zero of an empty block is its width, so an empty set answers size() itself.
+                if constexpr (has_static_size and static_num_blocks == 1 and N == bits_per_block) {
+                        return bits::detail::countr_zero(m_blocks[0]);
+                } else if constexpr (has_static_size and static_num_blocks == 2 and N == 2UZ * bits_per_block) {
+                        return m_blocks[0] != zero ? bits::detail::countr_zero(m_blocks[0]) : bits_per_block + bits::detail::countr_zero(m_blocks[1]);
+                } else {
+                        return inclusive_find_next(0UZ);
+                }
         }
 
-        // The primitive: inclusive, so both derivations are + 1 and nothing wraps.
+        // Inclusive, as find_first and a lower bound ask: size() is in its domain, so it guards the end.
         [[nodiscard]] constexpr auto inclusive_find_next(std::size_t n) const noexcept
                 -> std::size_t
         {
@@ -754,11 +842,115 @@ public:
                 return size();
         }
 
+        // A mask over n's own block, not a scan from n + 1: ~1 << offset is defined at every offset, so no end guard.
         [[nodiscard]] constexpr auto exclusive_find_next(std::size_t n) const noexcept
                 -> std::size_t
         {
                 assert(is_valid(n));
-                return inclusive_find_next(n + 1);
+                auto const [index, offset] = index_offset(n);
+                auto const block           = static_cast<block_type>(m_blocks[index] & shl(static_cast<block_type>(~unit), offset));
+                if constexpr (has_static_size and static_num_blocks == 1 and N == bits_per_block) {
+                        // An empty block counts every digit, which is size() here.
+                        return bits::detail::countr_zero(block);
+                } else {
+                        if (block != zero) {
+                                return (bits_per_block * index) + bits::detail::countr_zero(block);
+                        }
+                        if constexpr (has_static_size and static_num_blocks == 1) {
+                                return size();
+                        } else if constexpr (has_static_size and static_num_blocks == 2) {
+                                return index == 0UZ and m_blocks[1] != zero ? bits_per_block + bits::detail::countr_zero(m_blocks[1]) : size();
+                        } else {
+                                for (auto const i : std::views::iota(index + 1UZ, num_blocks())) {
+                                        if (auto const later = m_blocks[i]; later != zero) {
+                                                return (bits_per_block * i) + bits::detail::countr_zero(later);
+                                        }
+                                }
+                                return size();
+                        }
+                }
+        }
+
+        // The two ends of a non-empty container, deliberately NOT total: no empty case to answer.
+        [[nodiscard]] constexpr auto find_front() const noexcept
+                -> std::size_t
+        {
+                assert(any());
+                if constexpr (has_static_size and static_num_blocks == 1) {
+                        return bits::detail::countr_zero(m_blocks[0]);
+                } else if constexpr (has_static_size and static_num_blocks == 2) {
+                        return m_blocks[0] != zero ? bits::detail::countr_zero(m_blocks[0]) : bits::detail::countr_zero(m_blocks[1]) + bits_per_block;
+                } else {
+                        // A while, not a for: any() makes a for's exit untestable.
+                        auto i = 0UZ;
+                        while (m_blocks[i] == zero) {
+                                assert(i != last_block());
+                                ++i;
+                        }
+                        return (bits_per_block * i) + bits::detail::countr_zero(m_blocks[i]);
+                }
+        }
+
+        [[nodiscard]] constexpr auto find_back() const noexcept
+                -> std::size_t
+        {
+                assert(any());
+                if constexpr (has_static_size and static_num_blocks == 1) {
+                        return last_bit() - bits::detail::countl_zero(m_blocks[0]);
+                } else if constexpr (has_static_size and static_num_blocks == 2) {
+                        return m_blocks[1] != zero ? last_bit() - bits::detail::countl_zero(m_blocks[1]) : left_bit - bits::detail::countl_zero(m_blocks[0]);
+                } else {
+                        // The mirror of find_front, counting up from block i's base to drop the reversed range's term.
+                        auto i = last_block();
+                        while (m_blocks[i] == zero) {
+                                assert(i != 0);
+                                --i;
+                        }
+                        return (bits_per_block * i) + left_bit - bits::detail::countl_zero(m_blocks[i]);
+                }
+        }
+
+        // The lowest set position cleared by the walk's own step, on the first block that holds one; not empty.
+        constexpr auto drop_front() noexcept
+                -> void
+        {
+                assert(any());
+                if constexpr (has_static_size and static_num_blocks == 1) {
+                        m_blocks[0] = bits::detail::drop_lowest(m_blocks[0]);
+                } else if constexpr (has_static_size and static_num_blocks == 2) {
+                        auto& block = m_blocks[0] != zero ? m_blocks[0] : m_blocks[1];
+                        block       = bits::detail::drop_lowest(block);
+                } else {
+                        // A while, not a for: any() makes a for's exit untestable.
+                        auto i = 0UZ;
+                        while (m_blocks[i] == zero) {
+                                assert(i != last_block());
+                                ++i;
+                        }
+                        m_blocks[i] = bits::detail::drop_lowest(m_blocks[i]);
+                }
+                count_down(1UZ);
+        }
+
+        // The highest set position cleared, mirrored from the last block down; the set is not empty.
+        constexpr auto drop_back() noexcept
+                -> void
+        {
+                assert(any());
+                if constexpr (has_static_size and static_num_blocks == 1) {
+                        m_blocks[0] = bits::detail::drop_highest(m_blocks[0]);
+                } else if constexpr (has_static_size and static_num_blocks == 2) {
+                        auto& block = m_blocks[1] != zero ? m_blocks[1] : m_blocks[0];
+                        block       = bits::detail::drop_highest(block);
+                } else {
+                        auto i = last_block();
+                        while (m_blocks[i] == zero) {
+                                assert(i != 0);
+                                --i;
+                        }
+                        m_blocks[i] = bits::detail::drop_highest(m_blocks[i]);
+                }
+                count_down(1UZ);
         }
 
         // Deliberately NOT total: three instructions cheaper, and rend() supplies the guard.
@@ -805,20 +997,28 @@ public:
                 -> std::size_t
         {
                 assert(n <= size());
-                if constexpr (not(has_static_size and N == 0)) {
-                        if (n != 0UZ) {
-                                auto const [index, offset] = index_offset(n - 1UZ);
-                                if (auto const block = shl(m_blocks[index], left_bit - offset); block != zero) {
-                                        return n - 1UZ - bits::detail::countl_zero(block);
-                                }
+                if constexpr (has_static_size and N == 0) {
+                        return size();
+                } else {
+                        if (n == 0UZ) {
+                                return size();
+                        }
+                        // n - 1's own block first; one block, as at K = 1, leaves no block below it to scan.
+                        auto const [index, offset] = index_offset(n - 1UZ);
+                        if (auto const block = shl(m_blocks[index], left_bit - offset); block != zero) {
+                                return n - 1UZ - bits::detail::countl_zero(block);
+                        }
+                        if constexpr (has_static_size and static_num_blocks == 2) {
+                                return index == 1UZ and m_blocks[0] != zero ? left_bit - bits::detail::countl_zero(m_blocks[0]) : size();
+                        } else {
                                 for (auto i = index - 1UZ; i < index; --i) {
                                         if (m_blocks[i] != zero) {
                                                 return (bits_per_block * i) + left_bit - bits::detail::countl_zero(m_blocks[i]);
                                         }
                                 }
+                                return size();
                         }
                 }
-                return size();
         }
 
         // Total across two widths and reading-neutral: the blocks the other lacks read as zero. Growing is not here.
@@ -985,12 +1185,17 @@ public:
         constexpr auto set() noexcept
                 -> bit_block_container&
         {
-                if constexpr (has_static_size and static_has_unused_bits) {
+                if constexpr (has_static_size and static_num_blocks <= 2) {
+                        // Written out: GCC's early inliner sizes a fill as a call, where these are one or two stores.
+                        [&]<std::size_t... I>(std::index_sequence<I...>) -> void {
+                                ((m_blocks[I] = I == static_last_block ? static_used_bits : ones), ...);
+                        }(std::make_index_sequence<static_num_blocks>());
+                } else if constexpr (has_static_size and static_has_unused_bits) {
                         std::ranges::fill_n(std::ranges::begin(m_blocks), static_cast<std::ptrdiff_t>(static_last_block), ones);
                         m_blocks[static_last_block] = static_used_bits;
-                } else if constexpr (has_static_size and N > 0) {
+                } else if constexpr (has_static_size) {
                         std::ranges::fill(m_blocks, ones);
-                } else if constexpr (not has_static_size) {
+                } else {
                         // Every block, then the tail: at width zero there are no blocks and no tail.
                         std::ranges::fill(m_blocks, ones);
                         erase_unused();
@@ -1003,7 +1208,14 @@ public:
         constexpr auto reset() noexcept
                 -> bit_block_container&
         {
-                std::ranges::fill(m_blocks, zero);
+                if constexpr (has_static_size and static_num_blocks <= 2) {
+                        // Written out: GCC's early inliner sizes a fill as a call, where these are one or two stores.
+                        [&]<std::size_t... I>(std::index_sequence<I...>) -> void {
+                                ((m_blocks[I] = zero), ...);
+                        }(std::make_index_sequence<static_num_blocks>());
+                } else {
+                        std::ranges::fill(m_blocks, zero);
+                }
                 store_count(0UZ);
                 assert(none());
                 return *this;
@@ -1234,8 +1446,9 @@ public:
                 -> bool
         {
                 assert(is_valid(n));
-                auto&& [block, mask] = block_mask(n);
-                return bits::detail::block_intersects(block, mask);
+                // The block shifted down to its low bit, which x86-64 tests with one bt where a built mask takes two.
+                auto const [index, offset] = index_offset(n);
+                return bits::detail::block_intersects(shr(m_blocks[index], offset), unit);
         }
 
         [[nodiscard]] constexpr auto count() const noexcept
@@ -1261,26 +1474,15 @@ public:
         [[nodiscard]] constexpr auto all() const noexcept
                 -> bool
         {
-                if constexpr (has_static_size and static_has_unused_bits) {
-                        if constexpr (static_num_blocks == 1) {
-                                return m_blocks[0] == static_used_bits;
-                        } else if constexpr (static_num_blocks == 2) {
-                                return m_blocks[0] == ones and m_blocks[1] == static_used_bits;
-                        } else {
-                                return all_but_last_are_ones() and m_blocks[static_last_block] == static_used_bits;
-                        }
-                } else if constexpr (has_static_size) {
-                        if constexpr (N == 0) {
-                                return true;
-                        } else if constexpr (static_num_blocks == 1) {
-                                return m_blocks[0] == ones;
-                        } else if constexpr (static_num_blocks == 2) {
-                                return m_blocks[0] == ones and m_blocks[1] == ones;
-                        } else {
-                                return std::ranges::all_of(m_blocks, [](auto block) { return block == ones; });
-                        }
+                if constexpr (folds_blocks) {
+                        // Every block and-ed together with its padding filled in, and tested once: no branch per block.
+                        return [&]<std::size_t... I>(std::index_sequence<I...>) -> bool {
+                                auto every = ones;
+                                ((every = static_cast<block_type>(every & static_cast<block_type>(m_blocks[I] | (I == static_last_block ? static_unused_bits : zero)))), ...);
+                                return every == ones;
+                        }(std::make_index_sequence<static_num_blocks>());
                 } else {
-                        // One shape for both; the static arms keep the split only to stay compile-time branches.
+                        // Many blocks, or a run-time width: stop at the first block that is not all ones.
                         return num_blocks() == 0UZ or (all_but_last_are_ones() and m_blocks[last_block()] == used_bits());
                 }
         }
@@ -1294,14 +1496,16 @@ public:
         [[nodiscard]] constexpr auto none() const noexcept
                 -> bool
         {
-                if constexpr (has_static_size and N == 0) {
-                        return true;
-                } else if constexpr (has_static_size and static_num_blocks == 1) {
-                        return m_blocks[0] == zero;
-                } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        return m_blocks[0] == zero and m_blocks[1] == zero;
+                if constexpr (folds_blocks) {
+                        // Every block or-ed together and tested once, where all_of branches on each block.
+                        return [&]<std::size_t... I>(std::index_sequence<I...>) -> bool {
+                                auto some = zero;
+                                ((some = static_cast<block_type>(some | m_blocks[I])), ...);
+                                return some == zero;
+                        }(std::make_index_sequence<static_num_blocks>());
                 } else {
-                        return std::ranges::all_of(m_blocks, [](auto block) { return block == zero; });
+                        // Many blocks, or a run-time width: stop at the first set block.
+                        return std::ranges::all_of(m_blocks, [](auto block) -> bool { return block == zero; });
                 }
         }
 
@@ -1414,8 +1618,11 @@ private:
                 if constexpr (has_static_size and static_num_blocks == 1) {
                         op(this->m_blocks[0], other.m_blocks[0]);
                 } else if constexpr (has_static_size and static_num_blocks == 2) {
-                        op(this->m_blocks[0], other.m_blocks[0]);
-                        op(this->m_blocks[1], other.m_blocks[1]);
+                        // Both operand blocks loaded first, so no store through this can alias them.
+                        auto const rhs0 = other.m_blocks[0];
+                        auto const rhs1 = other.m_blocks[1];
+                        op(this->m_blocks[0], rhs0);
+                        op(this->m_blocks[1], rhs1);
                 } else if constexpr (has_static_size and N != 0) {
                         for (auto const i : std::views::iota(0UZ, num_blocks())) {
                                 op(this->m_blocks[i], other.m_blocks[i]);
@@ -1626,6 +1833,12 @@ private:
                 -> std::size_t
         {
                 return num_blocks() - 1UZ;
+        }
+
+        [[nodiscard]] constexpr auto last_bit() const noexcept
+                -> std::size_t
+        {
+                return (num_blocks() * bits_per_block) - 1UZ;
         }
 
         // The blocks a range of positions spans, each with its mask: whole blocks, a partial one at the end.

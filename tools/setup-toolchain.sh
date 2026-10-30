@@ -14,7 +14,7 @@
 #
 #   GCC 15, 16 and the trunk snapshot as g++-17; clang 22, 23 and trunk as clang++-24, with clang-tidy for each;
 #   clang-format 22, the format gate's one rung; libc++ 22; GCC 15's 32-bit multilib for the i686 leg; range-v3 and
-#   Google Benchmark from apt; CMake, gcovr and the same clang-format 22 from PyPI; and Boost 1.92's Container,
+#   Google Benchmark from apt; CMake, gcovr, FileCheck and the same clang-format 22 from PyPI; and Boost 1.92's Container,
 #   Dynamic Bitset, Hash2, Test and Unordered, built from Boost's release tarball by GCC 15 into /usr/local, and
 #   again at -m32 into /usr/local/i686 for the i686 leg, as CI's vcpkg builds them for its 32-bit triplet.
 #
@@ -111,16 +111,17 @@ $SUDO ldconfig
 # The format gate runs clang-format-22 from apt.llvm.org, installed above, at the stable rung alone: a formatter
 # release reformats the code base. Before 22 it reads `{ a * b }` in a requires-expression as a pointer declaration.
 # The same 22 also comes from PyPI as an unversioned clang-format, and CMake comes from there too, since noble's
-# 3.28 is older than the 3.30 CMakeLists.txt asks for, as does the coverage job's gcovr. All three are pinned by hash
-# in clang-format-requirements.txt, cmake-requirements.txt and gcovr-requirements.txt beside this script, and land in
-# ~/.local/bin.
+# 3.28 is older than the 3.30 CMakeLists.txt asks for, as do the coverage job's gcovr and the codegen tests' FileCheck.
+# All four are pinned by hash in the requirements files beside this script, and land in ~/.local/bin.
 CLANG_FORMAT_REQUIREMENTS="$(dirname "${BASH_SOURCE[0]}")/clang-format-requirements.txt"
 readonly CLANG_FORMAT_REQUIREMENTS
 CMAKE_REQUIREMENTS="$(dirname "${BASH_SOURCE[0]}")/cmake-requirements.txt"
 readonly CMAKE_REQUIREMENTS
 GCOVR_REQUIREMENTS="$(dirname "${BASH_SOURCE[0]}")/gcovr-requirements.txt"
 readonly GCOVR_REQUIREMENTS
-for requirements in "${CLANG_FORMAT_REQUIREMENTS}" "${CMAKE_REQUIREMENTS}" "${GCOVR_REQUIREMENTS}"; do
+FILECHECK_REQUIREMENTS="$(dirname "${BASH_SOURCE[0]}")/filecheck-requirements.txt"
+readonly FILECHECK_REQUIREMENTS
+for requirements in "${CLANG_FORMAT_REQUIREMENTS}" "${CMAKE_REQUIREMENTS}" "${GCOVR_REQUIREMENTS}" "${FILECHECK_REQUIREMENTS}"; do
         pip install --quiet --user --break-system-packages --require-hashes -r "${requirements}" \
                 || pip3 install --quiet --user --require-hashes -r "${requirements}"
 done

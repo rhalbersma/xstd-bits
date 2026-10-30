@@ -245,6 +245,11 @@ if(${project_option_prefix}_BUILD_HARDENED_TESTS)
         xstd::bits
     )
 
+    target_include_directories(
+        test.hardened.precondition PRIVATE
+        ${current_include_dir}
+    )
+
     target_compile_definitions(
         test.hardened.precondition PRIVATE
         NDEBUG
@@ -257,7 +262,7 @@ if(${project_option_prefix}_BUILD_HARDENED_TESTS)
         ${cxx_compile_options_optimization}
     )
 
-    foreach(violation subscript front back pop_back erase_end erase_reversed insert_past_end first last subspan valarray_subscript set_erase_end)
+    foreach(violation subscript front back pop_back erase_end erase_reversed insert_past_end first last subspan valarray_subscript set_erase_end set_front set_back set_subscript set_join set_toggle set_remove set_meet)
         add_test(NAME test.hardened.precondition.${violation} COMMAND test.hardened.precondition ${violation})
         # Each run ends in one abort within milliseconds, so a run still going after a minute is a hang to fail.
         set_tests_properties(test.hardened.precondition.${violation} PROPERTIES TIMEOUT 60)

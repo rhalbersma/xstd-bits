@@ -9,11 +9,13 @@
 #include <test/value_reference.hpp>                // value_reference
 #include <xstd/bits/bit_algorithm/bit_reverse.hpp> // bit_reverse
 #include <xstd/bits/bit_algorithm/bit_rotate.hpp>  // bit_rotate
-#include <xstd/bits/bit_array.hpp>                 // basic_bit_array
+#include <xstd/bits/bit_array.hpp>                 // basic_bit_array, bit_array
 #include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                               // count, none_of
 #include <concepts>                                // regular, same_as, totally_ordered
 #include <cstddef>                                 // ptrdiff_t, size_t
 #include <cstdint>                                 // uint32_t, uint64_t, uint8_t
+#include <functional>                              // identity
 #include <iterator>                                // contiguous_iterator, random_access_iterator, size
 #include <ranges>                                  // begin, contiguous_range, empty, iota, random_access_range, size
 #include <tuple>                                   // tuple_cat, tuple_size_v
@@ -148,6 +150,29 @@ BOOST_AUTO_TEST_CASE(ItRotatesAndReversesAsTheAlgorithmsDoAcrossManyBlocks)
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(xstd::basic_bit_array<std::uint8_t, 70>()), 0);
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(xstd::basic_bit_array<std::uint64_t, 128>()), 0);
         BOOST_CHECK_EQUAL(test::sequence::permutation_sweep(xstd::basic_bit_array<std::uint64_t, 130>()), 0);
+}
+
+// As std::array<bool, N> a; a[0] = true; is valid, each bit write reads its block, so the blocks start clear.
+BOOST_AUTO_TEST_CASE(WritingEveryElementAfterDefaultConstructionGivesTheArrayItsValue)
+{
+        auto const fill_odd = []<class A>(A a) -> std::size_t {
+                for (auto const n : std::views::iota(0UZ, a.size())) {
+                        a[n] = (n % 2UZ == 1UZ);
+                }
+                return static_cast<std::size_t>(std::ranges::count(a, true));
+        };
+        static_assert(fill_odd(xstd::bit_array<64>()) == 32UZ);
+        static_assert(fill_odd(xstd::bit_array<100>()) == 50UZ);
+        static_assert([] -> bool {
+                xstd::bit_array<100> a;
+                a[99] = true;
+                return std::ranges::count(a, true) == 1;
+        }());
+        xstd::bit_array<64> const whole;
+        xstd::bit_array<100> const padded;
+        BOOST_CHECK(std::ranges::none_of(whole, std::identity()) and std::ranges::none_of(padded, std::identity()));
+        BOOST_CHECK_EQUAL(fill_odd(whole), 32UZ);
+        BOOST_CHECK_EQUAL(fill_odd(padded), 50UZ);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
