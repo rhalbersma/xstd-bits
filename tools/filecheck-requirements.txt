@@ -1,0 +1,6 @@
+# Copyright Rein Halbersma 2014-2026. Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+# The codegen tests' FileCheck, a pure-Python port of LLVM's with no dependencies, pinned by hash for setup-toolchain.sh: the wheel and the sdist.
+filecheck==1.0.6 \
+    --hash=sha256:202b53d0b384016f6b150af8fa6f1b7f306d2213d31983d5a472135fce95baf9 \
+    --hash=sha256:c41c51f733b0bfdae6718dca4b94fb0bdf72fab70f35fc68d62bf8ac60d6442d

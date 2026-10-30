@@ -45,11 +45,12 @@ jobs:
           git diff --name-only "${BASE}" HEAD > "${RUNNER_TEMP}/changed"
           cat "${RUNNER_TEMP}/changed"
           # Paths no ladder compiles: prose, the README included, as no README example is compiled; the tools; test/fuzz/,
-          # which ClusterFuzzLite alone builds; the site's configuration; and the workflows that are not ladders.
+          # which ClusterFuzzLite alone builds; test/codegen/, which its own workflow compiles to assembly; the site's
+          # configuration; and the workflows that are not ladders.
           # benchmark/ and examples/ build: the GCC ladder smoke-runs the one, and test/ compiles against the other's
           # include/. Anything else, a new directory included, builds.
-          unbuilt='\.md$|^LICENSE_1_0\.txt$|^doc/|^tools/|^test/fuzz/|^mkdocs\.yml$|^\.clang-format$|^\.git-blame-ignore-revs$'
-          unbuilt="${unbuilt}"'|^\.github/workflows/(actionlint|audit|canary|cflite_batch|cflite_pr|clang-format|codeql|consumption|coverage|mutation|pages|scorecard)\.yml$'
+          unbuilt='\.md$|^LICENSE_1_0\.txt$|^doc/|^tools/|^test/fuzz/|^test/codegen/|^mkdocs\.yml$|^\.clang-format$|^\.git-blame-ignore-revs$'
+          unbuilt="${unbuilt}"'|^\.github/workflows/(actionlint|audit|canary|cflite_batch|cflite_pr|clang-format|codegen|codeql|consumption|coverage|mutation|pages|scorecard)\.yml$'
           if grep -qvE "${unbuilt}" "${RUNNER_TEMP}/changed"; then
             echo "build=true" >> "${GITHUB_OUTPUT}"
           else
