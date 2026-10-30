@@ -134,7 +134,7 @@ BOOST_AUTO_TEST_CASE(ARunTimeSetReadsAbsentKeysPastItsWidth)
 {
         BOOST_CHECK((xstd::bit_compress(xstd::bit_set{1, 500}, xstd::bit_set{1, 2, 3, 500, 900}) == xstd::bit_set{0, 3}));
         BOOST_CHECK((xstd::bit_compress(xstd::bit_set{1, 2000}, xstd::bit_set{1}) == xstd::bit_set{0}));
-        BOOST_CHECK((xstd::bit_compress(xstd::bit_set{}, xstd::bit_set{4, 5}) == xstd::bit_set{}));
+        BOOST_CHECK(xstd::bit_compress(xstd::bit_set{}, xstd::bit_set{4, 5}).empty());
 }
 
 // A sequence keeps its size, the packed positions first and false after them.

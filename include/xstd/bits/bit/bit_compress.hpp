@@ -12,6 +12,7 @@
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <xstd/ints/limits.hpp>                    // numeric_limits
 #include <cassert>                                 // assert
+#include <cstddef>                                 // size_t
 
 // [bit.permute]'s bit_compress over two owners of one type, of any width, beside xstd-ints' over one integer.
 namespace xstd {
