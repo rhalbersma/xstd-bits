@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(IsConstantAndKeepsTheIntegerOverload)
 {
         static_assert(xstd::has_single_bit(xstd::bit_fixed_set<192>{100}));
         static_assert(not xstd::has_single_bit(xstd::bit_fixed_set<192>{100, 150}));
-        static_assert(xstd::has_single_bit(std::uint64_t{1} << 40));
+        static_assert(xstd::has_single_bit(std::uint64_t{1} << 40U));
         static_assert(not xstd::has_single_bit(std::uint64_t{3}));
 }
 
