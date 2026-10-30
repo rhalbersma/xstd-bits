@@ -149,6 +149,12 @@ BOOST_AUTO_TEST_CASE(ASequenceKeepsItsSize)
         BOOST_CHECK_EQUAL(xstd::bit_compress<std::uint8_t>(a, b), 0b100U);
 }
 
+// An integer that the mask's first block fills is left as it is by the empty blocks after it.
+BOOST_AUTO_TEST_CASE(AnIntegerFilledByTheFirstBlockIgnoresTheRest)
+{
+        BOOST_CHECK_EQUAL(xstd::bit_compress<std::uint8_t>(board{1, 3, 100}, board{0, 1, 2, 3, 4, 5, 6, 7}), 0b1010U);
+}
+
 // A valarray's mask subscript gathers what bit_compress packs: the two run one kernel.
 BOOST_AUTO_TEST_CASE(AValarrayGathersWhatItPacks)
 {

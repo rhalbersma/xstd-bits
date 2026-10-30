@@ -39,6 +39,16 @@ constexpr auto check_widths(T const& x [[maybe_unused]], T const& m [[maybe_unus
         }
 }
 
+// An empty set of a run-time width as wide as m, its local at function scope so GCC elides the copy with no branch.
+template<permutable T>
+[[nodiscard]] constexpr auto empty_set_as_wide_as(T const& m)
+        -> T
+{
+        auto result = T();
+        storage_access::bits(result).resize(storage_access::bits(m).size());
+        return result;
+}
+
 // All false at the width a permutation of the mask's positions lands in: a fixed width, a sequence's size, a set's.
 template<permutable T>
 [[nodiscard]] constexpr auto zeros_over(T const& m)
@@ -47,9 +57,7 @@ template<permutable T>
         if constexpr (permutes_fixed_width<T>) {
                 return T();
         } else if constexpr (reads<T, set_reading_tag>) {
-                auto result = T();
-                storage_access::bits(result).resize(storage_access::bits(m).size());
-                return result;
+                return empty_set_as_wide_as(m);
         } else {
                 return T(m.size());
         }

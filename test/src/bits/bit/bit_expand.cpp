@@ -15,7 +15,7 @@
 #include <array>                               // array
 #include <bitset>                              // bitset
 #include <cstddef>                             // size_t
-#include <cstdint>                             // uint64_t
+#include <cstdint>                             // uint64_t, uint8_t
 #include <ranges>                              // iota
 #include <set>                                 // set
 
@@ -72,14 +72,22 @@ BOOST_AUTO_TEST_CASE(AnIndexWalksEverySubsetOfAMask)
         BOOST_CHECK_EQUAL(seen.size(), std::size_t{1} << mask.size());
 }
 
-// A run-time set narrower than the mask reads its absent keys as false; a sequence keeps the mask's size.
+// A run-time set narrower than the mask reads its absent keys as false, a wider one lays out only its low keys.
 BOOST_AUTO_TEST_CASE(ARunTimeWidthLaysItsLowBitsOut)
 {
         BOOST_CHECK((xstd::bit_expand(xstd::bit_set{0, 3}, xstd::bit_set{1, 2, 3, 500, 900}) == xstd::bit_set{1, 500}));
         BOOST_CHECK((xstd::bit_expand(xstd::bit_set{1}, xstd::bit_set{7, 900}) == xstd::bit_set{900}));
+        BOOST_CHECK((xstd::bit_expand(xstd::bit_set{0, 2, 2000}, xstd::bit_set{4, 5, 6}) == xstd::bit_set{4, 6}));
         auto const x = xstd::bit_vector{true, false, true, false, false};
         auto const m = xstd::bit_vector{false, true, true, false, true};
         BOOST_CHECK((xstd::bit_expand(x, m) == xstd::bit_vector{false, true, false, false, true}));
+}
+
+// An integer wider than every block of a small mask together lays out the mask's positions and nothing past its width.
+BOOST_AUTO_TEST_CASE(AnIntegerWiderThanTheMaskLaysOutWhatFits)
+{
+        using small = xstd::basic_bit_fixed_set<std::size_t, std::uint8_t, 20>;
+        BOOST_CHECK((xstd::bit_expand(~std::uint64_t{0}, small{1, 9, 19}) == small{1, 9, 19}));
 }
 
 // The deposit of a fixed width is a constant where its operands are.
