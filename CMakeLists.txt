@@ -367,6 +367,14 @@ if(PROJECT_IS_TOP_LEVEL)
     if(${project_option_prefix}_BUILD_FUZZERS)
         add_subdirectory(test/fuzz)
     endif()
+
+    # Off by default, and outside BUILD_TESTING: the codegen tests compile to assembly and read it with FileCheck, so they need neither Boost.Test nor a test executable. enable_testing() stays here, where ctest looks for the tests.
+    option(${project_option_prefix}_BUILD_CODEGEN_TESTS "Check the assembly the block kernels compile to, under test/codegen/" OFF)
+
+    if(${project_option_prefix}_BUILD_CODEGEN_TESTS)
+        enable_testing()
+        add_subdirectory(test/codegen)
+    endif()
 endif()
 
 install(
