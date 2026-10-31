@@ -14,6 +14,11 @@ caller may ignore: postfix `++` and `--`, `insert`, `insert_range`, `emplace`, `
 `erase` and `erase_if`, the reference `push_back` and `emplace_back` return, and the `try_` and `unchecked_` doors.
 It carries it on every constructor but `basic_bit_array`'s from an `initializer_list`.
 
+A *Throws:* element holds where exceptions are enabled. Built without them, as GCC's and Clang's `-fno-exceptions`
+and MSVC's `/EHs-c-` build a program, each throw instead writes the exception's message to `stderr` and calls
+`abort()`, as libstdc++ and libc++ do in that mode, and a member that would undo a partial effect before rethrowing
+has nothing left to undo. `XSTD_BITS_HAS_EXCEPTIONS` is `1` or `0` accordingly, unless the program defines it first.
+
 The library's own terms are used throughout:
 
 - A *block* is an unsigned integer holding bits. Position `i` is bit `i % D` of block `i / D`, where `D` is the

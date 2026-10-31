@@ -106,7 +106,7 @@ coverage() {
         script="$(cpp_ci_script gcovr)" || return 1
         "${cmake}" -S "${root}" -B "${dir}" -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++-15 \
                 -DCMAKE_CXX_FLAGS="--coverage -O0" -DCMAKE_EXE_LINKER_FLAGS=--coverage -DCMAKE_CXX_FLAGS_DEBUG=-g1 \
-                -DCMAKE_CXX_SCAN_FOR_MODULES=OFF -DXSTD_BITS_BUILD_BENCHMARKS=OFF -DXSTD_BITS_BUILD_HARDENED_TESTS=OFF \
+                -DCMAKE_CXX_SCAN_FOR_MODULES=OFF -DXSTD_BITS_BUILD_BENCHMARKS=OFF -DXSTD_BITS_BUILD_HARDENED_TESTS=OFF -DXSTD_BITS_BUILD_NO_EXCEPTIONS_TESTS=OFF \
                 && "${cmake}" --build "${dir}" --parallel "${jobs}" \
                 && ctest --test-dir "${dir}" --output-on-failure --parallel "${jobs}" \
                 && (cd "${root}" && PATH="${HOME:-/root}/.local/bin:${PATH}" GCOV=gcov-15 BUILD_DIR="${out}" \
