@@ -22,7 +22,7 @@
 // Out of line and cold, as libstdc++'s __throw_ helpers are, so a throw site's message costs its caller no inlining.
 #if defined(__GNUC__) or defined(__clang__)
 #define XSTD_BITS_COLD [[gnu::cold, gnu::noinline]]
-#elif defined(_MSC_VER)
+#elifdef _MSC_VER
 #define XSTD_BITS_COLD __declspec(noinline)
 #else
 #define XSTD_BITS_COLD
