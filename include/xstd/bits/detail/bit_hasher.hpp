@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_FUNCTIONAL_DETAIL_BIT_HASHER_HPP
-#define XSTD_BITS_BIT_FUNCTIONAL_DETAIL_BIT_HASHER_HPP
+#ifndef XSTD_BITS_DETAIL_BIT_HASHER_HPP
+#define XSTD_BITS_DETAIL_BIT_HASHER_HPP
 
 #include <xstd/bits/detail/hash.hpp>                               // bit_hashable, bit_hashable_range, hash_append_bit_planes, hash_append_bit_string
 #include <xstd/misc/concepts/hash_algorithm.hpp>                   // hash_algorithm
@@ -81,4 +81,4 @@ public:
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_BIT_FUNCTIONAL_DETAIL_BIT_HASHER_HPP
+#endif // XSTD_BITS_DETAIL_BIT_HASHER_HPP

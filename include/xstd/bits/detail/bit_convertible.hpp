@@ -3,13 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_DETAIL_BIT_CONVERTIBLE_HPP
-#define XSTD_BITS_BIT_DETAIL_BIT_CONVERTIBLE_HPP
+#ifndef XSTD_BITS_DETAIL_BIT_CONVERTIBLE_HPP
+#define XSTD_BITS_DETAIL_BIT_CONVERTIBLE_HPP
 
-#include <xstd/bits/bit/detail/bit_width.hpp>          // bit_width_v
 #include <xstd/bits/detail/bit_blocks_capacity.hpp>    // bit_blocks_capacity_v
 #include <xstd/bits/detail/bit_constructible_from.hpp> // bit_constructible_from
 #include <xstd/bits/detail/bit_layout.hpp>             // bit_bytes, bit_layout, byte_count, bytes_bits, copy_bits
+#include <xstd/bits/detail/bit_width.hpp>              // bit_width_v
 #include <xstd/bits/detail/from_blocks.hpp>            // from_blocks
 #include <xstd/bits/detail/ownership.hpp>              // owned_bits_t, owner, reads, set_reading_tag, storage_access, view
 #include <xstd/bits/detail/shift.hpp>                  // partial_block_mask, shl
@@ -357,4 +357,4 @@ template<class To, class From>
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_BIT_DETAIL_BIT_CONVERTIBLE_HPP
+#endif // XSTD_BITS_DETAIL_BIT_CONVERTIBLE_HPP

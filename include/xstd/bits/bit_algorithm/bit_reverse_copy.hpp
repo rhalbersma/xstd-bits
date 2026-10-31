@@ -6,13 +6,13 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_REVERSE_COPY_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_REVERSE_COPY_HPP
 
-#include <xstd/bits/bit_algorithm/detail/blit.hpp>     // reverse_copy_bools
-#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // first_position
-#include <xstd/bits/bit_iterator/detail/concepts.hpp>  // bool_output_iterator
-#include <xstd/bits/detail/ownership.hpp>              // reads_bools, storage_access
-#include <algorithm>                                   // reverse_copy_result
-#include <cstddef>                                     // ptrdiff_t
-#include <ranges>                                      // borrowed_iterator_t, end, size
+#include <xstd/bits/bit_algorithm/detail/blit.hpp> // reverse_copy_bools
+#include <xstd/bits/detail/iterator_concepts.hpp>  // bool_output_iterator
+#include <xstd/bits/detail/ownership.hpp>          // reads_bools, storage_access
+#include <xstd/bits/detail/sequence_storage.hpp>   // first_position
+#include <algorithm>                               // reverse_copy_result
+#include <cstddef>                                 // ptrdiff_t
+#include <ranges>                                  // borrowed_iterator_t, end, size
 
 namespace xstd::ranges {
 

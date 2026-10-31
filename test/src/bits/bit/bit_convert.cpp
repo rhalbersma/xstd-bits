@@ -7,8 +7,6 @@
 #include <test/for_each_type.hpp>                        // for_each_type
 #include <test/whole_blocks.hpp>                         // block_bits, whole_blocks
 #include <xstd/bits/bit/bit_convert.hpp>                 // bit_convert
-#include <xstd/bits/bit/detail/bit_convertible.hpp>      // adopts_from, bit_source, fixed_target, fixed_width, same_block_owners
-#include <xstd/bits/bit/detail/bit_width.hpp>            // bit_width_v
 #include <xstd/bits/bit_algorithm/bit_count.hpp>         // bit_count
 #include <xstd/bits/bit_array.hpp>                       // basic_bit_array, bit_array
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp> // bit_convertible_to
@@ -21,6 +19,8 @@
 #include <xstd/bits/bit_span/bit_span.hpp>               // bit_span
 #include <xstd/bits/bit_span/bit_subspan.hpp>            // bit_subspan
 #include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector, bit_vector
+#include <xstd/bits/detail/bit_convertible.hpp>          // adopts_from, bit_source, fixed_target, fixed_width, same_block_owners
+#include <xstd/bits/detail/bit_width.hpp>                // bit_width_v
 #include <xstd/bits/detail/ownership.hpp>                // owner, view
 #include <xstd/bits/ext/boost/bit_small_set.hpp>         // basic_bit_small_set, bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp>      // basic_bit_small_vector, bit_small_vector

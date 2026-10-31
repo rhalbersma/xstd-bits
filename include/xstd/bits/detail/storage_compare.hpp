@@ -3,28 +3,28 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_COMPARE_HPP
-#define XSTD_BITS_BIT_ALGORITHM_DETAIL_COMPARE_HPP
+#ifndef XSTD_BITS_DETAIL_STORAGE_COMPARE_HPP
+#define XSTD_BITS_DETAIL_STORAGE_COMPARE_HPP
 
-#include <xstd/bits/bit_algorithm/detail/comparable.hpp> // static_width
-#include <xstd/bits/bit_algorithm/detail/mismatch.hpp>   // first_mismatch
-#include <xstd/bits/bit_algorithm/detail/sequence.hpp>   // bits_t, first_position, whole_sequence
-#include <xstd/bits/detail/comparisons.hpp>              // numeric_three_way, set_equal, three_way
-#include <xstd/bits/detail/intrinsic.hpp>                // countr_zero
-#include <xstd/bits/detail/key_order.hpp>                // descends
-#include <xstd/bits/detail/ownership.hpp>                // sequence_reading_tag, set_reading_tag, storage_access
-#include <xstd/bits/detail/shift.hpp>                    // partial_block_mask
-#include <algorithm>                                     // max, min
-#include <cassert>                                       // assert
-#include <compare>                                       // strong_ordering
-#include <concepts>                                      // same_as
-#include <cstddef>                                       // size_t
-#include <cstdint>                                       // uint64_t
-#include <limits>                                        // numeric_limits
-#include <ranges>                                        // size
-#include <span>                                          // dynamic_extent
-#include <type_traits>                                   // remove_cvref_t
-#include <utility>                                       // declval
+#include <xstd/bits/detail/comparable_readings.hpp> // static_width
+#include <xstd/bits/detail/comparisons.hpp>         // numeric_three_way, set_equal, three_way
+#include <xstd/bits/detail/first_mismatch.hpp>      // first_mismatch
+#include <xstd/bits/detail/intrinsic.hpp>           // countr_zero
+#include <xstd/bits/detail/key_order.hpp>           // descends
+#include <xstd/bits/detail/ownership.hpp>           // sequence_reading_tag, set_reading_tag, storage_access
+#include <xstd/bits/detail/sequence_storage.hpp>    // bits_t, first_position, whole_sequence
+#include <xstd/bits/detail/shift.hpp>               // partial_block_mask
+#include <algorithm>                                // max, min
+#include <cassert>                                  // assert
+#include <compare>                                  // strong_ordering
+#include <concepts>                                 // same_as
+#include <cstddef>                                  // size_t
+#include <cstdint>                                  // uint64_t
+#include <limits>                                   // numeric_limits
+#include <ranges>                                   // size
+#include <span>                                     // dynamic_extent
+#include <type_traits>                              // remove_cvref_t
+#include <utility>                                  // declval
 
 namespace xstd::bits::detail {
 
@@ -200,4 +200,4 @@ template<class S1, class S2>
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_BIT_ALGORITHM_DETAIL_COMPARE_HPP
+#endif // XSTD_BITS_DETAIL_STORAGE_COMPARE_HPP

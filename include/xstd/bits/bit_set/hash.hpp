@@ -6,11 +6,11 @@
 #ifndef XSTD_BITS_BIT_SET_HASH_HPP
 #define XSTD_BITS_BIT_SET_HASH_HPP
 
-#include <xstd/bits/bit_set/bit_fixed_set.hpp> // basic_bit_fixed_set
-#include <xstd/bits/bit_set/bit_set.hpp>       // basic_bit_set
-#include <xstd/bits/bit_set/bit_set_view.hpp>  // bit_set_view
-#include <cstddef>                             // size_t
-#include <functional>                          // hash
+#include <xstd/bits/bit_set/detail/bit_fixed_set.hpp> // basic_bit_fixed_set
+#include <xstd/bits/bit_set/detail/bit_set.hpp>       // basic_bit_set
+#include <xstd/bits/bit_set/detail/bit_set_view.hpp>  // bit_set_view
+#include <cstddef>                                    // size_t
+#include <functional>                                 // hash
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
 

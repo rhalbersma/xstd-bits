@@ -6,11 +6,11 @@
 #ifndef XSTD_BITS_BIT_FUNCTIONAL_BIT_DIGEST_HPP
 #define XSTD_BITS_BIT_FUNCTIONAL_BIT_DIGEST_HPP
 
-#include <xstd/bits/bit_functional/detail/bit_hasher.hpp> // bit_hasher
-#include <xstd/bits/detail/hash.hpp>                      // bit_hashable, bit_hashable_range
-#include <xstd/misc/concepts/hash_algorithm.hpp>          // hash_algorithm
-#include <boost/hash2/flavor.hpp>                         // little_endian_flavor
-#include <boost/hash2/xxh3.hpp>                           // xxh3_128
+#include <xstd/bits/detail/bit_hasher.hpp>       // bit_hasher
+#include <xstd/bits/detail/hash.hpp>             // bit_hashable, bit_hashable_range
+#include <xstd/misc/concepts/hash_algorithm.hpp> // hash_algorithm
+#include <boost/hash2/flavor.hpp>                // little_endian_flavor
+#include <boost/hash2/xxh3.hpp>                  // xxh3_128
 
 namespace xstd {
 

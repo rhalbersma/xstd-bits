@@ -237,7 +237,14 @@ it. The folders under `include/xstd/bits/` stack in three kinds:
   `basic_bit_vector`, the template is in `detail/` and each family's header is a front over it, carrying only what
   is that family's own, such as its alias. `ext/` builds on whichever family it extends.
 
-`tools/layering.py`, in the Audit workflow and `tools/ci-local.sh audit`, checks all three from the `#include` lines
+Two rules make every header deletable on its own, and every folder too:
+
+- **A public header is a leaf.** Only an umbrella or `ext/` includes it. The library's own headers include the
+  definition under `detail/` instead, in the shared one where another folder needs it and in the folder's own where
+  only its neighbours do, as `bit_enum_set` builds on `bit_set/detail/bit_fixed_set.hpp`, not on the public header.
+- **A folder's own `detail/` is private to it.** What a second folder needs moves to the shared `detail/`.
+
+`tools/layering.py`, in the Audit workflow and `tools/ci-local.sh audit`, checks all of it from the `#include` lines
 and fails on a folder it does not classify, so a new folder says which kind it is before it lands. A public header
 keeps its path when its definition moves down: users include the front, and the front stays where it was.
 

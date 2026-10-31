@@ -6,11 +6,11 @@
 #ifndef XSTD_BITS_BIT_ARRAY_CONTAINER_HASH_HPP
 #define XSTD_BITS_BIT_ARRAY_CONTAINER_HASH_HPP
 
-#include <xstd/bits/bit_array/bit_array.hpp>      // basic_bit_array
-#include <boost/container_hash/is_range.hpp>      // is_range
-#include <boost/container_hash/is_tuple_like.hpp> // is_tuple_like
-#include <cstddef>                                // size_t
-#include <type_traits>                            // false_type
+#include <xstd/bits/bit_array/detail/bit_array.hpp> // basic_bit_array
+#include <boost/container_hash/is_range.hpp>        // is_range
+#include <boost/container_hash/is_tuple_like.hpp>   // is_tuple_like
+#include <cstddef>                                  // size_t
+#include <type_traits>                              // false_type
 
 namespace boost::container_hash {
 

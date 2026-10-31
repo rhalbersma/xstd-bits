@@ -3,13 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_FUNCTIONAL_DETAIL_BASIC_BIT_VECTOR_HASH_HPP
-#define XSTD_BITS_BIT_FUNCTIONAL_DETAIL_BASIC_BIT_VECTOR_HASH_HPP
+#ifndef XSTD_BITS_DETAIL_BASIC_BIT_VECTOR_HASH_HPP
+#define XSTD_BITS_DETAIL_BASIC_BIT_VECTOR_HASH_HPP
 
-#include <xstd/bits/bit_functional/detail/sequence_hash.hpp> // hash
-#include <xstd/bits/detail/basic_bit_vector.hpp>             // basic_bit_vector
-#include <cstddef>                                           // size_t
-#include <functional>                                        // hash
+#include <xstd/bits/detail/basic_bit_vector.hpp> // basic_bit_vector
+#include <xstd/bits/detail/sequence_hash.hpp>    // hash
+#include <cstddef>                               // size_t
+#include <functional>                            // hash
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
 
@@ -23,4 +23,4 @@ struct hash<xstd::basic_bit_vector<Blocks, N>> : hash<typename xstd::basic_bit_v
 
 // NOLINTEND(bugprone-std-namespace-modification)
 
-#endif // XSTD_BITS_BIT_FUNCTIONAL_DETAIL_BASIC_BIT_VECTOR_HASH_HPP
+#endif // XSTD_BITS_DETAIL_BASIC_BIT_VECTOR_HASH_HPP

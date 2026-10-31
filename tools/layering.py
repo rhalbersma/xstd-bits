@@ -13,13 +13,15 @@ above it are the foundation names, <bit>, the iterators, the algorithms and the 
 each a public front over detail/ and the layers below it. The container families sit on top, one
 folder each, and ext/ beside them builds on whichever it extends.
 
-Three rules hold, read from the #include lines alone:
+Five rules hold, read from the #include lines alone:
 
 - detail/ includes no public xstd-bits header, so nothing below a front depends on one;
 - no folder reaches back to a folder that reaches it, so the folders stack without a cycle;
-- no container family includes another, so deleting one leaves every other building.
+- no container family includes another, so deleting one leaves every other building;
+- a public header is included by umbrellas and ext/ alone, so deleting one breaks only those;
+- a folder's own detail/ is included from that folder alone, so deleting a folder breaks no other.
 
-The umbrella xstd/bits.hpp gathers every family and is exempt, as is ext/. A folder the lists
+The umbrellas gather and ext/ extends, so neither is bound by the last three rules. A folder the lists
 below do not classify is an error: a new folder says which kind it is before it lands.
 """
 
@@ -44,6 +46,16 @@ def folder(relative):
     return parts[0] if len(parts) > 1 else parts[0].removesuffix(".hpp")
 
 
+def is_umbrella(relative):
+    """An umbrella: a header directly under xstd/bits/, which gathers its folder."""
+    return "/" not in relative
+
+
+def is_detail(relative):
+    """A header under a detail/ folder, the shared one or a folder's own."""
+    return relative.startswith("detail/") or "/detail/" in relative
+
+
 def main():
     errors = []
     headers = {path.relative_to(BITS).as_posix(): INCLUDE.findall(path.read_text(encoding="utf-8")) for path in sorted(BITS.rglob("*.hpp"))}
@@ -62,6 +74,11 @@ def main():
                 errors.append(f"include/xstd/bits/{header}: the {source} family includes the {target} family's <xstd/bits/{included}>")
             if source != target and source != EXTENSIONS:
                 edges.setdefault(source, set()).add(target)
+            exempt = is_umbrella(header) or source == EXTENSIONS
+            if not exempt and not is_detail(included) and not is_umbrella(included) and target != EXTENSIONS:
+                errors.append(f"include/xstd/bits/{header}: includes the public <xstd/bits/{included}>, which only umbrellas and ext/ include")
+            if source != EXTENSIONS and is_detail(included) and target not in (SHARED, source):
+                errors.append(f"include/xstd/bits/{header}: includes the {target} folder's own <xstd/bits/{included}>")
 
     # Tarjan's strongly connected components over the folder graph: any with more than one folder is a cycle.
     index, low, stack, on_stack, cycles = {}, {}, [], set(), []

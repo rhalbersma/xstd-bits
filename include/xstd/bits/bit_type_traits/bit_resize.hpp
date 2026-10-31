@@ -6,16 +6,6 @@
 #ifndef XSTD_BITS_BIT_TYPE_TRAITS_BIT_RESIZE_HPP
 #define XSTD_BITS_BIT_TYPE_TRAITS_BIT_RESIZE_HPP
 
-#include <xstd/bits/detail/rebind.hpp> // resizable, with_width_t
-#include <cstddef>                     // size_t
-
-namespace xstd {
-
-// The same bit container N bits wide, as std::simd's resize_t takes another width; a run-time width has none to change.
-template<std::size_t N, class Owner>
-        requires bits::detail::resizable<Owner>
-using bit_resize = bits::detail::with_width_t<Owner, N>;
-
-} // namespace xstd
+#include <xstd/bits/bit_type_traits/detail/bit_resize.hpp> // IWYU pragma: export; bit_resize
 
 #endif // XSTD_BITS_BIT_TYPE_TRAITS_BIT_RESIZE_HPP

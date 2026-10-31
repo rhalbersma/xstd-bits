@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_BIT_SET_BIT_INPLACE_SET_HPP
 #define XSTD_BITS_BIT_SET_BIT_INPLACE_SET_HPP
 
-#include <xstd/bits/bit_concepts/bit_index_mapping.hpp> // bit_index_mapping
-#include <xstd/bits/bit_set/bit_key_mapping.hpp>        // bit_key_mapping
-#include <xstd/bits/bit_set/bit_set.hpp>                // basic_bit_set
+#include <xstd/bits/bit_set/detail/bit_key_mapping.hpp> // bit_key_mapping
+#include <xstd/bits/bit_set/detail/bit_set.hpp>         // basic_bit_set
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp>     // key_direction
+#include <xstd/bits/detail/bit_index_mapping.hpp>       // bit_index_mapping
 #include <xstd/bits/detail/inplace_blocks.hpp>          // inplace_blocks_for
 #include <xstd/bits/detail/num_blocks.hpp>              // num_blocks_v, tiling_block
 #include <xstd/ints/concepts/unsigned_integer.hpp>      // unsigned_integer

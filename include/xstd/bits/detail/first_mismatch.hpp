@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_MISMATCH_HPP
-#define XSTD_BITS_BIT_ALGORITHM_DETAIL_MISMATCH_HPP
+#ifndef XSTD_BITS_DETAIL_FIRST_MISMATCH_HPP
+#define XSTD_BITS_DETAIL_FIRST_MISMATCH_HPP
 
 #include <xstd/bits/detail/intrinsic.hpp> // countr_zero
 #include <algorithm>                      // min
@@ -29,4 +29,4 @@ template<class Bits>
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_BIT_ALGORITHM_DETAIL_MISMATCH_HPP
+#endif // XSTD_BITS_DETAIL_FIRST_MISMATCH_HPP

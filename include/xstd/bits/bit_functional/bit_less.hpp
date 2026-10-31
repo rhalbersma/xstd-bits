@@ -6,8 +6,8 @@
 #ifndef XSTD_BITS_BIT_FUNCTIONAL_BIT_LESS_HPP
 #define XSTD_BITS_BIT_FUNCTIONAL_BIT_LESS_HPP
 
-#include <xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp> // bit_lexicographical_compare_three_way
-#include <compare>                                                           // is_lt
+#include <xstd/bits/detail/bit_lexicographical_compare_three_way.hpp> // bit_lexicographical_compare_three_way
+#include <compare>                                                    // is_lt
 
 namespace xstd {
 

@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_COUNT_HPP
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_COUNT_HPP
 
-#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // whole_sequence
-#include <xstd/bits/detail/ownership.hpp>              // reads_bools, storage_access
-#include <cstddef>                                     // size_t
-#include <ranges>                                      // size
+#include <xstd/bits/detail/ownership.hpp>        // reads_bools, storage_access
+#include <xstd/bits/detail/sequence_storage.hpp> // whole_sequence
+#include <cstddef>                               // size_t
+#include <ranges>                                // size
 
 namespace xstd::bits::detail {
 

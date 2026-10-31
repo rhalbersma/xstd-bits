@@ -6,17 +6,17 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_WALK_HPP
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_WALK_HPP
 
-#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // first_position
-#include <xstd/bits/detail/key_order.hpp>              // descends
-#include <xstd/bits/detail/ownership.hpp>              // reads_keys, storage_access
-#include <xstd/bits/detail/shift.hpp>                  // shr
-#include <xstd/bits/detail/walk_block.hpp>             // walk_block_down, walk_block_up
-#include <xstd/misc/concepts/specialization_of.hpp>    // specialization_of
-#include <algorithm>                                   // min
-#include <cstddef>                                     // size_t
-#include <ranges>                                      // iota, ref_view, reverse_view, size
-#include <type_traits>                                 // remove_cvref_t
-#include <utility>                                     // declval
+#include <xstd/bits/detail/key_order.hpp>           // descends
+#include <xstd/bits/detail/ownership.hpp>           // reads_keys, storage_access
+#include <xstd/bits/detail/sequence_storage.hpp>    // first_position
+#include <xstd/bits/detail/shift.hpp>               // shr
+#include <xstd/bits/detail/walk_block.hpp>          // walk_block_down, walk_block_up
+#include <xstd/misc/concepts/specialization_of.hpp> // specialization_of
+#include <algorithm>                                // min
+#include <cstddef>                                  // size_t
+#include <ranges>                                   // iota, ref_view, reverse_view, size
+#include <type_traits>                              // remove_cvref_t
+#include <utility>                                  // declval
 
 namespace xstd::bits::detail {
 

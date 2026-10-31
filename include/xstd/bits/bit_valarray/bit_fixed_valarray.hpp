@@ -6,16 +6,16 @@
 #ifndef XSTD_BITS_BIT_VALARRAY_BIT_FIXED_VALARRAY_HPP
 #define XSTD_BITS_BIT_VALARRAY_BIT_FIXED_VALARRAY_HPP
 
-#include <xstd/bits/bit_utility/indeterminate.hpp>            // IWYU pragma: export; indeterminate, indeterminate_t
-#include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp>    // basic_bit_inplace_valarray
-#include <xstd/bits/bit_valarray/detail/valarray_adaptor.hpp> // gathered, valarray_adaptor
-#include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container
-#include <xstd/bits/detail/num_blocks.hpp>                    // holds_width, num_blocks_v, tiling_block
-#include <xstd/bits/detail/ownership.hpp>                     // storage_access
-#include <xstd/bits/detail/rebind.hpp>                        // rebind
-#include <xstd/ints/concepts/unsigned_integer.hpp>            // unsigned_integer
-#include <array>                                              // array
-#include <cstddef>                                            // size_t
+#include <xstd/bits/bit_valarray/detail/bit_inplace_valarray.hpp> // basic_bit_inplace_valarray
+#include <xstd/bits/bit_valarray/detail/valarray_adaptor.hpp>     // gathered, valarray_adaptor
+#include <xstd/bits/detail/bit_block_container.hpp>               // bit_block_container
+#include <xstd/bits/detail/indeterminate.hpp>                     // IWYU pragma: export; indeterminate, indeterminate_t
+#include <xstd/bits/detail/num_blocks.hpp>                        // holds_width, num_blocks_v, tiling_block
+#include <xstd/bits/detail/ownership.hpp>                         // storage_access
+#include <xstd/bits/detail/rebind.hpp>                            // rebind
+#include <xstd/ints/concepts/unsigned_integer.hpp>                // unsigned_integer
+#include <array>                                                  // array
+#include <cstddef>                                                // size_t
 
 namespace xstd {
 

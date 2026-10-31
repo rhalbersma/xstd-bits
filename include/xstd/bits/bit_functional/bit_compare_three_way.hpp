@@ -6,8 +6,8 @@
 #ifndef XSTD_BITS_BIT_FUNCTIONAL_BIT_COMPARE_THREE_WAY_HPP
 #define XSTD_BITS_BIT_FUNCTIONAL_BIT_COMPARE_THREE_WAY_HPP
 
-#include <xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp> // bit_lexicographical_compare_three_way
-#include <compare>                                                           // strong_ordering
+#include <xstd/bits/detail/bit_lexicographical_compare_three_way.hpp> // bit_lexicographical_compare_three_way
+#include <compare>                                                    // strong_ordering
 
 namespace xstd {
 

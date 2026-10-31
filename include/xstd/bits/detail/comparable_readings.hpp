@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_COMPARABLE_HPP
-#define XSTD_BITS_BIT_ALGORITHM_DETAIL_COMPARABLE_HPP
+#ifndef XSTD_BITS_DETAIL_COMPARABLE_READINGS_HPP
+#define XSTD_BITS_DETAIL_COMPARABLE_READINGS_HPP
 
 #include <xstd/bits/detail/key_order.hpp> // same_keys
 #include <xstd/bits/detail/ownership.hpp> // reads_bools, storage_access
@@ -32,4 +32,4 @@ concept comparable_readings = ((reads_bools<R1> and reads_bools<R2>) or same_key
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_BIT_ALGORITHM_DETAIL_COMPARABLE_HPP
+#endif // XSTD_BITS_DETAIL_COMPARABLE_READINGS_HPP

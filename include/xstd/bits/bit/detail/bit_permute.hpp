@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_DETAIL_BIT_PERMUTE_HPP
 #define XSTD_BITS_BIT_DETAIL_BIT_PERMUTE_HPP
 
-#include <xstd/bits/bit/detail/bit_width.hpp>      // bit_width_v
+#include <xstd/bits/detail/bit_width.hpp>          // bit_width_v
 #include <xstd/bits/detail/borrowed_bits.hpp>      // borrowed_bits
 #include <xstd/bits/detail/compress_blocks.hpp>    // compress_blocks
 #include <xstd/bits/detail/compressed.hpp>         // compressed

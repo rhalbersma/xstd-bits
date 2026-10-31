@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_BIT_ARRAY_HASH_HPP
 #define XSTD_BITS_BIT_ARRAY_HASH_HPP
 
-#include <xstd/bits/bit_array/bit_array.hpp>                 // basic_bit_array
-#include <xstd/bits/bit_functional/detail/sequence_hash.hpp> // hash
-#include <cstddef>                                           // size_t
-#include <functional>                                        // hash
+#include <xstd/bits/bit_array/detail/bit_array.hpp> // basic_bit_array
+#include <xstd/bits/detail/sequence_hash.hpp>       // hash
+#include <cstddef>                                  // size_t
+#include <functional>                               // hash
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
 

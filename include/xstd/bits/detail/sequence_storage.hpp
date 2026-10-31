@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_SEQUENCE_HPP
-#define XSTD_BITS_BIT_ALGORITHM_DETAIL_SEQUENCE_HPP
+#ifndef XSTD_BITS_DETAIL_SEQUENCE_STORAGE_HPP
+#define XSTD_BITS_DETAIL_SEQUENCE_STORAGE_HPP
 
 #include <xstd/bits/detail/ownership.hpp> // reads_bools, storage_access
 #include <cstddef>                        // size_t
@@ -39,4 +39,4 @@ concept writable_bools = reads_bools<R> and requires (R& r, bits_t<R>::block_typ
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_BIT_ALGORITHM_DETAIL_SEQUENCE_HPP
+#endif // XSTD_BITS_DETAIL_SEQUENCE_STORAGE_HPP

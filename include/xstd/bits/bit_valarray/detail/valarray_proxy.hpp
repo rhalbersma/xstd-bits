@@ -6,8 +6,8 @@
 #ifndef XSTD_BITS_BIT_VALARRAY_DETAIL_VALARRAY_PROXY_HPP
 #define XSTD_BITS_BIT_VALARRAY_DETAIL_VALARRAY_PROXY_HPP
 
-#include <xstd/bits/bit_valarray/bit_gslice.hpp>          // bit_gslice
-#include <xstd/bits/bit_valarray/bit_slice.hpp>           // bit_slice
+#include <xstd/bits/bit_valarray/detail/bit_gslice.hpp>   // bit_gslice
+#include <xstd/bits/bit_valarray/detail/bit_slice.hpp>    // bit_slice
 #include <xstd/bits/bit_valarray/detail/gslice_index.hpp> // gslice_access, gslice_index
 #include <xstd/bits/detail/bit_block_container.hpp>       // bit_block_container
 #include <xstd/bits/detail/block_width.hpp>               // block_width

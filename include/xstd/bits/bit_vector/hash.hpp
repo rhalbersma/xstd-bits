@@ -6,6 +6,6 @@
 #ifndef XSTD_BITS_BIT_VECTOR_HASH_HPP
 #define XSTD_BITS_BIT_VECTOR_HASH_HPP
 
-#include <xstd/bits/bit_functional/detail/basic_bit_vector_hash.hpp> // IWYU pragma: export; hash
+#include <xstd/bits/detail/basic_bit_vector_hash.hpp> // IWYU pragma: export; hash
 
 #endif // XSTD_BITS_BIT_VECTOR_HASH_HPP
