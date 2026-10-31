@@ -221,6 +221,26 @@ the code that uses it, and no user spells it. Follow the standard's practice wit
   `bit_convert` takes. A public concept carries semantics: do not promote one to keep a `detail` name out of a
   signature, and do not merge two to save a name.
 
+## Push implementation down, pull interface up
+
+A definition lives at the lowest folder that every user of it can reach, and a public header is a front over
+it. The folders under `include/xstd/bits/` stack in three kinds:
+
+- **The shared `detail/` is the bottom.** It holds every definition more than one folder needs: the block kernels,
+  the storage, the readings' adaptors, and the definitions behind the foundation names such as `bit_blocks`,
+  `bit_blocks_extent_v` and `from_blocks`. It includes no public xstd-bits header.
+- **The layers above it are fronts.** `bit_concepts/`, `bit_type_traits/`, `bit_ranges/` and `bit_utility/`, then
+  `bit/`, `bit_iterator/`, `bit_algorithm/` and `bit_functional/`: each public header re-exports what `detail/`
+  defines, or builds on the layers below it, and never on one above.
+- **The container families are the top,** one folder each, and no family includes another: delete any of them and
+  every other still builds. Where two families share a template, as `bit_vector` and `bit_inplace_vector` share
+  `basic_bit_vector`, the template is in `detail/` and each family's header is a front over it, carrying only what
+  is that family's own, such as its alias. `ext/` builds on whichever family it extends.
+
+`tools/layering.py`, in the Audit workflow and `tools/ci-local.sh audit`, checks all three from the `#include` lines
+and fails on a folder it does not classify, so a new folder says which kind it is before it lands. A public header
+keeps its path when its definition moves down: users include the front, and the front stays where it was.
+
 ## Tests: Murphy, not Machiavelli
 
 Easy to use and hard to misuse holds in the tests too. Test a concept, and any other functionality, against the

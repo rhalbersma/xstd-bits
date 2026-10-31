@@ -6,23 +6,23 @@
 #ifndef XSTD_BITS_DETAIL_BIT_LAYOUT_HPP
 #define XSTD_BITS_DETAIL_BIT_LAYOUT_HPP
 
-#include <xstd/bits/bit_concepts/bit_blocks.hpp>           // bit_blocks
-#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
-#include <xstd/bits/detail/owned_bit_blocks.hpp>           // owned_bit_blocks
-#include <xstd/bits/detail/shift.hpp>                      // shl, shr
-#include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
-#include <xstd/ints/limits.hpp>                            // numeric_limits
-#include <algorithm>                                       // copy, min
-#include <array>                                           // array
-#include <bit>                                             // bit_cast, endian
-#include <cstddef>                                         // size_t
-#include <cstring>                                         // memcpy
-#include <iterator>                                        // size
-#include <limits>                                          // numeric_limits
-#include <memory>                                          // addressof
-#include <ranges>                                          // iota, range_value_t, size
-#include <span>                                            // as_bytes, as_writable_bytes, dynamic_extent, span
-#include <type_traits>                                     // is_bounded_array_v, is_class_v, is_trivially_copyable_v, remove_const_t
+#include <xstd/bits/detail/bit_blocks.hpp>         // bit_blocks
+#include <xstd/bits/detail/bit_blocks_extent.hpp>  // bit_blocks_extent_v
+#include <xstd/bits/detail/owned_bit_blocks.hpp>   // owned_bit_blocks
+#include <xstd/bits/detail/shift.hpp>              // shl, shr
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <xstd/ints/limits.hpp>                    // numeric_limits
+#include <algorithm>                               // copy, min
+#include <array>                                   // array
+#include <bit>                                     // bit_cast, endian
+#include <cstddef>                                 // size_t
+#include <cstring>                                 // memcpy
+#include <iterator>                                // size
+#include <limits>                                  // numeric_limits
+#include <memory>                                  // addressof
+#include <ranges>                                  // iota, range_value_t, size
+#include <span>                                    // as_bytes, as_writable_bytes, dynamic_extent, span
+#include <type_traits>                             // is_bounded_array_v, is_class_v, is_trivially_copyable_v, remove_const_t
 
 namespace xstd::bits::detail {
 

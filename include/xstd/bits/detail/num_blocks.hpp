@@ -6,14 +6,14 @@
 #ifndef XSTD_BITS_DETAIL_NUM_BLOCKS_HPP
 #define XSTD_BITS_DETAIL_NUM_BLOCKS_HPP
 
-#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
-#include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
-#include <xstd/ints/cstdlib/div_ceil.hpp>                  // div_ceil
-#include <bit>                                             // has_single_bit
-#include <concepts>                                        // same_as
-#include <cstddef>                                         // size_t
-#include <limits>                                          // numeric_limits
-#include <type_traits>                                     // remove_cv_t
+#include <xstd/bits/detail/bit_blocks_extent.hpp>  // bit_blocks_extent_v
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <xstd/ints/cstdlib/div_ceil.hpp>          // div_ceil
+#include <bit>                                     // has_single_bit
+#include <concepts>                                // same_as
+#include <cstddef>                                 // size_t
+#include <limits>                                  // numeric_limits
+#include <type_traits>                             // remove_cv_t
 
 namespace xstd::bits::detail {
 

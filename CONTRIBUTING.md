@@ -13,6 +13,7 @@ This repository enforces its quality bar through CI rather than through review d
 - **Every cited paragraph is inventoried, and every inventoried one is accounted for.** The [Audit workflow](.github/workflows/audit.yml) runs `python3 tools/audit.py`, which checks the paragraph inventories under [`doc/audit/`](doc/audit) against the citations under `test/`: an answered row needs a citation, a cited paragraph needs a row, and a paragraph not answered needs a note saying why.
 - **Every name an include's comment lists is used.** The same job runs `python3 tools/include_comments.py`, which fails on a name in an include's trailing comment that the file's code does not use, over `include/`, `test/`, `benchmark/` and `examples/`. `misc-include-cleaner` checks the include itself, and only over the public headers. An `IWYU pragma: export` or `IWYU pragma: keep` line lists what the include provides rather than what the file spells, and is exempt.
 - **Every `ranges::` says whose ranges it means.** The same job runs `python3 tools/qualified_ranges.py`, which fails on a `ranges::` in the code of those trees that is not written `std::ranges::`, `xstd::ranges::` or `::ranges::` (range-v3). Inside `namespace xstd`, an unqualified `ranges::` finds this library's `xstd::ranges` before either of the others.
+- **The headers are layered.** The same job runs `python3 tools/layering.py`, which fails if the shared `include/xstd/bits/detail/` includes a public xstd-bits header, if two folders under `include/xstd/bits/` include each other's headers, directly or through others, or if one container family includes another, and on a folder it does not classify.
 - **Workflow files pass `actionlint`.** The [Actionlint workflow](.github/workflows/actionlint.yml) validates GitHub Actions syntax and expressions.
 - **The documented consumption methods work.** The [Consumption workflow](.github/workflows/consumption.yml) builds a consumer using `find_package`, `add_subdirectory`, and `FetchContent`.
 - **CodeQL analysis is clean.** The [CodeQL workflow](.github/workflows/codeql.yml) runs the C/C++ `security-extended` query suite.
@@ -225,7 +226,7 @@ The names to tick under branch protection, exactly as GitHub reports them:
 | :--- | :--- |
 | `actionlint / actionlint` | workflow syntax |
 | `apple_clang / all` | Xcode 16.4 and 26.6, Debug and Release |
-| `audit` | `tools/audit.py` over `doc/audit/`, and `tools/include_comments.py` and `tools/qualified_ranges.py` over the sources |
+| `audit` | `tools/audit.py` over `doc/audit/`, `tools/include_comments.py` and `tools/qualified_ranges.py` over the sources, and `tools/layering.py` over `include/` |
 | `clang / all` | Clang 22, 23, 24-SVN with libstdc++ |
 | `clang_cl / all` | clang-cl on VS 2022, 2026, 2026-Preview |
 | `clang_format / clang-format` | `clang-format --dry-run --Werror` against [`.clang-format`](.clang-format) |

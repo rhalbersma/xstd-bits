@@ -6,12 +6,12 @@
 #ifndef XSTD_BITS_BIT_TYPE_TRAITS_BIT_LEAST_HPP
 #define XSTD_BITS_BIT_TYPE_TRAITS_BIT_LEAST_HPP
 
-#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
-#include <xstd/bits/bit_type_traits/bit_rebind.hpp>        // bit_rebind
-#include <xstd/bits/detail/rebind.hpp>                     // rebind_width_v, resizable
-#include <cstddef>                                         // size_t
-#include <cstdint>                                         // uint16_t, uint32_t, uint64_t, uint8_t
-#include <type_traits>                                     // conditional_t
+#include <xstd/bits/bit_type_traits/bit_rebind.hpp> // bit_rebind
+#include <xstd/bits/detail/bit_blocks_extent.hpp>   // bit_blocks_extent_v
+#include <xstd/bits/detail/rebind.hpp>              // rebind_width_v, resizable
+#include <cstddef>                                  // size_t
+#include <cstdint>                                  // uint16_t, uint32_t, uint64_t, uint8_t
+#include <type_traits>                              // conditional_t
 
 namespace xstd {
 

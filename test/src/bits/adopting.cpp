@@ -3,33 +3,33 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/minimal_blocks.hpp>                          // minimal_blocks
-#include <test/whole_blocks.hpp>                            // whole_blocks
-#include <xstd/bits/bit_array.hpp>                          // bit_array
-#include <xstd/bits/bit_inplace_vector.hpp>                 // basic_bit_inplace_vector
-#include <xstd/bits/bit_ranges/from_blocks.hpp>             // from_blocks, from_blocks_t
-#include <xstd/bits/bit_set/bit_inplace_set.hpp>            // basic_bit_inplace_set
-#include <xstd/bits/bit_set/bit_key_mapping.hpp>            // bit_key_mapping
-#include <xstd/bits/bit_set/bit_set.hpp>                    // basic_bit_set, bit_set
-#include <xstd/bits/bit_vector.hpp>                         // basic_bit_vector, bit_vector
-#include <xstd/bits/bit_vector/detail/sequence_adaptor.hpp> // sequence_adaptor
-#include <xstd/bits/detail/bit_block_container.hpp>         // bit_block_container
-#include <xstd/bits/detail/inplace_blocks.hpp>              // inplace_blocks
-#include <xstd/bits/detail/ownership.hpp>                   // storage, window
-#include <xstd/bits/ext/boost/bit_small_set.hpp>            // basic_bit_small_set
-#include <boost/test/unit_test.hpp>                         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                                        // equal
-#include <concepts>                                         // same_as
-#include <cstddef>                                          // size_t
-#include <cstdint>                                          // uint8_t
-#include <functional>                                       // less
-#include <memory>                                           // allocator
-#include <memory_resource>                                  // new_delete_resource, polymorphic_allocator, unsynchronized_pool_resource
-#include <span>                                             // dynamic_extent
-#include <tuple>                                            // tuple
-#include <type_traits>                                      // is_constructible_v, is_nothrow_constructible_v
-#include <utility>                                          // move
-#include <vector>                                           // vector
+#include <test/minimal_blocks.hpp>                  // minimal_blocks
+#include <test/whole_blocks.hpp>                    // whole_blocks
+#include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
+#include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
+#include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
+#include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
+#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <xstd/bits/detail/from_blocks.hpp>         // from_blocks, from_blocks_t
+#include <xstd/bits/detail/inplace_blocks.hpp>      // inplace_blocks
+#include <xstd/bits/detail/ownership.hpp>           // storage, window
+#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
+#include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
+#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                                // equal
+#include <concepts>                                 // same_as
+#include <cstddef>                                  // size_t
+#include <cstdint>                                  // uint8_t
+#include <functional>                               // less
+#include <memory>                                   // allocator
+#include <memory_resource>                          // new_delete_resource, polymorphic_allocator, unsynchronized_pool_resource
+#include <span>                                     // dynamic_extent
+#include <tuple>                                    // tuple
+#include <type_traits>                              // is_constructible_v, is_nothrow_constructible_v
+#include <utility>                                  // move
+#include <vector>                                   // vector
 
 BOOST_AUTO_TEST_SUITE(Adopting)
 

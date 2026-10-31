@@ -6,24 +6,24 @@
 #ifndef XSTD_BITS_BIT_DETAIL_BIT_CONVERTIBLE_HPP
 #define XSTD_BITS_BIT_DETAIL_BIT_CONVERTIBLE_HPP
 
-#include <xstd/bits/bit/detail/bit_width.hpp>                // bit_width_v
-#include <xstd/bits/bit_concepts/bit_constructible_from.hpp> // bit_constructible_from
-#include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks
-#include <xstd/bits/detail/bit_blocks_capacity.hpp>          // bit_blocks_capacity_v
-#include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, byte_count, bytes_bits, copy_bits
-#include <xstd/bits/detail/ownership.hpp>                    // owned_bits_t, owner, reads, set_reading_tag, storage_access, view
-#include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
-#include <xstd/ints/limits.hpp>                              // numeric_limits
-#include <algorithm>                                         // copy, min
-#include <array>                                             // array
-#include <bit>                                               // popcount
-#include <concepts>                                          // default_initializable, same_as
-#include <cstddef>                                           // size_t
-#include <new>                                               // bad_alloc
-#include <span>                                              // dynamic_extent, span
-#include <stdexcept>                                         // overflow_error
-#include <type_traits>                                       // is_array_v, is_const_v, is_integral_v, is_rvalue_reference_v, is_scalar_v, is_volatile_v, remove_cvref_t, remove_reference_t
-#include <utility>                                           // declval, forward
+#include <xstd/bits/bit/detail/bit_width.hpp>          // bit_width_v
+#include <xstd/bits/detail/bit_blocks_capacity.hpp>    // bit_blocks_capacity_v
+#include <xstd/bits/detail/bit_constructible_from.hpp> // bit_constructible_from
+#include <xstd/bits/detail/bit_layout.hpp>             // bit_bytes, bit_layout, byte_count, bytes_bits, copy_bits
+#include <xstd/bits/detail/from_blocks.hpp>            // from_blocks
+#include <xstd/bits/detail/ownership.hpp>              // owned_bits_t, owner, reads, set_reading_tag, storage_access, view
+#include <xstd/bits/detail/shift.hpp>                  // partial_block_mask, shl
+#include <xstd/ints/limits.hpp>                        // numeric_limits
+#include <algorithm>                                   // copy, min
+#include <array>                                       // array
+#include <bit>                                         // popcount
+#include <concepts>                                    // default_initializable, same_as
+#include <cstddef>                                     // size_t
+#include <new>                                         // bad_alloc
+#include <span>                                        // dynamic_extent, span
+#include <stdexcept>                                   // overflow_error
+#include <type_traits>                                 // is_array_v, is_const_v, is_integral_v, is_rvalue_reference_v, is_scalar_v, is_volatile_v, remove_cvref_t, remove_reference_t
+#include <utility>                                     // declval, forward
 
 // What xstd::bit_convert asks of its two ends, and the copy between them: position i to position i, at any widths.
 namespace xstd::bits::detail {

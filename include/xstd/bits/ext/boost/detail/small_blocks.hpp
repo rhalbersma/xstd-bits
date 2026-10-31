@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_EXT_BOOST_DETAIL_SMALL_BLOCKS_HPP
 #define XSTD_BITS_EXT_BOOST_DETAIL_SMALL_BLOCKS_HPP
 
-#include <xstd/bits/bit_type_traits/bit_storage_rebind.hpp> // bit_storage_rebind
-#include <boost/container/small_vector.hpp>                 // small_vector
-#include <cstddef>                                          // size_t
-#include <memory>                                           // allocator_traits
+#include <xstd/bits/detail/bit_storage_rebind.hpp> // bit_storage_rebind
+#include <boost/container/small_vector.hpp>        // small_vector
+#include <cstddef>                                 // size_t
+#include <memory>                                  // allocator_traits
 
 // boost::container::small_vector as a bit storage: K blocks inline, and the heap past them.
 namespace xstd {

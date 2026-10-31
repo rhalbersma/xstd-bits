@@ -3,13 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_VECTOR_DETAIL_SEQUENCE_ERASURE_HPP
-#define XSTD_BITS_BIT_VECTOR_DETAIL_SEQUENCE_ERASURE_HPP
+#ifndef XSTD_BITS_DETAIL_SEQUENCE_ERASURE_HPP
+#define XSTD_BITS_DETAIL_SEQUENCE_ERASURE_HPP
 
-#include <xstd/bits/bit_vector/detail/sequence_adaptor.hpp> // sequence_adaptor
-#include <xstd/bits/detail/ownership.hpp>                   // storage, window
-#include <algorithm>                                        // ranges::remove_if
-#include <cstddef>                                          // size_t
+#include <xstd/bits/detail/ownership.hpp>        // storage, window
+#include <xstd/bits/detail/sequence_adaptor.hpp> // sequence_adaptor
+#include <algorithm>                             // ranges::remove_if
+#include <cstddef>                               // size_t
 
 namespace xstd::bits::detail {
 
@@ -35,4 +35,4 @@ constexpr auto erase(sequence_adaptor<Bits, Store, W, Derived, E>& c, U const& v
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_BIT_VECTOR_DETAIL_SEQUENCE_ERASURE_HPP
+#endif // XSTD_BITS_DETAIL_SEQUENCE_ERASURE_HPP

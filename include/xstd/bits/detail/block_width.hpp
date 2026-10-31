@@ -6,11 +6,11 @@
 #ifndef XSTD_BITS_DETAIL_BLOCK_WIDTH_HPP
 #define XSTD_BITS_DETAIL_BLOCK_WIDTH_HPP
 
-#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
-#include <xstd/ints/concepts/unsigned_integer.hpp>         // unsigned_integer
-#include <xstd/ints/limits.hpp>                            // numeric_limits
-#include <cstddef>                                         // size_t
-#include <type_traits>                                     // conditional_t
+#include <xstd/bits/detail/bit_blocks_extent.hpp>  // bit_blocks_extent_v
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <xstd/ints/limits.hpp>                    // numeric_limits
+#include <cstddef>                                 // size_t
+#include <type_traits>                             // conditional_t
 
 namespace xstd::bits::detail {
 

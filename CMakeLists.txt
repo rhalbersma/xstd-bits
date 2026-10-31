@@ -69,8 +69,8 @@ target_sources(
     BASE_DIRS include
     FILES
         include/xstd/bits.hpp
-        include/xstd/bits/bit_vector/detail/sequence_adaptor.hpp
-        include/xstd/bits/bit_vector/detail/sequence_erasure.hpp
+        include/xstd/bits/detail/sequence_adaptor.hpp
+        include/xstd/bits/detail/sequence_erasure.hpp
         include/xstd/bits/bit_set/detail/set_adaptor.hpp
         include/xstd/bits/bit_set/detail/erase_if.hpp
         include/xstd/bits/bit_valarray/detail/valarray_adaptor.hpp
@@ -96,6 +96,16 @@ target_sources(
         include/xstd/bits/detail/stored_masks.hpp
         include/xstd/bits/detail/word_masks.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
+        include/xstd/bits/detail/basic_bit_vector.hpp
+        include/xstd/bits/detail/basic_bit_vector_container_hash.hpp
+        include/xstd/bits/detail/bit_blocks.hpp
+        include/xstd/bits/detail/bit_blocks_extent.hpp
+        include/xstd/bits/detail/bit_constructible_from.hpp
+        include/xstd/bits/detail/bit_storage.hpp
+        include/xstd/bits/detail/bit_storage_rebind.hpp
+        include/xstd/bits/detail/from_blocks.hpp
+        include/xstd/bits/bit_functional/detail/basic_bit_vector_hash.hpp
+        include/xstd/bits/bit_functional/detail/sequence_hash.hpp
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
         include/xstd/bits/bit_algorithm/detail/blit.hpp
@@ -264,7 +274,7 @@ target_sources(
         include/xstd/bits/detail/storage_ptr.hpp
         include/xstd/bits/bit_span/detail/views.hpp
         include/xstd/bits/detail/blocks.hpp
-        include/xstd/bits/bit_type_traits/detail/blocks_extent.hpp
+        include/xstd/bits/detail/blocks_extent.hpp
         include/xstd/bits/detail/non_volatile.hpp
         include/xstd/bits/detail/num_blocks.hpp
         include/xstd/bits/detail/owner_members.hpp

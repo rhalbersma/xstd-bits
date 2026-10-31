@@ -6,20 +6,20 @@
 #ifndef XSTD_BITS_BIT_SET_DETAIL_SET_ADAPTOR_HPP
 #define XSTD_BITS_BIT_SET_DETAIL_SET_ADAPTOR_HPP
 
-#include <xstd/bits/bit_concepts/bit_blocks.hpp>              // bit_blocks
 #include <xstd/bits/bit_concepts/bit_index_mapping.hpp>       // bit_index_mapping
 #include <xstd/bits/bit_concepts/bit_mask_mapping.hpp>        // bit_mask_mapping
 #include <xstd/bits/bit_concepts/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
 #include <xstd/bits/bit_functional/bit_hash.hpp>              // bit_hash
-#include <xstd/bits/bit_ranges/from_blocks.hpp>               // from_blocks_t
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>              // bit_key_mapping
 #include <xstd/bits/bit_set/detail/is_key.hpp>                // is_key
 #include <xstd/bits/detail/adapted_bits.hpp>                  // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>           // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/assert.hpp>                        // XSTD_BITS_ASSERT
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container_type
+#include <xstd/bits/detail/bit_blocks.hpp>                    // bit_blocks
 #include <xstd/bits/detail/borrowed_bits.hpp>                 // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                   // numeric_three_way, set_equal, three_way
+#include <xstd/bits/detail/from_blocks.hpp>                   // from_blocks_t
 #include <xstd/bits/detail/hash.hpp>                          // hash_append_keys
 #include <xstd/bits/detail/input_iterator_pair.hpp>           // input_iterator_pair
 #include <xstd/bits/detail/non_volatile.hpp>                  // non_volatile

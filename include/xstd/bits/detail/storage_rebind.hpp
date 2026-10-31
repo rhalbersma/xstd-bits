@@ -6,14 +6,14 @@
 #ifndef XSTD_BITS_DETAIL_STORAGE_REBIND_HPP
 #define XSTD_BITS_DETAIL_STORAGE_REBIND_HPP
 
-#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>  // bit_blocks_extent_v
-#include <xstd/bits/bit_type_traits/bit_storage_rebind.hpp> // bit_storage_rebind
-#include <xstd/bits/detail/bit_block_container.hpp>         // admits_owner_extent
-#include <xstd/bits/detail/bit_blocks_capacity.hpp>         // bit_blocks_capacity_v
-#include <xstd/bits/detail/num_blocks.hpp>                  // num_blocks_v
-#include <cstddef>                                          // size_t
-#include <ranges>                                           // range_value_t
-#include <span>                                             // dynamic_extent
+#include <xstd/bits/detail/bit_block_container.hpp> // admits_owner_extent
+#include <xstd/bits/detail/bit_blocks_capacity.hpp> // bit_blocks_capacity_v
+#include <xstd/bits/detail/bit_blocks_extent.hpp>   // bit_blocks_extent_v
+#include <xstd/bits/detail/bit_storage_rebind.hpp>  // bit_storage_rebind
+#include <xstd/bits/detail/num_blocks.hpp>          // num_blocks_v
+#include <cstddef>                                  // size_t
+#include <ranges>                                   // range_value_t
+#include <span>                                     // dynamic_extent
 
 // An owner over a storage and a cap in bits, rebound through the storage's own bit_storage_rebind.
 namespace xstd::bits::detail {

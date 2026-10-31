@@ -138,7 +138,7 @@ format() {
 
 # The Audit job: the paragraph inventories against the citations, and the include comments against the code.
 audit() {
-        python3 "${root}/tools/audit.py" && python3 "${root}/tools/include_comments.py" && python3 "${root}/tools/qualified_ranges.py"
+        python3 "${root}/tools/audit.py" && python3 "${root}/tools/include_comments.py" && python3 "${root}/tools/qualified_ranges.py" && python3 "${root}/tools/layering.py"
 }
 
 run_leg() {

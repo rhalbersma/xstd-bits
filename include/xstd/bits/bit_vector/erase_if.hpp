@@ -6,6 +6,6 @@
 #ifndef XSTD_BITS_BIT_VECTOR_ERASE_IF_HPP
 #define XSTD_BITS_BIT_VECTOR_ERASE_IF_HPP
 
-#include <xstd/bits/bit_vector/detail/sequence_erasure.hpp> // IWYU pragma: export; erase, erase_if
+#include <xstd/bits/detail/sequence_erasure.hpp> // IWYU pragma: export; erase, erase_if
 
 #endif // XSTD_BITS_BIT_VECTOR_ERASE_IF_HPP

@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_DETAIL_BLOCKS_HPP
 #define XSTD_BITS_DETAIL_BLOCKS_HPP
 
-#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
-#include <xstd/bits/detail/bit_block_container.hpp>        // bit_block_container
-#include <cstddef>                                         // size_t
-#include <span>                                            // span
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <xstd/bits/detail/bit_blocks_extent.hpp>   // bit_blocks_extent_v
+#include <cstddef>                                  // size_t
+#include <span>                                     // span
 
 // What the public views are named by: the blocks, never the storage built over them.
 namespace xstd::bits::detail {

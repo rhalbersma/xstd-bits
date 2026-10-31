@@ -3,18 +3,17 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_VECTOR_DETAIL_SEQUENCE_ADAPTOR_HPP
-#define XSTD_BITS_BIT_VECTOR_DETAIL_SEQUENCE_ADAPTOR_HPP
+#ifndef XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
+#define XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
 
-#include <xstd/bits/bit_concepts/bit_blocks.hpp>             // bit_blocks
-#include <xstd/bits/bit_functional/bit_hash.hpp>             // bit_hash
-#include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks_t
 #include <xstd/bits/detail/adapted_bits.hpp>                 // adapted_bits
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_base_type, allocator_param_t
 #include <xstd/bits/detail/assert.hpp>                       // XSTD_BITS_ASSERT
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container_type
+#include <xstd/bits/detail/bit_blocks.hpp>                   // bit_blocks
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                  // three_way
+#include <xstd/bits/detail/from_blocks.hpp>                  // from_blocks_t
 #include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
 #include <xstd/bits/detail/input_iterator_pair.hpp>          // input_iterator_pair
 #include <xstd/bits/detail/non_volatile.hpp>                 // non_volatile
@@ -27,14 +26,12 @@
 #include <boost/container_hash/is_range.hpp>                 // is_range
 #include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
 #include <boost/hash2/hash_append_fwd.hpp>                   // hash_append_tag
-#include <boost/hash2/xxhash.hpp>                            // xxhash_64
 #include <algorithm>                                         // copy, min
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
 #include <concepts>                                          // constructible_from, derived_from, same_as
 #include <cstddef>                                           // ptrdiff_t, size_t
 #include <format>                                            // format, formatter
-#include <functional>                                        // hash
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator, make_reverse_iterator, random_access_iterator_tag, reverse_iterator, sentinel_for
 #include <memory>                                            // addressof
@@ -1570,17 +1567,6 @@ struct formatter<R, CharT> : formatter<bool, CharT>
         }
 };
 
-// The owner's bits, by bit_hash, where std::vector<bool> has a hash; a view no more than std::span has.
-template<class Bits, xstd::bits::detail::window W, class Derived>
-struct hash<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived>>
-{
-        [[nodiscard]] constexpr auto operator()(xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived> const& v) const noexcept
-                -> std::size_t
-        {
-                return xstd::bit_hash<xstd::bits::detail::sequence_adaptor<Bits, xstd::bits::detail::storage::owned, W, Derived>, boost::hash2::xxhash_64>()(v);
-        }
-};
-
 } // namespace std
 
 // NOLINTEND(bugprone-std-namespace-modification)
@@ -1600,4 +1586,4 @@ inline constexpr bool enable_borrowed_range<xstd::bits::detail::sequence_adaptor
 
 // NOLINTEND(bugprone-std-namespace-modification)
 
-#endif // XSTD_BITS_BIT_VECTOR_DETAIL_SEQUENCE_ADAPTOR_HPP
+#endif // XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP

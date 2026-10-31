@@ -6,13 +6,13 @@
 #ifndef XSTD_BITS_DETAIL_INPLACE_BLOCKS_HPP
 #define XSTD_BITS_DETAIL_INPLACE_BLOCKS_HPP
 
-#include <xstd/bits/bit_type_traits/bit_storage_rebind.hpp> // bit_storage_rebind
-#include <xstd/bits/detail/non_volatile.hpp>                // non_volatile
-#include <cstddef>                                          // size_t
-#include <iterator>                                         // input_iterator
-#include <new>                                              // bad_alloc
-#include <type_traits>                                      // conditional_t, is_const_v, is_empty_v, remove_reference_t
-#include <version>                                          // IWYU pragma: keep; __cpp_lib_inplace_vector
+#include <xstd/bits/detail/bit_storage_rebind.hpp> // bit_storage_rebind
+#include <xstd/bits/detail/non_volatile.hpp>       // non_volatile
+#include <cstddef>                                 // size_t
+#include <iterator>                                // input_iterator
+#include <new>                                     // bad_alloc
+#include <type_traits>                             // conditional_t, is_const_v, is_empty_v, remove_reference_t
+#include <version>                                 // IWYU pragma: keep; __cpp_lib_inplace_vector
 
 namespace xstd::bits::detail {
 

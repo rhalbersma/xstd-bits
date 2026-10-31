@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_TYPE_TRAITS_DETAIL_BLOCKS_EXTENT_HPP
-#define XSTD_BITS_BIT_TYPE_TRAITS_DETAIL_BLOCKS_EXTENT_HPP
+#ifndef XSTD_BITS_DETAIL_BLOCKS_EXTENT_HPP
+#define XSTD_BITS_DETAIL_BLOCKS_EXTENT_HPP
 
 #include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
 #include <xstd/ints/limits.hpp>                    // numeric_limits
@@ -34,4 +34,4 @@ inline constexpr std::size_t blocks_extent_v<Block[K]> = blocks_extent_v<Block> 
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_BIT_TYPE_TRAITS_DETAIL_BLOCKS_EXTENT_HPP
+#endif // XSTD_BITS_DETAIL_BLOCKS_EXTENT_HPP

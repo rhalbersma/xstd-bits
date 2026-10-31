@@ -3,28 +3,28 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/inplace_vector.hpp>                          // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/sequence/dense.hpp>                          // yields_every_position
-#include <test/sequence/rotation.hpp>                       // permutation_sweep
-#include <xstd/bits/bit_algorithm/bit_reverse.hpp>          // bit_reverse
-#include <xstd/bits/bit_algorithm/bit_rotate.hpp>           // bit_rotate
-#include <xstd/bits/bit_inplace_vector.hpp>                 // basic_bit_inplace_vector, bit_inplace_vector
-#include <xstd/bits/bit_type_traits/bit_align.hpp>          // bit_align
-#include <xstd/bits/bit_type_traits/bit_least.hpp>          // bit_least
-#include <xstd/bits/bit_vector/detail/sequence_adaptor.hpp> // sequence_adaptor
-#include <xstd/bits/detail/bit_block_container.hpp>         // bit_block_container
-#include <xstd/bits/detail/inplace_blocks.hpp>              // inplace_blocks
-#include <xstd/bits/detail/ownership.hpp>                   // owned_bits_t, storage
-#include <boost/test/unit_test.hpp>                         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                                        // equal
-#include <concepts>                                         // same_as
-#include <cstddef>                                          // size_t
-#include <cstdint>                                          // uint16_t, uint8_t
-#include <limits>                                           // numeric_limits
-#include <new>                                              // bad_alloc
-#include <ranges>                                           // iota, size
-#include <type_traits>                                      // integral_constant, is_empty_v, is_member_function_pointer_v
-#include <vector>                                           // vector
+#include <test/inplace_vector.hpp>                  // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/sequence/dense.hpp>                  // yields_every_position
+#include <test/sequence/rotation.hpp>               // permutation_sweep
+#include <xstd/bits/bit_algorithm/bit_reverse.hpp>  // bit_reverse
+#include <xstd/bits/bit_algorithm/bit_rotate.hpp>   // bit_rotate
+#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector, bit_inplace_vector
+#include <xstd/bits/bit_type_traits/bit_align.hpp>  // bit_align
+#include <xstd/bits/bit_type_traits/bit_least.hpp>  // bit_least
+#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <xstd/bits/detail/inplace_blocks.hpp>      // inplace_blocks
+#include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
+#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                // equal
+#include <concepts>                                 // same_as
+#include <cstddef>                                  // size_t
+#include <cstdint>                                  // uint16_t, uint8_t
+#include <limits>                                   // numeric_limits
+#include <new>                                      // bad_alloc
+#include <ranges>                                   // iota, size
+#include <type_traits>                              // integral_constant, is_empty_v, is_member_function_pointer_v
+#include <vector>                                   // vector
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 

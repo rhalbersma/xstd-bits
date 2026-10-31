@@ -3,38 +3,38 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/container/allocator.hpp>                     // basic_guarantee, copy_and_swap_propagating, copy_propagating, ledger_allocator, strong_guarantee
-#include <test/sanitizer.hpp>                               // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
-#include <test/sequence/dense.hpp>                          // yields_every_position
-#include <test/sequence/rotation.hpp>                       // permutation_sweep, permutes_ten_bits
-#include <test/whole_blocks.hpp>                            // block_bits
-#include <xstd/bits/bit_algorithm/bit_count.hpp>            // bit_count
-#include <xstd/bits/bit_algorithm/bit_reverse.hpp>          // bit_reverse
-#include <xstd/bits/bit_algorithm/bit_rotate.hpp>           // bit_rotate
-#include <xstd/bits/bit_array.hpp>                          // basic_bit_array
-#include <xstd/bits/bit_span/bit_span.hpp>                  // bit_span
-#include <xstd/bits/bit_vector.hpp>                         // bit_vector
-#include <xstd/bits/bit_vector/detail/sequence_adaptor.hpp> // sequence_adaptor
-#include <xstd/bits/detail/bit_block_container.hpp>         // bit_block_container
-#include <xstd/bits/detail/ownership.hpp>                   // storage
-#include <boost/iterator/function_input_iterator.hpp>       // make_function_input_iterator
-#include <boost/test/unit_test.hpp>                         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LT, BOOST_CHECK_THROW
-#include <algorithm>                                        // copy, equal, is_sorted, ranges::count, ranges::is_sorted, ranges::sort, sort
-#include <array>                                            // array
-#include <concepts>                                         // same_as
-#include <cstddef>                                          // ptrdiff_t, size_t
-#include <cstdint>                                          // int64_t, uint64_t, uint8_t
-#include <functional>                                       // ranges::greater
-#include <iterator>                                         // sentinel_for
-#include <limits>                                           // numeric_limits
-#include <memory>                                           // allocator
-#include <new>                                              // IWYU pragma: keep; bad_alloc, named only without TEST_HAS_ADDRESS_SANITIZER
-#include <ranges>                                           // equal, from_range, iota, to, transform
-#include <stdexcept>                                        // length_error, runtime_error
-#include <type_traits>                                      // is_convertible_v, is_nothrow_convertible_v
-#include <utility>                                          // declval, move
-#include <vector>                                           // vector
-#include <version>                                          // IWYU pragma: keep; __cpp_lib_containers_ranges
+#include <test/container/allocator.hpp>               // basic_guarantee, copy_and_swap_propagating, copy_propagating, ledger_allocator, strong_guarantee
+#include <test/sanitizer.hpp>                         // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
+#include <test/sequence/dense.hpp>                    // yields_every_position
+#include <test/sequence/rotation.hpp>                 // permutation_sweep, permutes_ten_bits
+#include <test/whole_blocks.hpp>                      // block_bits
+#include <xstd/bits/bit_algorithm/bit_count.hpp>      // bit_count
+#include <xstd/bits/bit_algorithm/bit_reverse.hpp>    // bit_reverse
+#include <xstd/bits/bit_algorithm/bit_rotate.hpp>     // bit_rotate
+#include <xstd/bits/bit_array.hpp>                    // basic_bit_array
+#include <xstd/bits/bit_span/bit_span.hpp>            // bit_span
+#include <xstd/bits/bit_vector.hpp>                   // bit_vector
+#include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container
+#include <xstd/bits/detail/ownership.hpp>             // storage
+#include <xstd/bits/detail/sequence_adaptor.hpp>      // sequence_adaptor
+#include <boost/iterator/function_input_iterator.hpp> // make_function_input_iterator
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_LT, BOOST_CHECK_THROW
+#include <algorithm>                                  // copy, equal, is_sorted, ranges::count, ranges::is_sorted, ranges::sort, sort
+#include <array>                                      // array
+#include <concepts>                                   // same_as
+#include <cstddef>                                    // ptrdiff_t, size_t
+#include <cstdint>                                    // int64_t, uint64_t, uint8_t
+#include <functional>                                 // ranges::greater
+#include <iterator>                                   // sentinel_for
+#include <limits>                                     // numeric_limits
+#include <memory>                                     // allocator
+#include <new>                                        // IWYU pragma: keep; bad_alloc, named only without TEST_HAS_ADDRESS_SANITIZER
+#include <ranges>                                     // equal, from_range, iota, to, transform
+#include <stdexcept>                                  // length_error, runtime_error
+#include <type_traits>                                // is_convertible_v, is_nothrow_convertible_v
+#include <utility>                                    // declval, move
+#include <vector>                                     // vector
+#include <version>                                    // IWYU pragma: keep; __cpp_lib_containers_ranges
 
 BOOST_AUTO_TEST_SUITE(BitVector)
 
