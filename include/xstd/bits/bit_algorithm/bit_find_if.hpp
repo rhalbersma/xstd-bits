@@ -33,10 +33,9 @@ template<class R, class Pred>
                 }
                 auto const on_false = static_cast<bool>(std::invoke(pred, false));
                 auto const on_true  = static_cast<bool>(std::invoke(pred, true));
-                if (on_false == on_true) {
-                        return on_true ? result_type(std::ranges::begin(r)) : result_type(std::ranges::end(r));
-                }
-                return result_type(xstd::ranges::bit_find(r, on_true));
+                // A conditional, not an if: a stateless pred makes both answers constant, which C4127 refuses in an if.
+                return on_false != on_true ? result_type(xstd::ranges::bit_find(r, on_true)) : on_true ? result_type(std::ranges::begin(r))
+                                                                                                       : result_type(std::ranges::end(r));
         }
 }
 
