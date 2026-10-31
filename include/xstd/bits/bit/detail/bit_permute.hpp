@@ -22,6 +22,7 @@
 #include <ranges>                                  // iota
 #include <span>                                    // dynamic_extent, span
 #include <type_traits>                             // is_const_v, is_volatile_v
+#include <utility>                                 // index_sequence, make_index_sequence
 
 // P3104's bit_compress and bit_expand over the blocks of two owners of one type, a block at a time.
 namespace xstd::bits::detail {
@@ -120,12 +121,20 @@ template<xstd::unsigned_integer U, class Bits>
         auto const masks      = m.blocks();
         auto result           = U{};
         auto fill             = 0UZ;
-        for (auto const k : std::views::iota(0UZ, masks.size())) {
-                // U full means every later mask block is empty, so no shift ever reaches the whole width of U.
-                if (fill < digits) {
-                        result = static_cast<U>(result | static_cast<U>(static_cast<U>(compressed(source[k], masks[k])) << fill));
-                }
+        auto const pack       = [&](std::size_t k) -> void {
+                // Once U is full, every later mask block is empty and packs nought under any shift, so the shift wraps.
+                result = static_cast<U>(result | static_cast<U>(static_cast<U>(compressed(source[k], masks[k])) << (fill % digits)));
                 fill += detail::popcount(masks[k]);
+        };
+        if constexpr (Bits::folds_blocks) {
+                // A fold: GCC unrolls constant indices to a PEXT per block and no branch, where it keeps a loop over k.
+                [&]<std::size_t... I>(std::index_sequence<I...>) -> void {
+                        (pack(I), ...);
+                }(std::make_index_sequence<Bits::static_num_blocks>());
+        } else {
+                for (auto const k : std::views::iota(0UZ, masks.size())) {
+                        pack(k);
+                }
         }
         return result;
 }
