@@ -16,7 +16,6 @@
 #include <concepts>                                // same_as
 #include <cstddef>                                 // size_t
 #include <cstdint>                                 // uint8_t
-#include <iterator>                                // distance
 #include <ranges>                                  // begin, dangling, end
 #include <set>                                     // set
 #include <vector>                                  // vector
