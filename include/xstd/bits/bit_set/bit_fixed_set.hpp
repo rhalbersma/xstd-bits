@@ -12,9 +12,9 @@
 #include <xstd/bits/bit_ranges/from_blocks.hpp>               // from_blocks, from_blocks_t
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>              // bit_key_mapping
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp>           // admits_width, key_direction, set_adaptor
-#include <xstd/bits/bit_set/indeterminate.hpp>                // indeterminate_t
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp>    // bit_blocks_extent_v
 #include <xstd/bits/bit_type_traits/bit_least.hpp>            // least_block_t
+#include <xstd/bits/bit_utility/indeterminate.hpp>            // IWYU pragma: export; indeterminate, indeterminate_t
 #include <xstd/bits/detail/bit_block_container.hpp>           // bit_block_container
 #include <xstd/bits/detail/bit_layout.hpp>                    // byte_count, bytes_bits
 #include <xstd/bits/detail/input_iterator_pair.hpp>           // input_iterator_pair

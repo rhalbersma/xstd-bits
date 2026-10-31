@@ -9,7 +9,7 @@
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>           // bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>         // bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>                 // bit_set
-#include <xstd/bits/bit_set/indeterminate.hpp>           // XSTD_INDETERMINATE, indeterminate, indeterminate_array, indeterminate_t
+#include <xstd/bits/bit_utility/indeterminate.hpp>       // XSTD_INDETERMINATE, indeterminate, indeterminate_array, indeterminate_t
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp> // bit_fixed_valarray
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>       // bit_valarray
 #include <xstd/bits/bit_vector/bit_vector.hpp>           // bit_vector

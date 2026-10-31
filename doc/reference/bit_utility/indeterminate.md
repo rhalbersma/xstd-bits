@@ -1,4 +1,4 @@
-# `<xstd/bits/bit_set/indeterminate.hpp>`
+# `<xstd/bits/bit_utility/indeterminate.hpp>`
 
 ## `xstd::indeterminate_t`, `xstd::indeterminate`, `xstd::indeterminate_array`, `XSTD_INDETERMINATE`
 

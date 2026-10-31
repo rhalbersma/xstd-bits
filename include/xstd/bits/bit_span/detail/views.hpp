@@ -3,12 +3,12 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_DETAIL_VIEWS_HPP
-#define XSTD_BITS_DETAIL_VIEWS_HPP
+#ifndef XSTD_BITS_BIT_SPAN_DETAIL_VIEWS_HPP
+#define XSTD_BITS_BIT_SPAN_DETAIL_VIEWS_HPP
 
-#include <xstd/bits/bit_concepts/bit_blocks.hpp> // bit_blocks
-#include <xstd/bits/detail/sequence_adaptor.hpp> // window_of
-#include <cstddef>                               // size_t
+#include <xstd/bits/bit_concepts/bit_blocks.hpp>            // bit_blocks
+#include <xstd/bits/bit_vector/detail/sequence_adaptor.hpp> // window_of
+#include <cstddef>                                          // size_t
 
 // What the sequence adaptor asks of the two public views: the window each hands back.
 namespace xstd {
@@ -40,4 +40,4 @@ struct window_of<bit_subspan<Blocks, Extent, N>, Bits, E>
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_DETAIL_VIEWS_HPP
+#endif // XSTD_BITS_BIT_SPAN_DETAIL_VIEWS_HPP

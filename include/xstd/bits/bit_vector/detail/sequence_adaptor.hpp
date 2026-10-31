@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
-#define XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
+#ifndef XSTD_BITS_BIT_VECTOR_DETAIL_SEQUENCE_ADAPTOR_HPP
+#define XSTD_BITS_BIT_VECTOR_DETAIL_SEQUENCE_ADAPTOR_HPP
 
 #include <xstd/bits/bit_concepts/bit_blocks.hpp>             // bit_blocks
 #include <xstd/bits/bit_functional/bit_hash.hpp>             // bit_hash
@@ -1600,4 +1600,4 @@ inline constexpr bool enable_borrowed_range<xstd::bits::detail::sequence_adaptor
 
 // NOLINTEND(bugprone-std-namespace-modification)
 
-#endif // XSTD_BITS_DETAIL_SEQUENCE_ADAPTOR_HPP
+#endif // XSTD_BITS_BIT_VECTOR_DETAIL_SEQUENCE_ADAPTOR_HPP

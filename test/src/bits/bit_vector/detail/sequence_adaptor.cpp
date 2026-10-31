@@ -3,37 +3,37 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/bit_exchange.hpp>                    // converts_between, converts_from, converts_to, exchanges_from_bits
-#include <test/block_types.hpp>                     // graded_extents
-#include <test/endian.hpp>                          // IWYU pragma: keep; TEST_BYTES_ARE_POSITIONS, bytes_are_positions
-#include <xstd/bits/bit/bit_convert.hpp>            // bit_convert
-#include <xstd/bits/bit_algorithm.hpp>              // bit_all_of, bit_any_of, bit_count, bit_fill, bit_for_each, bit_mismatch, bit_none_of
-#include <xstd/bits/bit_array.hpp>                  // basic_bit_array, bit_array
-#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
-#include <xstd/bits/bit_ranges/from_blocks.hpp>     // from_blocks
-#include <xstd/bits/bit_set/bit_set.hpp>            // bit_set
-#include <xstd/bits/bit_span/bit_span.hpp>          // bit_span
-#include <xstd/bits/bit_span/bit_subspan.hpp>       // bit_subspan
-#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, reads, sequence_reading_tag, set_reading_tag, storage
-#include <xstd/bits/detail/sequence_adaptor.hpp>    // blit_source, sequence_adaptor
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
-#include <algorithm>                                // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
-#include <array>                                    // array
-#include <bitset>                                   // bitset
-#include <compare>                                  // three_way_comparable
-#include <concepts>                                 // copyable, equality_comparable, regular, same_as, totally_ordered
-#include <cstddef>                                  // ptrdiff_t, size_t
-#include <cstdint>                                  // uint8_t, uint32_t, uint64_t
-#include <functional>                               // identity
-#include <limits>                                   // numeric_limits
-#include <ranges>                                   // equal, iota, random_access_range, ssize, transform
-#include <span>                                     // dynamic_extent
-#include <stdexcept>                                // length_error, out_of_range
-#include <type_traits>                              // is_const_v, is_constructible_v
-#include <utility>                                  // move, pair
-#include <vector>                                   // vector
+#include <test/bit_exchange.hpp>                            // converts_between, converts_from, converts_to, exchanges_from_bits
+#include <test/block_types.hpp>                             // graded_extents
+#include <test/endian.hpp>                                  // IWYU pragma: keep; TEST_BYTES_ARE_POSITIONS, bytes_are_positions
+#include <xstd/bits/bit/bit_convert.hpp>                    // bit_convert
+#include <xstd/bits/bit_algorithm.hpp>                      // bit_all_of, bit_any_of, bit_count, bit_fill, bit_for_each, bit_mismatch, bit_none_of
+#include <xstd/bits/bit_array.hpp>                          // basic_bit_array, bit_array
+#include <xstd/bits/bit_inplace_vector.hpp>                 // basic_bit_inplace_vector
+#include <xstd/bits/bit_ranges/from_blocks.hpp>             // from_blocks
+#include <xstd/bits/bit_set/bit_set.hpp>                    // bit_set
+#include <xstd/bits/bit_span/bit_span.hpp>                  // bit_span
+#include <xstd/bits/bit_span/bit_subspan.hpp>               // bit_subspan
+#include <xstd/bits/bit_vector.hpp>                         // basic_bit_vector, bit_vector
+#include <xstd/bits/bit_vector/detail/sequence_adaptor.hpp> // blit_source, sequence_adaptor
+#include <xstd/bits/detail/bit_block_container.hpp>         // bit_block_container
+#include <xstd/bits/detail/ownership.hpp>                   // owned_bits_t, reads, sequence_reading_tag, set_reading_tag, storage
+#include <boost/test/unit_test.hpp>                         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
+#include <algorithm>                                        // all_of, any_of, count, equal, lexicographical_compare_three_way, mismatch, none_of
+#include <array>                                            // array
+#include <bitset>                                           // bitset
+#include <compare>                                          // three_way_comparable
+#include <concepts>                                         // copyable, equality_comparable, regular, same_as, totally_ordered
+#include <cstddef>                                          // ptrdiff_t, size_t
+#include <cstdint>                                          // uint8_t, uint32_t, uint64_t
+#include <functional>                                       // identity
+#include <limits>                                           // numeric_limits
+#include <ranges>                                           // equal, iota, random_access_range, ssize, transform
+#include <span>                                             // dynamic_extent
+#include <stdexcept>                                        // length_error, out_of_range
+#include <type_traits>                                      // is_const_v, is_constructible_v
+#include <utility>                                          // move, pair
+#include <vector>                                           // vector
 
 namespace {
 

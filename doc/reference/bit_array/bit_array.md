@@ -61,7 +61,7 @@ As [[array]](https://eel.is/c++draft/array) for `array<bool, N>`, with:
       packed bit reads the block that holds it, so the blocks start clear rather than default-initialized; reading a
       position before writing it, which `array` leaves undefined, answers `false`.
     - Not in [array]: the `indeterminate_t` constructor writes nothing, for an array assigned before it is read; until
-      then only assignment and destruction are valid ([`indeterminate`](../bit_set/indeterminate.md)).
+      then only assignment and destruction are valid ([`indeterminate`](../bit_utility/indeterminate.md)).
     - The `initializer_list` constructor sets the leading positions to the listed values and leaves the rest `false`.
       *Preconditions:* `il.size() <= N`.
     - The built-in array constructor copies `a` position by position, and only an array of `N` elements converts.

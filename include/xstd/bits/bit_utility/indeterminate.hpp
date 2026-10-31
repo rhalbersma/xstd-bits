@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_SET_INDETERMINATE_HPP
-#define XSTD_BITS_BIT_SET_INDETERMINATE_HPP
+#ifndef XSTD_BITS_BIT_UTILITY_INDETERMINATE_HPP
+#define XSTD_BITS_BIT_UTILITY_INDETERMINATE_HPP
 
 #include <array>       // array
 #include <concepts>    // constructible_from
@@ -47,4 +47,4 @@ template<class T, std::size_t K>
 
 } // namespace xstd
 
-#endif // XSTD_BITS_BIT_SET_INDETERMINATE_HPP
+#endif // XSTD_BITS_BIT_UTILITY_INDETERMINATE_HPP

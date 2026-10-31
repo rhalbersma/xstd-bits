@@ -3,36 +3,36 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/array_storage.hpp>                   // array_storage
-#include <test/block_types.hpp>                     // all_block_types, digits_v, graded_extents
-#include <test/closed_proxy.hpp>                    // closed_proxies
-#include <test/ext_int128.hpp>                      // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
-#include <test/for_each_type.hpp>                   // for_each_type
-#include <test/minimal_blocks.hpp>                  // minimal_blocks
-#include <test/value_reference.hpp>                 // value_reference
-#include <xstd/bits/bit_array.hpp>                  // basic_bit_array
-#include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
-#include <xstd/bits/bit_span/bit_span.hpp>          // bit_span
-#include <xstd/bits/bit_span/bit_subspan.hpp>       // bit_subspan
-#include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
-#include <xstd/bits/detail/ownership.hpp>           // storage
-#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor, sequence_reference
-#include <xstd/bits/detail/storage_ptr.hpp>         // storage_ptr_t
-#include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
-#include <boost/test/unit_test.hpp>                 // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                                // equal, ranges::reverse, ranges::sort, reverse, sort
-#include <array>                                    // array
-#include <concepts>                                 // convertible_to, equality_comparable, random_access_iterator, same_as, sortable, totally_ordered, totally_ordered_with
-#include <cstddef>                                  // ptrdiff_t, size_t
-#include <cstdint>                                  // uint64_t, uint8_t
-#include <format>                                   // formattable
-#include <iterator>                                 // iter_move, next, prev, reverse_iterator
-#include <optional>                                 // optional
-#include <ranges>                                   // iota, subrange
-#include <type_traits>                              // is_assignable_v, is_constructible_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v
-#include <utility>                                  // as_const, declval
-#include <vector>                                   // vector
+#include <test/array_storage.hpp>                           // array_storage
+#include <test/block_types.hpp>                             // all_block_types, digits_v, graded_extents
+#include <test/closed_proxy.hpp>                            // closed_proxies
+#include <test/ext_int128.hpp>                              // TEST_HAS_ABSL_INT128, TEST_HAS_BOOST_INT128, uint128
+#include <test/for_each_type.hpp>                           // for_each_type
+#include <test/minimal_blocks.hpp>                          // minimal_blocks
+#include <test/value_reference.hpp>                         // value_reference
+#include <xstd/bits/bit_array.hpp>                          // basic_bit_array
+#include <xstd/bits/bit_inplace_vector.hpp>                 // basic_bit_inplace_vector
+#include <xstd/bits/bit_span/bit_span.hpp>                  // bit_span
+#include <xstd/bits/bit_span/bit_subspan.hpp>               // bit_subspan
+#include <xstd/bits/bit_vector.hpp>                         // basic_bit_vector
+#include <xstd/bits/bit_vector/detail/sequence_adaptor.hpp> // sequence_adaptor, sequence_reference
+#include <xstd/bits/detail/bit_block_container.hpp>         // bit_block_container
+#include <xstd/bits/detail/ownership.hpp>                   // storage
+#include <xstd/bits/detail/storage_ptr.hpp>                 // storage_ptr_t
+#include <xstd/bits/ext/boost/bit_small_vector.hpp>         // basic_bit_small_vector
+#include <boost/test/unit_test.hpp>                         // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <algorithm>                                        // equal, ranges::reverse, ranges::sort, reverse, sort
+#include <array>                                            // array
+#include <concepts>                                         // convertible_to, equality_comparable, random_access_iterator, same_as, sortable, totally_ordered, totally_ordered_with
+#include <cstddef>                                          // ptrdiff_t, size_t
+#include <cstdint>                                          // uint64_t, uint8_t
+#include <format>                                           // formattable
+#include <iterator>                                         // iter_move, next, prev, reverse_iterator
+#include <optional>                                         // optional
+#include <ranges>                                           // iota, subrange
+#include <type_traits>                                      // is_assignable_v, is_constructible_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v
+#include <utility>                                          // as_const, declval
+#include <vector>                                           // vector
 
 namespace {
 

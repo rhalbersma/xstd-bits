@@ -15,12 +15,12 @@
 #include <xstd/bits/bit_valarray/bit_slice.hpp>             // bit_slice
 #include <xstd/bits/bit_valarray/bit_slice_array.hpp>       // bit_slice_array
 #include <xstd/bits/bit_valarray/detail/valarray_proxy.hpp> // gslice_selection, indirect_selection, mask_selection, proxy_access, slice_selection, valarray_owner_of
+#include <xstd/bits/bit_vector/detail/sequence_adaptor.hpp> // sequence_adaptor
 #include <xstd/bits/detail/adapted_bits.hpp>                // adapted_bits
 #include <xstd/bits/detail/assert.hpp>                      // XSTD_BITS_ASSERT
 #include <xstd/bits/detail/bit_block_container.hpp>         // bit_block_container_type
 #include <xstd/bits/detail/borrowed_bits.hpp>               // borrowed_bits
 #include <xstd/bits/detail/ownership.hpp>                   // owned_storage, storage, storage_access, valarray_reading_tag, window
-#include <xstd/bits/detail/sequence_adaptor.hpp>            // sequence_adaptor
 #include <xstd/misc/type_traits/empty_base_type.hpp>        // empty_base_type
 #include <algorithm>                                        // copy
 #include <cassert>                                          // assert

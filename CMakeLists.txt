@@ -69,8 +69,8 @@ target_sources(
     BASE_DIRS include
     FILES
         include/xstd/bits.hpp
-        include/xstd/bits/detail/sequence_adaptor.hpp
-        include/xstd/bits/detail/sequence_erasure.hpp
+        include/xstd/bits/bit_vector/detail/sequence_adaptor.hpp
+        include/xstd/bits/bit_vector/detail/sequence_erasure.hpp
         include/xstd/bits/bit_set/detail/set_adaptor.hpp
         include/xstd/bits/bit_set/detail/erase_if.hpp
         include/xstd/bits/bit_valarray/detail/valarray_adaptor.hpp
@@ -168,6 +168,8 @@ target_sources(
         include/xstd/bits/bit_iterator/detail/select.hpp
         include/xstd/bits/bit_ranges.hpp
         include/xstd/bits/bit_ranges/from_blocks.hpp
+        include/xstd/bits/bit_utility.hpp
+        include/xstd/bits/bit_utility/indeterminate.hpp
         include/xstd/bits/bit_set.hpp
         include/xstd/bits/bit_set/bit_inplace_set.hpp
         include/xstd/bits/bit_set/bit_enum_set.hpp
@@ -177,7 +179,6 @@ target_sources(
         include/xstd/bits/bit_set/bit_set.hpp
         include/xstd/bits/bit_set/bit_set_view.hpp
         include/xstd/bits/bit_set/bit_fixed_set.hpp
-        include/xstd/bits/bit_set/indeterminate.hpp
         include/xstd/bits/bit_set/erase_if.hpp
         include/xstd/bits/bit_set/hash.hpp
         include/xstd/bits/bit_set/container_hash.hpp
@@ -243,7 +244,7 @@ target_sources(
         include/xstd/bits/detail/shift.hpp
         include/xstd/bits/detail/walk_block.hpp
         include/xstd/bits/detail/storage_ptr.hpp
-        include/xstd/bits/detail/views.hpp
+        include/xstd/bits/bit_span/detail/views.hpp
         include/xstd/bits/detail/blocks.hpp
         include/xstd/bits/bit_type_traits/detail/blocks_extent.hpp
         include/xstd/bits/detail/non_volatile.hpp

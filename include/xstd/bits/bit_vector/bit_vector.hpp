@@ -8,12 +8,12 @@
 
 #include <xstd/bits/bit_concepts/bit_storage.hpp>            // bit_storage
 #include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks, from_blocks_t
+#include <xstd/bits/bit_vector/detail/sequence_adaptor.hpp>  // sequence_adaptor
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_param_t
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
 #include <xstd/bits/detail/input_iterator_pair.hpp>          // input_iterator_pair
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
-#include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
 #include <xstd/bits/detail/storage_rebind.hpp>               // fits_storage, storage_owner, storage_rebind, storage_width_v
 #include <xstd/misc/concepts/container_compatible_range.hpp> // container_compatible_range
 #include <xstd/misc/concepts/simple_allocator.hpp>           // simple_allocator

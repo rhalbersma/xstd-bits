@@ -43,6 +43,7 @@ Each umbrella has a page of its own, with its synopsis and its headers, and each
 - [`<xstd/bits/bit_set.hpp>`](bit_set/index.md)
 - [`<xstd/bits/bit_span.hpp>`](bit_span/index.md)
 - [`<xstd/bits/bit_type_traits.hpp>`](bit_type_traits/index.md)
+- [`<xstd/bits/bit_utility.hpp>`](bit_utility/index.md)
 - [`<xstd/bits/bit_valarray.hpp>`](bit_valarray/index.md)
 - [`<xstd/bits/bit_vector.hpp>`](bit_vector/index.md)
 - [`<xstd/bits/ext/boost.hpp>`](ext_boost/index.md)
@@ -72,7 +73,7 @@ clause where one is shared.
 
 | Entity | Kind | Counterpart |
 | :-- | :-- | :-- |
-| `indeterminate`<br>`indeterminate_array`<br>`indeterminate_t` | New | [[dcl.attr.indet]](https://eel.is/c++draft/dcl.attr.indet) as a constructor tag: a fixed set's blocks left unwritten, as the attribute leaves a variable's storage |
+| `indeterminate`<br>`indeterminate_array`<br>`indeterminate_t` | New | [[dcl.attr.indet]](https://eel.is/c++draft/dcl.attr.indet) as a constructor tag: a fixed-width owner's blocks left unwritten, as the attribute leaves a variable's storage |
 | `bit_flag_set` | Generalizes | [[bitmask.types]](https://eel.is/c++draft/bitmask.types) as the set of a bitmask type's one-bit values |
 | `bit_enum_set` | New | none: the standard has no set of an enumeration's values |
 | `least_block_t`<br>`fast_block_t` | Generalizes | [[cstdint.syn]](https://eel.is/c++draft/cstdint.syn) chosen by a width rather than named by one |
