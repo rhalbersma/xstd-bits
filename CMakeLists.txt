@@ -76,7 +76,25 @@ target_sources(
         include/xstd/bits/bit_valarray/detail/valarray_adaptor.hpp
         include/xstd/bits/bit_valarray/detail/valarray_proxy.hpp
         include/xstd/bits/bit_valarray/detail/gslice_index.hpp
-        include/xstd/bits/detail/block_compress_expand.hpp
+        include/xstd/bits/detail/bit_at.hpp
+        include/xstd/bits/detail/bit_stream.hpp
+        include/xstd/bits/detail/block_width.hpp
+        include/xstd/bits/detail/compress_blocks.hpp
+        include/xstd/bits/detail/compressed.hpp
+        include/xstd/bits/detail/expand_blocks.hpp
+        include/xstd/bits/detail/expand_indices.hpp
+        include/xstd/bits/detail/expand_run.hpp
+        include/xstd/bits/detail/expanded.hpp
+        include/xstd/bits/detail/fill_blocks.hpp
+        include/xstd/bits/detail/fill_indices.hpp
+        include/xstd/bits/detail/fill_run.hpp
+        include/xstd/bits/detail/gather_indices.hpp
+        include/xstd/bits/detail/gather_run.hpp
+        include/xstd/bits/detail/permutes_in_hardware.hpp
+        include/xstd/bits/detail/scatter.hpp
+        include/xstd/bits/detail/slice_masks.hpp
+        include/xstd/bits/detail/stored_masks.hpp
+        include/xstd/bits/detail/word_masks.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
