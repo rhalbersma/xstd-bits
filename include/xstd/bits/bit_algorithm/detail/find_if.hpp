@@ -10,7 +10,7 @@
 #include <xstd/bits/detail/intrinsic.hpp>          // countl_zero, countr_zero
 #include <xstd/bits/detail/key_order.hpp>          // descends
 #include <xstd/bits/detail/ownership.hpp>          // storage_access
-#include <xstd/bits/detail/shift.hpp>              // shl
+#include <xstd/bits/detail/walk_block.hpp>         // drop_highest, drop_lowest
 #include <functional>                              // invoke
 #include <optional>                                // nullopt, optional
 #include <ranges>                                  // iota
@@ -39,7 +39,7 @@ template<class R, class Pred>
                                 if (std::invoke(pred, key)) {
                                         return key;
                                 }
-                                block = static_cast<block_type>(block ^ shl(block_type{1}, offset));
+                                block = drop_highest(block);
                         }
                 }
         } else {
@@ -50,7 +50,7 @@ template<class R, class Pred>
                                 if (std::invoke(pred, key)) {
                                         return key;
                                 }
-                                block = static_cast<block_type>(block & static_cast<block_type>(block - block_type{1}));
+                                block = drop_lowest(block);
                         }
                 }
         }
