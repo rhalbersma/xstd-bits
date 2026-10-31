@@ -111,12 +111,14 @@ BOOST_AUTO_TEST_CASE(OverASequenceItAsksAboutEachBoolOnce)
         BOOST_CHECK_EQUAL(calls, 1UZ);
 }
 
-// A pred that answers both bools alike finds the first element or none, whatever the bits hold.
+// A pred that answers both bools alike finds the first element or none, asked twice, whatever the bits hold.
 BOOST_AUTO_TEST_CASE(OverASequenceAConstantPredFindsTheFirstOrNone)
 {
         auto const a = test::algorithm::patterned(xstd::bit_array<130>());
-        BOOST_CHECK(xstd::ranges::bit_find_if(a, [](bool) -> bool { return true; }) == a.begin());
-        BOOST_CHECK(xstd::ranges::bit_find_if(a, [](bool) -> bool { return false; }) == a.end());
+        auto calls   = 0UZ;
+        BOOST_CHECK(xstd::ranges::bit_find_if(a, [&](bool) -> bool { ++calls; return true; }) == a.begin());
+        BOOST_CHECK(xstd::ranges::bit_find_if(a, [&](bool) -> bool { ++calls; return false; }) == a.end());
+        BOOST_CHECK_EQUAL(calls, 4UZ);
 }
 
 // pred takes each element by value, so a reference to one is refused, as are the standard containers.
