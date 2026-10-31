@@ -3,8 +3,8 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef XSTD_BITS_BIT_VALARRAY_DETAIL_BLOCK_COMPRESS_EXPAND_HPP
-#define XSTD_BITS_BIT_VALARRAY_DETAIL_BLOCK_COMPRESS_EXPAND_HPP
+#ifndef XSTD_BITS_DETAIL_BLOCK_COMPRESS_EXPAND_HPP
+#define XSTD_BITS_DETAIL_BLOCK_COMPRESS_EXPAND_HPP
 
 #include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
 #include <xstd/bits/detail/borrowed_bits.hpp>              // borrowed_bits
@@ -423,4 +423,4 @@ constexpr auto fill_indices(bool value, std::size_t count, Index index, borrowed
 
 } // namespace xstd::bits::detail
 
-#endif // XSTD_BITS_BIT_VALARRAY_DETAIL_BLOCK_COMPRESS_EXPAND_HPP
+#endif // XSTD_BITS_DETAIL_BLOCK_COMPRESS_EXPAND_HPP

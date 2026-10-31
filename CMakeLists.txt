@@ -76,7 +76,7 @@ target_sources(
         include/xstd/bits/bit_valarray/detail/valarray_adaptor.hpp
         include/xstd/bits/bit_valarray/detail/valarray_proxy.hpp
         include/xstd/bits/bit_valarray/detail/gslice_index.hpp
-        include/xstd/bits/bit_valarray/detail/block_compress_expand.hpp
+        include/xstd/bits/detail/block_compress_expand.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp

@@ -6,18 +6,18 @@
 #ifndef XSTD_BITS_BIT_DETAIL_BIT_PERMUTE_HPP
 #define XSTD_BITS_BIT_DETAIL_BIT_PERMUTE_HPP
 
-#include <xstd/bits/bit/detail/bit_width.hpp>                      // bit_width_v
-#include <xstd/bits/bit_valarray/detail/block_compress_expand.hpp> // compress_blocks, compressed, expand_blocks, scatter_assign, stored_masks
-#include <xstd/bits/detail/borrowed_bits.hpp>                      // borrowed_bits
-#include <xstd/bits/detail/intrinsic.hpp>                          // popcount
-#include <xstd/bits/detail/ownership.hpp>                          // owner, reads, set_reading_tag, storage_access
-#include <xstd/ints/concepts/unsigned_integer.hpp>                 // unsigned_integer
-#include <xstd/ints/limits.hpp>                                    // numeric_limits
-#include <cassert>                                                 // assert
-#include <cstddef>                                                 // size_t
-#include <ranges>                                                  // iota
-#include <span>                                                    // dynamic_extent, span
-#include <type_traits>                                             // is_const_v, is_volatile_v
+#include <xstd/bits/bit/detail/bit_width.hpp>         // bit_width_v
+#include <xstd/bits/detail/block_compress_expand.hpp> // compress_blocks, compressed, expand_blocks, scatter_assign, stored_masks
+#include <xstd/bits/detail/borrowed_bits.hpp>         // borrowed_bits
+#include <xstd/bits/detail/intrinsic.hpp>             // popcount
+#include <xstd/bits/detail/ownership.hpp>             // owner, reads, set_reading_tag, storage_access
+#include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
+#include <xstd/ints/limits.hpp>                       // numeric_limits
+#include <cassert>                                    // assert
+#include <cstddef>                                    // size_t
+#include <ranges>                                     // iota
+#include <span>                                       // dynamic_extent, span
+#include <type_traits>                                // is_const_v, is_volatile_v
 
 // P3104's bit_compress and bit_expand over the blocks of two owners of one type, a block at a time.
 namespace xstd::bits::detail {

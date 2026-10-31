@@ -3,17 +3,17 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_valarray/detail/block_compress_expand.hpp> // compress_blocks, expand_blocks, scatter_and, scatter_assign, scatter_or, scatter_xor, slice_masks, stored_masks
-#include <xstd/bits/detail/borrowed_bits.hpp>                      // borrowed_bits
-#include <boost/test/unit_test.hpp>                                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_TEST_CONTEXT
-#include <bit>                                                     // popcount
-#include <cstddef>                                                 // size_t
-#include <cstdint>                                                 // uint64_t, uint8_t
-#include <limits>                                                  // numeric_limits
-#include <ranges>                                                  // iota
-#include <span>                                                    // span
-#include <utility>                                                 // pair
-#include <vector>                                                  // vector
+#include <xstd/bits/detail/block_compress_expand.hpp> // compress_blocks, expand_blocks, scatter_and, scatter_assign, scatter_or, scatter_xor, slice_masks, stored_masks
+#include <xstd/bits/detail/borrowed_bits.hpp>         // borrowed_bits
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_TEST_CONTEXT
+#include <bit>                                        // popcount
+#include <cstddef>                                    // size_t
+#include <cstdint>                                    // uint64_t, uint8_t
+#include <limits>                                     // numeric_limits
+#include <ranges>                                     // iota
+#include <span>                                       // span
+#include <utility>                                    // pair
+#include <vector>                                     // vector
 
 BOOST_AUTO_TEST_SUITE(Detail)
 BOOST_AUTO_TEST_SUITE(BlockCompressExpand)
