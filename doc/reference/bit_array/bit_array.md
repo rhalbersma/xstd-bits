@@ -22,7 +22,8 @@ public:
   using block_container_type   = array<Block, see below>;
 
   // construct
-  basic_bit_array() = default;
+  constexpr basic_bit_array() noexcept;
+  constexpr explicit basic_bit_array(indeterminate_t) noexcept;
   constexpr basic_bit_array(initializer_list<bool> il);
   template<size_t M>
       requires (M == N)
@@ -56,7 +57,11 @@ As [[array]](https://eel.is/c++draft/array) for `array<bool, N>`, with:
   `void`, `data()` is absent, and `iterator` is random access rather than contiguous. `const_reference` is the same
   proxy over const storage, and reads without assigning.
 - The class is no aggregate. Its constructors are what `array`'s initialization does:
-    - The default constructor makes every position `false`.
+    - The default constructor makes every position `false`. `array<bool, N> a; a[0] = true;` is valid, and writing a
+      packed bit reads the block that holds it, so the blocks start clear rather than default-initialized; reading a
+      position before writing it, which `array` leaves undefined, answers `false`.
+    - Not in [array]: the `indeterminate_t` constructor writes nothing, for an array assigned before it is read; until
+      then only assignment and destruction are valid ([`indeterminate`](../bit_set/indeterminate.md)).
     - The `initializer_list` constructor sets the leading positions to the listed values and leaves the rest `false`.
       *Preconditions:* `il.size() <= N`.
     - The built-in array constructor copies `a` position by position, and only an array of `N` elements converts.

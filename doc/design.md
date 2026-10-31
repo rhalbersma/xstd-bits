@@ -466,7 +466,13 @@ The stated family is **one concept over a block or a fixed number of them**, and
 convertible. An unsigned integer states its own layout; a **contiguous sequence of unsigned integer blocks** states
 the rest of it, block `j` holding the positions `[j·digits, (j+1)·digits)`. A scalar is the sequence of length one,
 which is why `fixed_blocks_source` is one concept: `fixed_bit_blocks` whose width covers `N` and that a value owns.
-A scalar crosses as the range of one block it is, so one copy serves both. Everything in it is read by **shifts on values**, never by `std::bit_cast` on an
+A scalar crosses as the range of one block it is, so one copy serves both.
+That copy assigns every block, so the container starts from unwritten blocks and zeroes none of them first. It is
+a fold over the `K` block indices, not `std::ranges::copy` and not a loop. GCC sizes a function for inlining early,
+before calls and loops are folded away: a copy through a span takes the source's address, which puts it on the stack,
+and a loop indexes it at run time. Either made `Bitboard(from_blocks, x)` look like a call where it is one move, and
+pushed a chess engine's attack generator past GCC's inlining limits. The fold's constant indices give hand-written
+code's instructions at one, two and six blocks, the widths of chess, Othello and shogi, and Go. Everything in it is read by **shifts on values**, never by `std::bit_cast` on an
 object, so no padding is reachable and endianness never enters: `b[j] >> k` is the same number on either byte
 order. Only a foreign field of bits, whose internals this library cannot name, is read as an object.
 
@@ -753,7 +759,7 @@ truncating a width. Every reader goes through `size()`, which converts once, so 
 
 ### default-construction
 
-A defaulted default constructor plus an NSDMI, rather than two constructors constrained on the extent:
+A defaulted default constructor, rather than two constructors constrained on the extent:
 `std::vector` default-constructs empty, and so does a run-time width here -- width zero, no blocks, no
 allocation, as `std::vector<bool>` has it. The two members live in a base, `bit_members`, whose specialization for a
 capacity of nought declares them with no initializer and `[[no_unique_address]]`, since a default member initializer
@@ -761,6 +767,32 @@ makes a defaulted default constructor nontrivial ([the-inplace-column](#the-inpl
 blocks stay a plain member, whose tail padding an overlappable one would expose to `-Wpadded`.
 A static width holds exactly the blocks its width fills, which is none at width zero: `num_blocks_v` and `blocks_for`
 give the same count, and the static arms that index a block directly are the ones selected at one block or two.
+
+Default construction zeroes an array's blocks at every width, `bit_array` included, though `std::array<bool, N> a;`
+leaves its elements indeterminate. The two must admit the same code, and `array<bool, N> a; a[0] = true;` is valid:
+`a[0]` is an object of its own, and writing it reads nothing else. A packed `a[0] = true` reads the block that `a[1]`
+shares, which would be undefined over a default-initialized block, so the blocks start clear. Reading a position
+before writing it is undefined for `std::array`, which permits the `false` it answers here. What is given up is
+`is_trivially_default_constructible`, which no packed array can have while one-element writes stay valid; masking the
+read instead would not help, as an indeterminate value is the whole block's and `block & mask` already reads it.
+
+The zeroing is the public types' alone, and as late as the hierarchy allows. Every layer under them -- the layouts,
+`bit_block_container` and the adaptors -- defaults its default constructor and declares the blocks with no
+initializer, which a constructor could not skip, so each leaves them unwritten when default-initialized, as
+`std::array` does. The three public types over an array, `basic_bit_fixed_set`, `basic_bit_array` and
+`basic_bit_fixed_valarray`, reset their blocks in a user-provided default constructor; a run-time width starts empty
+and has nothing to zero. Inside the layers, a constructor that writes position by position, from keys or bools,
+resets the blocks first, and one that assigns every block, as the exchange through `from_blocks` does, leaves them
+unwritten. At a static width every layer is trivially default-constructible, as `std::array` is, so `T()`
+zero-initializes and `T t;` writes nothing. A default member initializer anywhere in the chain, even on the empty width
+tag, would make the constructor nontrivial, and GCC's constant evaluator drops the zero-initialization that precedes a
+nontrivial defaulted one. The public types and the position-by-position constructors assign their zeroes with
+`reset()` in any case, so they depend on neither.
+
+The three also take `xstd::indeterminate_t`, for a two-step initialization: the constructor leaves the base
+default-initialized and writes nothing at any width, the padding of a width that does not fill its blocks included.
+Only a whole write may follow it; inserting one key after it is undefined, as `a[0] = true` would be. A set that is
+about to be overwritten, as a chess engine's per-ply state is, asks for the tag where it is declared.
 
 ### structural-at-aligned-widths
 
@@ -2704,9 +2736,12 @@ should reach the library, it belongs in the interface, as a selection type with 
 `bit_gslice` carries a shape a `std::gslice` cannot; none is added without a workload that needs it.
 
 The two permutations come from xstd-ints, which runs BMI2 where the target has it fast and portable kernels
-elsewhere, choosing at compile time. Neither is public here: no `std::ranges` algorithm packs selected elements, so
-there is no signature for an `xstd::bit_compress` over this library's ranges to borrow
-([algorithms-not-members](#algorithms-not-members)), and the block-range kernels stay in `detail`, under the proxies.
+elsewhere, choosing at compile time. They are public as [[bit.permute]](https://eel.is/c++draft/bit.permute) has them,
+not as a ranges algorithm, since no `std::ranges` algorithm packs selected elements: `xstd::bit_compress(x, m)` and
+`xstd::bit_expand(x, m)` over two owners of one type, the type in and the type out as `bit_compress(T, T) -> T` is,
+over the same block kernels. An integer form packs into a register for a table's index and builds no owner, so two
+`bit_fixed_set<64>` compile to one `pext`. The valarray subscript is the same operation in `valarray`'s notation,
+its gather sized to what it selects where `bit_compress` keeps the source's width.
 
 `std::slice`, `std::gslice` and `std::valarray<std::size_t>` have no `constexpr` constructor, so a mask's subscripts
 and a `bit_slice`'s are the ones that run in a constant expression; they do, on the fixed and inplace arrays.
@@ -3401,6 +3436,7 @@ together, with what each contributed and where this library takes it up:
 | :-- | :-- | :-- | :-- |
 | [N2050](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2050.pdf) | 2006 | A dynamically sizeable bitset for TR2, after `boost::dynamic_bitset`, with set queries such as `is_subset_of` beside `push_back` and `resize`; libstdc++ still ships it as `std::tr2::dynamic_bitset`. | `bit_set` and `bit_vector`. The paper joins a set and a sequence in one type; here they are two readings of one storage. |
 | [N3110](https://wg21.link/n3110) | 2010 | Problems with the library's bitmask types, `ios_base::fmtflags`, `iostate`, `openmode` and the `regex_constants` flags: operators declared as members, an `operator~` that was a no-op or recursed, an underlying type that should be fixed so that `~` stays in range, and the point that the standard must not require enumerations, since [[bitmask.types]](https://eel.is/c++draft/bitmask.types) allows integers and `std::bitset` too. | Flag types over an enumeration, an integer or a `std::bitset`. `~` stays within `N` on the unsigned block, and an enumeration with no fixed underlying type spells its `N`. `bit_flag_set<std::ios_base::fmtflags, 16>` is one spelling across three standard libraries. |
+| [N3864](https://wg21.link/n3864) | 2014 | *A constexpr bitwise operations library*: free functions on one integer, among them rotations, `cntt0`, `cntl0` and `popcount`, `ispow2`, `ceilp2` and `floorp2`, `reverse_bits` and `reverse_bytes`, and `extract_bits_right` and `deposit_bits_right`, mapped in its instruction table to PEXT and PDEP. | The word layer, which later papers standardized: [P0553](https://wg21.link/P0553) and [P0556](https://wg21.link/P0556) for C++20's `<bit>`, and [P3104](https://wg21.link/P3104) for `bit_reverse`, `bit_compress` and `bit_expand`, which xstd-ints provides. `xstd::bit_compress` and `bit_expand` take extract and deposit from one word to owners of any width, and a set's `insert`, `erase` and `contains` replace its `setbit`, `rstbit` and `testbit`. |
 | [N4202](https://wg21.link/n4202) | 2014 | *Strongly Typed Bitset*: a storage parameter `T` for `std::bitset`, `small_bitset<N>` over the least `uint_least*_t` holding `N`, `fast_bitset<N>`, and `underlying()`. | The `Block` parameter, `bit_least`, `bit_fast`, `from_blocks` and `bit_convert`. [N4202](https://wg21.link/N4202) leaves the bits at or above `N` implementation-defined; here they are always zero, so `==`, hashing and `bit_cast` are exact. |
 | [P0125R0](https://wg21.link/p0125r0) | 2015 | `std::bitset::is_subset_of` and `is_superset_of`, members that may short-circuit, the names [N2050](https://wg21.link/N2050) used. | `xstd::ranges::bit_includes`, `bit_intersects` and `bit_disjoint`, free functions after `std::ranges::includes`. |
 | [P3103R0](https://wg21.link/P3103R0), [R2](https://wg21.link/P3103R2) | 2024 | *More bitset operations*: `rotl`, `rotr`, `reverse`, `countl_zero(pos)` and `countr_zero(pos)` and their `one` forms, and `one()`. | `xstd::ranges::bit_rotate` and `bit_reverse`, in `std::rotate`'s direction. Iteration, `lower_bound` and `upper_bound` cover the positional counts. |
@@ -4243,8 +4279,16 @@ performance benefit does not survive measurement: on the sieve at `N = 2^16`, GC
 twenty-five, 188.0µs unchecked against 188.1µs checked, and 75.1µs against 75.1µs over 65536 inserts. The comparison
 is against a compile-time constant and is never taken; it costs nothing to keep.
 
-An enumerator's `^=`, which toggles one key, is the same write and answers the same way. A key past the width is
-absent, so the toggle that admits it **is** the insert that admits it, and it grows where insert grows.
+**The operators are the unchecked doors.** That measurement holds where the key is a constant or a value the compiler
+can bound, and there the comparison folds. A key read from memory, a `Square` from a board array or a king square
+from `front()`, cannot be bounded, and there a throwing check is a compare, a branch and a call to the throw in every
+caller. Porting Stockfish onto `bit_enum_set<Square>` showed what that costs: the cold calls grew `do_move` and its
+neighbours past GCC's and Clang's inlining limits, and perft ran 4% slower than master under PGO. So the split is
+`std::bitset`'s own, `set(pos)` throwing beside an unchecked `operator[]`: `insert`, `emplace` and the ranged forms
+keep the check above, while an enumerator's `|=`, `^=`, `-=` and `&=`, and `operator[] const`, take the key as their
+precondition, checked only by a hardened build, and each writes its one position as the storage's `set`, `flip`,
+`reset` or one-position `&=` does. A toggle past a dynamic width is the insert that admits the key, and grows where
+insert grows; `length_error` past what a heap can count is a resource limit, not a key's, and stays.
 
 A value that is no key of a mapping closing the universe is the fourth reason, and it has one answer at every
 extent. It ranks at or past the mapping's `size`, and a static width is that `size`, so a fixed set says
@@ -4252,8 +4296,8 @@ extent. It ranks at or past the mapping's `size`, and a static width is that `si
 back there is none, so it asks the same question of `size` before its storage's own ceiling, and says
 `out_of_range` too. The two refusals never meet on one owner: an inplace set over such a mapping has that `size` for
 its capacity, so `bad_alloc` is left to an open universe's key past the capacity, and `length_error` to one past
-what a heap can count. Every door a value comes in through asks it: `insert`, `emplace`, `emplace_hint`, the ranged
-and listed forms, the constructors that insert, and an enumerator's `|=` and `^=`. A flag value of
+what a heap can count. Every checked door a value comes in through asks it: `insert`, `emplace`, `emplace_hint`, the
+ranged and listed forms, and the constructors that insert. A flag value of
 several bits, or of none, stays `bit_flag_mapping`'s precondition, there being no one position to rank it at.
 
 The element-wise `insert(first, last)` and `insert(ilist)` keep what they inserted before the refused key, which
@@ -4261,15 +4305,17 @@ is `[set]`'s own behaviour when an allocation throws midway; the consecutive `in
 range's last position before it writes anything, so that one is all or nothing.
 
 Erasing stays total like `contains`: removing what is not there is the no-op returning zero that
-`std::set::erase` is.
+`std::set::erase` is. Inside the width it is the storage's `erase`, which clears unconditionally, so the count it
+returns costs nothing when it is not read.
 
 **The single position**, member by member, measured at `-O1 -DNDEBUG -fsanitize=address` against libstdc++ 14:
 
 | a key past the width, or a step past an end | `std::set<size_t>` | here |
 |---|---|---|
 | `contains`, `count`, `find`, `lower_bound`, `upper_bound`, `equal_range`, `erase(key)` | answers | answers |
-| `insert`, `emplace`, `emplace_hint`, `insert(hint, x)`, an enumerator's `^=` | grows | `out_of_range` at a static width, grows at a dynamic one |
+| `insert`, `emplace`, `emplace_hint`, `insert(hint, x)` | grows | `out_of_range` at a static width, grows at a dynamic one |
 | the same, with a value that is no key of a closed universe | grows | `out_of_range` at every width |
+| an enumerator's `\|=`, `^=`, `-=`, `&=`, and `operator[]` | — | precondition, checked by a hardened build |
 | `erase(end())` | undefined | `assert(position != end())`, which it already said |
 | `erase(first, last)` reversed | aborts: a free of a pointer never allocated | `assert(*first <= *last)` |
 | `++end()` | undefined | `assert(m_idx < size())` |
@@ -6254,7 +6300,7 @@ Prior art for the inplace and small strings is in [prior-art-by-column](#prior-a
 ### bit-mdspan
 
 A bit matrix, `std::mdspan` over packed bits, adds a dimension to the views row rather than a reading
-([#196](https://github.com/rhalbersma/xstd-bits/issues/196)): bitboards, adjacency matrices, parity-check matrices,
+([#467](https://github.com/rhalbersma/xstd-bits/issues/467)): bitboards, adjacency matrices, parity-check matrices,
 cellular automata and binary images are its workloads. `[mdspan.accessor.reqmts]` lets an accessor's `reference`
 be other than `element_type&` and its `data_handle_type` other than `element_type*`, so the accessor is the
 sequence reading's proxy and iterator: `access(p, i)` is `*(p + i)` and `offset(p, i)` is `p + i`. The constraint
@@ -6535,7 +6581,7 @@ of code and stand either way.
 The directions above draw on one inventory of third-party containers, classified by behaviour rather than by
 name: **fixed**, an exact size at compile time; **inplace**, a size up to a compile-time capacity with no heap;
 **small**, an inline buffer of `N` and then the heap; **run-time-fixed**, a size chosen once at construction; and
-**dynamic**, a heap that grows ([#324](https://github.com/rhalbersma/xstd-bits/issues/324)). The block choice is
+**dynamic**, a heap that grows. The block choice is
 compared in [block-and-width-transformations](#block-and-width-transformations) and the enum and flag sets in
 [flag-types](#flag-types). Every signature was read from the header at the linked commit; these are references for
 design comparison, not test oracles.

@@ -11,6 +11,7 @@ public:
   using block_container_type = array<Block, see below>;
 
   // construct: [set.cons]'s without the allocator forms, with
+  constexpr explicit basic_bit_fixed_set(indeterminate_t) noexcept;
   template<class Bits>
       requires see below
     constexpr basic_bit_fixed_set(from_blocks_t, const Bits& b) noexcept;
@@ -44,11 +45,17 @@ As `basic_bit_set`, with:
   `basic_bit_array`'s does. *Mandates:* where `KeyMapping` models `sized_bit_index_mapping<KeyMapping, Key>`,
   `KeyMapping::size == N`.
 - There is no allocator, and neither `allocator_type` nor `get_allocator`. The default constructor is `noexcept`.
+- *`indeterminate_t` constructor:* *Effects:* Leaves the blocks default-initialized, writing nothing, at any width.
+  *Remarks:* Until it is assigned, the only valid operations on the set are assignment and destruction. See
+  [`indeterminate`](indeterminate.md).
 - `max_size` is a constant of the type, `N`; `size()` and `empty()` are functions that count the keys.
-- `insert`, `emplace`, the ranged forms and an enumerator's `|=` and `^=` throw `out_of_range` for a key whose
-  position is `N` or more.
+- `insert`, `emplace` and the ranged forms throw `out_of_range` for a key whose position is `N` or more. An
+  enumerator's `|=`, `^=`, `-=` and `&=`, the non-members over them, and `operator[]` take a position below `N` as
+  their precondition, and are `noexcept`.
 - `~x` complements every key below `N`. `<<= n` keeps the keys that land below `N`, and `>>= n` the keys at or
-  above `n`, both emptying the set where `n >= N`. Every operator over two sets is `noexcept`.
+  above `n`; both are the native shifts, as an integer's are, with `n < N` as their precondition. `xstd::shl` and
+  `xstd::shr` are the total forms, which empty the set where the count is `N` or more and shift the other way for a
+  negative count. Every operator over two sets is `noexcept`.
 - *`from_blocks` constructor:* As `basic_bit_array`'s: position `i` is a key where bit `i` of `b` is set. The guides
   deduce the width the blocks name, `Key` being `size_t`. `xstd::bit_convert` goes the other way, from the set to a
   block, an array of blocks or a `std::bitset`, position `i` staying position `i`.

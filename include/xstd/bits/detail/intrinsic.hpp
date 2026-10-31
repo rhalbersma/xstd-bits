@@ -20,7 +20,7 @@
 
 #ifdef __AVX512BW__
 
-#include <immintrin.h> // _mm512_and_si512, _mm512_movm_epi8, _mm512_set1_epi8, _mm512_storeu_si512
+#include <immintrin.h> // _mm512_maskz_mov_epi8, _mm512_set1_epi8, _mm512_storeu_si512
 
 #elifdef XSTD_INTS_HAS_FAST_BMI2
 
@@ -79,7 +79,7 @@ constexpr auto expand_block(std::uint64_t block, std::span<unsigned char, bools_
 #if defined(__AVX512BW__) || defined(XSTD_INTS_HAS_FAST_BMI2)
         if !consteval {
 #ifdef __AVX512BW__
-                _mm512_storeu_si512(bools.data(), _mm512_and_si512(_mm512_movm_epi8(block), _mm512_set1_epi8(1)));
+                _mm512_storeu_si512(bools.data(), _mm512_maskz_mov_epi8(block, _mm512_set1_epi8(1)));
 #else
                 // The low bit of each byte: the deposit puts the next source bit at each bit of the mask.
                 constexpr auto low_bits = std::uint64_t{0x0101'0101'0101'0101};

@@ -10,6 +10,7 @@
 #include <xstd/bits/bit_ranges/from_blocks.hpp>              // from_blocks, from_blocks_t
 #include <xstd/bits/detail/allocator_base_type.hpp>          // allocator_aware, allocator_param_t
 #include <xstd/bits/detail/bit_block_container.hpp>          // bit_block_container
+#include <xstd/bits/detail/input_iterator_pair.hpp>          // input_iterator_pair
 #include <xstd/bits/detail/ownership.hpp>                    // storage, window
 #include <xstd/bits/detail/rebind.hpp>                       // rebind
 #include <xstd/bits/detail/sequence_adaptor.hpp>             // sequence_adaptor
@@ -18,7 +19,6 @@
 #include <xstd/misc/concepts/simple_allocator.hpp>           // simple_allocator
 #include <cstddef>                                           // size_t
 #include <initializer_list>                                  // initializer_list
-#include <iterator>                                          // input_iterator
 #include <memory>                                            // allocator
 #include <ranges>                                            // from_range, from_range_t, input_range
 #include <span>                                              // dynamic_extent
@@ -69,13 +69,14 @@ public:
                 : base_type(n, value, a)
         {}
 
-        template<std::input_iterator InputIterator>
+        template<class InputIterator>
+                requires bits::detail::input_iterator_pair<InputIterator, InputIterator>
         [[nodiscard]] constexpr basic_bit_vector(InputIterator first, InputIterator last)
                 : base_type(first, last)
         {}
 
-        template<std::input_iterator InputIterator>
-                requires bits::detail::allocator_aware<Blocks>
+        template<class InputIterator>
+                requires bits::detail::input_iterator_pair<InputIterator, InputIterator> and bits::detail::allocator_aware<Blocks>
         [[nodiscard]] constexpr basic_bit_vector(InputIterator first, InputIterator last, allocator_param const& a)
                 : base_type(first, last, a)
         {}
@@ -133,8 +134,8 @@ public:
 using bit_vector = basic_bit_vector<>;
 
 // [vector.overview]'s guides: the blocks from the allocator, std::size_t by default, the element being bool.
-template<std::input_iterator InputIterator, class Allocator = std::allocator<std::size_t>>
-        requires xstd::simple_allocator<Allocator>
+template<class InputIterator, class Allocator = std::allocator<std::size_t>>
+        requires bits::detail::input_iterator_pair<InputIterator, InputIterator> and xstd::simple_allocator<Allocator>
 basic_bit_vector(InputIterator, InputIterator, Allocator = Allocator()) -> basic_bit_vector<std::vector<typename Allocator::value_type, Allocator>>;
 
 template<std::ranges::input_range R, class Allocator = std::allocator<std::size_t>>

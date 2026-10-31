@@ -353,6 +353,22 @@ BOOST_AUTO_TEST_CASE(ACountClosesTheUniverseWithNothingElseDeclared)
         BOOST_CHECK(x.empty());
 }
 
+// The operators with a key are the unchecked doors, as std::bitset's operator[] is: at a fixed width none throws.
+BOOST_AUTO_TEST_CASE(TheOperatorsWithAKeyThrowNothing)
+{
+        using test::set::piece;
+        auto x = xstd::bit_enum_set<piece>();
+        static_assert(noexcept(x |= piece::pawn) and noexcept(x ^= piece::pawn) and noexcept(x -= piece::pawn) and noexcept(x &= piece::pawn));
+        static_assert(noexcept(x | piece::pawn) and noexcept(x ^ piece::pawn) and noexcept(x - piece::pawn) and noexcept(x & piece::pawn));
+        static_assert(not noexcept(x.insert(piece::pawn)));
+        x |= piece::rook;
+        x ^= piece::pawn;
+        x -= piece::rook;
+        BOOST_CHECK(std::ranges::equal(x, std::set<piece>{piece::pawn}));
+        x &= piece::king;
+        BOOST_CHECK(x.empty());
+}
+
 // Gaps cost no bit: the universe is the six pieces, and the complement of none is all six.
 BOOST_AUTO_TEST_CASE(TheUniverseIsTheListedValuesWithoutTheGaps)
 {
@@ -362,12 +378,11 @@ BOOST_AUTO_TEST_CASE(TheUniverseIsTheListedValuesWithoutTheGaps)
         static_assert(sizeof(X) == 1UZ);
         BOOST_CHECK(std::ranges::equal(~X(), xstd::enum_traits<piece>::values));
 
-        // A value in a gap is in no set, and one cannot be put there.
+        // A value in a gap is in no set, and insert refuses to put it there.
         constexpr auto gap = std::bit_cast<piece>(std::uint8_t{2});
         auto x             = X{piece::pawn};
         BOOST_CHECK(not x.contains(gap));
         BOOST_CHECK_THROW(static_cast<void>(x.insert(gap)), std::out_of_range);
-        BOOST_CHECK_THROW(x |= gap, std::out_of_range);
         BOOST_CHECK(std::ranges::equal(x, std::set<piece>{piece::pawn}));
 }
 

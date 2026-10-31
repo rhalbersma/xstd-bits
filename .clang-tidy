@@ -71,3 +71,9 @@ CheckOptions:
   # accepts the option and does nothing with it, having said nothing about
   # lambdas in the first place.
   modernize-use-trailing-return-type.TransformLambdas: all_except_auto
+  # Iterators are passed by value, as the standard library's own signatures take
+  # them. The check measures cost by trivial copyability, and Boost's
+  # function_input_iterator, the tests' C++17 iterator without a default
+  # constructor, is not trivially copyable, so it would ask the iterator-pair
+  # constructors, assign and insert for references the standard does not use.
+  performance-unnecessary-value-param.AllowedTypes: '[Ii]terator(<|$)'

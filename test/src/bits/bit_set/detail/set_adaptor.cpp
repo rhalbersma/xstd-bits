@@ -11,6 +11,7 @@
 #include <test/set/primitives.hpp>                     // heterogeneous_key
 #include <test/spec/random.hpp>                        // engine, seed
 #include <xstd/bits/bit/bit_convert.hpp>               // bit_convert
+#include <xstd/bits/bit/shl.hpp>                       // shl
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>    // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>    // bit_includes
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp>  // bit_intersects
@@ -38,7 +39,7 @@
 #include <initializer_list>                            // initializer_list
 #include <iterator>                                    // ranges::distance
 #include <limits>                                      // numeric_limits
-#include <ranges>                                      // bidirectional_range, from_range, iota, ranges::to, transform
+#include <ranges>                                      // bidirectional_range, from_range, iota, ranges::to, reverse, transform
 #include <set>                                         // set
 #include <span>                                        // dynamic_extent
 #include <stdexcept>                                   // length_error, out_of_range
@@ -63,6 +64,9 @@ constexpr bool can_erase = requires (S s) { s.erase(0UZ); };
 
 template<class S>
 constexpr bool can_clear = requires (S s) { s.clear(); };
+
+template<class S>
+constexpr bool can_pop = requires (S s) { s.pop_front(); s.pop_back(); };
 
 template<class S>
 constexpr bool can_swap = requires (S s) { s.swap(s); };
@@ -158,12 +162,12 @@ BOOST_AUTO_TEST_CASE(AnOwnerIsRegularAndAViewIsCopyable)
 // Where the trait does not let this handle write, the member is not there to call.
 BOOST_AUTO_TEST_CASE(WritingIsGatedByTheStorageNotByThisConst)
 {
-        static_assert(can_insert<View> and can_erase<View> and can_clear<View>);
-        static_assert(can_insert<View const> and can_erase<View const> and can_clear<View const>);
-        static_assert(can_insert<Owner> and can_swap<Owner> and has_complement<Owner>);
+        static_assert(can_insert<View> and can_erase<View> and can_clear<View> and can_pop<View>);
+        static_assert(can_insert<View const> and can_erase<View const> and can_clear<View const> and can_pop<View const>);
+        static_assert(can_insert<Owner> and can_swap<Owner> and has_complement<Owner> and can_pop<Owner>);
 
-        static_assert(not can_insert<Reader> and not can_erase<Reader> and not can_clear<Reader>);
-        static_assert(not can_insert<Owner const> and not can_erase<Owner const> and not can_clear<Owner const>);
+        static_assert(not can_insert<Reader> and not can_erase<Reader> and not can_clear<Reader> and not can_pop<Reader>);
+        static_assert(not can_insert<Owner const> and not can_erase<Owner const> and not can_clear<Owner const> and not can_pop<Owner const>);
         static_assert(not can_swap<View> and not has_complement<View>);
 }
 
@@ -190,6 +194,9 @@ BOOST_AUTO_TEST_CASE(AViewWritesThroughToWhatItViews)
         BOOST_CHECK(*v.erase(v.find(7UZ)) == 9UZ);
         BOOST_CHECK(v.erase(v.find(11UZ), v.find(19UZ)) == v.find(19UZ));
         BOOST_CHECK(keys(v) == std::set<std::size_t>({3, 9, 19}));
+        v.pop_front();
+        v.pop_back();
+        BOOST_CHECK(keys(v) == std::set<std::size_t>({9}) and c.test(9) and not c.test(3) and not c.test(19));
 
         v.clear();
         BOOST_CHECK(c.none());
@@ -569,22 +576,6 @@ auto admits_at_every_door(X const& a, Model const& model, typename X::key_type v
         BOOST_CHECK(modelled<Model>(from_range) == Model{v});
 }
 
-// An enumerator is a one-element set: the operators that write it refuse it, and the two that only read it answer.
-template<class X>
-auto meets_it_as_an_empty_set_or_refuses(X const& a, typename X::key_type v)
-        -> void
-{
-        auto x = a;
-        check_refuses([&] -> void { x |= v; });
-        check_refuses([&] -> void { x ^= v; });
-        check_refuses([&] -> void { static_cast<void>(x | v); });
-        check_refuses([&] -> void { static_cast<void>(v ^ x); });
-        check_refuses([&] -> void { static_cast<void>(v - x); });
-        BOOST_CHECK(x == a);
-        auto const met = a & v;
-        BOOST_CHECK(met.empty() and (a - v) == a);
-}
-
 // An enumerator is a one-element set, and each operator meets a key as the model's set algebra does.
 template<class X, class Model>
 auto meets_it_as_a_one_element_set(X const& a, Model const& model, typename X::key_type v)
@@ -624,6 +615,9 @@ BOOST_AUTO_TEST_CASE(EveryOwnerAdmitsAKeyAndRefusesAValueThatIsNoKey)
                 auto const keys   = universe<X>();
                 auto const a      = X({keys.front(), keys.back()});
                 auto const model  = std::set<key_type, typename X::key_compare>(a.begin(), a.end());
+                // The first key alone, whose run-time width leaves the operators keys past it to meet.
+                auto const narrow       = X({keys.front()});
+                auto const narrow_model = std::set<key_type, typename X::key_compare>(narrow.begin(), narrow.end());
                 for (auto const v : offered<key_type>()) {
                         BOOST_TEST_CONTEXT("value: " << int{std::to_underlying(v)})
                         {
@@ -632,12 +626,10 @@ BOOST_AUTO_TEST_CASE(EveryOwnerAdmitsAKeyAndRefusesAValueThatIsNoKey)
                                         admits_at_every_door(a, model, v);
                                         if constexpr (not xstd::bit_mask_mapping<key_mapping, key_type>) {
                                                 meets_it_as_a_one_element_set(a, model, v);
+                                                meets_it_as_a_one_element_set(narrow, narrow_model, v);
                                         }
                                 } else {
                                         refuses_at_every_door(a, v);
-                                        if constexpr (not xstd::bit_mask_mapping<key_mapping, key_type>) {
-                                                meets_it_as_an_empty_set_or_refuses(a, v);
-                                        }
                                 }
                         }
                 }
@@ -658,6 +650,9 @@ BOOST_AUTO_TEST_CASE(EveryOwnerHoldsAtMostItsUniverse)
                 BOOST_CHECK_EQUAL(x.size(), key_mapping::size - 1UZ);
                 BOOST_CHECK(not x.contains(keys.front()));
                 BOOST_CHECK(std::ranges::all_of(x, [](key_type k) -> bool { return key_mapping::is_key(k); }));
+                auto top = X({keys.back()});
+                top <<= 1UZ;
+                BOOST_CHECK(top.empty());
         });
 }
 
@@ -689,21 +684,22 @@ BOOST_AUTO_TEST_CASE(ALeftShiftDropsTheKeysItCarriesPastMaxSize)
         shifted <<= 64UZ;
         BOOST_CHECK_EQUAL(shifted.size(), 1UZ);
         BOOST_CHECK(shifted.contains(64UZ));
-        for (auto const n : {shifted.max_size() - 64UZ, top - 64UZ, top}) {
-                auto emptied = shifted;
-                emptied <<= n;
-                BOOST_CHECK(emptied.empty());
+        auto emptied = shifted;
+        emptied <<= shifted.max_size() - 64UZ;
+        BOOST_CHECK(emptied.empty());
+        for (auto const n : {top - 64UZ, top}) {
+                BOOST_CHECK(xstd::shl(shifted, n).empty());
         }
 }
 
-// back() has a non-empty set as its precondition, and a zero width has no non-empty state to ask it in.
-BOOST_AUTO_TEST_CASE(AZeroWidthAnswersBackWithoutScanning)
+// A zero width has no non-empty state, so front() and back(), whose precondition that is, are never asked of it.
+BOOST_AUTO_TEST_CASE(AZeroWidthIsAlwaysEmpty)
 {
         auto const z = xstd::bit_fixed_set<0>();
 
         BOOST_CHECK(z.empty());
         BOOST_CHECK_EQUAL(z.size(), 0UZ);
-        BOOST_CHECK_EQUAL(static_cast<std::size_t>(z.back()), 0UZ);
+        BOOST_CHECK(z.begin() == z.end());
 }
 
 // Across two run-time widths the set operations ask whole blocks, with padding clear above them by invariant.
@@ -1123,6 +1119,63 @@ BOOST_AUTO_TEST_CASE(AViewOverADescendingOwnerAscends)
         static_assert(std::same_as<decltype(view)::key_compare, std::less<std::size_t>>);
         BOOST_CHECK(std::ranges::equal(view, std::vector<std::size_t>{3UZ, 70UZ, 129UZ}));
         BOOST_CHECK(std::ranges::equal(owner, std::vector<std::size_t>{129UZ, 70UZ, 3UZ}));
+}
+
+// front() and back() leave one at a time, in the set's own order, until the set is empty.
+BOOST_AUTO_TEST_CASE(PoppingTakesFrontAndBackInTheSetsOrder)
+{
+        auto const drains = []<class Set>(Set const& s) -> void {
+                auto const order = std::vector<std::size_t>(s.begin(), s.end());
+                auto from_front  = s;
+                for (auto const k : order) {
+                        BOOST_CHECK_EQUAL(static_cast<std::size_t>(from_front.front()), k);
+                        from_front.pop_front();
+                }
+                BOOST_CHECK(from_front.empty());
+                auto from_back = s;
+                for (auto const k : order | std::views::reverse) {
+                        BOOST_CHECK_EQUAL(static_cast<std::size_t>(from_back.back()), k);
+                        from_back.pop_back();
+                }
+                BOOST_CHECK(from_back.empty());
+        };
+        drains(xstd::bit_fixed_set<64>{3UZ, 40UZ, 63UZ});
+        drains(xstd::bit_fixed_set<128>{0UZ, 63UZ, 64UZ, 127UZ});
+        drains(xstd::bit_fixed_set<100>{1UZ, 64UZ, 99UZ});
+        drains(xstd::bit_fixed_set<300>{2UZ, 130UZ, 299UZ});
+        drains(descending_fixed{3UZ, 70UZ, 129UZ});
+        drains(dynamic_by<std::greater<std::size_t>>{5UZ, 300UZ});
+        drains(xstd::bit_set{7UZ, 1'000UZ});
+        drains(xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 200>{0UZ, 199UZ});
+}
+
+// A range erase clears the keys from its first up to its last, in the set's own order, and hands back last.
+BOOST_AUTO_TEST_CASE(ARangeEraseClearsTheKeysBetweenItsEnds)
+{
+        auto const erases_each_range = []<class Set>(Set const& s) -> void {
+                auto const order = std::vector<std::size_t>(s.begin(), s.end());
+                auto const n     = std::ssize(order);
+                for (auto const i : std::views::iota(0Z, n + 1)) {
+                        for (auto const j : std::views::iota(i, n + 1)) {
+                                auto erased         = s;
+                                auto const last     = std::ranges::next(erased.begin(), j);
+                                auto const returned = erased.erase(std::ranges::next(erased.begin(), i), last);
+                                auto kept           = order;
+                                kept.erase(kept.begin() + i, kept.begin() + j);
+                                BOOST_TEST_CONTEXT("erasing [" << i << ", " << j << ")")
+                                {
+                                        BOOST_CHECK(std::ranges::equal(erased, kept));
+                                        BOOST_CHECK_EQUAL(std::ranges::distance(erased.begin(), returned), i);
+                                }
+                        }
+                }
+        };
+        erases_each_range(xstd::bit_fixed_set<64>{3UZ, 40UZ, 41UZ, 63UZ});
+        erases_each_range(xstd::bit_fixed_set<300>{0UZ, 2UZ, 63UZ, 64UZ, 130UZ, 191UZ, 192UZ, 299UZ});
+        erases_each_range(descending_fixed{0UZ, 3UZ, 64UZ, 70UZ, 129UZ});
+        erases_each_range(dynamic_by<std::greater<std::size_t>>{5UZ, 63UZ, 64UZ, 300UZ});
+        erases_each_range(xstd::bit_set{7UZ, 8UZ, 1'000UZ});
+        erases_each_range(xstd::basic_bit_inplace_set<std::size_t, std::uint64_t, 200>{0UZ, 127UZ, 128UZ, 199UZ});
 }
 
 // The guides carry a comparator through, as std::set's do.
