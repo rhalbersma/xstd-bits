@@ -216,7 +216,7 @@ The Boost extensions sit apart, under `<xstd/bits/ext/>`. The umbrellas are:
 | `<xstd/bits/bit_type_traits.hpp>` | How a storage rebinds, the transformations that give an owner another block or width, and the blocks they choose. |
 | `<xstd/bits/bit_functional.hpp>` | The comparisons across block types and storages, and the hash and digest of the bits. |
 | `<xstd/bits/bit_ranges.hpp>` | `from_blocks`, the tag that reads an argument's blocks as bits. |
-| `<xstd/bits/bit.hpp>` | `bit_convert`, the positions of any bit storage into any other, at any two widths. |
+| `<xstd/bits/bit.hpp>` | `bit_convert`, the positions of any bit storage into any other, at any two widths, and `bit_compress` and `bit_expand`, PEXT and PDEP over owners of any width. |
 | `<xstd/bits/ext/boost.hpp>` | The three readings in Boost.Container's `small_vector`, inline up to a capacity and on the heap past it. |
 | `<xstd/bits/ext/boost/dynamic_bitset.hpp>` | `bit_convert` to and from `boost::dynamic_bitset`. |
 

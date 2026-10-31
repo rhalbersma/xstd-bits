@@ -28,7 +28,10 @@ nav:
     - reference/index.md
     - bit.hpp:
       - reference/bit/index.md
+      - bit_compress.hpp: reference/bit/bit_compress.md
       - bit_convert.hpp: reference/bit/bit_convert.md
+      - bit_expand.hpp: reference/bit/bit_expand.md
+      - has_single_bit.hpp: reference/bit/has_single_bit.md
       - shl.hpp: reference/bit/shl.md
     - bit_algorithm.hpp:
       - reference/bit_algorithm/index.md

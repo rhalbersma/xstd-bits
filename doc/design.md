@@ -2736,9 +2736,12 @@ should reach the library, it belongs in the interface, as a selection type with 
 `bit_gslice` carries a shape a `std::gslice` cannot; none is added without a workload that needs it.
 
 The two permutations come from xstd-ints, which runs BMI2 where the target has it fast and portable kernels
-elsewhere, choosing at compile time. Neither is public here: no `std::ranges` algorithm packs selected elements, so
-there is no signature for an `xstd::bit_compress` over this library's ranges to borrow
-([algorithms-not-members](#algorithms-not-members)), and the block-range kernels stay in `detail`, under the proxies.
+elsewhere, choosing at compile time. They are public as [[bit.permute]](https://eel.is/c++draft/bit.permute) has them,
+not as a ranges algorithm, since no `std::ranges` algorithm packs selected elements: `xstd::bit_compress(x, m)` and
+`xstd::bit_expand(x, m)` over two owners of one type, the type in and the type out as `bit_compress(T, T) -> T` is,
+over the same block kernels. An integer form packs into a register for a table's index and builds no owner, so two
+`bit_fixed_set<64>` compile to one `pext`. The valarray subscript is the same operation in `valarray`'s notation,
+its gather sized to what it selects where `bit_compress` keeps the source's width.
 
 `std::slice`, `std::gslice` and `std::valarray<std::size_t>` have no `constexpr` constructor, so a mask's subscripts
 and a `bit_slice`'s are the ones that run in a constant expression; they do, on the fixed and inplace arrays.
@@ -3433,6 +3436,7 @@ together, with what each contributed and where this library takes it up:
 | :-- | :-- | :-- | :-- |
 | [N2050](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2050.pdf) | 2006 | A dynamically sizeable bitset for TR2, after `boost::dynamic_bitset`, with set queries such as `is_subset_of` beside `push_back` and `resize`; libstdc++ still ships it as `std::tr2::dynamic_bitset`. | `bit_set` and `bit_vector`. The paper joins a set and a sequence in one type; here they are two readings of one storage. |
 | [N3110](https://wg21.link/n3110) | 2010 | Problems with the library's bitmask types, `ios_base::fmtflags`, `iostate`, `openmode` and the `regex_constants` flags: operators declared as members, an `operator~` that was a no-op or recursed, an underlying type that should be fixed so that `~` stays in range, and the point that the standard must not require enumerations, since [[bitmask.types]](https://eel.is/c++draft/bitmask.types) allows integers and `std::bitset` too. | Flag types over an enumeration, an integer or a `std::bitset`. `~` stays within `N` on the unsigned block, and an enumeration with no fixed underlying type spells its `N`. `bit_flag_set<std::ios_base::fmtflags, 16>` is one spelling across three standard libraries. |
+| [N3864](https://wg21.link/n3864) | 2014 | *A constexpr bitwise operations library*: free functions on one integer, among them rotations, `cntt0`, `cntl0` and `popcount`, `ispow2`, `ceilp2` and `floorp2`, `reverse_bits` and `reverse_bytes`, and `extract_bits_right` and `deposit_bits_right`, mapped in its instruction table to PEXT and PDEP. | The word layer, which later papers standardized: [P0553](https://wg21.link/P0553) and [P0556](https://wg21.link/P0556) for C++20's `<bit>`, and [P3104](https://wg21.link/P3104) for `bit_reverse`, `bit_compress` and `bit_expand`, which xstd-ints provides. `xstd::bit_compress` and `bit_expand` take extract and deposit from one word to owners of any width, and a set's `insert`, `erase` and `contains` replace its `setbit`, `rstbit` and `testbit`. |
 | [N4202](https://wg21.link/n4202) | 2014 | *Strongly Typed Bitset*: a storage parameter `T` for `std::bitset`, `small_bitset<N>` over the least `uint_least*_t` holding `N`, `fast_bitset<N>`, and `underlying()`. | The `Block` parameter, `bit_least`, `bit_fast`, `from_blocks` and `bit_convert`. [N4202](https://wg21.link/N4202) leaves the bits at or above `N` implementation-defined; here they are always zero, so `==`, hashing and `bit_cast` are exact. |
 | [P0125R0](https://wg21.link/p0125r0) | 2015 | `std::bitset::is_subset_of` and `is_superset_of`, members that may short-circuit, the names [N2050](https://wg21.link/N2050) used. | `xstd::ranges::bit_includes`, `bit_intersects` and `bit_disjoint`, free functions after `std::ranges::includes`. |
 | [P3103R0](https://wg21.link/P3103R0), [R2](https://wg21.link/P3103R2) | 2024 | *More bitset operations*: `rotl`, `rotr`, `reverse`, `countl_zero(pos)` and `countr_zero(pos)` and their `one` forms, and `one()`. | `xstd::ranges::bit_rotate` and `bit_reverse`, in `std::rotate`'s direction. Iteration, `lower_bound` and `upper_bound` cover the positional counts. |
