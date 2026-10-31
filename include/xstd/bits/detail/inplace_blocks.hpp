@@ -8,6 +8,7 @@
 
 #include <xstd/bits/bit_type_traits/bit_storage_rebind.hpp> // bit_storage_rebind
 #include <xstd/bits/detail/non_volatile.hpp>                // non_volatile
+#include <xstd/bits/detail/throw.hpp>                       // throw_exception
 #include <cstddef>                                          // size_t
 #include <iterator>                                         // input_iterator
 #include <new>                                              // bad_alloc
@@ -85,14 +86,14 @@ public:
                 -> void
         {
                 if (n != 0UZ) {
-                        throw std::bad_alloc();
+                        bits::detail::throw_exception(std::bad_alloc());
                 }
         }
 
         [[noreturn]] static constexpr auto push_back(Block const& /* value */)
                 -> void
         {
-                throw std::bad_alloc();
+                bits::detail::throw_exception(std::bad_alloc());
         }
 
         template<std::input_iterator I>
@@ -100,7 +101,7 @@ public:
                 -> void
         {
                 if (first != last) {
-                        throw std::bad_alloc();
+                        bits::detail::throw_exception(std::bad_alloc());
                 }
         }
 
