@@ -85,6 +85,7 @@ target_sources(
         include/xstd/bits/bit_algorithm/detail/compare.hpp
         include/xstd/bits/bit_algorithm/detail/count.hpp
         include/xstd/bits/bit_algorithm/detail/find.hpp
+        include/xstd/bits/bit_algorithm/detail/find_if.hpp
         include/xstd/bits/bit_algorithm/detail/mismatch.hpp
         include/xstd/bits/bit_algorithm/detail/sequence.hpp
         include/xstd/bits/bit_algorithm/detail/walk.hpp
@@ -97,6 +98,7 @@ target_sources(
         include/xstd/bits/bit_algorithm/bit_equal.hpp
         include/xstd/bits/bit_algorithm/bit_fill.hpp
         include/xstd/bits/bit_algorithm/bit_find.hpp
+        include/xstd/bits/bit_algorithm/bit_find_if.hpp
         include/xstd/bits/bit_algorithm/bit_find_last.hpp
         include/xstd/bits/bit_algorithm/bit_for_each.hpp
         include/xstd/bits/bit_algorithm/bit_includes.hpp

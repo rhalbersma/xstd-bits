@@ -12,6 +12,7 @@
 #include <xstd/bits/bit_algorithm/bit_none_of.hpp>   // IWYU pragma: export; bit_none_of
 #include <xstd/bits/bit_algorithm/bit_for_each.hpp>  // IWYU pragma: export; bit_for_each
 #include <xstd/bits/bit_algorithm/bit_find.hpp>      // IWYU pragma: export; bit_find
+#include <xstd/bits/bit_algorithm/bit_find_if.hpp>   // IWYU pragma: export; bit_find_if
 #include <xstd/bits/bit_algorithm/bit_find_last.hpp> // IWYU pragma: export; bit_find_last
 #include <xstd/bits/bit_algorithm/bit_count.hpp>     // IWYU pragma: export; bit_count
 #include <xstd/bits/bit_algorithm/bit_mismatch.hpp>  // IWYU pragma: export; bit_mismatch
