@@ -403,7 +403,7 @@ class Worker:
                 returncode, output = run(link_command, self.build, link_timeout)
                 if returncode != 0:
                         return "stillborn", "link failed"
-                returncode, output = run([exe, "--log_level=nothing", "--report_level=no"], self.build, timeout(target))
+                returncode, output = run([exe], self.build, timeout(target))
                 if returncode is None:
                         return "killed", "timed out"
                 if returncode != 0:
@@ -528,7 +528,7 @@ def main():
                 for target in chain:
                         if target.baseline == 0.0:
                                 start = time.monotonic()
-                                returncode, output = run([target.executable, "--log_level=nothing", "--report_level=no"], build, None)
+                                returncode, output = run([target.executable], build, None)
                                 target.baseline = time.monotonic() - start
                                 if returncode != 0:
                                         print(f"error: {target.name} fails unmutated:\n{output[-2000:]}", file=sys.stderr)
