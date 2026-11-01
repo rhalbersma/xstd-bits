@@ -49,7 +49,7 @@ in a default member initializer, as a braced `{indeterminate}` fills only the fi
 
 | Entity | Relation |
 | :----- | :------- |
-| [`basic_bit_fixed_set`](bit_fixed_set.md) | an owner that takes the tag, and empty by default |
+| [`basic_bit_fixed_set`](../bit_set/bit_fixed_set.md) | an owner that takes the tag, and empty by default |
 | [`basic_bit_array`](../bit_array/bit_array.md) | an owner that takes the tag, and zeroed by default, so that writing one element after default construction is valid, as for `array<bool, N>` |
 | [`basic_bit_fixed_valarray`](../bit_valarray/bit_fixed_valarray.md) | an owner that takes the tag, and zeroed by default, as `basic_bit_array` is |
 | [`boost::container::default_init_t`](https://www.boost.org/doc/libs/release/doc/html/container/extensions.html) | Boost.Container's tag for default- rather than value-initialized elements |
