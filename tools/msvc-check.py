@@ -45,6 +45,8 @@ import re
 import shlex
 import subprocess
 import sys
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -283,8 +285,16 @@ def changed_sources(base):
 def compile_on(compiler, source, flags):
     body = {"source": source, "options": {"userArguments": flags, "filters": {"execute": False}}}
     request = urllib.request.Request(API.format(compiler), data=json.dumps(body).encode(), headers={"Content-Type": "application/json", "Accept": "application/json"})
-    with urllib.request.urlopen(request, timeout=600) as response:
-        result = json.load(response)
+    # A gateway error is Compiler Explorer's load balancer between requests, gone on a later try.
+    for delay in (10, 30, 90, None):
+        try:
+            with urllib.request.urlopen(request, timeout=600) as response:
+                result = json.load(response)
+            break
+        except urllib.error.HTTPError as error:
+            if error.code not in (502, 503, 504) or delay is None:
+                raise
+            time.sleep(delay)
     diagnostics = [line.get("text", "") for line in result.get("stderr", []) + result.get("stdout", [])]
     return result.get("code"), [text for text in diagnostics if "warning" in text or "error" in text]
 
