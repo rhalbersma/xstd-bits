@@ -20,7 +20,7 @@ constexpr auto erase_if(sequence_adaptor<Bits, Store, W, Derived, E>& c, Pred pr
         requires requires { c.erase(c.cbegin(), c.cend()); }
 {
         auto const [first, last] = std::ranges::remove_if(c, pred);
-        auto const n             = static_cast<sequence_adaptor<Bits, Store, W>::size_type>(last - first);
+        auto const n             = static_cast<decltype(c.size())>(last - first);
         c.erase(first, last);
         return n;
 }
