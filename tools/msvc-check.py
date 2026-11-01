@@ -88,6 +88,29 @@ float.h inttypes.h limits.h locale.h math.h setjmp.h signal.h stdarg.h stddef.h 
 wchar.h wctype.h intrin.h immintrin.h emmintrin.h xmmintrin.h x86intrin.h
 """.split()
 
+# MSVC's <climits> as far as a preprocessor condition asks it, as Abseil's checks on CHAR_BIT and INT_MAX do.
+LIMITS = """\
+#pragma once
+#define CHAR_BIT 8
+#define SCHAR_MIN (-128)
+#define SCHAR_MAX 127
+#define UCHAR_MAX 0xff
+#define CHAR_MIN SCHAR_MIN
+#define CHAR_MAX SCHAR_MAX
+#define SHRT_MIN (-32768)
+#define SHRT_MAX 32767
+#define USHRT_MAX 0xffff
+#define INT_MIN (-2147483647 - 1)
+#define INT_MAX 2147483647
+#define UINT_MAX 0xffffffff
+#define LONG_MIN (-2147483647L - 1)
+#define LONG_MAX 2147483647L
+#define ULONG_MAX 0xffffffffUL
+#define LLONG_MIN (-9223372036854775807LL - 1)
+#define LLONG_MAX 9223372036854775807LL
+#define ULLONG_MAX 0xffffffffffffffffULL
+"""
+
 # Boost.Test as far as the tests spell it: enough to compile each body and instantiate what it reaches.
 UNIT_TEST = """\
 #pragma once
@@ -167,6 +190,8 @@ def rewrite(source, roots, definitions, build):
     for name in STANDARD:
         (stub / name).parent.mkdir(parents=True, exist_ok=True)
         (stub / name).touch()
+    for name in ("climits", "limits.h"):
+        (stub / name).write_text(LIMITS)
     (overlay / "boost" / "test").mkdir(parents=True, exist_ok=True)
     (overlay / "boost" / "test" / "unit_test.hpp").write_text(UNIT_TEST)
     (overlay / "boost" / "test" / "results_collector.hpp").write_text("#pragma once\n#include <boost/test/unit_test.hpp>\n")
