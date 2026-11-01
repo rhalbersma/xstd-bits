@@ -7,7 +7,7 @@
 #define XSTD_BITS_DETAIL_BASIC_BIT_VECTOR_HASH_HPP
 
 #include <xstd/bits/detail/basic_bit_vector.hpp> // basic_bit_vector
-#include <xstd/bits/detail/sequence_hash.hpp>    // hash
+#include <xstd/bits/detail/sequence_hash.hpp>    // IWYU pragma: keep; the hash<sequence_adaptor> the specialization derives from
 #include <cstddef>                               // size_t
 #include <functional>                            // hash
 
