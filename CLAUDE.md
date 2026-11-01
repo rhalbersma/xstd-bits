@@ -244,9 +244,10 @@ Two rules make every header deletable on its own, and every folder too:
   only its neighbours do, as `bit_enum_set` builds on `bit_set/detail/bit_fixed_set.hpp`, not on the public header.
 - **A folder's own `detail/` is private to it.** What a second folder needs moves to the shared `detail/`.
 
-`tools/layering.py`, in the Audit workflow and `tools/ci-local.sh audit`, checks all of it from the `#include` lines
-and fails on a folder it does not classify, so a new folder says which kind it is before it lands. A public header
-keeps its path when its definition moves down: users include the front, and the front stays where it was.
+cpp-ci's layering action, in the Audit workflow and `tools/ci-local.sh audit`, checks all of it from the `#include`
+lines, with each folder's kind in `tools/layering.toml`, and fails on a folder that file does not classify, so a new
+folder says which kind it is before it lands. A public header keeps its path when its definition moves down: users
+include the front, and the front stays where it was.
 
 ## Tests: Murphy, not Machiavelli
 

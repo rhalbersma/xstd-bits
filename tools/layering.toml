@@ -1,0 +1,13 @@
+# Copyright Rein Halbersma 2014-2026. Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+# The kind of each folder under include/xstd/bits/, for rhalbersma/cpp-ci's layering action, which the Audit workflow
+# and tools/ci-local.sh audit run. A folder not named here fails the check, so a new one says which kind it is.
+root = "include/xstd/bits"
+# The bottom: every definition more than one folder needs. It includes no public header.
+shared = "detail"
+# Public fronts over the shared folder and the layers below, never over one above.
+layers = ["bit", "bit_algorithm", "bit_concepts", "bit_functional", "bit_iterator", "bit_ranges", "bit_type_traits", "bit_utility"]
+# The top, one folder each: no family includes another.
+families = ["bit_array", "bit_inplace_vector", "bit_set", "bit_span", "bit_valarray", "bit_vector"]
+# Build on whichever family they extend.
+extensions = ["ext"]

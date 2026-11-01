@@ -136,9 +136,32 @@ format() {
                 | xargs -0 clang-format-22 --dry-run --Werror
 }
 
-# The Audit job: the paragraph inventories against the citations, and the include comments against the code.
+# rhalbersma/cpp-ci's layering check, at the commit the Audit workflow pins its action to, so the local verdict is the
+# one CI reaches. Fetched once per commit into build/ci-local/cpp-ci/<commit>/.
+cpp_ci_layering() {
+        local sha script
+        sha="$(grep -oE 'rhalbersma/cpp-ci/\.github/actions/layering@[0-9a-f]{40}' "${root}/.github/workflows/audit.yml" | head -1)"
+        sha="${sha##*@}"
+        [ -n "${sha}" ] || { echo "no cpp-ci layering pin in .github/workflows/audit.yml" >&2; return 1; }
+        script="${out}/cpp-ci/${sha}/layering.py"
+        if [ ! -s "${script}" ]; then
+                mkdir -p "${script%/*}"
+                if ! curl -fsSL --retry 3 -o "${script}.part" \
+                        "https://raw.githubusercontent.com/rhalbersma/cpp-ci/${sha}/.github/actions/layering/layering.py"; then
+                        rm -f "${script}.part"
+                        return 1
+                fi
+                mv "${script}.part" "${script}"
+        fi
+        echo "${script}"
+}
+
+# The Audit job: the paragraph inventories against the citations, the include comments against the code, and the layering.
 audit() {
-        python3 "${root}/tools/audit.py" && python3 "${root}/tools/include_comments.py" && python3 "${root}/tools/qualified_ranges.py" && python3 "${root}/tools/layering.py"
+        local layering
+        layering="$(cpp_ci_layering)" || return 1
+        python3 "${root}/tools/audit.py" && python3 "${root}/tools/include_comments.py" && python3 "${root}/tools/qualified_ranges.py" \
+                && (cd "${root}" && python3 -I "${layering}" tools/layering.toml)
 }
 
 run_leg() {
