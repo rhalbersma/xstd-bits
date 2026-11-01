@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_algorithm.hpp>         // bit_all_of, bit_any_of, bit_copy, bit_copy_backward, bit_count, bit_disjoint, bit_equal, bit_fill, bit_find, bit_find_last, bit_for_each, bit_includes, bit_intersects, bit_is_partitioned, bit_is_sorted, bit_lexicographical_compare_three_way, bit_mismatch, bit_move, bit_none_of, bit_partition, bit_partition_point, bit_reverse, bit_reverse_copy, bit_rotate, bit_rotate_copy, bit_set_difference, bit_set_intersection, bit_set_symmetric_difference, bit_set_union, bit_shift_left, bit_shift_right, bit_sort, bit_swap_ranges, bit_transform
+#include <xstd/bits/bit_algorithm.hpp>         // bit_all_of, bit_any_of, bit_copy, bit_copy_backward, bit_count, bit_disjoint, bit_equal, bit_fill, bit_find, bit_find_if, bit_find_last, bit_for_each, bit_includes, bit_intersects, bit_is_partitioned, bit_is_sorted, bit_lexicographical_compare_three_way, bit_mismatch, bit_move, bit_none_of, bit_partition, bit_partition_point, bit_reverse, bit_reverse_copy, bit_rotate, bit_rotate_copy, bit_set_difference, bit_set_intersection, bit_set_symmetric_difference, bit_set_union, bit_shift_left, bit_shift_right, bit_sort, bit_swap_ranges, bit_transform
 #include <xstd/bits/bit_array.hpp>             // bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp> // bit_fixed_set
 #include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(TheUmbrellaReachesTheWrites)
                 static_cast<void>(xstd::ranges::bit_transform(b, b.begin(), std::logical_not<>()));
                 static_cast<void>(xstd::ranges::bit_shift_right(a, 1));
                 static_cast<void>(xstd::ranges::bit_partition(a));
-                auto const partitioned = xstd::ranges::bit_is_partitioned(a) and xstd::ranges::bit_partition_point(a) == xstd::ranges::bit_find(a, false);
+                auto const partitioned = xstd::ranges::bit_is_partitioned(a) and xstd::ranges::bit_partition_point(a) == xstd::ranges::bit_find(a, false) and xstd::ranges::bit_find_if(a, [](bool x) -> bool { return not x; }) == xstd::ranges::bit_find(a, false);
                 static_cast<void>(xstd::ranges::bit_sort(a));
                 auto ones = 0;
                 static_cast<void>(xstd::ranges::bit_for_each(a, [&](bool x) -> void { ones += static_cast<int>(x); }));
