@@ -32,10 +32,24 @@ death test handed the violation to commit, are not.
 
 ## Scope
 
-`include/xstd/bits/bit_algorithm/` and `include/xstd/bits/bit_iterator/`, 417 mutants. Every dependent test was run against each survivor. The block
-kernels under `include/xstd/bits/detail/` follow: each of their headers is included by some 170 tests, and the
-portable and BMI2 paths of `intrinsic.hpp` are compiled out on a machine with AVX-512, so they need builds for those
-targets as well.
+`include/xstd/bits/bit_algorithm/` and `include/xstd/bits/bit_iterator/`, 417 mutants. Every dependent test was run
+against each survivor.
+
+The block kernels under `include/xstd/bits/detail/`, 351 mutants over 24 headers: the gathers, scatters and masks the
+valarray's subscripts and the `[bit.permute]` functions build on, the block walks, shifts and intrinsics, and the
+comparisons. [`tools/mutate-kernels.sh`](../tools/mutate-kernels.sh) runs them as the weekly workflow does. Two
+things set them apart from the folders above:
+
+- **They branch on the instruction set.** `intrinsic.hpp` expands a block into bools with one AVX-512BW store, a PDEP
+  per byte where PDEP is fast, or a table, and `compressed.hpp` and `expanded.hpp` skip a full mask only where no
+  instruction permutes bits. A build for the machine at hand compiles in one of those paths, so the kernels are built
+  with `XSTD_BITS_TEST_ARCH` set to a level instead: `x86-64-v3` compiles in every path but the portable one, and
+  `x86-64` compiles in that one. The AVX-512 store has no operator to mutate.
+- **Each is run against the tests that call it.** A kernel header reaches some 200 tests, most of which only include
+  it; run against all of them, a survivor costs hours. Each group of headers is run against the tests that killed one
+  of its mutants, so a survivor there is a gap in those tests or a mutant listed below.
+
+`bit_block_container.hpp`, the storage under every container, follows with 650 mutants.
 
 ## Equivalent mutants
 

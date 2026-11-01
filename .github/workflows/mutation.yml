@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Every mutant of the headers in doc/mutation.md's scope is killed by a test or listed there as equivalent.
+  # Every mutant of bit_algorithm/ and bit_iterator/ is killed by a test or listed in doc/mutation.md as equivalent.
   mutation:
     runs-on: ubuntu-24.04
     timeout-minutes: 330
@@ -46,3 +46,19 @@ jobs:
         run: |
           mapfile -t headers < <(cd include && find xstd/bits/bit_algorithm xstd/bits/bit_iterator -name '*.hpp' | sort)
           python3 tools/mutate.py "${headers[@]}" --build build/mutate --jobs "$(nproc)"
+
+  # The block kernels under include/xstd/bits/detail/, built for fixed instruction-set levels: a native build compiles in
+  # whichever of their paths the runner's processor has.
+  kernels:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the toolchain
+        run: tools/setup-toolchain.sh
+
+      - name: Kill or classify every mutant
+        run: tools/mutate-kernels.sh
