@@ -295,6 +295,11 @@ Never build with whatever `g++` or `clang++` happen to resolve to. Ubuntu 24.04 
 back to a cut-down reproduction proves less than it appears to. What `ci-local.sh` cannot cover, MSVC, clang-cl,
 MinGW, Apple Clang and Emscripten, is CI's alone; say so rather than claim it was checked.
 
+MSVC is the one CI's alone that can still be asked first. [`tools/msvc-check.py`](tools/msvc-check.py) compiles test
+sources on Compiler Explorer's MSVC, VS 2022 and the newest, with the ladder's flags: `--changed` takes the tests a
+branch touches and those mirroring its headers. Run it before a push that changes a header, beside the legs; a pass
+there covers the tests it compiled, not the whole ladder, and the pull request says which.
+
 Run every job that takes more than a moment in the background: the setup script, a build, a test run, a `ci-local.sh`
 leg, clang-tidy, a mutation pass. A leg takes tens of minutes and the full run hours, and a conversation blocked on
 one cannot answer the question asked meanwhile. Start the job detached, logging to a file, take up the next thing or
