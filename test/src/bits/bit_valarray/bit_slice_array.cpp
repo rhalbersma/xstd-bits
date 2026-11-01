@@ -109,4 +109,16 @@ BOOST_AUTO_TEST_CASE(ASliceTakesAnyOwnerOverTheSameBlocks)
         }
 }
 
+// A run of stride one that ends inside a block gathers no position past its end, from a block boundary or between them.
+BOOST_AUTO_TEST_CASE(ARunGathersNoPositionPastItsEnd)
+{
+        auto const v = test::valarray::make<xstd::bit_valarray>(test::valarray::model(460UZ, true));
+        for (auto const& s : {std::slice(0UZ, 100UZ, 1UZ), std::slice(3UZ, 100UZ, 1UZ), std::slice(64UZ, 70UZ, 1UZ)}) {
+                BOOST_TEST_CONTEXT("slice(" << s.start() << ", " << s.size() << ", " << s.stride() << ")")
+                {
+                        test::valarray::check_equal(xstd::bit_valarray(v[s]), test::valarray::model(s.size(), true));
+                }
+        }
+}
+
 BOOST_AUTO_TEST_SUITE_END()

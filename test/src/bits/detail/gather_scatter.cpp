@@ -150,22 +150,24 @@ BOOST_AUTO_TEST_CASE(CompressAndExpandAgreeWithTheOracleOverASweepOfWideBlocks)
         }
 }
 
-// A slice's masks, block by block, select exactly start + j * stride for j < size, at every start, stride and size.
+// A slice's masks select exactly start + j * stride for j < size, and reach no block past the slice's last.
 BOOST_AUTO_TEST_CASE(SliceMasksSelectEveryStrideFromEveryStart)
 {
         using Block  = std::uint8_t;
         auto const n = 5UZ * digits<Block>;
+        // A whole period of blocks past the slice's own, where a period loop that overran its bound would write.
+        auto const num_blocks = digits<Block> + (n / digits<Block>);
         for (auto const start : std::views::iota(0UZ, n)) {
                 for (auto const stride : std::views::iota(1UZ, digits<Block>)) {
                         for (auto const size : std::views::iota(1UZ, ((n - 1UZ - start) / stride) + 2UZ)) {
                                 BOOST_TEST_CONTEXT("slice(" << start << ", " << size << ", " << stride << ")")
                                 {
-                                        auto blocks = std::vector<Block>(n / digits<Block>);
+                                        auto blocks = std::vector<Block>(num_blocks);
                                         xstd::bits::detail::slice_masks<Block>(start, size, stride).for_each([&](std::size_t k, Block mask, std::size_t count) -> void {
-                                                blocks[k] = mask;
+                                                blocks.at(k) = mask;
                                                 BOOST_CHECK_EQUAL(count, static_cast<std::size_t>(std::popcount(mask)));
                                         });
-                                        BOOST_CHECK(bools_of(blocks) == slice_oracle(n, start, size, stride));
+                                        BOOST_CHECK(bools_of(blocks) == slice_oracle(blocks.size() * digits<Block>, start, size, stride));
                                 }
                         }
                 }

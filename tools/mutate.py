@@ -591,7 +591,9 @@ def main():
         print(f"killed {counts['killed']}, equivalent {counts.get('equivalent', 0)}, survived {counts['survived']}, stillborn {counts['stillborn']}, pending {pending}: score {score:.1f}%")
         for m in mutants:
                 if m.status == "survived":
-                        print(f"SURVIVED {m.header}:{m.line}:{m.column}: {m.original!r} -> {m.replacement!r} ({m.tried} of {m.dependents} targets)    {m.source_line}")
+                        chain = chains.get(m.header)
+                        reach = f"{passed_in(m, chain)} of {len(chain)}" if chain else f"{m.tried} of {m.dependents}"
+                        print(f"SURVIVED {m.header}:{m.line}:{m.column}: {m.original!r} -> {m.replacement!r} ({reach} targets)    {m.source_line}")
                         print(f"  | `{m.header}` | `{m.source_line.replace('|', chr(92) + '|')}` | {m.occurrence} | {m.offset} | `{m.original.replace('|', chr(92) + '|')}` → `{m.replacement.replace('|', chr(92) + '|')}` | |")
         for line in stale:
                 print(f"STALE {line}")
