@@ -18,8 +18,9 @@ file covers the rest: what happens between opening a pull request and merging it
 - **Validation states what ran:**
   - which `tools/ci-local.sh` legs ran, and on which commit;
   - which `main` was merged in;
-  - what local CI cannot cover, named as CI's alone: MSVC, clang-cl, MinGW, Apple Clang and Emscripten; the
-    sanitizer, CodeQL, consumption, fuzzing and mutation jobs; and libc++ on the two newer rungs.
+  - which tests `tools/msvc-check.py` compiled on MSVC, and on which commit;
+  - what local CI cannot cover, named as CI's alone: MSVC beyond those tests, clang-cl, MinGW, Apple Clang and
+    Emscripten; the sanitizer, CodeQL, consumption, fuzzing and mutation jobs; and libc++ on the two newer rungs.
 - **Keep the body current.** A fix round that changes what the pull request does updates the body in the same round.
 - **Open it as a draft.** It leaves draft only to merge.
 
@@ -35,9 +36,11 @@ ClusterFuzzLite and Codecov's `patch`. CONTRIBUTING.md's table lists the ones br
    `Clang 23`, `MSVC`, `clang-cl` or `GCC 15`. Every workaround the tree carries says what it works around.
 3. **Reproduce before fixing.**
    - **A Linux leg:** run its `ci-local.sh` leg.
-   - **A leg `ci-local.sh` cannot run:** reproduce it on Compiler Explorer. Amalgamate the test file and the xstd
-     headers it reaches, from this repository, xstd-ints and xstd-misc, into one source, with `#line` directives so
-     the diagnostics name the real files.
+   - **An MSVC leg:** run `tools/msvc-check.py` on the failing test, on the head that failed and on the fix. It
+     compiles the test with every header it reaches written into one file, under the ladder's flags.
+   - **Another leg `ci-local.sh` cannot run:** reproduce it on Compiler Explorer. Amalgamate the test file and the
+     xstd headers it reaches, from this repository, xstd-ints and xstd-misc, into one source, with `#line` directives
+     so the diagnostics name the real files.
    - **Compiler Explorer's compilers:**
      - `clang1910`: the Clang inside VS 2022's clang-cl;
      - `clang-cl2216` and the `x64 msvc` compilers;

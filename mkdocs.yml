@@ -44,6 +44,7 @@ nav:
       - bit_equal.hpp: reference/bit_algorithm/bit_equal.md
       - bit_fill.hpp: reference/bit_algorithm/bit_fill.md
       - bit_find.hpp: reference/bit_algorithm/bit_find.md
+      - bit_find_if.hpp: /xstd-bits/reference/bit_algorithm/bit_find/
       - bit_find_last.hpp: /xstd-bits/reference/bit_algorithm/bit_find/
       - bit_for_each.hpp: reference/bit_algorithm/bit_for_each.md
       - bit_includes.hpp: reference/bit_algorithm/bit_includes.md
