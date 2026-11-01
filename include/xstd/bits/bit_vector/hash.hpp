@@ -6,20 +6,6 @@
 #ifndef XSTD_BITS_BIT_VECTOR_HASH_HPP
 #define XSTD_BITS_BIT_VECTOR_HASH_HPP
 
-#include <xstd/bits/bit_vector/bit_vector.hpp> // basic_bit_vector
-#include <cstddef>                             // size_t
-#include <functional>                          // hash
-
-// NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
-
-namespace std {
-
-template<class Blocks, std::size_t N>
-struct hash<xstd::basic_bit_vector<Blocks, N>> : hash<typename xstd::basic_bit_vector<Blocks, N>::adaptor_type>
-{};
-
-} // namespace std
-
-// NOLINTEND(bugprone-std-namespace-modification)
+#include <xstd/bits/detail/basic_bit_vector_hash.hpp> // IWYU pragma: export; hash
 
 #endif // XSTD_BITS_BIT_VECTOR_HASH_HPP

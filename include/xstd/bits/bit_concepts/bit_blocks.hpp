@@ -6,15 +6,6 @@
 #ifndef XSTD_BITS_BIT_CONCEPTS_BIT_BLOCKS_HPP
 #define XSTD_BITS_BIT_CONCEPTS_BIT_BLOCKS_HPP
 
-#include <xstd/bits/detail/bit_block_range.hpp> // bit_block, bit_block_range
-
-// What every container and view here presents a packed interface over: bits in contiguous unsigned blocks.
-namespace xstd {
-
-// One block, or a range of them, const as the bare type is and never volatile, which a register's accesses must be.
-template<class Bits>
-concept bit_blocks = bits::detail::bit_block<Bits> or bits::detail::bit_block_range<Bits>;
-
-} // namespace xstd
+#include <xstd/bits/detail/bit_blocks.hpp> // IWYU pragma: export; bit_blocks
 
 #endif // XSTD_BITS_BIT_CONCEPTS_BIT_BLOCKS_HPP

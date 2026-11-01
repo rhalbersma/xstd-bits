@@ -6,11 +6,11 @@
 #ifndef XSTD_BITS_BIT_ARRAY_TO_ARRAY_HPP
 #define XSTD_BITS_BIT_ARRAY_TO_ARRAY_HPP
 
-#include <xstd/bits/bit_array/bit_array.hpp> // bit_array
-#include <concepts>                          // same_as
-#include <cstddef>                           // size_t
-#include <type_traits>                       // remove_cv_t
-#include <utility>                           // move
+#include <xstd/bits/bit_array/detail/bit_array.hpp> // bit_array
+#include <concepts>                                 // same_as
+#include <cstddef>                                  // size_t
+#include <type_traits>                              // remove_cv_t
+#include <utility>                                  // move
 
 namespace xstd {
 

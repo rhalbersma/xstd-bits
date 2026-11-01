@@ -6,16 +6,6 @@
 #ifndef XSTD_BITS_BIT_RANGES_FROM_BLOCKS_HPP
 #define XSTD_BITS_BIT_RANGES_FROM_BLOCKS_HPP
 
-// The tag that says an argument's blocks are read as bits, as std::from_range says a range's elements are read.
-namespace xstd {
-
-struct from_blocks_t
-{
-        explicit from_blocks_t() = default;
-};
-
-inline constexpr auto from_blocks = from_blocks_t();
-
-} // namespace xstd
+#include <xstd/bits/detail/from_blocks.hpp> // IWYU pragma: export; from_blocks, from_blocks_t
 
 #endif // XSTD_BITS_BIT_RANGES_FROM_BLOCKS_HPP

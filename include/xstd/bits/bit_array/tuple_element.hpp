@@ -6,9 +6,9 @@
 #ifndef XSTD_BITS_BIT_ARRAY_TUPLE_ELEMENT_HPP
 #define XSTD_BITS_BIT_ARRAY_TUPLE_ELEMENT_HPP
 
-#include <xstd/bits/bit_array/bit_array.hpp> // basic_bit_array
-#include <cstddef>                           // size_t
-#include <tuple>                             // tuple_element, tuple_size
+#include <xstd/bits/bit_array/detail/bit_array.hpp> // basic_bit_array
+#include <cstddef>                                  // size_t
+#include <tuple>                                    // tuple_element, tuple_size
 
 // NOLINTBEGIN(bugprone-std-namespace-modification): [namespace.std]/2 admits specializing for a program-defined type.
 

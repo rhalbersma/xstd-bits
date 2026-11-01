@@ -6,16 +6,6 @@
 #ifndef XSTD_BITS_BIT_TYPE_TRAITS_BIT_REBIND_HPP
 #define XSTD_BITS_BIT_TYPE_TRAITS_BIT_REBIND_HPP
 
-#include <xstd/bits/detail/rebind.hpp>             // rebindable, with_block_t
-#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
-
-namespace xstd {
-
-// The same bit container over another block, allocator rebound too, as std::simd's rebind_t takes another element.
-template<xstd::unsigned_integer Block, class Owner>
-        requires bits::detail::rebindable<Owner>
-using bit_rebind = bits::detail::with_block_t<Owner, Block>;
-
-} // namespace xstd
+#include <xstd/bits/detail/bit_rebind.hpp> // IWYU pragma: export; bit_rebind
 
 #endif // XSTD_BITS_BIT_TYPE_TRAITS_BIT_REBIND_HPP

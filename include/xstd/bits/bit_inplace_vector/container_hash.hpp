@@ -6,6 +6,6 @@
 #ifndef XSTD_BITS_BIT_INPLACE_VECTOR_CONTAINER_HASH_HPP
 #define XSTD_BITS_BIT_INPLACE_VECTOR_CONTAINER_HASH_HPP
 
-#include <xstd/bits/bit_vector/container_hash.hpp> // IWYU pragma: export; is_range, is_tuple_like
+#include <xstd/bits/detail/basic_bit_vector_container_hash.hpp> // IWYU pragma: export; is_range, is_tuple_like
 
 #endif // XSTD_BITS_BIT_INPLACE_VECTOR_CONTAINER_HASH_HPP

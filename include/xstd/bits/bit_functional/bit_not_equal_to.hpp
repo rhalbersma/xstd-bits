@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_BIT_FUNCTIONAL_BIT_NOT_EQUAL_TO_HPP
 #define XSTD_BITS_BIT_FUNCTIONAL_BIT_NOT_EQUAL_TO_HPP
 
-#include <xstd/bits/bit_algorithm/bit_equal.hpp> // bit_equal
+#include <xstd/bits/detail/bit_equal.hpp> // bit_equal
 
 namespace xstd {
 

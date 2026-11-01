@@ -6,7 +6,7 @@
 #ifndef XSTD_BITS_DETAIL_OWNED_BIT_BLOCKS_HPP
 #define XSTD_BITS_DETAIL_OWNED_BIT_BLOCKS_HPP
 
-#include <xstd/bits/bit_concepts/bit_blocks.hpp>      // bit_blocks
+#include <xstd/bits/detail/bit_blocks.hpp>            // bit_blocks
 #include <xstd/bits/detail/range_const_reference.hpp> // range_const_reference_t
 #include <xstd/ints/concepts/unsigned_integer.hpp>    // unsigned_integer
 #include <concepts>                                   // regular, same_as

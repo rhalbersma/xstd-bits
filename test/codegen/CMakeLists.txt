@@ -82,3 +82,6 @@ list(JOIN block_pairs "," block_pairs)
 foreach(march x86-64 x86-64-v3)
     add_codegen_test(blocks.cpp ${march} "-march=${march}" "CHECK,BRANCH-FREE" SAME_BODIES ${block_pairs})
 endforeach()
+
+# A set packed into an integer is a PEXT per block and no branch, and one block compiles as its word packed by hand.
+add_codegen_test(compress.cpp x86-64-v3 "-march=x86-64-v3" "CHECK,FAST-BMI2,BRANCH-FREE" SAME_BODIES codegen_compress_set1=codegen_compress_word1)

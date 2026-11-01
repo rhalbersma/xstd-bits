@@ -6,25 +6,38 @@
 #ifndef XSTD_BITS_BIT_VALARRAY_DETAIL_VALARRAY_PROXY_HPP
 #define XSTD_BITS_BIT_VALARRAY_DETAIL_VALARRAY_PROXY_HPP
 
-#include <xstd/bits/bit_valarray/bit_gslice.hpp>                   // bit_gslice
-#include <xstd/bits/bit_valarray/bit_slice.hpp>                    // bit_slice
-#include <xstd/bits/bit_valarray/detail/block_compress_expand.hpp> // block_width, compress_blocks, expand_blocks, expand_indices, fill_blocks, fill_indices, gather_indices, scatter_and, scatter_assign, scatter_or, scatter_xor, slice_masks, stored_masks
-#include <xstd/bits/bit_valarray/detail/gslice_index.hpp>          // gslice_access, gslice_index
-#include <xstd/bits/detail/bit_block_container.hpp>                // bit_block_container
-#include <xstd/bits/detail/borrowed_bits.hpp>                      // borrowed_bits
-#include <xstd/bits/detail/intrinsic.hpp>                          // popcount
-#include <xstd/bits/detail/ownership.hpp>                          // owned_bits_t, owner_reading, storage_access, valarray_reading_tag
-#include <xstd/ints/concepts/unsigned_integer.hpp>                 // unsigned_integer
-#include <algorithm>                                               // all_of, count
-#include <cassert>                                                 // assert
-#include <concepts>                                                // derived_from, same_as
-#include <cstddef>                                                 // size_t
-#include <iterator>                                                // ssize
-#include <span>                                                    // span
-#include <type_traits>                                             // remove_cvref_t
-#include <utility>                                                 // forward
-#include <valarray>                                                // valarray
-#include <vector>                                                  // vector
+#include <xstd/bits/bit_valarray/detail/bit_gslice.hpp>   // bit_gslice
+#include <xstd/bits/bit_valarray/detail/bit_slice.hpp>    // bit_slice
+#include <xstd/bits/bit_valarray/detail/gslice_index.hpp> // gslice_access, gslice_index
+#include <xstd/bits/detail/bit_block_container.hpp>       // bit_block_container
+#include <xstd/bits/detail/block_width.hpp>               // block_width
+#include <xstd/bits/detail/borrowed_bits.hpp>             // borrowed_bits
+#include <xstd/bits/detail/compress_blocks.hpp>           // compress_blocks
+#include <xstd/bits/detail/expand_blocks.hpp>             // expand_blocks
+#include <xstd/bits/detail/expand_indices.hpp>            // expand_indices
+#include <xstd/bits/detail/expand_run.hpp>                // expand_run
+#include <xstd/bits/detail/fill_blocks.hpp>               // fill_blocks
+#include <xstd/bits/detail/fill_indices.hpp>              // fill_indices
+#include <xstd/bits/detail/fill_run.hpp>                  // fill_run
+#include <xstd/bits/detail/gather_indices.hpp>            // gather_indices
+#include <xstd/bits/detail/gather_run.hpp>                // gather_run
+#include <xstd/bits/detail/intrinsic.hpp>                 // popcount
+#include <xstd/bits/detail/ownership.hpp>                 // owned_bits_t, owner_reading, storage_access, valarray_reading_tag
+#include <xstd/bits/detail/scatter.hpp>                   // scatter_and, scatter_assign, scatter_or, scatter_xor
+#include <xstd/bits/detail/slice_masks.hpp>               // slice_masks
+#include <xstd/bits/detail/stored_masks.hpp>              // stored_masks
+#include <xstd/bits/detail/word_masks.hpp>                // word_masks
+#include <xstd/ints/concepts/unsigned_integer.hpp>        // unsigned_integer
+#include <algorithm>                                      // all_of, count
+#include <cassert>                                        // assert
+#include <concepts>                                       // derived_from, same_as
+#include <cstddef>                                        // size_t
+#include <iterator>                                       // ssize
+#include <span>                                           // span
+#include <type_traits>                                    // remove_cvref_t
+#include <utility>                                        // forward
+#include <valarray>                                       // valarray
+#include <vector>                                         // vector
 
 // The positions [valarray.sub]'s four subscripts select, and the proxy that writes through them to its owner's blocks.
 namespace xstd::bits::detail {

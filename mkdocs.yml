@@ -125,7 +125,6 @@ nav:
       - container_hash.hpp: /xstd-bits/reference/bit_set/hash/
       - erase_if.hpp: reference/bit_set/erase_if.md
       - hash.hpp: reference/bit_set/hash.md
-      - indeterminate.hpp: reference/bit_set/indeterminate.md
     - bit_span.hpp:
       - reference/bit_span/index.md
       - bit_span.hpp: reference/bit_span/bit_span.md
@@ -140,6 +139,9 @@ nav:
       - bit_resize.hpp: reference/bit_type_traits/bit_resize.md
       - bit_storage_rebind.hpp: reference/bit_type_traits/bit_storage_rebind.md
       - bit_underlying.hpp: reference/bit_type_traits/bit_underlying.md
+    - bit_utility.hpp:
+      - reference/bit_utility/index.md
+      - indeterminate.hpp: reference/bit_utility/indeterminate.md
     - bit_valarray.hpp:
       - reference/bit_valarray/index.md
       - bit_fixed_valarray.hpp: reference/bit_valarray/bit_fixed_valarray.md

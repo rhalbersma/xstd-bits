@@ -6,24 +6,24 @@
 #ifndef XSTD_BITS_BIT_SET_DETAIL_FLAG_BLOCK_HPP
 #define XSTD_BITS_BIT_SET_DETAIL_FLAG_BLOCK_HPP
 
-#include <xstd/bits/bit_type_traits/bit_least.hpp>      // least_block_t
-#include <xstd/bits/bit_type_traits/bit_underlying.hpp> // underlying_block_t
-#include <xstd/bits/detail/bit_layout.hpp>              // bit_bytes, bits_per_byte, byte_count, bytes_bits, container_source
-#include <xstd/bits/detail/intrinsic.hpp>               // countr_zero, popcount
-#include <xstd/bits/detail/ordinal.hpp>                 // ordinal_t
-#include <xstd/bits/detail/shift.hpp>                   // shl
-#include <xstd/ints/concepts/integer.hpp>               // integer
-#include <xstd/ints/concepts/unsigned_integer.hpp>      // unsigned_integer
-#include <xstd/ints/limits/numeric_limits.hpp>          // numeric_limits
-#include <xstd/ints/type_traits/make_unsigned.hpp>      // make_unsigned_t
-#include <algorithm>                                    // ranges::find_if
-#include <array>                                        // array
-#include <bitset>                                       // bitset
-#include <cstddef>                                      // size_t
-#include <iterator>                                     // ranges::distance
-#include <limits>                                       // numeric_limits
-#include <ranges>                                       // views::iota
-#include <type_traits>                                  // conditional_t, is_enum_v, type_identity
+#include <xstd/bits/detail/bit_layout.hpp>         // bit_bytes, bits_per_byte, byte_count, bytes_bits, container_source
+#include <xstd/bits/detail/bit_least.hpp>          // least_block_t
+#include <xstd/bits/detail/bit_underlying.hpp>     // underlying_block_t
+#include <xstd/bits/detail/intrinsic.hpp>          // countr_zero, popcount
+#include <xstd/bits/detail/ordinal.hpp>            // ordinal_t
+#include <xstd/bits/detail/shift.hpp>              // shl
+#include <xstd/ints/concepts/integer.hpp>          // integer
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <xstd/ints/limits/numeric_limits.hpp>     // numeric_limits
+#include <xstd/ints/type_traits/make_unsigned.hpp> // make_unsigned_t
+#include <algorithm>                               // ranges::find_if
+#include <array>                                   // array
+#include <bitset>                                  // bitset
+#include <cstddef>                                 // size_t
+#include <iterator>                                // ranges::distance
+#include <limits>                                  // numeric_limits
+#include <ranges>                                  // views::iota
+#include <type_traits>                             // conditional_t, is_enum_v, type_identity
 
 // The word a flag type's mask is read and written as: an enumeration's or an integer's unsigned type, or a bitset's.
 namespace xstd::bits::detail {

@@ -6,14 +6,14 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_MISMATCH_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_MISMATCH_HPP
 
-#include <xstd/bits/bit_algorithm/detail/mismatch.hpp> // first_mismatch
-#include <xstd/bits/bit_algorithm/detail/sequence.hpp> // whole_sequence
-#include <xstd/bits/detail/ownership.hpp>              // reads_bools, storage_access
-#include <algorithm>                                   // mismatch, mismatch_result
-#include <concepts>                                    // same_as
-#include <cstddef>                                     // ptrdiff_t
-#include <ranges>                                      // begin, borrowed_iterator_t, size
-#include <type_traits>                                 // remove_cvref_t
+#include <xstd/bits/detail/first_mismatch.hpp>   // first_mismatch
+#include <xstd/bits/detail/ownership.hpp>        // reads_bools, storage_access
+#include <xstd/bits/detail/sequence_storage.hpp> // whole_sequence
+#include <algorithm>                             // mismatch, mismatch_result
+#include <concepts>                              // same_as
+#include <cstddef>                               // ptrdiff_t
+#include <ranges>                                // begin, borrowed_iterator_t, size
+#include <type_traits>                           // remove_cvref_t
 
 namespace xstd::ranges {
 

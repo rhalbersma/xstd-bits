@@ -6,10 +6,12 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_FIND_IF_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_FIND_IF_HPP
 
-#include <xstd/bits/bit_algorithm/bit_find.hpp>       // bit_find
+#include <xstd/bits/bit_algorithm/detail/find.hpp>    // find_value
 #include <xstd/bits/bit_algorithm/detail/find_if.hpp> // find_key_if
-#include <xstd/bits/detail/ownership.hpp>             // reads_bools, reads_keys
+#include <xstd/bits/detail/ownership.hpp>             // reads_bools, reads_keys, storage_access
+#include <xstd/bits/detail/sequence_storage.hpp>      // first_position
 #include <concepts>                                   // predicate
+#include <cstddef>                                    // ptrdiff_t
 #include <functional>                                 // invoke
 #include <ranges>                                     // begin, borrowed_iterator_t, end, range_value_t, size
 
@@ -34,8 +36,8 @@ template<class R, class Pred>
                 auto const on_false = static_cast<bool>(std::invoke(pred, false));
                 auto const on_true  = static_cast<bool>(std::invoke(pred, true));
                 // A conditional, not an if: a stateless pred makes both answers constant, which C4127 refuses in an if.
-                return on_false != on_true ? result_type(xstd::ranges::bit_find(r, on_true)) : on_true ? result_type(std::ranges::begin(r))
-                                                                                                       : result_type(std::ranges::end(r));
+                return on_false != on_true ? result_type(std::ranges::begin(r) + static_cast<std::ptrdiff_t>(bits::detail::find_value(bits::detail::storage_access::bits(r), bits::detail::first_position(r), n, on_true))) : on_true ? result_type(std::ranges::begin(r))
+                                                                                                                                                                                                                                      : result_type(std::ranges::end(r));
         }
 }
 

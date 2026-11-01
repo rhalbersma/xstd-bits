@@ -34,3 +34,6 @@ jobs:
 
       - name: "Check that every ranges:: says whose ranges it means"
         run: python3 tools/qualified_ranges.py
+
+      - name: Check that the headers are layered and no container family includes another
+        run: python3 tools/layering.py

@@ -6,18 +6,23 @@
 #ifndef XSTD_BITS_BIT_DETAIL_BIT_PERMUTE_HPP
 #define XSTD_BITS_BIT_DETAIL_BIT_PERMUTE_HPP
 
-#include <xstd/bits/bit/detail/bit_width.hpp>                      // bit_width_v
-#include <xstd/bits/bit_valarray/detail/block_compress_expand.hpp> // compress_blocks, compressed, expand_blocks, scatter_assign, stored_masks
-#include <xstd/bits/detail/borrowed_bits.hpp>                      // borrowed_bits
-#include <xstd/bits/detail/intrinsic.hpp>                          // popcount
-#include <xstd/bits/detail/ownership.hpp>                          // owner, reads, set_reading_tag, storage_access
-#include <xstd/ints/concepts/unsigned_integer.hpp>                 // unsigned_integer
-#include <xstd/ints/limits.hpp>                                    // numeric_limits
-#include <cassert>                                                 // assert
-#include <cstddef>                                                 // size_t
-#include <ranges>                                                  // iota
-#include <span>                                                    // dynamic_extent, span
-#include <type_traits>                                             // is_const_v, is_volatile_v
+#include <xstd/bits/detail/bit_width.hpp>          // bit_width_v
+#include <xstd/bits/detail/borrowed_bits.hpp>      // borrowed_bits
+#include <xstd/bits/detail/compress_blocks.hpp>    // compress_blocks
+#include <xstd/bits/detail/compressed.hpp>         // compressed
+#include <xstd/bits/detail/expand_blocks.hpp>      // expand_blocks
+#include <xstd/bits/detail/intrinsic.hpp>          // popcount
+#include <xstd/bits/detail/ownership.hpp>          // owner, reads, set_reading_tag, storage_access
+#include <xstd/bits/detail/scatter.hpp>            // scatter_assign
+#include <xstd/bits/detail/stored_masks.hpp>       // stored_masks
+#include <xstd/ints/concepts/unsigned_integer.hpp> // unsigned_integer
+#include <xstd/ints/limits.hpp>                    // numeric_limits
+#include <cassert>                                 // assert
+#include <cstddef>                                 // size_t
+#include <ranges>                                  // iota
+#include <span>                                    // dynamic_extent, span
+#include <type_traits>                             // is_const_v, is_volatile_v
+#include <utility>                                 // index_sequence, make_index_sequence
 
 // P3104's bit_compress and bit_expand over the blocks of two owners of one type, a block at a time.
 namespace xstd::bits::detail {
@@ -116,12 +121,20 @@ template<xstd::unsigned_integer U, class Bits>
         auto const masks      = m.blocks();
         auto result           = U{};
         auto fill             = 0UZ;
-        for (auto const k : std::views::iota(0UZ, masks.size())) {
-                // U full means every later mask block is empty, so no shift ever reaches the whole width of U.
-                if (fill < digits) {
-                        result = static_cast<U>(result | static_cast<U>(static_cast<U>(compressed(source[k], masks[k])) << fill));
-                }
+        auto const pack       = [&](std::size_t k) -> void {
+                // Once U is full, every later mask block is empty and packs nought under any shift, so the shift wraps.
+                result = static_cast<U>(result | static_cast<U>(static_cast<U>(compressed(source[k], masks[k])) << (fill % digits)));
                 fill += detail::popcount(masks[k]);
+        };
+        if constexpr (Bits::folds_blocks) {
+                // A fold: GCC unrolls constant indices to a PEXT per block and no branch, where it keeps a loop over k.
+                [&]<std::size_t... I>(std::index_sequence<I...>) -> void {
+                        (pack(I), ...);
+                }(std::make_index_sequence<Bits::static_num_blocks>());
+        } else {
+                for (auto const k : std::views::iota(0UZ, masks.size())) {
+                        pack(k);
+                }
         }
         return result;
 }

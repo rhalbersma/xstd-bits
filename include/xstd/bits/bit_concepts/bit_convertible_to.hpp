@@ -6,10 +6,10 @@
 #ifndef XSTD_BITS_BIT_CONCEPTS_BIT_CONVERTIBLE_TO_HPP
 #define XSTD_BITS_BIT_CONCEPTS_BIT_CONVERTIBLE_TO_HPP
 
-#include <xstd/bits/bit/bit_convert.hpp> // bit_convert
-#include <concepts>                      // same_as
-#include <type_traits>                   // remove_cv_t
-#include <utility>                       // forward
+#include <xstd/bits/detail/bit_convert.hpp> // bit_convert
+#include <concepts>                         // same_as
+#include <type_traits>                      // remove_cv_t
+#include <utility>                          // forward
 
 namespace xstd {
 

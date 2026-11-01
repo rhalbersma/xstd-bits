@@ -6,14 +6,14 @@
 #ifndef XSTD_BITS_BIT_SET_BIT_FLAG_SET_HPP
 #define XSTD_BITS_BIT_SET_BIT_FLAG_SET_HPP
 
-#include <xstd/bits/bit_set/bit_fixed_set.hpp>     // basic_bit_fixed_set
-#include <xstd/bits/bit_set/bit_flag_mapping.hpp>  // bit_flag_mapping
-#include <xstd/bits/bit_set/detail/flag_block.hpp> // default_flag_width_v, flag_enumeration, flag_mask
-#include <xstd/bits/bit_type_traits/bit_least.hpp> // bit_least
-#include <xstd/ints/concepts/bit_mask.hpp>         // bit_mask
-#include <xstd/ints/concepts/signed_integer.hpp>   // signed_integer
-#include <cstddef>                                 // size_t
-#include <functional>                              // greater
+#include <xstd/bits/bit_set/detail/bit_fixed_set.hpp>    // basic_bit_fixed_set
+#include <xstd/bits/bit_set/detail/bit_flag_mapping.hpp> // bit_flag_mapping
+#include <xstd/bits/bit_set/detail/flag_block.hpp>       // default_flag_width_v, flag_enumeration, flag_mask
+#include <xstd/bits/detail/bit_least.hpp>                // bit_least
+#include <xstd/ints/concepts/bit_mask.hpp>               // bit_mask
+#include <xstd/ints/concepts/signed_integer.hpp>         // signed_integer
+#include <cstddef>                                       // size_t
+#include <functional>                                    // greater
 
 // A flag type: the set of a bitmask type's one-bit values below N, which converts with the mask itself.
 namespace xstd {

@@ -6,13 +6,13 @@
 #ifndef XSTD_BITS_DETAIL_BIT_BLOCKS_CAPACITY_HPP
 #define XSTD_BITS_DETAIL_BIT_BLOCKS_CAPACITY_HPP
 
-#include <xstd/bits/bit_concepts/bit_blocks.hpp>           // bit_blocks
-#include <xstd/bits/bit_type_traits/bit_blocks_extent.hpp> // bit_blocks_extent_v
-#include <xstd/bits/detail/resizable_bit_blocks.hpp>       // resizable_bit_blocks
-#include <cstddef>                                         // size_t
-#include <ranges>                                          // range_value_t
-#include <span>                                            // dynamic_extent
-#include <type_traits>                                     // integral_constant, is_pointer_v
+#include <xstd/bits/detail/bit_blocks.hpp>           // bit_blocks
+#include <xstd/bits/detail/bit_blocks_extent.hpp>    // bit_blocks_extent_v
+#include <xstd/bits/detail/resizable_bit_blocks.hpp> // resizable_bit_blocks
+#include <cstddef>                                   // size_t
+#include <ranges>                                    // range_value_t
+#include <span>                                      // dynamic_extent
+#include <type_traits>                               // integral_constant, is_pointer_v
 
 namespace xstd::bits::detail {
 

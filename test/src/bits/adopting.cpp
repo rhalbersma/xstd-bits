@@ -7,12 +7,12 @@
 #include <test/whole_blocks.hpp>                    // whole_blocks
 #include <xstd/bits/bit_array.hpp>                  // bit_array
 #include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
-#include <xstd/bits/bit_ranges/from_blocks.hpp>     // from_blocks, from_blocks_t
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_key_mapping.hpp>    // bit_key_mapping
 #include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
 #include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container
+#include <xstd/bits/detail/from_blocks.hpp>         // from_blocks, from_blocks_t
 #include <xstd/bits/detail/inplace_blocks.hpp>      // inplace_blocks
 #include <xstd/bits/detail/ownership.hpp>           // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor

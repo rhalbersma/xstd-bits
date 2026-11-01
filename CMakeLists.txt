@@ -76,18 +76,40 @@ target_sources(
         include/xstd/bits/bit_valarray/detail/valarray_adaptor.hpp
         include/xstd/bits/bit_valarray/detail/valarray_proxy.hpp
         include/xstd/bits/bit_valarray/detail/gslice_index.hpp
-        include/xstd/bits/bit_valarray/detail/block_compress_expand.hpp
+        include/xstd/bits/detail/bit_at.hpp
+        include/xstd/bits/detail/bit_stream.hpp
+        include/xstd/bits/detail/block_width.hpp
+        include/xstd/bits/detail/compress_blocks.hpp
+        include/xstd/bits/detail/compressed.hpp
+        include/xstd/bits/detail/expand_blocks.hpp
+        include/xstd/bits/detail/expand_indices.hpp
+        include/xstd/bits/detail/expand_run.hpp
+        include/xstd/bits/detail/expanded.hpp
+        include/xstd/bits/detail/fill_blocks.hpp
+        include/xstd/bits/detail/fill_indices.hpp
+        include/xstd/bits/detail/fill_run.hpp
+        include/xstd/bits/detail/gather_indices.hpp
+        include/xstd/bits/detail/gather_run.hpp
+        include/xstd/bits/detail/permutes_in_hardware.hpp
+        include/xstd/bits/detail/scatter.hpp
+        include/xstd/bits/detail/slice_masks.hpp
+        include/xstd/bits/detail/stored_masks.hpp
+        include/xstd/bits/detail/word_masks.hpp
         include/xstd/bits/detail/borrowed_bits.hpp
+        include/xstd/bits/detail/basic_bit_vector.hpp
+        include/xstd/bits/detail/basic_bit_vector_container_hash.hpp
+        include/xstd/bits/detail/bit_blocks.hpp
+        include/xstd/bits/detail/bit_blocks_extent.hpp
+        include/xstd/bits/detail/bit_constructible_from.hpp
+        include/xstd/bits/detail/bit_storage.hpp
+        include/xstd/bits/detail/bit_storage_rebind.hpp
+        include/xstd/bits/detail/from_blocks.hpp
         include/xstd/bits/bit_algorithm.hpp
         include/xstd/bits/bit_algorithm/detail/block_includes.hpp
         include/xstd/bits/bit_algorithm/detail/blit.hpp
-        include/xstd/bits/bit_algorithm/detail/comparable.hpp
-        include/xstd/bits/bit_algorithm/detail/compare.hpp
         include/xstd/bits/bit_algorithm/detail/count.hpp
         include/xstd/bits/bit_algorithm/detail/find.hpp
         include/xstd/bits/bit_algorithm/detail/find_if.hpp
-        include/xstd/bits/bit_algorithm/detail/mismatch.hpp
-        include/xstd/bits/bit_algorithm/detail/sequence.hpp
         include/xstd/bits/bit_algorithm/detail/walk.hpp
         include/xstd/bits/bit_algorithm/bit_all_of.hpp
         include/xstd/bits/bit_algorithm/bit_any_of.hpp
@@ -160,16 +182,16 @@ target_sources(
         include/xstd/bits/bit_functional/bit_less.hpp
         include/xstd/bits/bit_functional/bit_less_equal.hpp
         include/xstd/bits/bit_functional/bit_not_equal_to.hpp
-        include/xstd/bits/bit_functional/detail/bit_hasher.hpp
         include/xstd/bits/bit_iterator.hpp
         include/xstd/bits/bit_iterator/bit_advance.hpp
         include/xstd/bits/bit_iterator/bit_distance.hpp
         include/xstd/bits/bit_iterator/bit_next.hpp
         include/xstd/bits/bit_iterator/bit_prev.hpp
-        include/xstd/bits/bit_iterator/detail/concepts.hpp
         include/xstd/bits/bit_iterator/detail/select.hpp
         include/xstd/bits/bit_ranges.hpp
         include/xstd/bits/bit_ranges/from_blocks.hpp
+        include/xstd/bits/bit_utility.hpp
+        include/xstd/bits/bit_utility/indeterminate.hpp
         include/xstd/bits/bit_set.hpp
         include/xstd/bits/bit_set/bit_inplace_set.hpp
         include/xstd/bits/bit_set/bit_enum_set.hpp
@@ -179,7 +201,6 @@ target_sources(
         include/xstd/bits/bit_set/bit_set.hpp
         include/xstd/bits/bit_set/bit_set_view.hpp
         include/xstd/bits/bit_set/bit_fixed_set.hpp
-        include/xstd/bits/bit_set/indeterminate.hpp
         include/xstd/bits/bit_set/erase_if.hpp
         include/xstd/bits/bit_set/hash.hpp
         include/xstd/bits/bit_set/container_hash.hpp
@@ -232,7 +253,6 @@ target_sources(
         include/xstd/bits/ext/boost/detail/dynamic_bitset.hpp
         include/xstd/bits/ext/boost/detail/small_blocks.hpp
         include/xstd/bits/detail/bit_layout.hpp
-        include/xstd/bits/bit/detail/bit_convertible.hpp
         include/xstd/bits/bit/detail/bit_permute.hpp
         include/xstd/bits/bit/detail/shift_by.hpp
         include/xstd/bits/detail/bit_blocks_capacity.hpp
@@ -240,21 +260,59 @@ target_sources(
         include/xstd/bits/detail/owned_bit_blocks.hpp
         include/xstd/bits/detail/resizable_bit_blocks.hpp
         include/xstd/bits/detail/storage_rebind.hpp
-        include/xstd/bits/bit/detail/bit_width.hpp
         include/xstd/bits/detail/range_const_reference.hpp
         include/xstd/bits/detail/shift.hpp
         include/xstd/bits/detail/walk_block.hpp
         include/xstd/bits/detail/storage_ptr.hpp
         include/xstd/bits/detail/throw.hpp
-        include/xstd/bits/detail/views.hpp
+        include/xstd/bits/bit_span/detail/views.hpp
         include/xstd/bits/detail/blocks.hpp
-        include/xstd/bits/bit_type_traits/detail/blocks_extent.hpp
+        include/xstd/bits/detail/blocks_extent.hpp
         include/xstd/bits/detail/non_volatile.hpp
         include/xstd/bits/detail/num_blocks.hpp
         include/xstd/bits/detail/owner_members.hpp
         include/xstd/bits/detail/key_order.hpp
         include/xstd/bits/detail/ownership.hpp
         include/xstd/bits/detail/rebind.hpp
+        include/xstd/bits/bit_algorithm/detail/bit_intersects.hpp
+        include/xstd/bits/bit_array/detail/bit_array.hpp
+        include/xstd/bits/bit_iterator/detail/bit_advance.hpp
+        include/xstd/bits/bit_set/detail/bit_fixed_set.hpp
+        include/xstd/bits/bit_set/detail/bit_flag_mapping.hpp
+        include/xstd/bits/bit_set/detail/bit_key_mapping.hpp
+        include/xstd/bits/bit_set/detail/bit_set.hpp
+        include/xstd/bits/bit_set/detail/bit_set_view.hpp
+        include/xstd/bits/bit_span/detail/bit_subspan.hpp
+        include/xstd/bits/bit_type_traits/detail/bit_resize.hpp
+        include/xstd/bits/bit_valarray/detail/bit_gslice.hpp
+        include/xstd/bits/bit_valarray/detail/bit_gslice_array.hpp
+        include/xstd/bits/bit_valarray/detail/bit_indirect_array.hpp
+        include/xstd/bits/bit_valarray/detail/bit_inplace_valarray.hpp
+        include/xstd/bits/bit_valarray/detail/bit_mask_array.hpp
+        include/xstd/bits/bit_valarray/detail/bit_slice.hpp
+        include/xstd/bits/bit_valarray/detail/bit_slice_array.hpp
+        include/xstd/bits/bit_valarray/detail/bit_valarray.hpp
+        include/xstd/bits/detail/basic_bit_vector_hash.hpp
+        include/xstd/bits/detail/bit_convert.hpp
+        include/xstd/bits/detail/bit_convertible.hpp
+        include/xstd/bits/detail/bit_equal.hpp
+        include/xstd/bits/detail/bit_hash.hpp
+        include/xstd/bits/detail/bit_hasher.hpp
+        include/xstd/bits/detail/bit_index_mapping.hpp
+        include/xstd/bits/detail/bit_least.hpp
+        include/xstd/bits/detail/bit_lexicographical_compare_three_way.hpp
+        include/xstd/bits/detail/bit_mask_mapping.hpp
+        include/xstd/bits/detail/bit_rebind.hpp
+        include/xstd/bits/detail/bit_underlying.hpp
+        include/xstd/bits/detail/bit_width.hpp
+        include/xstd/bits/detail/comparable_readings.hpp
+        include/xstd/bits/detail/first_mismatch.hpp
+        include/xstd/bits/detail/indeterminate.hpp
+        include/xstd/bits/detail/iterator_concepts.hpp
+        include/xstd/bits/detail/sequence_hash.hpp
+        include/xstd/bits/detail/sequence_storage.hpp
+        include/xstd/bits/detail/sized_bit_index_mapping.hpp
+        include/xstd/bits/detail/storage_compare.hpp
 )
 
 # The list above is hand-written, and it drifted: the three inplace headers reached include/ and bits.hpp but never this file set, so every installed consumer's <xstd/bits.hpp> named three headers that were not installed. No compiler leg could see it -- they all build from the source tree -- and the consumer translation unit that does build against the install tree had included one container header until it was made the interface gate. Checked here from now on, the way test/ checks that every public header is mirrored. Every header under include/, not just include/xstd/: include/ is exactly what a consumer gets, and the workloads that used to sit beside it now live in examples/. A stray directory here would otherwise ride the file set's BASE_DIRS onto every add_subdirectory consumer's include path while never being installed. HEADER_SET answers in absolute paths, so the glob asks for them that way and the message relativizes back.

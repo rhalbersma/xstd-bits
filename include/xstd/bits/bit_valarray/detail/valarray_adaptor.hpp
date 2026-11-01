@@ -6,30 +6,30 @@
 #ifndef XSTD_BITS_BIT_VALARRAY_DETAIL_VALARRAY_ADAPTOR_HPP
 #define XSTD_BITS_BIT_VALARRAY_DETAIL_VALARRAY_ADAPTOR_HPP
 
-#include <xstd/bits/bit_concepts/bit_blocks.hpp>            // bit_blocks
-#include <xstd/bits/bit_ranges/from_blocks.hpp>             // from_blocks, from_blocks_t
-#include <xstd/bits/bit_valarray/bit_gslice.hpp>            // bit_gslice
-#include <xstd/bits/bit_valarray/bit_gslice_array.hpp>      // bit_gslice_array
-#include <xstd/bits/bit_valarray/bit_indirect_array.hpp>    // bit_indirect_array
-#include <xstd/bits/bit_valarray/bit_mask_array.hpp>        // bit_mask_array
-#include <xstd/bits/bit_valarray/bit_slice.hpp>             // bit_slice
-#include <xstd/bits/bit_valarray/bit_slice_array.hpp>       // bit_slice_array
-#include <xstd/bits/bit_valarray/detail/valarray_proxy.hpp> // gslice_selection, indirect_selection, mask_selection, proxy_access, slice_selection, valarray_owner_of
-#include <xstd/bits/detail/adapted_bits.hpp>                // adapted_bits
-#include <xstd/bits/detail/assert.hpp>                      // XSTD_BITS_ASSERT
-#include <xstd/bits/detail/bit_block_container.hpp>         // bit_block_container_type
-#include <xstd/bits/detail/borrowed_bits.hpp>               // borrowed_bits
-#include <xstd/bits/detail/ownership.hpp>                   // owned_storage, storage, storage_access, valarray_reading_tag, window
-#include <xstd/bits/detail/sequence_adaptor.hpp>            // sequence_adaptor
-#include <xstd/misc/type_traits/empty_base_type.hpp>        // empty_base_type
-#include <algorithm>                                        // copy
-#include <cassert>                                          // assert
-#include <cstddef>                                          // size_t
-#include <initializer_list>                                 // initializer_list
-#include <span>                                             // span
-#include <type_traits>                                      // conditional_t, is_nothrow_copy_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v
-#include <utility>                                          // in_place, move
-#include <valarray>                                         // gslice, slice, valarray
+#include <xstd/bits/bit_valarray/detail/bit_gslice.hpp>         // bit_gslice
+#include <xstd/bits/bit_valarray/detail/bit_gslice_array.hpp>   // bit_gslice_array
+#include <xstd/bits/bit_valarray/detail/bit_indirect_array.hpp> // bit_indirect_array
+#include <xstd/bits/bit_valarray/detail/bit_mask_array.hpp>     // bit_mask_array
+#include <xstd/bits/bit_valarray/detail/bit_slice.hpp>          // bit_slice
+#include <xstd/bits/bit_valarray/detail/bit_slice_array.hpp>    // bit_slice_array
+#include <xstd/bits/bit_valarray/detail/valarray_proxy.hpp>     // gslice_selection, indirect_selection, mask_selection, proxy_access, slice_selection, valarray_owner_of
+#include <xstd/bits/detail/adapted_bits.hpp>                    // adapted_bits
+#include <xstd/bits/detail/assert.hpp>                          // XSTD_BITS_ASSERT
+#include <xstd/bits/detail/bit_block_container.hpp>             // bit_block_container_type
+#include <xstd/bits/detail/bit_blocks.hpp>                      // bit_blocks
+#include <xstd/bits/detail/borrowed_bits.hpp>                   // borrowed_bits
+#include <xstd/bits/detail/from_blocks.hpp>                     // from_blocks, from_blocks_t
+#include <xstd/bits/detail/ownership.hpp>                       // owned_storage, storage, storage_access, valarray_reading_tag, window
+#include <xstd/bits/detail/sequence_adaptor.hpp>                // sequence_adaptor
+#include <xstd/misc/type_traits/empty_base_type.hpp>            // empty_base_type
+#include <algorithm>                                            // copy
+#include <cassert>                                              // assert
+#include <cstddef>                                              // size_t
+#include <initializer_list>                                     // initializer_list
+#include <span>                                                 // span
+#include <type_traits>                                          // conditional_t, is_nothrow_copy_constructible_v, is_nothrow_move_constructible_v, is_nothrow_swappable_v
+#include <utility>                                              // in_place, move
+#include <valarray>                                             // gslice, slice, valarray
 
 // The valarray reading, [valarray] at bool over a bit_block_container it owns: every operator acts elementwise.
 namespace xstd::bits::detail {

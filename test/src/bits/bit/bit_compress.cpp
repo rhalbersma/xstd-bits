@@ -155,6 +155,15 @@ BOOST_AUTO_TEST_CASE(AnIntegerFilledByTheFirstBlockIgnoresTheRest)
         BOOST_CHECK_EQUAL(xstd::bit_compress<std::uint8_t>(board{1, 3, 100}, board{0, 1, 2, 3, 4, 5, 6, 7}), 0b1010U);
 }
 
+// A width carried at run time packs into an integer block after block, as a fixed one does, and fills it as far.
+BOOST_AUTO_TEST_CASE(ARunTimeWidthPacksIntoAnInteger)
+{
+        auto const x = xstd::bit_convert<xstd::bit_vector>(board{3, 70, 130, 191});
+        auto const m = xstd::bit_convert<xstd::bit_vector>(board{3, 4, 70, 71, 130, 190, 191});
+        BOOST_CHECK_EQUAL(xstd::bit_compress<std::uint64_t>(x, m), 0b1010101U);
+        BOOST_CHECK_EQUAL(xstd::bit_compress<std::uint8_t>(xstd::bit_convert<xstd::bit_vector>(board{1, 3, 100}), xstd::bit_convert<xstd::bit_vector>(board{0, 1, 2, 3, 4, 5, 6, 7})), 0b1010U);
+}
+
 // A valarray's mask subscript gathers what bit_compress packs: the two run one kernel.
 BOOST_AUTO_TEST_CASE(AValarrayGathersWhatItPacks)
 {

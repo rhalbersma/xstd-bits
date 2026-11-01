@@ -6,9 +6,9 @@
 #ifndef XSTD_BITS_BIT_TYPE_TRAITS_BIT_ALIGN_HPP
 #define XSTD_BITS_BIT_TYPE_TRAITS_BIT_ALIGN_HPP
 
-#include <xstd/bits/bit_type_traits/bit_resize.hpp> // bit_resize
-#include <xstd/bits/detail/num_blocks.hpp>          // whole_blocks_width_v
-#include <xstd/bits/detail/rebind.hpp>              // rebind_block_t, rebind_width_v, resizable
+#include <xstd/bits/bit_type_traits/detail/bit_resize.hpp> // bit_resize
+#include <xstd/bits/detail/num_blocks.hpp>                 // whole_blocks_width_v
+#include <xstd/bits/detail/rebind.hpp>                     // rebind_block_t, rebind_width_v, resizable
 
 namespace xstd {
 
