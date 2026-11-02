@@ -52,9 +52,9 @@ things set them apart from the folders above:
 `include/xstd/bits/detail/bit_block_container.hpp`, the storage under every container, 650 mutants. It reaches some
 150 tests, and its own test takes most of a minute to build, so like the kernels it is run against the 17 tests that
 killed one of its mutants, in a weekly job of its own, `storage` in [`mutation.yml`](../.github/workflows/mutation.yml),
-which names them. Before that list was drawn, each survivor was run against at least 85 of the header's 149 dependent
-tests, the first twelve against all of them. Most of those listed below change a branch that only the type selects,
-or a value no caller reads.
+which names them. Before that list was drawn, twelve of its survivors were run against all 149 of the header's
+dependent tests, twenty more against at least 85, and the last six against those 17 alone. Most of those listed below
+change a branch that only the type selects, or a value no caller reads.
 
 ## Equivalent mutants
 
