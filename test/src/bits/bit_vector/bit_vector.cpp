@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/container/allocator.hpp>               // basic_guarantee, copy_and_swap_propagating, copy_propagating, ledger_allocator, strong_guarantee
+#include <test/container/allocator.hpp>               // basic_guarantee, copy_and_swap_propagating, copy_propagating, ledger, ledger_allocator, non_propagating, propagating, strong_guarantee
 #include <test/sanitizer.hpp>                         // IWYU pragma: keep; TEST_HAS_ADDRESS_SANITIZER
 #include <test/sequence/dense.hpp>                    // yields_every_position
 #include <test/sequence/rotation.hpp>                 // permutation_sweep, permutes_ten_bits
@@ -324,6 +324,34 @@ BOOST_AUTO_TEST_CASE(InsertingWithinCapacityAllocatesNothing)
                 BOOST_CHECK_EQUAL(book.refusals, 0);
                 BOOST_CHECK(std::ranges::equal(v, m));
         }
+}
+
+// A copy into storage already as wide as the source reuses it, so with every allocation refused it still completes.
+BOOST_AUTO_TEST_CASE(CopyingWithinCapacityAllocatesNothing)
+{
+        using X      = xstd::basic_bit_vector<std::vector<std::uint8_t, test::container::propagating<std::uint8_t>>>;
+        auto book    = test::container::ledger();
+        auto x       = X(16UZ, test::container::ledger_allocator<X>(book));
+        auto const y = X(16UZ, true, test::container::ledger_allocator<X>(book));
+        book.budget  = 0;
+        x            = y;
+        book.budget  = -1;
+        BOOST_CHECK_EQUAL(book.refusals, 0);
+        BOOST_CHECK(x == y);
+}
+
+// Equal allocators that do not propagate on move still let a move take the blocks whole, allocating nothing.
+BOOST_AUTO_TEST_CASE(MovingUnderEqualAllocatorsAllocatesNothing)
+{
+        using X     = xstd::basic_bit_vector<std::vector<std::uint8_t, test::container::non_propagating<std::uint8_t>>>;
+        auto book   = test::container::ledger();
+        auto x      = X(test::container::ledger_allocator<X>(book));
+        auto y      = X(1'000UZ, true, test::container::ledger_allocator<X>(book));
+        book.budget = 0;
+        x           = std::move(y);
+        book.budget = -1;
+        BOOST_CHECK_EQUAL(book.refusals, 0);
+        BOOST_CHECK(x == X(1'000UZ, true));
 }
 
 // Inserting at the end grows as push_back does, geometrically, so n insertions make O(log n) allocations.
