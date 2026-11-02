@@ -43,17 +43,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: rhalbersma/cpp-ci/.github/actions/apt-retry@196a3cb571dbf0e9e7b104b4586694753299553a
+      - uses: rhalbersma/cpp-ci/.github/actions/apt-retry@0e0b8a1ec3476589bb39dc798d41551e18165916
 
       - name: Install GCC
-        uses: rhalbersma/cpp-ci/.github/actions/install-gcc@196a3cb571dbf0e9e7b104b4586694753299553a
+        uses: rhalbersma/cpp-ci/.github/actions/install-gcc@0e0b8a1ec3476589bb39dc798d41551e18165916
         with:
           version: "15"
           trunk: false
 
       - name: Install Clang
         if: startsWith(matrix.compiler, 'clang')
-        uses: rhalbersma/cpp-ci/.github/actions/install-clang@196a3cb571dbf0e9e7b104b4586694753299553a
+        uses: rhalbersma/cpp-ci/.github/actions/install-clang@0e0b8a1ec3476589bb39dc798d41551e18165916
         with:
           version: "22"
           llvm_suffix: "-22"
@@ -68,7 +68,7 @@ jobs:
 
       - name: Locate the overlay triplets
         id: overlay
-        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-overlay@196a3cb571dbf0e9e7b104b4586694753299553a
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-overlay@0e0b8a1ec3476589bb39dc798d41551e18165916
 
       - name: Restore vcpkg binary cache
         id: vcpkg-cache
@@ -79,10 +79,10 @@ jobs:
           restore-keys: ${{ env.VCPKG_CACHE_KEY }}
 
       - name: Check out vcpkg at the pinned commit
-        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-setup@196a3cb571dbf0e9e7b104b4586694753299553a
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-setup@0e0b8a1ec3476589bb39dc798d41551e18165916
 
       - name: Install the dependencies
-        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-install@196a3cb571dbf0e9e7b104b4586694753299553a
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-install@0e0b8a1ec3476589bb39dc798d41551e18165916
         with:
           triplet: ${{ env.TRIPLET }}
           overlay_triplets: ${{ steps.overlay.outputs.triplets }}
