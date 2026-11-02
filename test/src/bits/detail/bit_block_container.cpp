@@ -1657,6 +1657,18 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreBlockAtOnTheOperand, T, AlignedBlockA
         }
 }
 
+// The ranged forms over spans ending where the blocks end, the empty one at the end included: no walk reads past them.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsStopAtTheLastBlock, T, AlignedBlockAtTypes)
+{
+        auto const c = aligned_sample<T>();
+        auto const r = reference(c);
+        for (auto const n : {0UZ, 8UZ, 16UZ, 24UZ}) {
+                auto const slice = std::views::iota(n, 24UZ) | std::views::transform([&](std::size_t i) -> bool { return r[i]; });
+                BOOST_CHECK_EQUAL(c.any(n, 24UZ - n), std::ranges::any_of(slice, std::identity()));
+                BOOST_CHECK_EQUAL(c.all(n, 24UZ - n), std::ranges::all_of(slice, std::identity()));
+        }
+}
+
 namespace {
 
 // Whether the blocks name a vehicle, asked so a refusal answers false rather than erroring.
