@@ -16,7 +16,7 @@
 #include <xstd/bits/bit_type_traits/bit_align.hpp> // bit_align
 #include <xstd/bits/bit_type_traits/bit_fast.hpp>  // bit_fast
 #include <xstd/bits/bit_type_traits/bit_least.hpp> // bit_least, least_block_t
-#include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_TEST_CONTEXT
 #include <algorithm>                               // ranges::equal
 #include <array>                                   // array
 #include <bitset>                                  // bitset
@@ -30,7 +30,7 @@
 #include <stdexcept>                               // out_of_range
 #include <tuple>                                   // tuple, tuple_cat
 #include <type_traits>                             // integral_constant, is_constructible_v, is_convertible_v, is_member_function_pointer_v
-#include <utility>                                 // declval
+#include <utility>                                 // declval, index_sequence, make_index_sequence
 
 BOOST_AUTO_TEST_SUITE(BitFiniteSet)
 
@@ -230,6 +230,25 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItYieldsAscendingKeys, T, Types)
                 }
         }
         test::set::yields_ascending_keys(c);
+}
+
+// At every width up to three narrow blocks, an empty set begins at its end and a set of one key begins at that key.
+BOOST_AUTO_TEST_CASE(EveryWidthUpToThreeBlocksBeginsAtItsFirstKey)
+{
+        auto const at_width = []<std::size_t N>() -> void {
+                using S = fixed_set_of<std::uint8_t, N>;
+                BOOST_TEST_CONTEXT("N = " << N)
+                {
+                        auto const empty = S();
+                        BOOST_CHECK(empty.begin() == empty.end());
+                        for (auto const key : std::views::iota(0UZ, N)) {
+                                auto c = S();
+                                c.insert(key);
+                                BOOST_CHECK_EQUAL(*c.begin(), key);
+                        }
+                }
+        };
+        [&]<std::size_t... N>(std::index_sequence<N...>) -> void { (at_width.template operator()<N>(), ...); }(std::make_index_sequence<25>());
 }
 
 // A static width is a capacity and a std::bitset's own width both, so position n here is bit n there.
