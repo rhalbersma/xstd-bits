@@ -374,6 +374,9 @@ if(PROJECT_IS_TOP_LEVEL)
         set(CMAKE_CXX_STANDARD ${${project_option_prefix}_CXX_STANDARD})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+        # The kernels branch on the instructions they are compiled for: AVX-512BW, fast PDEP and PEXT, or neither. A build for the machine it runs on compiles in one of those paths and skips the others, so mutation testing them takes one build per level, each run on a machine that has it.
+        set(${project_option_prefix}_TEST_ARCH native CACHE STRING "The -march of the tests on Clang and GCC: native, or a level such as x86-64 or x86-64-v3")
+
         # Strict, as xstd and tabula compile, except where strict mode would drop the widest Block: <bit>'s functions take std::unsigned_integral alone, and libstdc++ before 16 carries unsigned __int128 into that concept only outside __STRICT_ANSI__, where libc++ and libstdc++ 16 always do. The question is asked of the toolchain rather than of a version number, so a clang on libstdc++ 15 gets the answer that standard library gives, and MSVC and 32-bit targets, which have no unsigned __int128 to lose, stay strict.
         set(CMAKE_CXX_EXTENSIONS OFF)
         include(CheckCXXSourceCompiles)

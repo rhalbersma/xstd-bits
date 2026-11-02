@@ -22,7 +22,9 @@ python3 tools/mutate.py $(cd include && find xstd/bits/bit_algorithm xstd/bits/b
 
 `--list` prints the mutants without building anything. `--lines`, `--operators` and `--tests` narrow a run to one
 site, one kind of change or some of the tests. `--resume` takes the verdicts an earlier `--output` reached and
-decides the rest, and `--limit` decides only that many, so a long run can be split. Warnings are off as errors
+decides the rest, and `--limit` decides only that many, so a long run can be split. `--max-targets` stops a mutant after
+that many of the targets that depend on its header, the likeliest to catch it first. A survivor records how many it
+passed, and a later `--resume` run with a higher cap, or none, widens it from there rather than from the start. Warnings are off as errors
 because a mutant that only trips a warning has not been caught by a test.
 
 Only executables CTest runs with no arguments and the default pass rule are run. The hardened preconditions, a
@@ -30,10 +32,24 @@ death test handed the violation to commit, are not.
 
 ## Scope
 
-`include/xstd/bits/bit_algorithm/` and `include/xstd/bits/bit_iterator/`, 417 mutants. Every dependent test was run against each survivor. The block
-kernels under `include/xstd/bits/detail/` follow: each of their headers is included by some 170 tests, and the
-portable and BMI2 paths of `intrinsic.hpp` are compiled out on a machine with AVX-512, so they need builds for those
-targets as well.
+`include/xstd/bits/bit_algorithm/` and `include/xstd/bits/bit_iterator/`, 417 mutants. Every dependent test was run
+against each survivor.
+
+The block kernels under `include/xstd/bits/detail/`, 351 mutants over 24 headers: the gathers, scatters and masks the
+valarray's subscripts and the `[bit.permute]` functions build on, the block walks, shifts and intrinsics, and the
+comparisons. [`tools/mutate-kernels.sh`](../tools/mutate-kernels.sh) runs them as the weekly workflow does. Two
+things set them apart from the folders above:
+
+- **They branch on the instruction set.** `intrinsic.hpp` expands a block into bools with one AVX-512BW store, a PDEP
+  per byte where PDEP is fast, or a table, and `compressed.hpp` and `expanded.hpp` skip a full mask only where no
+  instruction permutes bits. A build for the machine at hand compiles in one of those paths, so the kernels are built
+  with `XSTD_BITS_TEST_ARCH` set to a level instead: `x86-64-v3` compiles in every path but the portable one, and
+  `x86-64` compiles in that one. The AVX-512 store has no operator to mutate.
+- **Each is run against the tests that call it.** A kernel header reaches some 200 tests, most of which only include
+  it; run against all of them, a survivor costs hours. Each group of headers is run against the tests that killed one
+  of its mutants, so a survivor there is a gap in those tests or a mutant listed below.
+
+`bit_block_container.hpp`, the storage under every container, follows with 650 mutants.
 
 ## Equivalent mutants
 
@@ -62,3 +78,7 @@ in that text, so an edit to the line, or a new line with the same text above it,
 | `xstd/bits/bit_iterator/detail/select.hpp` | `auto const m    = static_cast<std::size_t>(n < 0 ? -n : n);` | 1 | 46 | `<` → `<=` | At `n == 0` only, where `-n == n`; `advance_keys` has also returned by then. |
 | `xstd/bits/bit_iterator/detail/select.hpp` | `auto const result = ((0 < n) != descends<typename std::iter_reference_t<I>::adaptor_type>)` | 1 | 25 | `<` → `<=` | At `n == 0` only, and `advance_keys` has returned before this line when `n == 0`. |
 | `xstd/bits/bit_iterator/detail/select.hpp` | `return n < 0 ? -rest : rest;` | 1 | 10 | `<` → `<=` | At `n == 0` only, and `advance_keys` has returned before this line when `n == 0`. |
+| `xstd/bits/detail/word_masks.hpp` | `if constexpr (digits <= word) {` | 1 | 22 | `<=` → `<` | At a 64-bit block only, where the wider-block loop runs once over the one word the first branch shifts by zero, at an index always below `m_words.size()`. |
+| `xstd/bits/detail/slice_masks.hpp` | `, m_spans_end(m_first + 1UZ + (((m_last - m_first - std::ranges::min(m_last - m_first, 2UZ)) / m_span) * m_span))` | 1 | 25 | `1UZ` → `0UZ` | The period loop steps by `m_span` from `m_first + 1`, and `m_span` is at least 2 on that branch, so a bound one lower stops it at the same block. |
+| `xstd/bits/detail/slice_masks.hpp` | `, m_spans_end(m_first + 1UZ + (((m_last - m_first - std::ranges::min(m_last - m_first, 2UZ)) / m_span) * m_span))` | 1 | 77 | `-` → `+` | `min` gives 2 for `m_last + m_first` as for `m_last - m_first` once the latter is 2 or more, and at 1 `for_each` returns after the first block before it reads `m_spans_end`. |
+| `xstd/bits/detail/intrinsic.hpp` | `for (auto const byte : std::views::iota(0UZ, table.size())) {` | 1 | 41 | `0UZ` → `1UZ` | Byte 0's row is all zeros, the value the table starts with. |

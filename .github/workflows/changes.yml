@@ -13,8 +13,9 @@ on:
     outputs:
       build:
         description: >
-          'true' unless the event is a pull request whose every changed file is
-          one no compiler ladder builds; 'false' only then.
+          'true' unless the event is a pull request Dependabot opened, or one
+          whose every changed file is one no compiler ladder builds; 'false'
+          only then.
         value: ${{ jobs.changes.outputs.build }}
 
 jobs:
@@ -36,10 +37,17 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           BASE: ${{ github.event.pull_request.base.sha }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           set -euo pipefail
           if [ "${EVENT}" != pull_request ]; then
             echo "build=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          # Dependabot's monthly bump opens on its own schedule, beside whatever pull request holds the one CI slot the
+          # four repositories share, so the ladders skip it: the nightly canary meets its pins in them once it merges.
+          if [ "${AUTHOR}" = 'dependabot[bot]' ]; then
+            echo "build=false" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
           git diff --name-only "${BASE}" HEAD > "${RUNNER_TEMP}/changed"
