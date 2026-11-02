@@ -337,19 +337,30 @@ inline constexpr auto is_std_set_v<std::set<Key, Compare, Allocator>> = true;
 
 // The standard's models, held to the basic guarantee it gives; ours allocate before they change anything.
 template<class X>
-inline constexpr auto is_std_model_v = is_std_set_v<X>;
+inline constexpr auto is_std_vector_bool_v = false;
 
 template<class Allocator>
-inline constexpr auto is_std_model_v<std::vector<bool, Allocator>> = true;
+inline constexpr auto is_std_vector_bool_v<std::vector<bool, Allocator>> = true;
+
+template<class X>
+inline constexpr auto is_std_model_v = is_std_set_v<X> or is_std_vector_bool_v<X>;
 
 #ifdef _LIBCPP_VERSION
 
 // libc++'s std::set reuses its nodes to assign into, and a refusal part way leaves it corrupt.
-inline constexpr auto std_set_assigning_in_is_valid_after_a_refusal = false;
+template<class X>
+inline constexpr auto assigning_in_is_valid_after_a_refusal = not is_std_set_v<X>;
+
+#elifdef _MSVC_STL_VERSION
+
+// MSVC's vector<bool> refused an assignment keeps its old size over blocks the refusal emptied, past its capacity.
+template<class X>
+inline constexpr auto assigning_in_is_valid_after_a_refusal = not is_std_vector_bool_v<X>;
 
 #else
 
-inline constexpr auto std_set_assigning_in_is_valid_after_a_refusal = true;
+template<class X>
+inline constexpr auto assigning_in_is_valid_after_a_refusal = true;
 
 #endif
 
@@ -385,7 +396,7 @@ BOOST_AUTO_TEST_CASE(CopyAssignment)
                         BOOST_CHECK(u == t);                                                                               // [container.alloc.reqmts]/23
                         BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_copy_assignment::value ? b : a)); // [container.reqmts]/64
                         BOOST_CHECK(basic_guarantee(other<T>(a), [&](T& x) -> void { x = T(t, x.get_allocator()); }));     // [container.reqmts]/25
-                        if constexpr (keeps_a_ledger<T> and (std_set_assigning_in_is_valid_after_a_refusal or not is_std_set_v<T>)) {
+                        if constexpr (keeps_a_ledger<T> and assigning_in_is_valid_after_a_refusal<T>) {
                                 check_copying_in(t, a, 0); // [container.reqmts]/25
                                 check_copying_in(t, a, 1); // [container.reqmts]/25
                         }
@@ -425,7 +436,7 @@ BOOST_AUTO_TEST_CASE(MoveAssignment)
                         BOOST_CHECK_EQUAL(u.size(), t.size());                                                             // [container.alloc.reqmts]/27
                         BOOST_CHECK(u == t);                                                                               // [container.alloc.reqmts]/28
                         BOOST_CHECK(u.get_allocator() == (traits::propagate_on_container_move_assignment::value ? b : a)); // [container.reqmts]/64
-                        if constexpr (keeps_a_ledger<T> and (std_set_assigning_in_is_valid_after_a_refusal or not is_std_set_v<T>)) {
+                        if constexpr (keeps_a_ledger<T> and assigning_in_is_valid_after_a_refusal<T>) {
                                 check_moving_in_element_by_element(t, a); // [container.reqmts]/25
                         }
                 }
