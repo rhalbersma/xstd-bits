@@ -235,7 +235,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ItYieldsAscendingKeys, T, Types)
 // At every width up to three narrow blocks, an empty set begins at its end and a set of one key begins at that key.
 BOOST_AUTO_TEST_CASE(EveryWidthUpToThreeBlocksBeginsAtItsFirstKey)
 {
-        auto const at_width = []<std::size_t N>() -> void {
+        auto const at_width = []<std::size_t N> -> void {
                 using S = fixed_set_of<std::uint8_t, N>;
                 BOOST_TEST_CONTEXT("N = " << N)
                 {
