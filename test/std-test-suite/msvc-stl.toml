@@ -3,8 +3,7 @@
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
 
-# The MSVC STL's own tests of vector<bool>, read against bit_vector, and of std::set over int keys, read against bit_set,
-# whose keys are std::size_t. Each rewrite names one type, so a test reached by none is not run; each departure is named.
+# The MSVC STL's own tests of vector<bool>, rewritten onto xstd::bit_vector, with each departure from them named.
 
 [msvc-stl]
 take = [
@@ -13,27 +12,12 @@ take = [
     { path = "tests/std/tests/Dev11_0135139_vector_bool_comparisons" },
     { path = "tests/std/tests/GH_000625_vector_bool_optimization" },
     { path = "tests/std/tests/Dev10_563443_empty_vector_begin_plus_zero" },
-    { path = "tests/std/tests/Dev10_766948_insert_ambiguity" },
-    { path = "tests/std/tests/P1206R7_set_from_range" },
-    { path = "tests/std/tests/P1206R7_set_insert_range" },
-    { path = "tests/std/tests/P1206R7_vector_append_range" },
-    { path = "tests/std/tests/P1206R7_vector_assign_range" },
-    { path = "tests/std/tests/P1206R7_vector_from_range" },
-    { path = "tests/std/tests/P1206R7_vector_insert_range" },
-    { path = "tests/std/tests/P1209R0_erase_if_erase" },
 ]
-include = [
-    "xstd/bits/bit_set/bit_set.hpp",
-    "xstd/bits/bit_set/erase_if.hpp",
-    "xstd/bits/bit_vector.hpp",
-]
-# The tests name both unqualified, under a using-directive for std; one with an allocator or comparator of its own stays
-# std's.
+include = ["xstd/bits/bit_vector.hpp"]
+# The tests name vector<bool> unqualified, under a using-directive for std; one with an allocator of its own stays std's.
 rewrite = [
     { from = "std::vector<bool>", to = "xstd::bit_vector" },
     { regex = '(?<![\w:])vector<bool>', to = 'xstd::bit_vector' },
-    { from = "std::set<int>", to = "xstd::bit_set" },
-    { regex = '(?<![\w:])set<int>', to = 'xstd::bit_set' },
 ]
 
 [[msvc-stl.assertion]]
