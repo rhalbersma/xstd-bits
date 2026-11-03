@@ -1,0 +1,63 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+# libstdc++'s own tests of vector<bool>, rewritten onto xstd::bit_vector, with each departure from them named.
+
+[libstdcxx]
+take = [{ path = "libstdc++-v3/testsuite/23_containers/vector/bool" }]
+include = ["xstd/bits/bit_vector.hpp"]
+# Spelled qualified, or unqualified under a using-directive for std; one with an allocator of its own stays std::vector.
+rewrite = [
+    { from = "std::vector<bool>", to = "xstd::bit_vector" },
+    { regex = '(?<![\w:])vector<bool>', to = 'xstd::bit_vector' },
+]
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/cons/noexcept_move_construct.cc"
+sha256 = "c2ae85a02695d317c15ed2be4dbdaa3b05337ac8eb14a7673daf8b1ada5955c3"
+line = "static_assert( std::is_nothrow_constructible<vbtype,"
+to = "static_assert( std::is_constructible<vbtype,"
+departure = "[vector.overview] declares the move constructor with an allocator without noexcept, which libstdc++ adds as an extension"
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc"
+sha256 = "748b4a39e0bda63fae74eb6bca490bdcc047b3f99ee2fb41a42a0d6b9ba7d1b2"
+line = "v.flip();"
+to = "for (auto&& bit : v) bit = !bit;"
+departure = "no flip(): [vector.bool.pspc]'s negation of every element is written element by element"
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc"
+sha256 = "748b4a39e0bda63fae74eb6bca490bdcc047b3f99ee2fb41a42a0d6b9ba7d1b2"
+line = "v[2].flip();"
+to = "v[2] = !v[2];"
+departure = "no reference::flip()"
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/constexpr.cc"
+sha256 = "830691ce96813b0107a07c691d6f37f0cf3e0bf2776cf33715aeeec608767737"
+line = "std::vector<bool>::swap(v1[0], v1[1]);"
+to = "std::ranges::iter_swap(v1.begin(), v1.begin() + 1);"
+departure = "no static swap(reference, reference): [vector.bool.pspc]'s exchange of two elements goes through the iterators"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/requirements/citerators.cc"
+sha256 = "2f4a277f428a841945e1a1e6fde726211bbafbdc3d7f49732f72cd28cbcfc0e8"
+fails = "compile"
+paragraph = "none of bit_vector's: libstdc++'s __gnu_test::citerator reads __gnu_test::traits, which describes the standard containers alone"
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc"
+sha256 = "748b4a39e0bda63fae74eb6bca490bdcc047b3f99ee2fb41a42a0d6b9ba7d1b2"
+line = "auto n = std::erase(e, false);"
+to = "auto n = erase(e, false);"
+departure = "[vector.erasure]'s erase is std's for std::vector; bit_vector's is xstd's, found by argument-dependent lookup"
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc"
+sha256 = "748b4a39e0bda63fae74eb6bca490bdcc047b3f99ee2fb41a42a0d6b9ba7d1b2"
+line = "n = std::erase_if(e, [](std::vector<bool>::reference val) { return !val; });"
+to = "n = erase_if(e, [](std::vector<bool>::reference val) { return !val; });"
+departure = "[vector.erasure]'s erase_if is std's for std::vector; bit_vector's is xstd's, found by argument-dependent lookup"

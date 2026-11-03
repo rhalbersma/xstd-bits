@@ -8,7 +8,7 @@
 
 #include <xstd/bits/detail/ownership.hpp>        // storage, window
 #include <xstd/bits/detail/sequence_adaptor.hpp> // sequence_adaptor
-#include <algorithm>                             // ranges::remove_if
+#include <algorithm>                             // remove_if
 #include <cstddef>                               // size_t
 
 namespace xstd::bits::detail {
@@ -19,9 +19,10 @@ constexpr auto erase_if(sequence_adaptor<Bits, Store, W, Derived, E>& c, Pred pr
         -> sequence_adaptor<Bits, Store, W, Derived, E>::size_type
         requires requires { c.erase(c.cbegin(), c.cend()); }
 {
-        auto const [first, last] = std::ranges::remove_if(c, pred);
-        auto const n             = static_cast<decltype(c.size())>(last - first);
-        c.erase(first, last);
+        // [vector.erasure]'s classic remove_if asks pred of *it alone; ranges::remove_if also asks it of bool&.
+        auto const first = std::remove_if(c.begin(), c.end(), pred);
+        auto const n     = static_cast<decltype(c.size())>(c.end() - first);
+        c.erase(first, c.end());
         return n;
 }
 
