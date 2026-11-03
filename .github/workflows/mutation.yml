@@ -62,3 +62,31 @@ jobs:
 
       - name: Kill or classify every mutant
         run: tools/mutate-kernels.sh
+
+  # The storage under every container, against the tests that killed one of its mutants: it reaches some 150 tests,
+  # and its own test's build alone makes each mutant cost most of a minute.
+  storage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    env:
+      TESTS: test.bits.detail.bit_block_container|test.bits.detail.bit_blocks_capacity|test.bits.adopting|test.bits.bit_precise_blocks|test.bits.bit_vector.bit_vector|test.bits.bit_inplace_vector.bit_inplace_vector|test.bits.bit_set.bit_set|test.bits.bit_set.bit_fixed_set|test.bits.bit_set.bit_inplace_set|test.bits.bit_valarray.bit_valarray|test.bits.bit_algorithm.bit_set_difference|test.bits.ext.boost|test.spec.containers.container.requirements.general.container.alloc.reqmts|test.spec.containers.container.requirements.general.container.opt.reqmts|test.spec.containers.container.requirements.sequence.reqmts|test.spec.containers.sequences.array.overview|test.spec.containers.sequences.inplace.vector.modifiers
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the toolchain
+        run: tools/setup-toolchain.sh
+
+      - name: Build the tests that kill its mutants
+        run: |
+          # Clang 22 on GCC 15's libstdc++, its own rung's, rather than the newest GCC the toolchain installs.
+          ~/.local/bin/cmake -S . -B build/mutate -G Ninja -DCMAKE_CXX_COMPILER=clang++-22 -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS=--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/15 \
+            -DCMAKE_CXX_FLAGS_DEBUG=-O0 -DBUILD_TESTING=ON -DXSTD_BITS_WARNINGS_AS_ERRORS=OFF \
+            -DXSTD_BITS_BUILD_BENCHMARKS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          IFS='|' read -ra tests <<< "${TESTS}"
+          ninja -C build/mutate "${tests[@]}"
+
+      - name: Kill or classify every mutant
+        run: python3 tools/mutate.py xstd/bits/detail/bit_block_container.hpp --build build/mutate --jobs "$(nproc)" --tests "^(${TESTS//./\\.})\$"

@@ -539,6 +539,15 @@ BOOST_AUTO_TEST_CASE(ItsStorageIsAContiguousSizedRangeOfUnsignedIntegers)
         static_assert(not xstd::bits::detail::owned_bit_blocks<std::array<std::bitset<64>, 4>>);
 }
 
+// The vehicle is the bit_block_container_type, const or not, and never the blocks it holds, though they are storage.
+BOOST_AUTO_TEST_CASE(OnlyTheVehicleIsABitBlockContainer)
+{
+        using blocks_type = std::vector<std::uint64_t>;
+        static_assert(xstd::bits::detail::bit_block_container_type<xstd::bits::detail::bit_block_container<blocks_type>>);
+        static_assert(xstd::bits::detail::bit_block_container_type<xstd::bits::detail::bit_block_container<blocks_type> const>);
+        static_assert(not xstd::bits::detail::bit_block_container_type<blocks_type>);
+}
+
 // The const subscript against P2278R4's range_const_reference_t: wherever both arms exist they must agree.
 BOOST_AUTO_TEST_CASE(TheConstReferenceIsP2278s)
 {
@@ -1645,6 +1654,18 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BothShiftsAreBlockAtOnTheOperand, T, AlignedBlockA
                 for (auto const i : std::views::iota(n_blocks + 1UZ, last + 1UZ)) {
                         BOOST_CHECK_EQUAL(l[i], c.block_at((i * D) - n));
                 }
+        }
+}
+
+// The ranged forms over spans ending where the blocks end, the empty one at the end included: no walk reads past them.
+BOOST_AUTO_TEST_CASE_TEMPLATE(TheRangedFormsStopAtTheLastBlock, T, AlignedBlockAtTypes)
+{
+        auto const c = aligned_sample<T>();
+        auto const r = reference(c);
+        for (auto const n : {0UZ, 8UZ, 16UZ, 24UZ}) {
+                auto const slice = std::views::iota(n, 24UZ) | std::views::transform([&](std::size_t i) -> bool { return r[i]; });
+                BOOST_CHECK_EQUAL(c.any(n, 24UZ - n), std::ranges::any_of(slice, std::identity()));
+                BOOST_CHECK_EQUAL(c.all(n, 24UZ - n), std::ranges::all_of(slice, std::identity()));
         }
 }
 
