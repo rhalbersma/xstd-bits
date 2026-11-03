@@ -4,11 +4,18 @@
 #          http://www.boost.org/LICENSE_1_0.txt)
 
 # libc++'s tests of std::vector<bool>, the one container its suite writes against a proxy reference, read against
-# bit_vector.
+# bit_vector; and its tests of std::set over int keys, read against bit_set, whose keys are std::size_t. Each rewrite
+# names one type, so a test reached by neither is left to the standard library and not run.
 [libcxx]
-take = [{ path = "libcxx/test/std/containers/sequences/vector.bool" }]
-include = ["xstd/bits/bit_vector.hpp"]
-rewrite = [{ from = "std::vector<bool>", to = "xstd::bit_vector" }]
+take = [
+  { path = "libcxx/test/std/containers/sequences/vector.bool" },
+  { path = "libcxx/test/std/containers/associative/set" },
+]
+include = ["xstd/bits/bit_set/bit_set.hpp", "xstd/bits/bit_vector.hpp"]
+rewrite = [
+  { from = "std::vector<bool>", to = "xstd::bit_vector" },
+  { from = "std::set<int>", to = "xstd::bit_set" },
+]
 
 # libc++'s own invariant check names a member only its vector<bool> has; the paragraph's guarantees are asserted beside it.
 [[libcxx.assertion]]
