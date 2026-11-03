@@ -49,7 +49,7 @@ things set them apart from the folders above:
   it; run against all of them, a survivor costs hours. Each group of headers is run against the tests that killed one
   of its mutants, so a survivor there is a gap in those tests or a mutant listed below.
 
-`include/xstd/bits/detail/bit_block_container.hpp`, the storage under every container, 650 mutants. It reaches some
+`include/xstd/bits/detail/bit_block_container.hpp`, the storage under every container, 642 mutants. It reaches some
 150 tests, and its own test takes most of a minute to build, so like the kernels it is run against the 17 tests that
 killed one of its mutants, in a weekly job of its own, `storage` in [`mutation.yml`](../.github/workflows/mutation.yml),
 which names them. Before that list was drawn, twelve of its survivors were run against all 149 of the header's
@@ -109,7 +109,6 @@ in that text, so an edit to the line, or a new line with the same text above it,
 | `xstd/bits/detail/bit_block_container.hpp` | `if constexpr (has_static_size and static_num_blocks == 1 and N == bits_per_block) {` | 1 | 53 | `==` → `!=` | `N == bits_per_block` already makes the block count one, so `!=` only sends that width to the general search, which returns the same position. |
 | `xstd/bits/detail/bit_block_container.hpp` | `} else if constexpr (has_static_size and static_num_blocks == 2 and N == 2UZ * bits_per_block) {` | 1 | 60 | `==` → `!=` | `N == 2 * bits_per_block` already makes the block count two, so `!=` only sends that width to the general search, which returns the same position. |
 | `xstd/bits/detail/bit_block_container.hpp` | `if constexpr (has_static_size and static_num_blocks == 1 and N == bits_per_block) {` | 2 | 53 | `==` → `!=` | `N == bits_per_block` already makes the block count one, so `!=` only sends that width to the general arm, which returns the same position. |
-| `xstd/bits/detail/bit_block_container.hpp` | `store_count(written - counted_above());` | 1 | 21 | `-` → `+` | `transform` is called only by the valarray reading, whose storage keeps no count, so this counted arm is never instantiated. |
 | `xstd/bits/detail/bit_block_container.hpp` | `for (auto i = last_block(), count = last_block() - n_blocks; i - n_blocks - 1UZ < count; --i) {` | 1 | 50 | `-` → `+` | `count` bounds the countdown from above only: from `last_block()` down, `i - n_blocks - 1` stays below both `last_block() - n_blocks` and `last_block() + n_blocks`, and below `n_blocks + 1` it wraps and stops the loop either way. |
 | `xstd/bits/detail/bit_block_container.hpp` | `for (auto i = last_block(), count = last_block() - n_blocks; i - n_blocks - 1UZ < count; --i) {` | 1 | 81 | `<` → `<=` | `i - n_blocks - 1` starts at `count - 1` and only falls, so it never equals `count`; below zero it wraps past it either way. |
 | `xstd/bits/detail/bit_block_container.hpp` | `if constexpr (has_static_size and static_num_blocks <= 2) {` | 1 | 53 | `<=` → `<` | Leaves a static width of two blocks to the fill arms below, which write the same blocks. |

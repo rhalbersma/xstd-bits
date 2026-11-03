@@ -1048,21 +1048,13 @@ public:
 
         // An elementwise kernel over two storages of one width: each block through f, then the padding cleared.
         template<class F>
+                requires (not has_stored_count)
         constexpr auto transform(bit_block_container const& other, F f) noexcept
                 -> bit_block_container&
         {
                 assert(size() == other.size());
-                if constexpr (has_stored_count) {
-                        auto written = 0UZ;
-                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                                m_blocks[i] = f(m_blocks[i], other.m_blocks[i]);
-                                written += bits::detail::popcount(m_blocks[i]);
-                        }
-                        store_count(written - counted_above());
-                } else {
-                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                                m_blocks[i] = f(m_blocks[i], other.m_blocks[i]);
-                        }
+                for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                        m_blocks[i] = f(m_blocks[i], other.m_blocks[i]);
                 }
                 erase_unused();
                 return *this;
@@ -1070,20 +1062,12 @@ public:
 
         // The same against one block, which is how an elementwise kernel meets a scalar.
         template<class F>
+                requires (not has_stored_count)
         constexpr auto transform(F f) noexcept
                 -> bit_block_container&
         {
-                if constexpr (has_stored_count) {
-                        auto written = 0UZ;
-                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                                m_blocks[i] = f(m_blocks[i]);
-                                written += bits::detail::popcount(m_blocks[i]);
-                        }
-                        store_count(written - counted_above());
-                } else {
-                        for (auto const i : std::views::iota(0UZ, num_blocks())) {
-                                m_blocks[i] = f(m_blocks[i]);
-                        }
+                for (auto const i : std::views::iota(0UZ, num_blocks())) {
+                        m_blocks[i] = f(m_blocks[i]);
                 }
                 erase_unused();
                 return *this;
