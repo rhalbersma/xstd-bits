@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/block_types.hpp>                       // all_block_types
+#include <test/container/allocator.hpp>               // copy_propagating, ledger, ledger_allocator, propagating
 #include <test/set/ascending.hpp>                     // yields_ascending_keys
 #include <test/set/strong_index.hpp>                  // agrees_with_std_set_of_strong_indices, strong_index
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>   // bit_disjoint
@@ -18,7 +19,7 @@
 #include <xstd/bits/detail/bit_block_container.hpp>   // bit_block_container, set_bits_t
 #include <xstd/bits/detail/ownership.hpp>             // owned_bits_t, storage
 #include <boost/iterator/function_input_iterator.hpp> // make_function_input_iterator
-#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <algorithm>                                  // equal, ranges::equal
 #include <array>                                      // array
 #include <bitset>                                     // bitset
@@ -29,11 +30,13 @@
 #include <format>                                     // format
 #include <functional>                                 // greater, hash, less
 #include <initializer_list>                           // initializer_list
-#include <iterator>                                   // iter_value_t, sentinel_for
+#include <iterator>                                   // iter_value_t, ranges::distance, sentinel_for
 #include <memory>                                     // allocator
+#include <new>                                        // bad_alloc
 #include <ranges>                                     // equal, iota, reverse, to
 #include <set>                                        // set
 #include <span>                                       // dynamic_extent
+#include <stdexcept>                                  // length_error
 #include <type_traits>                                // is_constructible_v
 #include <utility>                                    // move
 #include <vector>                                     // vector
@@ -196,6 +199,32 @@ BOOST_AUTO_TEST_CASE(TheKeyCountIsKeptThroughEveryHandle)
         s <<= 100;
         s >>= 120;
         BOOST_CHECK_EQUAL(s.size(), 20UZ);
+}
+
+// The largest key a growing set holds is no length error: inserting it fails, if it fails, for want of memory alone.
+BOOST_AUTO_TEST_CASE(TheLargestKeyFailsOnlyForWantOfMemory)
+{
+        using S     = xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t, test::container::propagating<std::uint8_t>>>;
+        auto book   = test::container::ledger();
+        auto s      = S(test::container::ledger_allocator<S>(book));
+        book.budget = 0;
+        BOOST_CHECK_THROW(s.insert(s.max_size() - 1UZ), std::bad_alloc);
+        BOOST_CHECK_THROW(s.insert(s.max_size()), std::length_error);
+        book.budget = -1;
+        BOOST_CHECK(s.empty());
+}
+
+// A copy refused under an allocator that propagates on copy alone leaves the set empty, its key count with it.
+BOOST_AUTO_TEST_CASE(ARefusedCopyLeavesTheKeyCountWithTheBlocks)
+{
+        using S           = xstd::basic_bit_set<std::size_t, std::vector<std::uint8_t, test::container::copy_propagating<std::uint8_t>>>;
+        auto book         = test::container::ledger();
+        auto x            = S({3}, test::container::ledger_allocator<S>(book, 0));
+        auto const source = S({3, 500, 999}, test::container::ledger_allocator<S>(book, 1));
+        book.budget       = 0;
+        BOOST_CHECK_THROW(x = source, std::bad_alloc);
+        book.budget = -1;
+        BOOST_CHECK(x.empty() and std::ranges::distance(x) == 0);
 }
 
 // Ascending keys, whatever the insertion order: what makes this a set rather than a bag of positions.
