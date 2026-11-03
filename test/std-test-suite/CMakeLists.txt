@@ -20,4 +20,14 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cpp-ci)
 include(${cpp-ci_SOURCE_DIR}/cmake/StdTestSuite.cmake)
 
-std_test_suite(libcxx MAPPING ${CMAKE_CURRENT_SOURCE_DIR}/libcxx.toml LINK_LIBRARIES xstd::bits)
+# Each library's own suite on the library it is written for, since each also checks its own library's choices.
+include(CheckCXXSymbolExists)
+check_cxx_symbol_exists(_LIBCPP_VERSION version XSTD_BITS_STD_TEST_SUITE_LIBCPP)
+if(XSTD_BITS_STD_TEST_SUITE_LIBCPP)
+    std_test_suite(libcxx MAPPING ${CMAKE_CURRENT_SOURCE_DIR}/libcxx.toml LINK_LIBRARIES xstd::bits)
+else()
+    std_test_suite(libstdcxx MAPPING ${CMAKE_CURRENT_SOURCE_DIR}/libstdcxx.toml LINK_LIBRARIES xstd::bits)
+endif()
+
+# The MSVC STL's tests reach none of its internals, and no Linux leg has the MSVC STL, so they run beside either.
+std_test_suite(msvc-stl MAPPING ${CMAKE_CURRENT_SOURCE_DIR}/msvc-stl.toml LINK_LIBRARIES xstd::bits)

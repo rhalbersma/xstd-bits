@@ -27,4 +27,14 @@ BOOST_AUTO_TEST_CASE(ItErasesAsAStdVectorOfBoolDoes)
         BOOST_CHECK(std::ranges::equal(x, m));
 }
 
+// [vector.erasure] asks the predicate of the reference alone, so one over the container's own proxy is taken.
+BOOST_AUTO_TEST_CASE(ItTakesAPredicateOverTheReference)
+{
+        auto const bools = std::vector<bool>({true, false, true, true, false, false, true});
+        auto x           = xstd::bit_vector(bools.begin(), bools.end());
+        auto m           = bools;
+        BOOST_CHECK_EQUAL(erase_if(x, [](xstd::bit_vector::reference b) -> bool { return not b; }), std::erase_if(m, [](std::vector<bool>::reference b) -> bool { return not b; }));
+        BOOST_CHECK(std::ranges::equal(x, m));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
