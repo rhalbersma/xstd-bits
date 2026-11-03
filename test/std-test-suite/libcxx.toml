@@ -4,27 +4,23 @@
 #          http://www.boost.org/LICENSE_1_0.txt)
 
 # libc++'s tests of std::vector<bool>, the one container its suite writes against a proxy reference, read against
-# bit_vector; its tests of std::set over int keys, read against bit_set, whose keys are std::size_t; its tests of
-# std::valarray<bool>, read against bit_valarray; and its algorithm tests over std::vector<bool>, which run the
-# standard algorithms over bit_vector's iterators. Each rewrite names one type, so a test reached by none is left to
-# the standard library and not run.
+# bit_vector; its tests of std::set over int keys, read against bit_set, whose keys are std::size_t; and its algorithm
+# tests over std::vector<bool>, which run the standard algorithms over bit_vector's iterators. Each rewrite names one
+# type, so a test reached by none is left to the standard library and not run.
 [libcxx]
 take = [
   { path = "libcxx/test/std/containers/sequences/vector.bool" },
   { path = "libcxx/test/std/containers/associative/set" },
-  { path = "libcxx/test/std/numerics/numarray", select = "valarray<bool>" },
   { path = "libcxx/test/std/algorithms", select = "vector<bool>" },
 ]
 include = [
   "xstd/bits/bit_set/bit_set.hpp",
   "xstd/bits/bit_set/erase_if.hpp",
-  "xstd/bits/bit_valarray/bit_valarray.hpp",
   "xstd/bits/bit_vector.hpp",
 ]
 rewrite = [
   { from = "std::vector<bool>", to = "xstd::bit_vector" },
   { from = "std::set<int>", to = "xstd::bit_set" },
-  { from = "std::valarray<bool>", to = "xstd::bit_valarray" },
 ]
 
 # libc++'s own invariant check names a member only its vector<bool> has; the paragraph's guarantees are asserted beside it.
@@ -291,3 +287,40 @@ file = "libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp"
 sha256 = "67892454971ee63aa00e0960941a7b77c8da1e0c1d0d54948ea508234ac93b43"
 fails = "compile"
 paragraph = "[set.overview]"
+
+# The standard algorithms walk bit_vector's iterators a bit at a time, past Clang's constant-evaluation step limit; the
+# run-time half is kept.
+[[libcxx.assertion]]
+file = "libcxx/test/std/algorithms/alg.modifying.operations/alg.rotate/ranges_rotate.pass.cpp"
+sha256 = "c14ff24d631ee29d3634b69f47291eeb1f6a815411adaa89d2b77bbdbd06b207"
+line = "static_assert(test());"
+drop = true
+departure = "libc++'s word-wise algorithms over its own __bit_iterator"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/algorithms/alg.modifying.operations/alg.rotate/rotate.pass.cpp"
+sha256 = "dc5893911fb3ab3d5aff25f75fe0e52df1ab1979444edeea4c7a4b2b2df1a0d3"
+line = "static_assert(test());"
+drop = true
+departure = "libc++'s word-wise algorithms over its own __bit_iterator"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/algorithms/alg.modifying.operations/alg.swap/ranges.swap_ranges.pass.cpp"
+sha256 = "e3e399398efac2044031b0e1b4ecd06802d9e8fba96fe295e900622574682176"
+line = "static_assert(test());"
+drop = true
+departure = "libc++'s word-wise algorithms over its own __bit_iterator"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/algorithms/alg.nonmodifying/alg.count/count.pass.cpp"
+sha256 = "1ac8db305ae448a2be99aab2c211fb6a4837fa37e48e4e01d82fa22a7a06d1b6"
+line = "static_assert(test());"
+drop = true
+departure = "libc++'s word-wise algorithms over its own __bit_iterator"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/algorithms/alg.nonmodifying/alg.count/ranges.count.pass.cpp"
+sha256 = "417e99545def4c8d71d4cc7cdc6fdccb498cde9f3b3d648a0a2a686873300e62"
+line = "static_assert(test());"
+drop = true
+departure = "libc++'s word-wise algorithms over its own __bit_iterator"
