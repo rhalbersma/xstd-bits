@@ -3,15 +3,29 @@
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
 
-# libstdc++'s own tests of vector<bool>, rewritten onto xstd::bit_vector, with each departure from them named.
+# libstdc++'s own tests of vector<bool>, read against bit_vector; its tests of std::set over int keys, read against
+# bit_set, whose keys are std::size_t; and its algorithm tests over std::vector<bool>, which run the standard algorithms
+# over bit_vector's iterators. Each rewrite names one type, so a test reached by none is left to the standard library
+# and not run, and each departure from the tests is named.
 
 [libstdcxx]
-take = [{ path = "libstdc++-v3/testsuite/23_containers/vector/bool" }]
-include = ["xstd/bits/bit_vector.hpp"]
-# Spelled qualified, or unqualified under a using-directive for std; one with an allocator of its own stays std::vector.
+take = [
+    { path = "libstdc++-v3/testsuite/23_containers/vector/bool" },
+    { path = "libstdc++-v3/testsuite/23_containers/set" },
+    { path = "libstdc++-v3/testsuite/25_algorithms", select = "vector<bool>" },
+]
+include = [
+    "xstd/bits/bit_set/bit_set.hpp",
+    "xstd/bits/bit_set/erase_if.hpp",
+    "xstd/bits/bit_vector.hpp",
+]
+# Spelled qualified, or unqualified under a using-directive for std; one with a comparator or allocator of its own stays
+# std's.
 rewrite = [
     { from = "std::vector<bool>", to = "xstd::bit_vector" },
     { regex = '(?<![\w:])vector<bool>', to = 'xstd::bit_vector' },
+    { from = "std::set<int>", to = "xstd::bit_set" },
+    { regex = '(?<![\w:])set<int>', to = 'xstd::bit_set' },
 ]
 
 [[libstdcxx.assertion]]
