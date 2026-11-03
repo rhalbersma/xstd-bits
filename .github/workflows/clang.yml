@@ -27,7 +27,7 @@ jobs:
   clang_ladder:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/clang.yml@0e0b8a1ec3476589bb39dc798d41551e18165916 # main after rhalbersma/cpp-ci#83, with the std_test_suite adapters of rhalbersma/cpp-ci#82
+    uses: rhalbersma/cpp-ci/.github/workflows/clang.yml@4bd632358dfeb4c79fa606f9dcb70ba0052acd8e # main after rhalbersma/cpp-ci#92, with the install-clang key-fetch retry of rhalbersma/cpp-ci#91
     with:
       # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so
       # the nightly canary covers it, building every rung and build type on main.

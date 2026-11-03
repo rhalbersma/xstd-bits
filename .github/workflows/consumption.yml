@@ -20,7 +20,7 @@ on:
 jobs:
   # The last stub to arrive: the shared workflow could not express this library before cpp-ci v0.4.1.
   consumption:
-    uses: rhalbersma/cpp-ci/.github/workflows/consumption.yml@0e0b8a1ec3476589bb39dc798d41551e18165916 # main after rhalbersma/cpp-ci#83, with the std_test_suite adapters of rhalbersma/cpp-ci#82
+    uses: rhalbersma/cpp-ci/.github/workflows/consumption.yml@4bd632358dfeb4c79fa606f9dcb70ba0052acd8e # main after rhalbersma/cpp-ci#92, with the install-clang key-fetch retry of rhalbersma/cpp-ci#91
     with:
       # CMakeLists.txt find_package()s boost_hash2 and boost_container unconditionally, so every configure here needs vcpkg.
       vcpkg: true
