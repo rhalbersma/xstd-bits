@@ -420,7 +420,7 @@ if(PROJECT_IS_TOP_LEVEL)
 
         add_subdirectory(test)
 
-        # Off by default, and one libc++ leg turns it on. The standard libraries' own test suites, written against the paragraphs by people who never saw this library, rewritten onto its spelling: a check whose authors have no stake in the answer. Needs git and Python 3.11.
+        # Off by default, and one libc++ leg and one GCC leg turn it on. The standard libraries' own test suites, written against the paragraphs by people who never saw this library, rewritten onto its spelling: a check whose authors have no stake in the answer. Needs git and Python 3.11.
         option(${project_option_prefix}_BUILD_STD_TEST_SUITES "Run the standard libraries' test suites against the containers they mirror" OFF)
 
         if(${project_option_prefix}_BUILD_STD_TEST_SUITES)
