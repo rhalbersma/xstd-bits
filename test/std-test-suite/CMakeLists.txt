@@ -20,7 +20,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cpp-ci)
 include(${cpp-ci_SOURCE_DIR}/cmake/StdTestSuite.cmake)
 
-# A suite's tests, and a test that doc/audit/vendor.md records what became of each of them in this build.
+# A suite's tests, and a test that doc/vendor.md records what became of each of them in this build.
 find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
 function(xstd_bits_std_test_suite suite)
     std_test_suite(${suite} MAPPING ${CMAKE_CURRENT_SOURCE_DIR}/${suite}.toml LINK_LIBRARIES xstd::bits)

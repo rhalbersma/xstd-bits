@@ -5,12 +5,12 @@
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
 
-"""Hold doc/audit/vendor.md to the standard library test suites the build ran.
+"""Hold doc/vendor.md to the standard library test suites the build ran.
 
 rhalbersma/cpp-ci's std_test_suite adapter writes a manifest.json for each suite: the
 repository and tag it fetched, and for every file under a directory the mapping takes, its
 SHA-256 and what became of it. This script renders a suite's manifest as its section of
-doc/audit/vendor.md, one row per test the mapping selects, and either writes that section or
+doc/vendor.md, one row per test the mapping selects, and either writes that section or
 checks that the table already holds it:
 
     tools/vendor.py write build/.../std-test-suite/libstdcxx/manifest.json
@@ -30,7 +30,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TABLE = ROOT / "doc" / "audit" / "vendor.md"
+TABLE = ROOT / "doc" / "vendor.md"
 
 NAMES = {"libcxx": "libc++", "libstdcxx": "libstdc++", "msvc-stl": "MSVC STL"}
 
@@ -117,7 +117,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("action", choices=["write", "check"])
     parser.add_argument("manifests", nargs="+", type=Path, help="manifest.json files the adapter wrote")
-    parser.add_argument("--table", type=Path, default=TABLE, help="the table, by default doc/audit/vendor.md")
+    parser.add_argument("--table", type=Path, default=TABLE, help="the table, by default doc/vendor.md")
     args = parser.parse_args()
 
     text = args.table.read_text() if args.table.exists() else HEADER
