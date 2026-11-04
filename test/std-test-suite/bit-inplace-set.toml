@@ -19,3 +19,9 @@ rewrite = [
     { from = "std::set<int>", to = "xstd::bit_inplace_set<128>" },
     { regex = '(?<![\w:])set<int>', to = 'xstd::bit_inplace_set<128>' },
 ]
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/associative/set/get_allocator.pass.cpp"
+sha256 = "fc4089ed8899d9c9aed2333bded6b6ee83bd0313f8066ac0240712bea14c12f1"
+fails = "compile"
+paragraph = "[container.alloc.reqmts]: an inplace set allocates nothing, so it has no allocator to return"

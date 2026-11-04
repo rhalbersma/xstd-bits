@@ -26,3 +26,9 @@ sha256 = "dd6e842f78a8e2a8683857a8ef1068dbb7c8f25945b1249521fe1064fcade182"
 line = "VERIFY( b.find(2) == b.end());"
 drop = true
 departure = "[container.reqmts] leaves a moved-from container's value unspecified: libstdc++'s nodes leave it empty, and a fixed set's array of blocks moves by copying"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/associative/set/get_allocator.pass.cpp"
+sha256 = "fc4089ed8899d9c9aed2333bded6b6ee83bd0313f8066ac0240712bea14c12f1"
+fails = "compile"
+paragraph = "[container.alloc.reqmts]: a fixed set allocates nothing, so it has no allocator to return"
