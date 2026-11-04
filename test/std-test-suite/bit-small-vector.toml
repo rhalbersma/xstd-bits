@@ -115,13 +115,6 @@ drop = true
 departure = "Boost's small_vector is not usable in a constant expression"
 
 [[libcxx.assertion]]
-file = "libcxx/test/std/containers/sequences/vector.bool/construct_iter_iter_alloc.pass.cpp"
-sha256 = "20896f7a3a5190983a56e1b06fe923d3da59e3897fa5900ab82d557b141dd066"
-line = "static_assert(tests());"
-drop = true
-departure = "Boost's small_vector is not usable in a constant expression"
-
-[[libcxx.assertion]]
 file = "libcxx/test/std/containers/sequences/vector.bool/construct_size.pass.cpp"
 sha256 = "cadd143ad1be3268aa333f3240255cae78980589795db98fbc680735fba9b93b"
 line = "static_assert(tests());"
@@ -136,22 +129,8 @@ drop = true
 departure = "Boost's small_vector is not usable in a constant expression"
 
 [[libcxx.assertion]]
-file = "libcxx/test/std/containers/sequences/vector.bool/construct_size_value_alloc.pass.cpp"
-sha256 = "239cc590980b5468e9397cb6417ca8bdd6488143e1ab7899ec9165949f9a0504"
-line = "static_assert(tests());"
-drop = true
-departure = "Boost's small_vector is not usable in a constant expression"
-
-[[libcxx.assertion]]
 file = "libcxx/test/std/containers/sequences/vector.bool/copy.pass.cpp"
 sha256 = "099b47ccca0a2dfdb2ff6b04dfd90424d2c90f93eb46061108170a40dfe366ca"
-line = "static_assert(tests());"
-drop = true
-departure = "Boost's small_vector is not usable in a constant expression"
-
-[[libcxx.assertion]]
-file = "libcxx/test/std/containers/sequences/vector.bool/copy_alloc.pass.cpp"
-sha256 = "85df1926257b925fec12caeed7faf3672229040d195f4d1531b10c8a0a30500e"
 line = "static_assert(tests());"
 drop = true
 departure = "Boost's small_vector is not usable in a constant expression"
@@ -323,3 +302,54 @@ sha256 = "7dd9a484a1160f4c5cfe29303cd63fa26876f309ea16cded2268401c3b4bfc00"
 line = "static_assert(tests());"
 drop = true
 departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/capacity.pass.cpp"
+sha256 = "bd0cdf5c51481ca00f79e5f1e4c7991f385f8724183c10005c032ca5f89e76b1"
+line = "assert(v.capacity() == 0);"
+drop = true
+departure = "an empty small vector holds its first 64 bits inside it, so its capacity starts at 64"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/shrink_to_fit.pass.cpp"
+sha256 = "0728d15aaa564c44bb8411abd91a35bd87a8298987d2284293a93e86518c1a4a"
+line = "LIBCPP_ASSERT(v.capacity() == 0); // libc++ honors the shrink_to_fit request as a QOI matter"
+drop = true
+departure = "an empty small vector holds its first 64 bits inside it, so shrink_to_fit leaves it at 64"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/compare.three_way.pass.cpp"
+sha256 = "84536e3f356ed8cd538cf4a38d74e037fcc7d2041a6ffe4d1abde7f0bcef52ae"
+line = "static_assert(test_sequence_container_spaceship_vectorbool());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_iter_iter_alloc.pass.cpp"
+sha256 = "20896f7a3a5190983a56e1b06fe923d3da59e3897fa5900ab82d557b141dd066"
+fails = "compile"
+paragraph = "[container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_size_value_alloc.pass.cpp"
+sha256 = "239cc590980b5468e9397cb6417ca8bdd6488143e1ab7899ec9165949f9a0504"
+fails = "compile"
+paragraph = "[container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/sequences/vector.bool/copy_alloc.pass.cpp"
+sha256 = "85df1926257b925fec12caeed7faf3672229040d195f4d1531b10c8a0a30500e"
+fails = "compile"
+paragraph = "[container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/sequences/vector.bool/get_allocator.pass.cpp"
+sha256 = "a2c1f841bc86237c2b1db061f8d2a155a4a8e63c358be06c70697a17ae676288"
+fails = "compile"
+paragraph = "[container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/sequences/vector.bool/ctor_exceptions.pass.cpp"
+sha256 = "f0a3662fb27d1b091f912dc20e1bd77beeab941b1f68f293d748463457a1eadd"
+fails = "compile"
+paragraph = "[container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool"
