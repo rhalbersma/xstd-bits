@@ -18,6 +18,7 @@ docs_dir: doc
 exclude_docs: |
   audit/
   mutation.md
+  vendor.md
 
 hooks:
   - tools/mkdocs_hooks.py

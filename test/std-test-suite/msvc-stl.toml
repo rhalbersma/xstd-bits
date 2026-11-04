@@ -11,6 +11,7 @@ take = [
     { path = "tests/std/tests/Dev10_816787_swap_vector_bool_elements" },
     { path = "tests/std/tests/Dev11_0135139_vector_bool_comparisons" },
     { path = "tests/std/tests/GH_000625_vector_bool_optimization" },
+    { path = "tests/std/tests/Dev10_563443_empty_vector_begin_plus_zero" },
 ]
 include = ["xstd/bits/bit_vector.hpp"]
 # The tests name vector<bool> unqualified, under a using-directive for std; one with an allocator of its own stays std's.
