@@ -1,11 +1,12 @@
 # Standard library test suites
 
 Each standard library's own tests of the containers this library generalizes, and what became of each one when it ran
-against them. `tools/vendor.py` writes a suite's section from the manifest that rhalbersma/cpp-ci's adapter leaves in
-the build, and each suite job's `std-test-suite.<suite>.table` test fails when the section no longer matches it.
+against each of them. A section is one suite against one subject. `tools/vendor.py` writes it from the manifest that
+rhalbersma/cpp-ci's adapter leaves in the build, and each suite job's `std-test-suite.<suite>-<subject>.table` test fails
+when the section no longer matches it.
 
-- **Mappings:** `test/std-test-suite/<suite>.toml` name the directories taken, the rewrites onto this library's types,
-  and each departure.
+- **Mappings:** `test/std-test-suite/<suite>-<directory>.toml` name the directories a suite takes and each departure
+  from their tests, and `<subject>.toml` the rewrites onto one of this library's types.
 - **Hashes:** the first twelve hexadecimal digits of the test file's SHA-256 at the pinned tag.
 
 A row's `outcome` is one of:
@@ -20,10 +21,10 @@ A row's `outcome` is one of:
 | `fails at run time` | expected to fail when run, for the paragraph or reason the note gives |
 | `not run` | left out, for the reason the note gives |
 
-## libc++
+## libc++ against bit_vector
 
 - **Pinned:** [https://github.com/llvm/llvm-project](https://github.com/llvm/llvm-project) at `llvmorg-22.1.8`.
-- **Mapping:** `test/std-test-suite/libcxx.toml`.
+- **Mappings:** the suite's `test/std-test-suite/libcxx-*.toml` for the directories it takes, and `bit-vector.toml` for the type.
 - **Not selected:** 285 files that do not match `vector<bool>`, left to the standard library.
 
 | test | sha256 | outcome | note |
@@ -55,6 +56,174 @@ A row's `outcome` is one of:
 | `libcxx/test/std/algorithms/alg.nonmodifying/alg.find/ranges.find.pass.cpp` | `7e7310cd53a3` | runs |  |
 | `libcxx/test/std/algorithms/alg.sorting/alg.three.way/lexicographical_compare_three_way.pass.cpp` | `852950fb21d6` | runs |  |
 | `libcxx/test/std/algorithms/alg.sorting/alg.three.way/lexicographical_compare_three_way_comp.pass.cpp` | `5538a26c6bbe` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/append_range.pass.cpp` | `a7bb6ff8b52a` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/assign_copy.pass.cpp` | `786caa6714a6` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/assign_initializer_list.pass.cpp` | `8ac695a13daf` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/assign_iter_iter.pass.cpp` | `bf33e7e26c13` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/assign_move.pass.cpp` | `a0d3785c2f48` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/assign_range.pass.cpp` | `2597e4d51293` | runs, adapted | assert(v == (std::vector{true, true, false})); (no == between a bit vector and std::vector<bool>) |
+| `libcxx/test/std/containers/sequences/vector.bool/assign_size_value.pass.cpp` | `c1c029389fc2` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/at.pass.cpp` | `c16bb2a0fbe3` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/at_const.pass.cpp` | `1ad4a6be52c4` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/capacity.pass.cpp` | `bd0cdf5c5148` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/compare.pass.cpp` | `611e6f3d6591` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/compare.three_way.pass.cpp` | `84536e3f356e` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/const_reference.pass.cpp` | `b2c54fc371d8` | runs, adapted | ASSERT_SAME_TYPE(CRefT, std::__bit_const_reference<std::vector<bool> >); (const_reference is the bit vector's own proxy) |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_default.pass.cpp` | `91e7235d968d` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()); LIBCPP_ASSERT(c1.__invariants()); (libc++'s internal __invariants()) |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_from_range.pass.cpp` | `ae75de83eac2` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_iter_iter.pass.cpp` | `c858cf3457f9` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_iter_iter_alloc.pass.cpp` | `20896f7a3a51` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_size.pass.cpp` | `cadd143ad1be` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_size_value.pass.cpp` | `a95b41f6af6a` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_size_value_alloc.pass.cpp` | `239cc590980b` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
+| `libcxx/test/std/containers/sequences/vector.bool/copy.pass.cpp` | `099b47ccca0a` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
+| `libcxx/test/std/containers/sequences/vector.bool/copy_alloc.pass.cpp` | `85df1926257b` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
+| `libcxx/test/std/containers/sequences/vector.bool/ctor_exceptions.pass.cpp` | `f0a3662fb27d` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/default_noexcept.pass.cpp` | `9322089620ca` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/dtor_noexcept.pass.cpp` | `6b7ff6d79584` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/emplace.pass.cpp` | `a95b4892a7f1` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/emplace_back.pass.cpp` | `f5c231ec0d5b` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/empty.pass.cpp` | `c02fbea895f1` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/empty.verify.cpp` | `1782f8452118` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/sequences/vector.bool/enabled_hash.pass.cpp` | `f3922952e6c6` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/erase_iter.pass.cpp` | `1626d6e39a3b` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/erase_iter_iter.pass.cpp` | `4308b6117e67` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/find.pass.cpp` | `ce82dff5fad1` | runs, adapted | static_assert(tests()); (libc++'s word-wise find over its own __bit_iterator) |
+| `libcxx/test/std/containers/sequences/vector.bool/flip.pass.cpp` | `9d448c597d57` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/get_allocator.pass.cpp` | `a2c1f841bc86` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/initializer_list.pass.cpp` | `3925ac3909fe` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/initializer_list_alloc.pass.cpp` | `a1a77b5186d1` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/insert_iter_initializer_list.pass.cpp` | `8eac48e5232b` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/insert_iter_iter_iter.pass.cpp` | `fa5e3a732705` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/insert_iter_size_value.pass.cpp` | `c1141d3da82b` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/insert_iter_value.pass.cpp` | `9c67396f68b1` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/insert_range.pass.cpp` | `74eee090d500` | runs, adapted | assert(v == (std::vector{true, true, false})); (no == between a bit vector and std::vector<bool>) |
+| `libcxx/test/std/containers/sequences/vector.bool/iterator_concept_conformance.compile.pass.cpp` | `877d7324a1f2` | compiles |  |
+| `libcxx/test/std/containers/sequences/vector.bool/iterators.pass.cpp` | `4b0f26352d9b` | runs, adapted | ASSERT_SAME_TYPE(ConstIterRefT, std::__bit_const_reference<std::vector<bool> >); (const_reference is the bit vector's own proxy) |
+| `libcxx/test/std/containers/sequences/vector.bool/max_size.pass.cpp` | `54d60eacfd4e` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/move.pass.cpp` | `2b5de716ce17` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/move_alloc.pass.cpp` | `c39401b2f483` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/move_assign_noexcept.pass.cpp` | `ff0e0c366b0a` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/move_noexcept.pass.cpp` | `a5e20790f775` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/op_equal_initializer_list.pass.cpp` | `13a3e3eb7f46` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/push_back.pass.cpp` | `11b111d47b14` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/range_concept_conformance.compile.pass.cpp` | `64bbf9b43b1b` | compiles |  |
+| `libcxx/test/std/containers/sequences/vector.bool/reference.swap.pass.cpp` | `61152ce772dc` | fails to compile | [vector.bool.pspc] |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/assign_bool.pass.cpp` | `1345f2bbf123` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/assign_copy.pass.cpp` | `2147006250fc` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/ctor_copy.pass.cpp` | `3b5e218787b7` | runs, adapted | ref.flip(); (no reference::flip()) |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/ctor_no_default.compile.pass.cpp` | `6046838b48bc` | compiles |  |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/flip.pass.cpp` | `14c46e44ed31` | fails to compile | [vector.bool.pspc] |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/operator_bool.pass.cpp` | `4ef15a3c29e8` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/triviality.compile.pass.cpp` | `84c3f15dab61` | compiles |  |
+| `libcxx/test/std/containers/sequences/vector.bool/reserve.pass.cpp` | `a8eceb876f60` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/resize_size.pass.cpp` | `de77f47f77c1` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/resize_size_value.pass.cpp` | `64ec1aac4726` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/shrink_to_fit.pass.cpp` | `0728d15aaa56` | runs, adapted | unsigned bits_per_word = static_cast<unsigned>(sizeof(C::__storage_type) * CHAR_BIT); (libc++'s internal __storage_type, which is the bit vector's block_container_type::value_type) |
+| `libcxx/test/std/containers/sequences/vector.bool/size.pass.cpp` | `47bd59fb0f7f` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/small_allocator_size.pass.cpp` | `8d8e42571436` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/swap.pass.cpp` | `314da3d047e1` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/swap_noexcept.pass.cpp` | `5a653ac42f5d` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/types.pass.cpp` | `174730a46512` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/format.functions.format.pass.cpp` | `17dea9b8044b` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/format.functions.tests.h` | `c4f78270d64f` | not run | not a test source |
+| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/format.functions.vformat.pass.cpp` | `2cc492786004` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/format.pass.cpp` | `816e848537be` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/parse.pass.cpp` | `1e8daf4e26c8` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/types.compile.pass.cpp` | `22eeadf5632f` | compiles |  |
+| `libcxx/test/std/containers/sequences/vector.bool/vector_bool.pass.cpp` | `7dd9a484a116` | runs |  |
+
+## libc++ against bit_small_vector
+
+- **Pinned:** [https://github.com/llvm/llvm-project](https://github.com/llvm/llvm-project) at `llvmorg-22.1.8`.
+- **Mappings:** the suite's `test/std-test-suite/libcxx-*.toml` for the directories it takes, and `bit-small-vector.toml` for the type.
+
+| test | sha256 | outcome | note |
+| :--- | :--- | :--- | :--- |
+| `libcxx/test/std/containers/sequences/vector.bool/append_range.pass.cpp` | `a7bb6ff8b52a` | runs, adapted | static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/assign_copy.pass.cpp` | `786caa6714a6` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/assign_initializer_list.pass.cpp` | `8ac695a13daf` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/assign_iter_iter.pass.cpp` | `bf33e7e26c13` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/assign_move.pass.cpp` | `a0d3785c2f48` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/assign_range.pass.cpp` | `2597e4d51293` | runs, adapted | assert(v == (std::vector{true, true, false})); (no == between a bit vector and std::vector<bool>); static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/assign_size_value.pass.cpp` | `c1c029389fc2` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/at.pass.cpp` | `c16bb2a0fbe3` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/at_const.pass.cpp` | `1ad4a6be52c4` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/capacity.pass.cpp` | `bd0cdf5c5148` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression); assert(v.capacity() == 0); (an empty small vector holds its first 64 bits inside it, so its capacity starts at 64) |
+| `libcxx/test/std/containers/sequences/vector.bool/compare.pass.cpp` | `611e6f3d6591` | runs, adapted | static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/compare.three_way.pass.cpp` | `84536e3f356e` | runs, adapted | static_assert(test_sequence_container_spaceship_vectorbool()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/const_reference.pass.cpp` | `b2c54fc371d8` | runs, adapted | ASSERT_SAME_TYPE(CRefT, std::__bit_const_reference<std::vector<bool> >); (const_reference is the bit vector's own proxy); static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_default.pass.cpp` | `91e7235d968d` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()); LIBCPP_ASSERT(c1.__invariants()); (libc++'s internal __invariants()); static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_from_range.pass.cpp` | `ae75de83eac2` | runs, adapted | static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_iter_iter.pass.cpp` | `c858cf3457f9` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()); static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_iter_iter_alloc.pass.cpp` | `20896f7a3a51` | fails to compile | [container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_size.pass.cpp` | `cadd143ad1be` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()); static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_size_value.pass.cpp` | `a95b41f6af6a` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()); static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/construct_size_value_alloc.pass.cpp` | `239cc590980b` | fails to compile | [container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool |
+| `libcxx/test/std/containers/sequences/vector.bool/copy.pass.cpp` | `099b47ccca0a` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()); static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/copy_alloc.pass.cpp` | `85df1926257b` | fails to compile | [container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool |
+| `libcxx/test/std/containers/sequences/vector.bool/ctor_exceptions.pass.cpp` | `f0a3662fb27d` | fails to compile | [container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool |
+| `libcxx/test/std/containers/sequences/vector.bool/default_noexcept.pass.cpp` | `9322089620ca` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/dtor_noexcept.pass.cpp` | `6b7ff6d79584` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/emplace.pass.cpp` | `a95b4892a7f1` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/emplace_back.pass.cpp` | `f5c231ec0d5b` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/empty.pass.cpp` | `c02fbea895f1` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/empty.verify.cpp` | `1782f8452118` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/sequences/vector.bool/enabled_hash.pass.cpp` | `f3922952e6c6` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/erase_iter.pass.cpp` | `1626d6e39a3b` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/erase_iter_iter.pass.cpp` | `4308b6117e67` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/find.pass.cpp` | `ce82dff5fad1` | runs, adapted | static_assert(tests()); (libc++'s word-wise find over its own __bit_iterator) |
+| `libcxx/test/std/containers/sequences/vector.bool/flip.pass.cpp` | `9d448c597d57` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/get_allocator.pass.cpp` | `a2c1f841bc86` | fails to compile | [container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool |
+| `libcxx/test/std/containers/sequences/vector.bool/initializer_list.pass.cpp` | `3925ac3909fe` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/initializer_list_alloc.pass.cpp` | `a1a77b5186d1` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/insert_iter_initializer_list.pass.cpp` | `8eac48e5232b` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/insert_iter_iter_iter.pass.cpp` | `fa5e3a732705` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/insert_iter_size_value.pass.cpp` | `c1141d3da82b` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/insert_iter_value.pass.cpp` | `9c67396f68b1` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/insert_range.pass.cpp` | `74eee090d500` | runs, adapted | assert(v == (std::vector{true, true, false})); (no == between a bit vector and std::vector<bool>); static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/iterator_concept_conformance.compile.pass.cpp` | `877d7324a1f2` | compiles |  |
+| `libcxx/test/std/containers/sequences/vector.bool/iterators.pass.cpp` | `4b0f26352d9b` | runs, adapted | ASSERT_SAME_TYPE(ConstIterRefT, std::__bit_const_reference<std::vector<bool> >); (const_reference is the bit vector's own proxy) |
+| `libcxx/test/std/containers/sequences/vector.bool/max_size.pass.cpp` | `54d60eacfd4e` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/move.pass.cpp` | `2b5de716ce17` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/move_alloc.pass.cpp` | `c39401b2f483` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/move_assign_noexcept.pass.cpp` | `ff0e0c366b0a` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/move_noexcept.pass.cpp` | `a5e20790f775` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/op_equal_initializer_list.pass.cpp` | `13a3e3eb7f46` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/push_back.pass.cpp` | `11b111d47b14` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/range_concept_conformance.compile.pass.cpp` | `64bbf9b43b1b` | compiles |  |
+| `libcxx/test/std/containers/sequences/vector.bool/reference.swap.pass.cpp` | `61152ce772dc` | fails to compile | [vector.bool.pspc] |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/assign_bool.pass.cpp` | `1345f2bbf123` | runs, adapted | static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/assign_copy.pass.cpp` | `2147006250fc` | runs, adapted | static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/ctor_copy.pass.cpp` | `3b5e218787b7` | runs, adapted | ref.flip(); (no reference::flip()); static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/ctor_no_default.compile.pass.cpp` | `6046838b48bc` | compiles |  |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/flip.pass.cpp` | `14c46e44ed31` | fails to compile | [vector.bool.pspc] |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/operator_bool.pass.cpp` | `4ef15a3c29e8` | runs, adapted | static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/triviality.compile.pass.cpp` | `84c3f15dab61` | compiles |  |
+| `libcxx/test/std/containers/sequences/vector.bool/reserve.pass.cpp` | `a8eceb876f60` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/resize_size.pass.cpp` | `de77f47f77c1` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/resize_size_value.pass.cpp` | `64ec1aac4726` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/shrink_to_fit.pass.cpp` | `0728d15aaa56` | runs, adapted | unsigned bits_per_word = static_cast<unsigned>(sizeof(C::__storage_type) * CHAR_BIT); (libc++'s internal __storage_type, which is the bit vector's block_container_type::value_type); static_assert(tests()); (Boost's small_vector is not usable in a constant expression); LIBCPP_ASSERT(v.capacity() == 0); // libc++ honors the shrink_to_fit request as a QOI matter (an empty small vector holds its first 64 bits inside it, so shrink_to_fit leaves it at 64) |
+| `libcxx/test/std/containers/sequences/vector.bool/size.pass.cpp` | `47bd59fb0f7f` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/small_allocator_size.pass.cpp` | `8d8e42571436` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/swap.pass.cpp` | `314da3d047e1` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/swap_noexcept.pass.cpp` | `5a653ac42f5d` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/types.pass.cpp` | `174730a46512` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/format.functions.format.pass.cpp` | `17dea9b8044b` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/format.functions.tests.h` | `c4f78270d64f` | not run | not a test source |
+| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/format.functions.vformat.pass.cpp` | `2cc492786004` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/format.pass.cpp` | `816e848537be` | runs |  |
+| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/parse.pass.cpp` | `1e8daf4e26c8` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/types.compile.pass.cpp` | `22eeadf5632f` | compiles |  |
+| `libcxx/test/std/containers/sequences/vector.bool/vector_bool.pass.cpp` | `7dd9a484a116` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
+
+## libc++ against bit_set
+
+- **Pinned:** [https://github.com/llvm/llvm-project](https://github.com/llvm/llvm-project) at `llvmorg-22.1.8`.
+- **Mappings:** the suite's `test/std-test-suite/libcxx-*.toml` for the directories it takes, and `bit-set.toml` for the type.
+
+| test | sha256 | outcome | note |
+| :--- | :--- | :--- | :--- |
 | `libcxx/test/std/containers/associative/set/allocator_mismatch.verify.cpp` | `652e404d93f1` | not run | a test of diagnostics, run in a second pass |
 | `libcxx/test/std/containers/associative/set/clear.pass.cpp` | `868ab0b8ffa2` | runs |  |
 | `libcxx/test/std/containers/associative/set/contains.pass.cpp` | `65f44690079c` | runs |  |
@@ -127,188 +296,263 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/associative/set/set.special/non_member_swap.pass.cpp` | `e83b62b3de55` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.special/swap_noexcept.pass.cpp` | `9d0330c20bd4` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/size.pass.cpp` | `fb4ba712d3f1` | runs |  |
-| `libcxx/test/std/containers/associative/set/types.pass.cpp` | `4b2d43c4a72a` | runs, adapted | static_assert((std::is_same<C::key_type, int>::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::value_type, int>::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::key_compare, std::less<int> >::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::value_compare, std::less<int> >::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::allocator_type, std::allocator<int> >::value), ""); (allocator_type is the block container's allocator); static_assert((std::is_same<C::reference, int&>::value), ""); (reference is bit_set's own proxy); static_assert((std::is_same<C::const_reference, const int&>::value), ""); (reference is bit_set's own proxy); static_assert((std::is_same<C::pointer, int*>::value), ""); (pointer is bit_set's own proxy); static_assert((std::is_same<C::const_pointer, const int*>::value), ""); (pointer is bit_set's own proxy) |
+| `libcxx/test/std/containers/associative/set/types.pass.cpp` | `4b2d43c4a72a` | runs, adapted | static_assert((std::is_same<C::key_type, int>::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::value_type, int>::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::key_compare, std::less<int> >::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::value_compare, std::less<int> >::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::allocator_type, std::allocator<int> >::value), ""); (allocator_type is the block container's allocator); static_assert((std::is_same<C::reference, int&>::value), ""); (reference is the set's own proxy); static_assert((std::is_same<C::const_reference, const int&>::value), ""); (reference is the set's own proxy); static_assert((std::is_same<C::pointer, int*>::value), ""); (pointer is the set's own proxy); static_assert((std::is_same<C::const_pointer, const int*>::value), ""); (pointer is the set's own proxy) |
 | `libcxx/test/std/containers/associative/set/upper_bound.pass.cpp` | `c8e7efe86b1d` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/append_range.pass.cpp` | `a7bb6ff8b52a` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/assign_copy.pass.cpp` | `786caa6714a6` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/sequences/vector.bool/assign_initializer_list.pass.cpp` | `8ac695a13daf` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/assign_iter_iter.pass.cpp` | `bf33e7e26c13` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/assign_move.pass.cpp` | `a0d3785c2f48` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/sequences/vector.bool/assign_range.pass.cpp` | `2597e4d51293` | runs, adapted | assert(v == (std::vector{true, true, false})); (no == between bit_vector and std::vector<bool>) |
-| `libcxx/test/std/containers/sequences/vector.bool/assign_size_value.pass.cpp` | `c1c029389fc2` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/at.pass.cpp` | `c16bb2a0fbe3` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/sequences/vector.bool/at_const.pass.cpp` | `1ad4a6be52c4` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/sequences/vector.bool/capacity.pass.cpp` | `bd0cdf5c5148` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/compare.pass.cpp` | `611e6f3d6591` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/compare.three_way.pass.cpp` | `84536e3f356e` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/const_reference.pass.cpp` | `b2c54fc371d8` | runs, adapted | ASSERT_SAME_TYPE(CRefT, std::__bit_const_reference<std::vector<bool> >); (const_reference is bit_vector's own proxy) |
-| `libcxx/test/std/containers/sequences/vector.bool/construct_default.pass.cpp` | `91e7235d968d` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()); LIBCPP_ASSERT(c1.__invariants()); (libc++'s internal __invariants()) |
-| `libcxx/test/std/containers/sequences/vector.bool/construct_from_range.pass.cpp` | `ae75de83eac2` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/construct_iter_iter.pass.cpp` | `c858cf3457f9` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
-| `libcxx/test/std/containers/sequences/vector.bool/construct_iter_iter_alloc.pass.cpp` | `20896f7a3a51` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
-| `libcxx/test/std/containers/sequences/vector.bool/construct_size.pass.cpp` | `cadd143ad1be` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
-| `libcxx/test/std/containers/sequences/vector.bool/construct_size_value.pass.cpp` | `a95b41f6af6a` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
-| `libcxx/test/std/containers/sequences/vector.bool/construct_size_value_alloc.pass.cpp` | `239cc590980b` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
-| `libcxx/test/std/containers/sequences/vector.bool/copy.pass.cpp` | `099b47ccca0a` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
-| `libcxx/test/std/containers/sequences/vector.bool/copy_alloc.pass.cpp` | `85df1926257b` | runs, adapted | LIBCPP_ASSERT(c.__invariants()); (libc++'s internal __invariants()) |
-| `libcxx/test/std/containers/sequences/vector.bool/ctor_exceptions.pass.cpp` | `f0a3662fb27d` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/default_noexcept.pass.cpp` | `9322089620ca` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/dtor_noexcept.pass.cpp` | `6b7ff6d79584` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/emplace.pass.cpp` | `a95b4892a7f1` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/emplace_back.pass.cpp` | `f5c231ec0d5b` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/empty.pass.cpp` | `c02fbea895f1` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/empty.verify.cpp` | `1782f8452118` | not run | a test of diagnostics, run in a second pass |
-| `libcxx/test/std/containers/sequences/vector.bool/enabled_hash.pass.cpp` | `f3922952e6c6` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/erase_iter.pass.cpp` | `1626d6e39a3b` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/erase_iter_iter.pass.cpp` | `4308b6117e67` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/find.pass.cpp` | `ce82dff5fad1` | runs, adapted | static_assert(tests()); (libc++'s word-wise find over its own __bit_iterator) |
-| `libcxx/test/std/containers/sequences/vector.bool/flip.pass.cpp` | `9d448c597d57` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/sequences/vector.bool/get_allocator.pass.cpp` | `a2c1f841bc86` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/initializer_list.pass.cpp` | `3925ac3909fe` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/initializer_list_alloc.pass.cpp` | `a1a77b5186d1` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/sequences/vector.bool/insert_iter_initializer_list.pass.cpp` | `8eac48e5232b` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/insert_iter_iter_iter.pass.cpp` | `fa5e3a732705` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/insert_iter_size_value.pass.cpp` | `c1141d3da82b` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/insert_iter_value.pass.cpp` | `9c67396f68b1` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/insert_range.pass.cpp` | `74eee090d500` | runs, adapted | assert(v == (std::vector{true, true, false})); (no == between bit_vector and std::vector<bool>) |
-| `libcxx/test/std/containers/sequences/vector.bool/iterator_concept_conformance.compile.pass.cpp` | `877d7324a1f2` | compiles |  |
-| `libcxx/test/std/containers/sequences/vector.bool/iterators.pass.cpp` | `4b0f26352d9b` | runs, adapted | ASSERT_SAME_TYPE(ConstIterRefT, std::__bit_const_reference<std::vector<bool> >); (const_reference is bit_vector's own proxy) |
-| `libcxx/test/std/containers/sequences/vector.bool/max_size.pass.cpp` | `54d60eacfd4e` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/sequences/vector.bool/move.pass.cpp` | `2b5de716ce17` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/sequences/vector.bool/move_alloc.pass.cpp` | `c39401b2f483` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/sequences/vector.bool/move_assign_noexcept.pass.cpp` | `ff0e0c366b0a` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/move_noexcept.pass.cpp` | `a5e20790f775` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/op_equal_initializer_list.pass.cpp` | `13a3e3eb7f46` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/push_back.pass.cpp` | `11b111d47b14` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/range_concept_conformance.compile.pass.cpp` | `64bbf9b43b1b` | compiles |  |
-| `libcxx/test/std/containers/sequences/vector.bool/reference.swap.pass.cpp` | `61152ce772dc` | fails to compile | [vector.bool.pspc] |
-| `libcxx/test/std/containers/sequences/vector.bool/reference/assign_bool.pass.cpp` | `1345f2bbf123` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/reference/assign_copy.pass.cpp` | `2147006250fc` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/reference/ctor_copy.pass.cpp` | `3b5e218787b7` | runs, adapted | ref.flip(); (no reference::flip()) |
-| `libcxx/test/std/containers/sequences/vector.bool/reference/ctor_no_default.compile.pass.cpp` | `6046838b48bc` | compiles |  |
-| `libcxx/test/std/containers/sequences/vector.bool/reference/flip.pass.cpp` | `14c46e44ed31` | fails to compile | [vector.bool.pspc] |
-| `libcxx/test/std/containers/sequences/vector.bool/reference/operator_bool.pass.cpp` | `4ef15a3c29e8` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/reference/triviality.compile.pass.cpp` | `84c3f15dab61` | compiles |  |
-| `libcxx/test/std/containers/sequences/vector.bool/reserve.pass.cpp` | `a8eceb876f60` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/resize_size.pass.cpp` | `de77f47f77c1` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/resize_size_value.pass.cpp` | `64ec1aac4726` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/shrink_to_fit.pass.cpp` | `0728d15aaa56` | runs, adapted | unsigned bits_per_word = static_cast<unsigned>(sizeof(C::__storage_type) * CHAR_BIT); (libc++'s internal __storage_type, which is bit_vector's block_container_type::value_type) |
-| `libcxx/test/std/containers/sequences/vector.bool/size.pass.cpp` | `47bd59fb0f7f` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/small_allocator_size.pass.cpp` | `8d8e42571436` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/swap.pass.cpp` | `314da3d047e1` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/swap_noexcept.pass.cpp` | `5a653ac42f5d` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/types.pass.cpp` | `174730a46512` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/format.functions.format.pass.cpp` | `17dea9b8044b` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/format.functions.tests.h` | `c4f78270d64f` | not run | not a test source |
-| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/format.functions.vformat.pass.cpp` | `2cc492786004` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/format.pass.cpp` | `816e848537be` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/parse.pass.cpp` | `1e8daf4e26c8` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/types.compile.pass.cpp` | `22eeadf5632f` | compiles |  |
-| `libcxx/test/std/containers/sequences/vector.bool/vector_bool.pass.cpp` | `7dd9a484a116` | runs |  |
 
-## libstdc++
+## libc++ against bit_fixed_set
+
+- **Pinned:** [https://github.com/llvm/llvm-project](https://github.com/llvm/llvm-project) at `llvmorg-22.1.8`.
+- **Mappings:** the suite's `test/std-test-suite/libcxx-*.toml` for the directories it takes, and `bit-fixed-set.toml` for the type.
+
+| test | sha256 | outcome | note |
+| :--- | :--- | :--- | :--- |
+| `libcxx/test/std/containers/associative/set/allocator_mismatch.verify.cpp` | `652e404d93f1` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/clear.pass.cpp` | `868ab0b8ffa2` | runs |  |
+| `libcxx/test/std/containers/associative/set/contains.pass.cpp` | `65f44690079c` | runs |  |
+| `libcxx/test/std/containers/associative/set/contains_transparent.pass.cpp` | `53e63173cb89` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/count.pass.cpp` | `5584b1aee741` | runs |  |
+| `libcxx/test/std/containers/associative/set/count_transparent.pass.cpp` | `cc6c8ec6805e` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/emplace.pass.cpp` | `a97e7837b0a8` | runs |  |
+| `libcxx/test/std/containers/associative/set/emplace_hint.pass.cpp` | `c34b803be01e` | runs |  |
+| `libcxx/test/std/containers/associative/set/empty.pass.cpp` | `867fff1dd206` | runs |  |
+| `libcxx/test/std/containers/associative/set/empty.verify.cpp` | `41e7e25fd205` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/equal_range.pass.cpp` | `4583b139b1cd` | runs |  |
+| `libcxx/test/std/containers/associative/set/equal_range_transparent.pass.cpp` | `da7036c6599d` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/erase_iter.pass.cpp` | `909c375d1481` | runs |  |
+| `libcxx/test/std/containers/associative/set/erase_iter_iter.pass.cpp` | `62ef8c22ae43` | runs |  |
+| `libcxx/test/std/containers/associative/set/erase_key.pass.cpp` | `60869d49ba8b` | runs |  |
+| `libcxx/test/std/containers/associative/set/extract_iterator.pass.cpp` | `9128487e04ad` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/extract_key.pass.cpp` | `772ad5bc7540` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/find.pass.cpp` | `ade8c52b1955` | runs |  |
+| `libcxx/test/std/containers/associative/set/gcc_workaround.compile.pass.cpp` | `634150905da9` | compiles |  |
+| `libcxx/test/std/containers/associative/set/get_allocator.pass.cpp` | `fc4089ed8899` | fails to compile | [container.alloc.reqmts]: a fixed set allocates nothing, so it has no allocator to return |
+| `libcxx/test/std/containers/associative/set/incomplete_type.pass.cpp` | `b97dd11b85dc` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_and_emplace_allocator_requirements.pass.cpp` | `c30872880534` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_cv.pass.cpp` | `e97308343c7a` | runs |  |
+| `libcxx/test/std/containers/associative/set/insert_initializer_list.pass.cpp` | `0bc5f2a9ce75` | runs |  |
+| `libcxx/test/std/containers/associative/set/insert_iter_cv.pass.cpp` | `f66a4fa7d485` | runs |  |
+| `libcxx/test/std/containers/associative/set/insert_iter_iter.pass.cpp` | `a3718a9c57f0` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_iter_rv.pass.cpp` | `27478c59caea` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_node_type.pass.cpp` | `b35cd8ad9585` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/insert_node_type_hint.pass.cpp` | `bfa4b3367805` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/insert_range.pass.cpp` | `5ae2955e9078` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_rv.pass.cpp` | `4304561cb95c` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/iterator.pass.cpp` | `819b7372dfe6` | runs |  |
+| `libcxx/test/std/containers/associative/set/iterator_concept_conformance.compile.pass.cpp` | `a2025a27b5c2` | compiles |  |
+| `libcxx/test/std/containers/associative/set/lower_bound.pass.cpp` | `4f7a2603a0f6` | runs |  |
+| `libcxx/test/std/containers/associative/set/max_size.pass.cpp` | `ef6ff179df58` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/merge.pass.cpp` | `658c775174c6` | fails to compile | [associative.reqmts.general] |
+| `libcxx/test/std/containers/associative/set/range_concept_conformance.compile.pass.cpp` | `44fbd721985e` | compiles |  |
+| `libcxx/test/std/containers/associative/set/set.cons/alloc.pass.cpp` | `aa43e9fcb26c` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/assign_initializer_list.pass.cpp` | `f964d9f95928` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.cons/compare.pass.cpp` | `0d8f91617a0f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/compare_alloc.pass.cpp` | `6a6cfa91e0e2` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/compare_copy_constructible.compile.fail.cpp` | `ef04ba8973f2` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/copy.pass.cpp` | `fb263a52b8d7` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/copy_alloc.pass.cpp` | `08bc9f7177b3` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/copy_assign.addressof.compile.pass.cpp` | `42e4ed735d3c` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/copy_assign.pass.cpp` | `980c27da3575` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp` | `67892454971e` | fails to compile | [set.overview] |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.verify.cpp` | `1bf1b172533f` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/default.pass.cpp` | `e9b906681a03` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.cons/default_noexcept.pass.cpp` | `c830d62c2869` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/dtor_noexcept.pass.cpp` | `3c74373bb576` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/from_range.pass.cpp` | `5c08a8ebab24` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/initializer_list.pass.cpp` | `6c6ac53143bf` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.cons/initializer_list_compare.pass.cpp` | `a69c0795ff30` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/initializer_list_compare_alloc.pass.cpp` | `c40cd541e87c` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/iter_iter.pass.cpp` | `bd55ceb68288` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/iter_iter_alloc.pass.cpp` | `703e27ee0053` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/iter_iter_comp.pass.cpp` | `f127416c851d` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move.pass.cpp` | `d7d0d1fb2af5` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move_alloc.pass.cpp` | `63dc391910eb` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move_assign.pass.cpp` | `2e0f50070d13` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move_assign_noexcept.compile.pass.cpp` | `3a2b32c868d9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move_noexcept.pass.cpp` | `5e61f09993b3` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.erasure/erase_if.pass.cpp` | `bf06247af20e` | runs, adapted | ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase_if(s, p))); (erase_if is xstd's, found by argument-dependent lookup); assert(expected_erased_count == std::erase_if(s, p)); (erase_if is xstd's, found by argument-dependent lookup) |
+| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.pass.cpp` | `83d05f3bef66` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.verify.cpp` | `5a78a712cc54` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.nonmember/op_compare.pass.cpp` | `db0f2ccd8606` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.observers/comp.pass.cpp` | `7a51eb983905` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.special/member_swap.pass.cpp` | `e6db2e8ded52` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.special/non_member_swap.pass.cpp` | `e83b62b3de55` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.special/swap_noexcept.pass.cpp` | `9d0330c20bd4` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/size.pass.cpp` | `fb4ba712d3f1` | runs |  |
+| `libcxx/test/std/containers/associative/set/types.pass.cpp` | `4b2d43c4a72a` | runs, adapted | static_assert((std::is_same<C::key_type, int>::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::value_type, int>::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::key_compare, std::less<int> >::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::value_compare, std::less<int> >::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::allocator_type, std::allocator<int> >::value), ""); (allocator_type is the block container's allocator); static_assert((std::is_same<C::reference, int&>::value), ""); (reference is the set's own proxy); static_assert((std::is_same<C::const_reference, const int&>::value), ""); (reference is the set's own proxy); static_assert((std::is_same<C::pointer, int*>::value), ""); (pointer is the set's own proxy); static_assert((std::is_same<C::const_pointer, const int*>::value), ""); (pointer is the set's own proxy) |
+| `libcxx/test/std/containers/associative/set/upper_bound.pass.cpp` | `c8e7efe86b1d` | runs |  |
+
+## libc++ against bit_inplace_set
+
+- **Pinned:** [https://github.com/llvm/llvm-project](https://github.com/llvm/llvm-project) at `llvmorg-22.1.8`.
+- **Mappings:** the suite's `test/std-test-suite/libcxx-*.toml` for the directories it takes, and `bit-inplace-set.toml` for the type.
+
+| test | sha256 | outcome | note |
+| :--- | :--- | :--- | :--- |
+| `libcxx/test/std/containers/associative/set/allocator_mismatch.verify.cpp` | `652e404d93f1` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/clear.pass.cpp` | `868ab0b8ffa2` | runs |  |
+| `libcxx/test/std/containers/associative/set/contains.pass.cpp` | `65f44690079c` | runs |  |
+| `libcxx/test/std/containers/associative/set/contains_transparent.pass.cpp` | `53e63173cb89` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/count.pass.cpp` | `5584b1aee741` | runs |  |
+| `libcxx/test/std/containers/associative/set/count_transparent.pass.cpp` | `cc6c8ec6805e` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/emplace.pass.cpp` | `a97e7837b0a8` | runs |  |
+| `libcxx/test/std/containers/associative/set/emplace_hint.pass.cpp` | `c34b803be01e` | runs |  |
+| `libcxx/test/std/containers/associative/set/empty.pass.cpp` | `867fff1dd206` | runs |  |
+| `libcxx/test/std/containers/associative/set/empty.verify.cpp` | `41e7e25fd205` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/equal_range.pass.cpp` | `4583b139b1cd` | runs |  |
+| `libcxx/test/std/containers/associative/set/equal_range_transparent.pass.cpp` | `da7036c6599d` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/erase_iter.pass.cpp` | `909c375d1481` | runs |  |
+| `libcxx/test/std/containers/associative/set/erase_iter_iter.pass.cpp` | `62ef8c22ae43` | runs |  |
+| `libcxx/test/std/containers/associative/set/erase_key.pass.cpp` | `60869d49ba8b` | runs |  |
+| `libcxx/test/std/containers/associative/set/extract_iterator.pass.cpp` | `9128487e04ad` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/extract_key.pass.cpp` | `772ad5bc7540` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/find.pass.cpp` | `ade8c52b1955` | runs |  |
+| `libcxx/test/std/containers/associative/set/gcc_workaround.compile.pass.cpp` | `634150905da9` | compiles |  |
+| `libcxx/test/std/containers/associative/set/get_allocator.pass.cpp` | `fc4089ed8899` | fails to compile | [container.alloc.reqmts]: an inplace set allocates nothing, so it has no allocator to return |
+| `libcxx/test/std/containers/associative/set/incomplete_type.pass.cpp` | `b97dd11b85dc` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_and_emplace_allocator_requirements.pass.cpp` | `c30872880534` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_cv.pass.cpp` | `e97308343c7a` | runs |  |
+| `libcxx/test/std/containers/associative/set/insert_initializer_list.pass.cpp` | `0bc5f2a9ce75` | runs |  |
+| `libcxx/test/std/containers/associative/set/insert_iter_cv.pass.cpp` | `f66a4fa7d485` | runs |  |
+| `libcxx/test/std/containers/associative/set/insert_iter_iter.pass.cpp` | `a3718a9c57f0` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_iter_rv.pass.cpp` | `27478c59caea` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_node_type.pass.cpp` | `b35cd8ad9585` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/insert_node_type_hint.pass.cpp` | `bfa4b3367805` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/insert_range.pass.cpp` | `5ae2955e9078` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_rv.pass.cpp` | `4304561cb95c` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/iterator.pass.cpp` | `819b7372dfe6` | runs |  |
+| `libcxx/test/std/containers/associative/set/iterator_concept_conformance.compile.pass.cpp` | `a2025a27b5c2` | compiles |  |
+| `libcxx/test/std/containers/associative/set/lower_bound.pass.cpp` | `4f7a2603a0f6` | runs |  |
+| `libcxx/test/std/containers/associative/set/max_size.pass.cpp` | `ef6ff179df58` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/merge.pass.cpp` | `658c775174c6` | fails to compile | [associative.reqmts.general] |
+| `libcxx/test/std/containers/associative/set/range_concept_conformance.compile.pass.cpp` | `44fbd721985e` | compiles |  |
+| `libcxx/test/std/containers/associative/set/set.cons/alloc.pass.cpp` | `aa43e9fcb26c` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/assign_initializer_list.pass.cpp` | `f964d9f95928` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.cons/compare.pass.cpp` | `0d8f91617a0f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/compare_alloc.pass.cpp` | `6a6cfa91e0e2` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/compare_copy_constructible.compile.fail.cpp` | `ef04ba8973f2` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/copy.pass.cpp` | `fb263a52b8d7` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/copy_alloc.pass.cpp` | `08bc9f7177b3` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/copy_assign.addressof.compile.pass.cpp` | `42e4ed735d3c` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/copy_assign.pass.cpp` | `980c27da3575` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp` | `67892454971e` | fails to compile | [set.overview] |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.verify.cpp` | `1bf1b172533f` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/default.pass.cpp` | `e9b906681a03` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.cons/default_noexcept.pass.cpp` | `c830d62c2869` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/dtor_noexcept.pass.cpp` | `3c74373bb576` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/from_range.pass.cpp` | `5c08a8ebab24` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/initializer_list.pass.cpp` | `6c6ac53143bf` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.cons/initializer_list_compare.pass.cpp` | `a69c0795ff30` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/initializer_list_compare_alloc.pass.cpp` | `c40cd541e87c` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/iter_iter.pass.cpp` | `bd55ceb68288` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/iter_iter_alloc.pass.cpp` | `703e27ee0053` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/iter_iter_comp.pass.cpp` | `f127416c851d` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move.pass.cpp` | `d7d0d1fb2af5` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move_alloc.pass.cpp` | `63dc391910eb` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move_assign.pass.cpp` | `2e0f50070d13` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move_assign_noexcept.compile.pass.cpp` | `3a2b32c868d9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move_noexcept.pass.cpp` | `5e61f09993b3` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.erasure/erase_if.pass.cpp` | `bf06247af20e` | runs, adapted | ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase_if(s, p))); (erase_if is xstd's, found by argument-dependent lookup); assert(expected_erased_count == std::erase_if(s, p)); (erase_if is xstd's, found by argument-dependent lookup) |
+| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.pass.cpp` | `83d05f3bef66` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.verify.cpp` | `5a78a712cc54` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.nonmember/op_compare.pass.cpp` | `db0f2ccd8606` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.observers/comp.pass.cpp` | `7a51eb983905` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.special/member_swap.pass.cpp` | `e6db2e8ded52` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.special/non_member_swap.pass.cpp` | `e83b62b3de55` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.special/swap_noexcept.pass.cpp` | `9d0330c20bd4` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/size.pass.cpp` | `fb4ba712d3f1` | runs |  |
+| `libcxx/test/std/containers/associative/set/types.pass.cpp` | `4b2d43c4a72a` | runs, adapted | static_assert((std::is_same<C::key_type, int>::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::value_type, int>::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::key_compare, std::less<int> >::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::value_compare, std::less<int> >::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::allocator_type, std::allocator<int> >::value), ""); (allocator_type is the block container's allocator); static_assert((std::is_same<C::reference, int&>::value), ""); (reference is the set's own proxy); static_assert((std::is_same<C::const_reference, const int&>::value), ""); (reference is the set's own proxy); static_assert((std::is_same<C::pointer, int*>::value), ""); (pointer is the set's own proxy); static_assert((std::is_same<C::const_pointer, const int*>::value), ""); (pointer is the set's own proxy) |
+| `libcxx/test/std/containers/associative/set/upper_bound.pass.cpp` | `c8e7efe86b1d` | runs |  |
+
+## libc++ against bit_small_set
+
+- **Pinned:** [https://github.com/llvm/llvm-project](https://github.com/llvm/llvm-project) at `llvmorg-22.1.8`.
+- **Mappings:** the suite's `test/std-test-suite/libcxx-*.toml` for the directories it takes, and `bit-small-set.toml` for the type.
+
+| test | sha256 | outcome | note |
+| :--- | :--- | :--- | :--- |
+| `libcxx/test/std/containers/associative/set/allocator_mismatch.verify.cpp` | `652e404d93f1` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/clear.pass.cpp` | `868ab0b8ffa2` | runs |  |
+| `libcxx/test/std/containers/associative/set/contains.pass.cpp` | `65f44690079c` | runs |  |
+| `libcxx/test/std/containers/associative/set/contains_transparent.pass.cpp` | `53e63173cb89` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/count.pass.cpp` | `5584b1aee741` | runs |  |
+| `libcxx/test/std/containers/associative/set/count_transparent.pass.cpp` | `cc6c8ec6805e` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/emplace.pass.cpp` | `a97e7837b0a8` | runs |  |
+| `libcxx/test/std/containers/associative/set/emplace_hint.pass.cpp` | `c34b803be01e` | runs |  |
+| `libcxx/test/std/containers/associative/set/empty.pass.cpp` | `867fff1dd206` | runs |  |
+| `libcxx/test/std/containers/associative/set/empty.verify.cpp` | `41e7e25fd205` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/equal_range.pass.cpp` | `4583b139b1cd` | runs |  |
+| `libcxx/test/std/containers/associative/set/equal_range_transparent.pass.cpp` | `da7036c6599d` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/erase_iter.pass.cpp` | `909c375d1481` | runs |  |
+| `libcxx/test/std/containers/associative/set/erase_iter_iter.pass.cpp` | `62ef8c22ae43` | runs |  |
+| `libcxx/test/std/containers/associative/set/erase_key.pass.cpp` | `60869d49ba8b` | runs |  |
+| `libcxx/test/std/containers/associative/set/extract_iterator.pass.cpp` | `9128487e04ad` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/extract_key.pass.cpp` | `772ad5bc7540` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/find.pass.cpp` | `ade8c52b1955` | runs |  |
+| `libcxx/test/std/containers/associative/set/gcc_workaround.compile.pass.cpp` | `634150905da9` | compiles |  |
+| `libcxx/test/std/containers/associative/set/get_allocator.pass.cpp` | `fc4089ed8899` | fails to compile | [container.alloc.reqmts]: the set's allocator is its storage's, Boost's small_vector allocator of blocks, not std::allocator<int> |
+| `libcxx/test/std/containers/associative/set/incomplete_type.pass.cpp` | `b97dd11b85dc` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_and_emplace_allocator_requirements.pass.cpp` | `c30872880534` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_cv.pass.cpp` | `e97308343c7a` | runs |  |
+| `libcxx/test/std/containers/associative/set/insert_initializer_list.pass.cpp` | `0bc5f2a9ce75` | runs |  |
+| `libcxx/test/std/containers/associative/set/insert_iter_cv.pass.cpp` | `f66a4fa7d485` | runs |  |
+| `libcxx/test/std/containers/associative/set/insert_iter_iter.pass.cpp` | `a3718a9c57f0` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_iter_rv.pass.cpp` | `27478c59caea` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_node_type.pass.cpp` | `b35cd8ad9585` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/insert_node_type_hint.pass.cpp` | `bfa4b3367805` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/insert_range.pass.cpp` | `5ae2955e9078` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/insert_rv.pass.cpp` | `4304561cb95c` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/iterator.pass.cpp` | `819b7372dfe6` | runs |  |
+| `libcxx/test/std/containers/associative/set/iterator_concept_conformance.compile.pass.cpp` | `a2025a27b5c2` | compiles |  |
+| `libcxx/test/std/containers/associative/set/lower_bound.pass.cpp` | `4f7a2603a0f6` | runs |  |
+| `libcxx/test/std/containers/associative/set/max_size.pass.cpp` | `ef6ff179df58` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/merge.pass.cpp` | `658c775174c6` | fails to compile | [associative.reqmts.general] |
+| `libcxx/test/std/containers/associative/set/range_concept_conformance.compile.pass.cpp` | `44fbd721985e` | compiles |  |
+| `libcxx/test/std/containers/associative/set/set.cons/alloc.pass.cpp` | `aa43e9fcb26c` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/assign_initializer_list.pass.cpp` | `f964d9f95928` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.cons/compare.pass.cpp` | `0d8f91617a0f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/compare_alloc.pass.cpp` | `6a6cfa91e0e2` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/compare_copy_constructible.compile.fail.cpp` | `ef04ba8973f2` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/copy.pass.cpp` | `fb263a52b8d7` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/copy_alloc.pass.cpp` | `08bc9f7177b3` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/copy_assign.addressof.compile.pass.cpp` | `42e4ed735d3c` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/copy_assign.pass.cpp` | `980c27da3575` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp` | `67892454971e` | fails to compile | [set.overview] |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.verify.cpp` | `1bf1b172533f` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/default.pass.cpp` | `e9b906681a03` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.cons/default_noexcept.pass.cpp` | `c830d62c2869` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/dtor_noexcept.pass.cpp` | `3c74373bb576` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/from_range.pass.cpp` | `5c08a8ebab24` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/initializer_list.pass.cpp` | `6c6ac53143bf` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.cons/initializer_list_compare.pass.cpp` | `a69c0795ff30` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/initializer_list_compare_alloc.pass.cpp` | `c40cd541e87c` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/iter_iter.pass.cpp` | `bd55ceb68288` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/iter_iter_alloc.pass.cpp` | `703e27ee0053` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/iter_iter_comp.pass.cpp` | `f127416c851d` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move.pass.cpp` | `d7d0d1fb2af5` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move_alloc.pass.cpp` | `63dc391910eb` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move_assign.pass.cpp` | `2e0f50070d13` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move_assign_noexcept.compile.pass.cpp` | `3a2b32c868d9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.cons/move_noexcept.pass.cpp` | `5e61f09993b3` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.erasure/erase_if.pass.cpp` | `bf06247af20e` | runs, adapted | ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase_if(s, p))); (erase_if is xstd's, found by argument-dependent lookup); assert(expected_erased_count == std::erase_if(s, p)); (erase_if is xstd's, found by argument-dependent lookup) |
+| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.pass.cpp` | `83d05f3bef66` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.verify.cpp` | `5a78a712cc54` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.nonmember/op_compare.pass.cpp` | `db0f2ccd8606` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.observers/comp.pass.cpp` | `7a51eb983905` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.special/member_swap.pass.cpp` | `e6db2e8ded52` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.special/non_member_swap.pass.cpp` | `e83b62b3de55` | runs |  |
+| `libcxx/test/std/containers/associative/set/set.special/swap_noexcept.pass.cpp` | `9d0330c20bd4` | not run | no rewrite reaches it, so it tests the standard library |
+| `libcxx/test/std/containers/associative/set/size.pass.cpp` | `fb4ba712d3f1` | runs |  |
+| `libcxx/test/std/containers/associative/set/types.pass.cpp` | `4b2d43c4a72a` | runs, adapted | static_assert((std::is_same<C::key_type, int>::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::value_type, int>::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::key_compare, std::less<int> >::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::value_compare, std::less<int> >::value), ""); (the key the rewrite reads std::set<int> as, std::size_t); static_assert((std::is_same<C::allocator_type, std::allocator<int> >::value), ""); (allocator_type is the block container's allocator); static_assert((std::is_same<C::reference, int&>::value), ""); (reference is the set's own proxy); static_assert((std::is_same<C::const_reference, const int&>::value), ""); (reference is the set's own proxy); static_assert((std::is_same<C::pointer, int*>::value), ""); (pointer is the set's own proxy); static_assert((std::is_same<C::const_pointer, const int*>::value), ""); (pointer is the set's own proxy) |
+| `libcxx/test/std/containers/associative/set/upper_bound.pass.cpp` | `c8e7efe86b1d` | runs |  |
+
+## libstdc++ against bit_vector
 
 - **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.2.0`.
-- **Mapping:** `test/std-test-suite/libstdcxx.toml`.
+- **Mappings:** the suite's `test/std-test-suite/libstdcxx-*.toml` for the directories it takes, and `bit-vector.toml` for the type.
 - **Not selected:** 807 files that do not match `vector<bool>`, left to the standard library.
 
 | test | sha256 | outcome | note |
 | :--- | :--- | :--- | :--- |
-| `libstdc++-v3/testsuite/23_containers/set/14340.cc` | `8ca7c4598091` | compiles |  |
-| `libstdc++-v3/testsuite/23_containers/set/18604.cc` | `e75fd7a7647e` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/23781_neg.cc` | `385b02b013d2` | not run | a test of diagnostics, run in a second pass |
-| `libstdc++-v3/testsuite/23_containers/set/48101-2_neg.cc` | `b1ae60d36967` | not run | dg-add-options strict_std, which this adapter does not interpret |
-| `libstdc++-v3/testsuite/23_containers/set/48101-3_neg.cc` | `2801895e66c1` | not run | a test of diagnostics, run in a second pass |
-| `libstdc++-v3/testsuite/23_containers/set/48101_neg.cc` | `61e673eef398` | not run | a test of diagnostics, run in a second pass |
-| `libstdc++-v3/testsuite/23_containers/set/58764.cc` | `d30ac2979c4b` | compiles |  |
-| `libstdc++-v3/testsuite/23_containers/set/85965.cc` | `46628f3c5814` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/92124.cc` | `b525b7998dca` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/allocator/103501.cc` | `af062909f7f8` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/allocator/71964.cc` | `762472679152` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/allocator/copy.cc` | `c4a9538337e0` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/allocator/copy_assign.cc` | `926a979c7386` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/allocator/default_init.cc` | `4e1155f45ce2` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/allocator/ext_ptr.cc` | `ac3be6c483d9` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/allocator/init-list.cc` | `dcd3153c0811` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/allocator/minimal.cc` | `695b1cd30388` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/allocator/move.cc` | `4f332bbeb2a8` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/allocator/move_assign.cc` | `f43319b474da` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/allocator/move_cons.cc` | `464cd0ee9360` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/allocator/noexcept.cc` | `687f399e7d2f` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/allocator/swap.cc` | `df4f1f6a2f38` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/capacity/29134.cc` | `1b0c36dcf586` | runs, adapted | VERIFY( s.max_size() == __gnu_test::max_size(a) ); (max_size(), which [container.reqmts] leaves to the implementation, is libstdc++'s tree node count here) |
-| `libstdc++-v3/testsuite/23_containers/set/check_construct_destroy.cc` | `9cd7336b0b12` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/cons/61023.cc` | `04cb8b499db4` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc` | `31f823d5b496` | fails to compile | [set.overview] |
-| `libstdc++-v3/testsuite/23_containers/set/cons/from_range.cc` | `c55f94862e89` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/cons/moveable.cc` | `dd6e842f78a8` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_default_construct.cc` | `72ce52d65d70` | compiles |  |
-| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_move_construct.cc` | `c85c45fb3570` | compiles, adapted | static_assert( std::is_nothrow_constructible<stype, ([set.overview] declares the move constructor with an allocator without noexcept, which libstdc++ adds as an extension) |
-| `libstdc++-v3/testsuite/23_containers/set/cons/self_move.cc` | `2dc2c7e0fd78` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/set/debug/114316.cc` | `38a5d4b4c86f` | not run | dg-require-debug-mode |
-| `libstdc++-v3/testsuite/23_containers/set/debug/60499.cc` | `c979b567b671` | not run | dg-require-debug-mode |
-| `libstdc++-v3/testsuite/23_containers/set/debug/90102.cc` | `53b22a10de5d` | fails to compile | none of bit_set's: a test of libstdc++'s debug-mode std::__debug::set |
-| `libstdc++-v3/testsuite/23_containers/set/debug/construct1_neg.cc` | `986a90652e00` | not run | dg-require-debug-mode |
-| `libstdc++-v3/testsuite/23_containers/set/debug/construct2_neg.cc` | `4f059f7eee3c` | not run | dg-require-debug-mode |
-| `libstdc++-v3/testsuite/23_containers/set/debug/construct3_neg.cc` | `b979292cd0fb` | not run | dg-require-debug-mode |
-| `libstdc++-v3/testsuite/23_containers/set/debug/construct4_neg.cc` | `18a5dcc9e58a` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/debug/construct5_neg.cc` | `b9f98b92c1fc` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/debug/insert1_neg.cc` | `edceb683c54a` | not run | dg-require-debug-mode |
-| `libstdc++-v3/testsuite/23_containers/set/debug/insert2_neg.cc` | `7c6a47d8221b` | not run | dg-require-debug-mode |
-| `libstdc++-v3/testsuite/23_containers/set/debug/insert3_neg.cc` | `b518e60ea0db` | not run | dg-require-debug-mode |
-| `libstdc++-v3/testsuite/23_containers/set/debug/insert4_neg.cc` | `f02fab0f4f67` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/debug/invalidation/1.cc` | `916785fa1b1f` | fails to compile | none of bit_set's: a test of libstdc++'s debug-mode iterator invalidation |
-| `libstdc++-v3/testsuite/23_containers/set/debug/invalidation/2.cc` | `9e5c00d1e9e0` | fails to compile | none of bit_set's: a test of libstdc++'s debug-mode iterator invalidation |
-| `libstdc++-v3/testsuite/23_containers/set/debug/move_assign_neg.cc` | `2529bce4d6a3` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/debug/move_neg.cc` | `00761113b543` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/erasure.cc` | `f1448b4a42c4` | runs, adapted | auto num = std::erase_if(s, is_odd); (erase_if is xstd's, found by argument-dependent lookup); std::erase_if(s, pred); (erase_if is xstd's, found by argument-dependent lookup) |
-| `libstdc++-v3/testsuite/23_containers/set/init-list.cc` | `1a32d769c68f` | runs, adapted | __gnu_test::set_memory_limits(); (none of bit_set's: the memory limit is set by libstdc++'s test support library, which no consumer links) |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/114401.cc` | `f52e0a46d3c9` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/16728.cc` | `34251006fef4` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/17948.cc` | `65b521036b4c` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/dr130.cc` | `e54e82e18827` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/emplace/1.cc` | `68de43084794` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/emplace/92878_92947.cc` | `388b69763da2` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/51142.cc` | `4c12ac79a9a9` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/abi_tag.cc` | `4172e524714b` | not run | dg-require-normal-mode |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/dr130-linkage-check.cc` | `79abb42457bf` | not run | dg-require-effective-target ia32 |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc` | `3898dc149ffb` | fails to compile | [container.node] |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/1.cc` | `425016942069` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/2.cc` | `777671a9096e` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/3.cc` | `1093d434d546` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/87194.cc` | `bae69d6f2d40` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/insert_range.cc` | `d627bab8eb3f` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc` | `64cd1d48163c` | fails to compile | [associative.reqmts.general] |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc` | `63fba8bfd4ad` | fails to compile | [container.node] |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/1.cc` | `7f3e45d73237` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/2.cc` | `c512b7aaaff0` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/3.cc` | `5f03aec3b103` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/adl.cc` | `945cabfbddb7` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/move_comparison.cc` | `8a049456d86d` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/operations/1.cc` | `6ddb29a55397` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/set/operations/2.cc` | `4a06d7411f9b` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/set/operations/contains.cc` | `945a453d9816` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/set/operations/count.cc` | `9c059115dcfa` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/set/operations/equal_range_adl.cc` | `91eae0255523` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/operators/1_neg.cc` | `2a8d8b8fde22` | not run | a test of diagnostics, run in a second pass |
-| `libstdc++-v3/testsuite/23_containers/set/operators/cmp_c++20.cc` | `97c181291623` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs.cc` | `bd4cdd0b6bea` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs_debug.cc` | `5b648ccf1e94` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/range_access.cc` | `da4c0f5f4a00` | compiles |  |
-| `libstdc++-v3/testsuite/23_containers/set/requirements/citerators.cc` | `582b06fee64b` | fails to compile | none of bit_set's: libstdc++'s __gnu_test::citerator reads __gnu_test::traits, which describes the standard containers alone |
-| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/basic.cc` | `50b601537097` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/generation_prohibited.cc` | `abd082c2ca8f` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/propagation_consistent.cc` | `040f3f6e3656` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/1.cc` | `9fd0346fc798` | compiles |  |
-| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/2.cc` | `498cab28880a` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/3.cc` | `d11a4f73b9b9` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/4.cc` | `a6dd32be2501` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/5.cc` | `92b8be19bb23` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/alloc_ptr.cc` | `01619de7cecc` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/alloc_ptr_ignored.cc` | `8c9492ccfc61` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/requirements/partial_specialization/1.cc` | `779da47c0c5a` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/requirements/typedefs.cc` | `0a0a7a569ecb` | fails to compile | none of bit_set's: libstdc++'s __gnu_test::types reads __gnu_test::traits, which describes the standard containers alone |
-| `libstdc++-v3/testsuite/23_containers/set/version.cc` | `55ad5d0e4e12` | not run | dg-do preprocess, which builds no test |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/1.cc` | `b239d71e27f2` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/110807.cc` | `be1300b70a53` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/115098.cc` | `269eaf59548f` | compiles |  |
@@ -354,7 +598,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/1.cc` | `1d66a207486d` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/assign_range.cc` | `b0ff689382a3` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/constexpr.cc` | `5097184503d9` | compiles |  |
-| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc` | `748b4a39e0bd` | compiles, adapted | v.flip(); (no flip(): [vector.bool.pspc]'s negation of every element is written element by element); v[2].flip(); (no reference::flip()); auto n = std::erase(e, false); ([vector.erasure]'s erase is std's for std::vector; bit_vector's is xstd's, found by argument-dependent lookup); n = std::erase_if(e, [](std::vector<bool>::reference val) { return !val; }); ([vector.erasure]'s erase_if is std's for std::vector; bit_vector's is xstd's, found by argument-dependent lookup) |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc` | `748b4a39e0bd` | compiles, adapted | v.flip(); (no flip(): [vector.bool.pspc]'s negation of every element is written element by element); v[2].flip(); (no reference::flip()); auto n = std::erase(e, false); ([vector.erasure]'s erase is std's for std::vector; a bit vector's is xstd's, found by argument-dependent lookup); n = std::erase_if(e, [](std::vector<bool>::reference val) { return !val; }); ([vector.erasure]'s erase_if is std's for std::vector; a bit vector's is xstd's, found by argument-dependent lookup) |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/erase/1.cc` | `7718fe8af97d` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/erase/54577.cc` | `39ed01e4b81c` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/insert/1.cc` | `d823df99a0f5` | runs |  |
@@ -366,7 +610,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/1.cc` | `cb5c28334c21` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/2.cc` | `ebe64973f01f` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/constexpr.cc` | `830691ce9681` | compiles, adapted | std::vector<bool>::swap(v1[0], v1[1]); (no static swap(reference, reference): [vector.bool.pspc]'s exchange of two elements goes through the iterators) |
-| `libstdc++-v3/testsuite/23_containers/vector/bool/requirements/citerators.cc` | `2f4a277f428a` | fails to compile | none of bit_vector's: libstdc++'s __gnu_test::citerator reads __gnu_test::traits, which describes the standard containers alone |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/requirements/citerators.cc` | `2f4a277f428a` | fails to compile | none of the bit vector's: libstdc++'s __gnu_test::citerator reads __gnu_test::traits, which describes the standard containers alone |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/requirements/dr438/constructor.cc` | `3fc8cf8bfb56` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/swap.cc` | `842f03de2a14` | runs |  |
 | `libstdc++-v3/testsuite/25_algorithms/adjacent_find/vectorbool.cc` | `74612885f4f4` | runs |  |
@@ -382,10 +626,490 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/25_algorithms/sort/vectorbool.cc` | `b0ed19fb9b70` | runs |  |
 | `libstdc++-v3/testsuite/25_algorithms/stable_sort/3.cc` | `26d4f78595b9` | runs |  |
 
-## MSVC STL
+## libstdc++ against bit_small_vector
+
+- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.2.0`.
+- **Mappings:** the suite's `test/std-test-suite/libstdcxx-*.toml` for the directories it takes, and `bit-small-vector.toml` for the type.
+
+| test | sha256 | outcome | note |
+| :--- | :--- | :--- | :--- |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/1.cc` | `b239d71e27f2` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/110807.cc` | `be1300b70a53` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/115098.cc` | `269eaf59548f` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/21244.cc` | `e84a5e45ba07` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/23632.cc` | `426ca1c086c6` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/6886.cc` | `9a3f630ea854` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/72847.cc` | `3fa84e8e0d9d` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/80893.cc` | `0c99b0b89fe8` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/82558.cc` | `a125794728da` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/allocator/115854.cc` | `ae988fb519cc` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/allocator/copy.cc` | `5944d3420346` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/allocator/copy_assign.cc` | `97855bc6f48a` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/allocator/default_init.cc` | `98920de35e68` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/allocator/ext_ptr.cc` | `01416592b713` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/allocator/minimal.cc` | `0a85831ad8cc` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/allocator/move.cc` | `dd30143bfff1` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/allocator/move_assign.cc` | `2089c513c356` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/allocator/noexcept.cc` | `921ac7262aa5` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/allocator/swap.cc` | `f275c3c69a8b` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/capacity/1.cc` | `25cbb017aab2` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/capacity/110498.cc` | `3e25b1ea157f` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/capacity/114758.cc` | `3e53f4132b5f` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/capacity/29134.cc` | `c9cd04e3b13f` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/capacity/constexpr.cc` | `f379b0056969` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/capacity/shrink_to_fit.cc` | `b49f915776e1` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/clear_allocator.cc` | `31ef8a5b6d38` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/cmp_c++20.cc` | `1804758f43e8` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/cons/1.cc` | `9c5f5ab72c9a` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/cons/2.cc` | `72819fbb826a` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/cons/87809.cc` | `5bc4c8d78579` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/cons/constexpr.cc` | `851108289086` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/cons/from_range.cc` | `aa8df55bdebb` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/cons/lwg3778.cc` | `bb08ee37faf0` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/cons/noexcept_move_construct.cc` | `c2ae85a02695` | compiles, adapted | static_assert( std::is_nothrow_constructible<vbtype, ([vector.overview] declares the move constructor with an allocator without noexcept, which libstdc++ adds as an extension) |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/element_access/1.cc` | `411c76dc9f86` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/element_access/constexpr.cc` | `a5004d73da49` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/emplace.cc` | `5ff6b81c9f10` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/emplace_cxx17_return.cc` | `0f5832cb9801` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/emplace_rvalue.cc` | `ec86a3c0fdab` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/format.cc` | `674b7cd4b4d5` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/hash/1.cc` | `1b0c9ac21dcc` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/iterator_c++20.cc` | `7e810e62f3e2` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/1.cc` | `1d66a207486d` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/assign_range.cc` | `b0ff689382a3` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/constexpr.cc` | `5097184503d9` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc` | `748b4a39e0bd` | compiles, adapted | v.flip(); (no flip(): [vector.bool.pspc]'s negation of every element is written element by element); v[2].flip(); (no reference::flip()); auto n = std::erase(e, false); ([vector.erasure]'s erase is std's for std::vector; a bit vector's is xstd's, found by argument-dependent lookup); n = std::erase_if(e, [](std::vector<bool>::reference val) { return !val; }); ([vector.erasure]'s erase_if is std's for std::vector; a bit vector's is xstd's, found by argument-dependent lookup) |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/erase/1.cc` | `7718fe8af97d` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/erase/54577.cc` | `39ed01e4b81c` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/insert/1.cc` | `d823df99a0f5` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/insert/104559.cc` | `e8d165705405` | not run | dg-require-normal-mode |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/insert/31370.cc` | `92ca76abf9e9` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/insert/append_range.cc` | `aaa3ca66e33a` | runs, adapted | static_assert( test_constexpr() ); (Boost's small_vector is not usable in a constant expression) |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/insert/const_iterator.cc` | `f00f67e0186c` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/insert/insert_range.cc` | `7e37b4870485` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/1.cc` | `cb5c28334c21` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/2.cc` | `ebe64973f01f` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/constexpr.cc` | `830691ce9681` | compiles, adapted | std::vector<bool>::swap(v1[0], v1[1]); (no static swap(reference, reference): [vector.bool.pspc]'s exchange of two elements goes through the iterators) |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/requirements/citerators.cc` | `2f4a277f428a` | fails to compile | none of the bit vector's: libstdc++'s __gnu_test::citerator reads __gnu_test::traits, which describes the standard containers alone |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/requirements/dr438/constructor.cc` | `3fc8cf8bfb56` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/swap.cc` | `842f03de2a14` | runs |  |
+
+## libstdc++ against bit_set
+
+- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.2.0`.
+- **Mappings:** the suite's `test/std-test-suite/libstdcxx-*.toml` for the directories it takes, and `bit-set.toml` for the type.
+
+| test | sha256 | outcome | note |
+| :--- | :--- | :--- | :--- |
+| `libstdc++-v3/testsuite/23_containers/set/14340.cc` | `8ca7c4598091` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/18604.cc` | `e75fd7a7647e` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/23781_neg.cc` | `385b02b013d2` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/48101-2_neg.cc` | `b1ae60d36967` | not run | dg-add-options strict_std, which this adapter does not interpret |
+| `libstdc++-v3/testsuite/23_containers/set/48101-3_neg.cc` | `2801895e66c1` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/48101_neg.cc` | `61e673eef398` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/58764.cc` | `d30ac2979c4b` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/85965.cc` | `46628f3c5814` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/92124.cc` | `b525b7998dca` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/103501.cc` | `af062909f7f8` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/71964.cc` | `762472679152` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/copy.cc` | `c4a9538337e0` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/copy_assign.cc` | `926a979c7386` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/default_init.cc` | `4e1155f45ce2` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/ext_ptr.cc` | `ac3be6c483d9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/init-list.cc` | `dcd3153c0811` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/minimal.cc` | `695b1cd30388` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/move.cc` | `4f332bbeb2a8` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/move_assign.cc` | `f43319b474da` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/move_cons.cc` | `464cd0ee9360` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/noexcept.cc` | `687f399e7d2f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/swap.cc` | `df4f1f6a2f38` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/capacity/29134.cc` | `1b0c36dcf586` | runs, adapted | VERIFY( s.max_size() == __gnu_test::max_size(a) ); (max_size(), which [container.reqmts] leaves to the implementation, is libstdc++'s tree node count here) |
+| `libstdc++-v3/testsuite/23_containers/set/check_construct_destroy.cc` | `9cd7336b0b12` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/cons/61023.cc` | `04cb8b499db4` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc` | `31f823d5b496` | fails to compile | [set.overview] |
+| `libstdc++-v3/testsuite/23_containers/set/cons/from_range.cc` | `c55f94862e89` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/cons/moveable.cc` | `dd6e842f78a8` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_default_construct.cc` | `72ce52d65d70` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_move_construct.cc` | `c85c45fb3570` | compiles, adapted | static_assert( std::is_nothrow_constructible<stype, ([set.overview] declares the move constructor with an allocator without noexcept, which libstdc++ adds as an extension) |
+| `libstdc++-v3/testsuite/23_containers/set/cons/self_move.cc` | `2dc2c7e0fd78` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/debug/114316.cc` | `38a5d4b4c86f` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/60499.cc` | `c979b567b671` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/90102.cc` | `53b22a10de5d` | fails to compile | none of the set's: a test of libstdc++'s debug-mode std::__debug::set |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct1_neg.cc` | `986a90652e00` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct2_neg.cc` | `4f059f7eee3c` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct3_neg.cc` | `b979292cd0fb` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct4_neg.cc` | `18a5dcc9e58a` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct5_neg.cc` | `b9f98b92c1fc` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert1_neg.cc` | `edceb683c54a` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert2_neg.cc` | `7c6a47d8221b` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert3_neg.cc` | `b518e60ea0db` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert4_neg.cc` | `f02fab0f4f67` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/invalidation/1.cc` | `916785fa1b1f` | fails to compile | none of the set's: a test of libstdc++'s debug-mode iterator invalidation |
+| `libstdc++-v3/testsuite/23_containers/set/debug/invalidation/2.cc` | `9e5c00d1e9e0` | fails to compile | none of the set's: a test of libstdc++'s debug-mode iterator invalidation |
+| `libstdc++-v3/testsuite/23_containers/set/debug/move_assign_neg.cc` | `2529bce4d6a3` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/move_neg.cc` | `00761113b543` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/erasure.cc` | `f1448b4a42c4` | runs, adapted | auto num = std::erase_if(s, is_odd); (erase_if is xstd's, found by argument-dependent lookup); std::erase_if(s, pred); (erase_if is xstd's, found by argument-dependent lookup) |
+| `libstdc++-v3/testsuite/23_containers/set/init-list.cc` | `1a32d769c68f` | runs, adapted | __gnu_test::set_memory_limits(); (none of the set's: the memory limit is set by libstdc++'s test support library, which no consumer links) |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/114401.cc` | `f52e0a46d3c9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/16728.cc` | `34251006fef4` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/17948.cc` | `65b521036b4c` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/dr130.cc` | `e54e82e18827` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/emplace/1.cc` | `68de43084794` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/emplace/92878_92947.cc` | `388b69763da2` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/51142.cc` | `4c12ac79a9a9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/abi_tag.cc` | `4172e524714b` | not run | dg-require-normal-mode |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/dr130-linkage-check.cc` | `79abb42457bf` | not run | dg-require-effective-target ia32 |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc` | `3898dc149ffb` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/1.cc` | `425016942069` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/2.cc` | `777671a9096e` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/3.cc` | `1093d434d546` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/87194.cc` | `bae69d6f2d40` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/insert_range.cc` | `d627bab8eb3f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc` | `64cd1d48163c` | fails to compile | [associative.reqmts.general] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc` | `63fba8bfd4ad` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/1.cc` | `7f3e45d73237` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/2.cc` | `c512b7aaaff0` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/3.cc` | `5f03aec3b103` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/adl.cc` | `945cabfbddb7` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/move_comparison.cc` | `8a049456d86d` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/operations/1.cc` | `6ddb29a55397` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/2.cc` | `4a06d7411f9b` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/contains.cc` | `945a453d9816` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/count.cc` | `9c059115dcfa` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/equal_range_adl.cc` | `91eae0255523` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/operators/1_neg.cc` | `2a8d8b8fde22` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/operators/cmp_c++20.cc` | `97c181291623` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs.cc` | `bd4cdd0b6bea` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs_debug.cc` | `5b648ccf1e94` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/range_access.cc` | `da4c0f5f4a00` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/citerators.cc` | `582b06fee64b` | fails to compile | none of the set's: libstdc++'s __gnu_test::citerator reads __gnu_test::traits, which describes the standard containers alone |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/basic.cc` | `50b601537097` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/generation_prohibited.cc` | `abd082c2ca8f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/propagation_consistent.cc` | `040f3f6e3656` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/1.cc` | `9fd0346fc798` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/2.cc` | `498cab28880a` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/3.cc` | `d11a4f73b9b9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/4.cc` | `a6dd32be2501` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/5.cc` | `92b8be19bb23` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/alloc_ptr.cc` | `01619de7cecc` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/alloc_ptr_ignored.cc` | `8c9492ccfc61` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/partial_specialization/1.cc` | `779da47c0c5a` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/typedefs.cc` | `0a0a7a569ecb` | fails to compile | none of the set's: libstdc++'s __gnu_test::types reads __gnu_test::traits, which describes the standard containers alone |
+| `libstdc++-v3/testsuite/23_containers/set/version.cc` | `55ad5d0e4e12` | not run | dg-do preprocess, which builds no test |
+
+## libstdc++ against bit_fixed_set
+
+- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.2.0`.
+- **Mappings:** the suite's `test/std-test-suite/libstdcxx-*.toml` for the directories it takes, and `bit-fixed-set.toml` for the type.
+
+| test | sha256 | outcome | note |
+| :--- | :--- | :--- | :--- |
+| `libstdc++-v3/testsuite/23_containers/set/14340.cc` | `8ca7c4598091` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/18604.cc` | `e75fd7a7647e` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/23781_neg.cc` | `385b02b013d2` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/48101-2_neg.cc` | `b1ae60d36967` | not run | dg-add-options strict_std, which this adapter does not interpret |
+| `libstdc++-v3/testsuite/23_containers/set/48101-3_neg.cc` | `2801895e66c1` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/48101_neg.cc` | `61e673eef398` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/58764.cc` | `d30ac2979c4b` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/85965.cc` | `46628f3c5814` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/92124.cc` | `b525b7998dca` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/103501.cc` | `af062909f7f8` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/71964.cc` | `762472679152` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/copy.cc` | `c4a9538337e0` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/copy_assign.cc` | `926a979c7386` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/default_init.cc` | `4e1155f45ce2` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/ext_ptr.cc` | `ac3be6c483d9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/init-list.cc` | `dcd3153c0811` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/minimal.cc` | `695b1cd30388` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/move.cc` | `4f332bbeb2a8` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/move_assign.cc` | `f43319b474da` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/move_cons.cc` | `464cd0ee9360` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/noexcept.cc` | `687f399e7d2f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/swap.cc` | `df4f1f6a2f38` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/capacity/29134.cc` | `1b0c36dcf586` | runs, adapted | VERIFY( s.max_size() == __gnu_test::max_size(a) ); (max_size(), which [container.reqmts] leaves to the implementation, is libstdc++'s tree node count here) |
+| `libstdc++-v3/testsuite/23_containers/set/check_construct_destroy.cc` | `9cd7336b0b12` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/cons/61023.cc` | `04cb8b499db4` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc` | `31f823d5b496` | fails to compile | [set.overview] |
+| `libstdc++-v3/testsuite/23_containers/set/cons/from_range.cc` | `c55f94862e89` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/cons/moveable.cc` | `dd6e842f78a8` | runs, adapted | VERIFY( b.find(2) == b.end()); ([container.reqmts] leaves a moved-from container's value unspecified: libstdc++'s nodes leave it empty, and a fixed set's array of blocks moves by copying) |
+| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_default_construct.cc` | `72ce52d65d70` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_move_construct.cc` | `c85c45fb3570` | compiles, adapted | static_assert( std::is_nothrow_constructible<stype, ([set.overview] declares the move constructor with an allocator without noexcept, which libstdc++ adds as an extension) |
+| `libstdc++-v3/testsuite/23_containers/set/cons/self_move.cc` | `2dc2c7e0fd78` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/debug/114316.cc` | `38a5d4b4c86f` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/60499.cc` | `c979b567b671` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/90102.cc` | `53b22a10de5d` | fails to compile | none of the set's: a test of libstdc++'s debug-mode std::__debug::set |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct1_neg.cc` | `986a90652e00` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct2_neg.cc` | `4f059f7eee3c` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct3_neg.cc` | `b979292cd0fb` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct4_neg.cc` | `18a5dcc9e58a` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct5_neg.cc` | `b9f98b92c1fc` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert1_neg.cc` | `edceb683c54a` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert2_neg.cc` | `7c6a47d8221b` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert3_neg.cc` | `b518e60ea0db` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert4_neg.cc` | `f02fab0f4f67` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/invalidation/1.cc` | `916785fa1b1f` | fails to compile | none of the set's: a test of libstdc++'s debug-mode iterator invalidation |
+| `libstdc++-v3/testsuite/23_containers/set/debug/invalidation/2.cc` | `9e5c00d1e9e0` | fails to compile | none of the set's: a test of libstdc++'s debug-mode iterator invalidation |
+| `libstdc++-v3/testsuite/23_containers/set/debug/move_assign_neg.cc` | `2529bce4d6a3` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/move_neg.cc` | `00761113b543` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/erasure.cc` | `f1448b4a42c4` | runs, adapted | auto num = std::erase_if(s, is_odd); (erase_if is xstd's, found by argument-dependent lookup); std::erase_if(s, pred); (erase_if is xstd's, found by argument-dependent lookup) |
+| `libstdc++-v3/testsuite/23_containers/set/init-list.cc` | `1a32d769c68f` | runs, adapted | __gnu_test::set_memory_limits(); (none of the set's: the memory limit is set by libstdc++'s test support library, which no consumer links) |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/114401.cc` | `f52e0a46d3c9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/16728.cc` | `34251006fef4` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/17948.cc` | `65b521036b4c` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/dr130.cc` | `e54e82e18827` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/emplace/1.cc` | `68de43084794` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/emplace/92878_92947.cc` | `388b69763da2` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/51142.cc` | `4c12ac79a9a9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/abi_tag.cc` | `4172e524714b` | not run | dg-require-normal-mode |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/dr130-linkage-check.cc` | `79abb42457bf` | not run | dg-require-effective-target ia32 |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc` | `3898dc149ffb` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/1.cc` | `425016942069` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/2.cc` | `777671a9096e` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/3.cc` | `1093d434d546` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/87194.cc` | `bae69d6f2d40` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/insert_range.cc` | `d627bab8eb3f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc` | `64cd1d48163c` | fails to compile | [associative.reqmts.general] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc` | `63fba8bfd4ad` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/1.cc` | `7f3e45d73237` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/2.cc` | `c512b7aaaff0` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/3.cc` | `5f03aec3b103` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/adl.cc` | `945cabfbddb7` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/move_comparison.cc` | `8a049456d86d` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/operations/1.cc` | `6ddb29a55397` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/2.cc` | `4a06d7411f9b` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/contains.cc` | `945a453d9816` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/count.cc` | `9c059115dcfa` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/equal_range_adl.cc` | `91eae0255523` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/operators/1_neg.cc` | `2a8d8b8fde22` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/operators/cmp_c++20.cc` | `97c181291623` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs.cc` | `bd4cdd0b6bea` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs_debug.cc` | `5b648ccf1e94` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/range_access.cc` | `da4c0f5f4a00` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/citerators.cc` | `582b06fee64b` | fails to compile | none of the set's: libstdc++'s __gnu_test::citerator reads __gnu_test::traits, which describes the standard containers alone |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/basic.cc` | `50b601537097` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/generation_prohibited.cc` | `abd082c2ca8f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/propagation_consistent.cc` | `040f3f6e3656` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/1.cc` | `9fd0346fc798` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/2.cc` | `498cab28880a` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/3.cc` | `d11a4f73b9b9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/4.cc` | `a6dd32be2501` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/5.cc` | `92b8be19bb23` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/alloc_ptr.cc` | `01619de7cecc` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/alloc_ptr_ignored.cc` | `8c9492ccfc61` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/partial_specialization/1.cc` | `779da47c0c5a` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/typedefs.cc` | `0a0a7a569ecb` | fails to compile | none of the set's: libstdc++'s __gnu_test::types reads __gnu_test::traits, which describes the standard containers alone |
+| `libstdc++-v3/testsuite/23_containers/set/version.cc` | `55ad5d0e4e12` | not run | dg-do preprocess, which builds no test |
+
+## libstdc++ against bit_inplace_set
+
+- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.2.0`.
+- **Mappings:** the suite's `test/std-test-suite/libstdcxx-*.toml` for the directories it takes, and `bit-inplace-set.toml` for the type.
+
+| test | sha256 | outcome | note |
+| :--- | :--- | :--- | :--- |
+| `libstdc++-v3/testsuite/23_containers/set/14340.cc` | `8ca7c4598091` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/18604.cc` | `e75fd7a7647e` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/23781_neg.cc` | `385b02b013d2` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/48101-2_neg.cc` | `b1ae60d36967` | not run | dg-add-options strict_std, which this adapter does not interpret |
+| `libstdc++-v3/testsuite/23_containers/set/48101-3_neg.cc` | `2801895e66c1` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/48101_neg.cc` | `61e673eef398` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/58764.cc` | `d30ac2979c4b` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/85965.cc` | `46628f3c5814` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/92124.cc` | `b525b7998dca` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/103501.cc` | `af062909f7f8` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/71964.cc` | `762472679152` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/copy.cc` | `c4a9538337e0` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/copy_assign.cc` | `926a979c7386` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/default_init.cc` | `4e1155f45ce2` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/ext_ptr.cc` | `ac3be6c483d9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/init-list.cc` | `dcd3153c0811` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/minimal.cc` | `695b1cd30388` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/move.cc` | `4f332bbeb2a8` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/move_assign.cc` | `f43319b474da` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/move_cons.cc` | `464cd0ee9360` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/noexcept.cc` | `687f399e7d2f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/swap.cc` | `df4f1f6a2f38` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/capacity/29134.cc` | `1b0c36dcf586` | runs, adapted | VERIFY( s.max_size() == __gnu_test::max_size(a) ); (max_size(), which [container.reqmts] leaves to the implementation, is libstdc++'s tree node count here) |
+| `libstdc++-v3/testsuite/23_containers/set/check_construct_destroy.cc` | `9cd7336b0b12` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/cons/61023.cc` | `04cb8b499db4` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc` | `31f823d5b496` | fails to compile | [set.overview] |
+| `libstdc++-v3/testsuite/23_containers/set/cons/from_range.cc` | `c55f94862e89` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/cons/moveable.cc` | `dd6e842f78a8` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_default_construct.cc` | `72ce52d65d70` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_move_construct.cc` | `c85c45fb3570` | compiles, adapted | static_assert( std::is_nothrow_constructible<stype, ([set.overview] declares the move constructor with an allocator without noexcept, which libstdc++ adds as an extension) |
+| `libstdc++-v3/testsuite/23_containers/set/cons/self_move.cc` | `2dc2c7e0fd78` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/debug/114316.cc` | `38a5d4b4c86f` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/60499.cc` | `c979b567b671` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/90102.cc` | `53b22a10de5d` | fails to compile | none of the set's: a test of libstdc++'s debug-mode std::__debug::set |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct1_neg.cc` | `986a90652e00` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct2_neg.cc` | `4f059f7eee3c` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct3_neg.cc` | `b979292cd0fb` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct4_neg.cc` | `18a5dcc9e58a` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct5_neg.cc` | `b9f98b92c1fc` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert1_neg.cc` | `edceb683c54a` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert2_neg.cc` | `7c6a47d8221b` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert3_neg.cc` | `b518e60ea0db` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert4_neg.cc` | `f02fab0f4f67` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/invalidation/1.cc` | `916785fa1b1f` | fails to compile | none of the set's: a test of libstdc++'s debug-mode iterator invalidation |
+| `libstdc++-v3/testsuite/23_containers/set/debug/invalidation/2.cc` | `9e5c00d1e9e0` | fails to compile | none of the set's: a test of libstdc++'s debug-mode iterator invalidation |
+| `libstdc++-v3/testsuite/23_containers/set/debug/move_assign_neg.cc` | `2529bce4d6a3` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/move_neg.cc` | `00761113b543` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/erasure.cc` | `f1448b4a42c4` | runs, adapted | auto num = std::erase_if(s, is_odd); (erase_if is xstd's, found by argument-dependent lookup); std::erase_if(s, pred); (erase_if is xstd's, found by argument-dependent lookup) |
+| `libstdc++-v3/testsuite/23_containers/set/init-list.cc` | `1a32d769c68f` | runs, adapted | __gnu_test::set_memory_limits(); (none of the set's: the memory limit is set by libstdc++'s test support library, which no consumer links) |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/114401.cc` | `f52e0a46d3c9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/16728.cc` | `34251006fef4` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/17948.cc` | `65b521036b4c` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/dr130.cc` | `e54e82e18827` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/emplace/1.cc` | `68de43084794` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/emplace/92878_92947.cc` | `388b69763da2` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/51142.cc` | `4c12ac79a9a9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/abi_tag.cc` | `4172e524714b` | not run | dg-require-normal-mode |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/dr130-linkage-check.cc` | `79abb42457bf` | not run | dg-require-effective-target ia32 |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc` | `3898dc149ffb` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/1.cc` | `425016942069` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/2.cc` | `777671a9096e` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/3.cc` | `1093d434d546` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/87194.cc` | `bae69d6f2d40` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/insert_range.cc` | `d627bab8eb3f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc` | `64cd1d48163c` | fails to compile | [associative.reqmts.general] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc` | `63fba8bfd4ad` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/1.cc` | `7f3e45d73237` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/2.cc` | `c512b7aaaff0` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/3.cc` | `5f03aec3b103` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/adl.cc` | `945cabfbddb7` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/move_comparison.cc` | `8a049456d86d` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/operations/1.cc` | `6ddb29a55397` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/2.cc` | `4a06d7411f9b` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/contains.cc` | `945a453d9816` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/count.cc` | `9c059115dcfa` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/equal_range_adl.cc` | `91eae0255523` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/operators/1_neg.cc` | `2a8d8b8fde22` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/operators/cmp_c++20.cc` | `97c181291623` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs.cc` | `bd4cdd0b6bea` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs_debug.cc` | `5b648ccf1e94` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/range_access.cc` | `da4c0f5f4a00` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/citerators.cc` | `582b06fee64b` | fails to compile | none of the set's: libstdc++'s __gnu_test::citerator reads __gnu_test::traits, which describes the standard containers alone |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/basic.cc` | `50b601537097` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/generation_prohibited.cc` | `abd082c2ca8f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/propagation_consistent.cc` | `040f3f6e3656` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/1.cc` | `9fd0346fc798` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/2.cc` | `498cab28880a` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/3.cc` | `d11a4f73b9b9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/4.cc` | `a6dd32be2501` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/5.cc` | `92b8be19bb23` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/alloc_ptr.cc` | `01619de7cecc` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/alloc_ptr_ignored.cc` | `8c9492ccfc61` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/partial_specialization/1.cc` | `779da47c0c5a` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/typedefs.cc` | `0a0a7a569ecb` | fails to compile | none of the set's: libstdc++'s __gnu_test::types reads __gnu_test::traits, which describes the standard containers alone |
+| `libstdc++-v3/testsuite/23_containers/set/version.cc` | `55ad5d0e4e12` | not run | dg-do preprocess, which builds no test |
+
+## libstdc++ against bit_small_set
+
+- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.2.0`.
+- **Mappings:** the suite's `test/std-test-suite/libstdcxx-*.toml` for the directories it takes, and `bit-small-set.toml` for the type.
+
+| test | sha256 | outcome | note |
+| :--- | :--- | :--- | :--- |
+| `libstdc++-v3/testsuite/23_containers/set/14340.cc` | `8ca7c4598091` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/18604.cc` | `e75fd7a7647e` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/23781_neg.cc` | `385b02b013d2` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/48101-2_neg.cc` | `b1ae60d36967` | not run | dg-add-options strict_std, which this adapter does not interpret |
+| `libstdc++-v3/testsuite/23_containers/set/48101-3_neg.cc` | `2801895e66c1` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/48101_neg.cc` | `61e673eef398` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/58764.cc` | `d30ac2979c4b` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/85965.cc` | `46628f3c5814` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/92124.cc` | `b525b7998dca` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/103501.cc` | `af062909f7f8` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/71964.cc` | `762472679152` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/copy.cc` | `c4a9538337e0` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/copy_assign.cc` | `926a979c7386` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/default_init.cc` | `4e1155f45ce2` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/ext_ptr.cc` | `ac3be6c483d9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/init-list.cc` | `dcd3153c0811` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/minimal.cc` | `695b1cd30388` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/move.cc` | `4f332bbeb2a8` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/move_assign.cc` | `f43319b474da` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/move_cons.cc` | `464cd0ee9360` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/noexcept.cc` | `687f399e7d2f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/allocator/swap.cc` | `df4f1f6a2f38` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/capacity/29134.cc` | `1b0c36dcf586` | runs, adapted | VERIFY( s.max_size() == __gnu_test::max_size(a) ); (max_size(), which [container.reqmts] leaves to the implementation, is libstdc++'s tree node count here) |
+| `libstdc++-v3/testsuite/23_containers/set/check_construct_destroy.cc` | `9cd7336b0b12` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/cons/61023.cc` | `04cb8b499db4` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc` | `31f823d5b496` | fails to compile | [set.overview] |
+| `libstdc++-v3/testsuite/23_containers/set/cons/from_range.cc` | `c55f94862e89` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/cons/moveable.cc` | `dd6e842f78a8` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_default_construct.cc` | `72ce52d65d70` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_move_construct.cc` | `c85c45fb3570` | compiles, adapted | static_assert( std::is_nothrow_constructible<stype, ([set.overview] declares the move constructor with an allocator without noexcept, which libstdc++ adds as an extension) |
+| `libstdc++-v3/testsuite/23_containers/set/cons/self_move.cc` | `2dc2c7e0fd78` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/debug/114316.cc` | `38a5d4b4c86f` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/60499.cc` | `c979b567b671` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/90102.cc` | `53b22a10de5d` | fails to compile | none of the set's: a test of libstdc++'s debug-mode std::__debug::set |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct1_neg.cc` | `986a90652e00` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct2_neg.cc` | `4f059f7eee3c` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct3_neg.cc` | `b979292cd0fb` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct4_neg.cc` | `18a5dcc9e58a` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/construct5_neg.cc` | `b9f98b92c1fc` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert1_neg.cc` | `edceb683c54a` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert2_neg.cc` | `7c6a47d8221b` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert3_neg.cc` | `b518e60ea0db` | not run | dg-require-debug-mode |
+| `libstdc++-v3/testsuite/23_containers/set/debug/insert4_neg.cc` | `f02fab0f4f67` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/invalidation/1.cc` | `916785fa1b1f` | fails to compile | none of the set's: a test of libstdc++'s debug-mode iterator invalidation |
+| `libstdc++-v3/testsuite/23_containers/set/debug/invalidation/2.cc` | `9e5c00d1e9e0` | fails to compile | none of the set's: a test of libstdc++'s debug-mode iterator invalidation |
+| `libstdc++-v3/testsuite/23_containers/set/debug/move_assign_neg.cc` | `2529bce4d6a3` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/debug/move_neg.cc` | `00761113b543` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/erasure.cc` | `f1448b4a42c4` | runs, adapted | auto num = std::erase_if(s, is_odd); (erase_if is xstd's, found by argument-dependent lookup); std::erase_if(s, pred); (erase_if is xstd's, found by argument-dependent lookup) |
+| `libstdc++-v3/testsuite/23_containers/set/init-list.cc` | `1a32d769c68f` | runs, adapted | __gnu_test::set_memory_limits(); (none of the set's: the memory limit is set by libstdc++'s test support library, which no consumer links) |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/114401.cc` | `f52e0a46d3c9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/16728.cc` | `34251006fef4` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/17948.cc` | `65b521036b4c` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/dr130.cc` | `e54e82e18827` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/emplace/1.cc` | `68de43084794` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/emplace/92878_92947.cc` | `388b69763da2` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/51142.cc` | `4c12ac79a9a9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/abi_tag.cc` | `4172e524714b` | not run | dg-require-normal-mode |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/dr130-linkage-check.cc` | `79abb42457bf` | not run | dg-require-effective-target ia32 |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc` | `3898dc149ffb` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/1.cc` | `425016942069` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/2.cc` | `777671a9096e` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/3.cc` | `1093d434d546` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/87194.cc` | `bae69d6f2d40` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/insert_range.cc` | `d627bab8eb3f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc` | `64cd1d48163c` | fails to compile | [associative.reqmts.general] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc` | `63fba8bfd4ad` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/1.cc` | `7f3e45d73237` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/2.cc` | `c512b7aaaff0` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/3.cc` | `5f03aec3b103` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/adl.cc` | `945cabfbddb7` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/move_comparison.cc` | `8a049456d86d` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/operations/1.cc` | `6ddb29a55397` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/2.cc` | `4a06d7411f9b` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/contains.cc` | `945a453d9816` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/count.cc` | `9c059115dcfa` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/operations/equal_range_adl.cc` | `91eae0255523` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/operators/1_neg.cc` | `2a8d8b8fde22` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/operators/cmp_c++20.cc` | `97c181291623` | runs |  |
+| `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs.cc` | `bd4cdd0b6bea` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs_debug.cc` | `5b648ccf1e94` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/range_access.cc` | `da4c0f5f4a00` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/citerators.cc` | `582b06fee64b` | fails to compile | none of the set's: libstdc++'s __gnu_test::citerator reads __gnu_test::traits, which describes the standard containers alone |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/basic.cc` | `50b601537097` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/generation_prohibited.cc` | `abd082c2ca8f` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/exception/propagation_consistent.cc` | `040f3f6e3656` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/1.cc` | `9fd0346fc798` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/2.cc` | `498cab28880a` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/3.cc` | `d11a4f73b9b9` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/4.cc` | `a6dd32be2501` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/5.cc` | `92b8be19bb23` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/alloc_ptr.cc` | `01619de7cecc` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/explicit_instantiation/alloc_ptr_ignored.cc` | `8c9492ccfc61` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/partial_specialization/1.cc` | `779da47c0c5a` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/requirements/typedefs.cc` | `0a0a7a569ecb` | fails to compile | none of the set's: libstdc++'s __gnu_test::types reads __gnu_test::traits, which describes the standard containers alone |
+| `libstdc++-v3/testsuite/23_containers/set/version.cc` | `55ad5d0e4e12` | not run | dg-do preprocess, which builds no test |
+
+## MSVC STL against bit_vector
 
 - **Pinned:** [https://github.com/microsoft/STL](https://github.com/microsoft/STL) at `vs-2022-17.14`.
-- **Mapping:** `test/std-test-suite/msvc-stl.toml`.
+- **Mappings:** the suite's `test/std-test-suite/msvc-stl-*.toml` for the directories it takes, and `bit-vector.toml` for the type.
 
 | test | sha256 | outcome | note |
 | :--- | :--- | :--- | :--- |
@@ -398,4 +1122,22 @@ A row's `outcome` is one of:
 | `tests/std/tests/Dev11_0135139_vector_bool_comparisons/env.lst` | `477c3ace9294` | not run | not a test source |
 | `tests/std/tests/Dev11_0135139_vector_bool_comparisons/test.cpp` | `7e586b4f2a2c` | runs, adapted | x.back().flip(); (no reference::flip()); y.back().flip(); (no reference::flip()) |
 | `tests/std/tests/GH_000625_vector_bool_optimization/env.lst` | `477c3ace9294` | not run | not a test source |
-| `tests/std/tests/GH_000625_vector_bool_optimization/test.cpp` | `f8a75dba8e34` | runs, adapted | static_assert(blockSize == _VBITS, "Invalid block size"); (the MSVC STL's internal _VBITS, the width of its words; the test's data crosses word boundaries at any width); input_true[length + 1].flip(); (no reference::flip()); input_false[length + 1].flip(); (no reference::flip()); input_true[0].flip(); (no reference::flip()); input_false[0].flip(); (no reference::flip()); void print_vec(const char* const name, const vector<T>& v) { (the test's diagnostic helper takes a std::vector<T>, which bit_vector is not, so it deduces the container instead) |
+| `tests/std/tests/GH_000625_vector_bool_optimization/test.cpp` | `f8a75dba8e34` | runs, adapted | static_assert(blockSize == _VBITS, "Invalid block size"); (the MSVC STL's internal _VBITS, the width of its words; the test's data crosses word boundaries at any width); input_true[length + 1].flip(); (no reference::flip()); input_false[length + 1].flip(); (no reference::flip()); input_true[0].flip(); (no reference::flip()); input_false[0].flip(); (no reference::flip()); void print_vec(const char* const name, const vector<T>& v) { (the test's diagnostic helper takes a std::vector<T>, which a bit vector is not, so it deduces the container instead) |
+
+## MSVC STL against bit_small_vector
+
+- **Pinned:** [https://github.com/microsoft/STL](https://github.com/microsoft/STL) at `vs-2022-17.14`.
+- **Mappings:** the suite's `test/std-test-suite/msvc-stl-*.toml` for the directories it takes, and `bit-small-vector.toml` for the type.
+
+| test | sha256 | outcome | note |
+| :--- | :--- | :--- | :--- |
+| `tests/std/tests/Dev10_563443_empty_vector_begin_plus_zero/env.lst` | `477c3ace9294` | not run | not a test source |
+| `tests/std/tests/Dev10_563443_empty_vector_begin_plus_zero/test.cpp` | `aa8374c89c38` | runs |  |
+| `tests/std/tests/Dev10_689595_back_inserter_vector_bool/env.lst` | `477c3ace9294` | not run | not a test source |
+| `tests/std/tests/Dev10_689595_back_inserter_vector_bool/test.cpp` | `925fd499ca3c` | runs |  |
+| `tests/std/tests/Dev10_816787_swap_vector_bool_elements/env.lst` | `477c3ace9294` | not run | not a test source |
+| `tests/std/tests/Dev10_816787_swap_vector_bool_elements/test.cpp` | `a55840c127a8` | runs |  |
+| `tests/std/tests/Dev11_0135139_vector_bool_comparisons/env.lst` | `477c3ace9294` | not run | not a test source |
+| `tests/std/tests/Dev11_0135139_vector_bool_comparisons/test.cpp` | `7e586b4f2a2c` | runs, adapted | x.back().flip(); (no reference::flip()); y.back().flip(); (no reference::flip()); vector<bool> v(47, allocator<bool>()); (the allocator is the storage's, Boost's small_vector allocator of blocks, not std::allocator<bool>) |
+| `tests/std/tests/GH_000625_vector_bool_optimization/env.lst` | `477c3ace9294` | not run | not a test source |
+| `tests/std/tests/GH_000625_vector_bool_optimization/test.cpp` | `f8a75dba8e34` | runs, adapted | static_assert(blockSize == _VBITS, "Invalid block size"); (the MSVC STL's internal _VBITS, the width of its words; the test's data crosses word boundaries at any width); input_true[length + 1].flip(); (no reference::flip()); input_false[length + 1].flip(); (no reference::flip()); input_true[0].flip(); (no reference::flip()); input_false[0].flip(); (no reference::flip()); void print_vec(const char* const name, const vector<T>& v) { (the test's diagnostic helper takes a std::vector<T>, which a bit vector is not, so it deduces the container instead) |
