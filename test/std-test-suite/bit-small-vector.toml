@@ -22,3 +22,17 @@ rewrite = [
     { from = "std::vector<bool>", to = "xstd::bit_small_vector<64>" },
     { regex = '(?<![\w:])vector<bool>', to = 'xstd::bit_small_vector<64>' },
 ]
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/insert/append_range.cc"
+sha256 = "aaa3ca66e33aac53b5c8859b6bba8f5e9ea8d1fa9b091e69dd9424271527bb1d"
+line = "static_assert( test_constexpr() );"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev11_0135139_vector_bool_comparisons/test.cpp"
+sha256 = "7e586b4f2a2c386086b096c2af9f411185734b2c0b017a04e23b9afacff6c3c6"
+line = "vector<bool> v(47, allocator<bool>());"
+to = "vector<bool> v(47, xstd::bit_small_vector<64>::allocator_type());"
+departure = "the allocator is the storage's, Boost's small_vector allocator of blocks, not std::allocator<bool>"
