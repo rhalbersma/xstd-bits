@@ -1,0 +1,403 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+# The vector<bool> tests read against bit_small_vector, whose first 64 bits live inside it, in a Boost small_vector.
+include = ["xstd/bits/ext/boost/bit_small_vector.hpp"]
+
+# libc++ spells vector<bool> qualified.
+[libcxx]
+rewrite = [{ from = "std::vector<bool>", to = "xstd::bit_small_vector<64>" }]
+
+# Spelled qualified, or unqualified under a using-directive for std; one with an allocator of its own stays std's.
+[libstdcxx]
+rewrite = [
+    { from = "std::vector<bool>", to = "xstd::bit_small_vector<64>" },
+    { regex = '(?<![\w:])vector<bool>', to = 'xstd::bit_small_vector<64>' },
+]
+
+[msvc-stl]
+rewrite = [
+    { from = "std::vector<bool>", to = "xstd::bit_small_vector<64>" },
+    { regex = '(?<![\w:])vector<bool>', to = 'xstd::bit_small_vector<64>' },
+]
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/insert/append_range.cc"
+sha256 = "aaa3ca66e33aac53b5c8859b6bba8f5e9ea8d1fa9b091e69dd9424271527bb1d"
+line = "static_assert( test_constexpr() );"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev11_0135139_vector_bool_comparisons/test.cpp"
+sha256 = "7e586b4f2a2c386086b096c2af9f411185734b2c0b017a04e23b9afacff6c3c6"
+line = "vector<bool> v(47, allocator<bool>());"
+to = "vector<bool> v(47, xstd::bit_small_vector<64>::allocator_type());"
+departure = "the allocator is the storage's, Boost's small_vector allocator of blocks, not std::allocator<bool>"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/append_range.pass.cpp"
+sha256 = "a7bb6ff8b52ac68eb1caa33bacb26747d08142ba4ee88ac3a066d69b675d5c3a"
+line = "static_assert(test());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/assign_initializer_list.pass.cpp"
+sha256 = "8ac695a13daf5118b2bfd963e90ddc7a6ca371a0d9475b107d8d351bb91817c0"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/assign_iter_iter.pass.cpp"
+sha256 = "bf33e7e26c1311fb58d53109c1ba8bcfeaabff5c635e19a1bf624ef602feb220"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/assign_range.pass.cpp"
+sha256 = "2597e4d51293c0e5e631cff3b0dc00554f33dd6264db492ee397bb58fa6c13be"
+line = "static_assert(test());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/assign_size_value.pass.cpp"
+sha256 = "c1c029389fc236bfedba484977dd57bfe215f2bdec48dc50ddc790ae787253a9"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/capacity.pass.cpp"
+sha256 = "bd0cdf5c51481ca00f79e5f1e4c7991f385f8724183c10005c032ca5f89e76b1"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/compare.pass.cpp"
+sha256 = "611e6f3d659160143dbd98cbde70a16ac333e0f6882bfbd969a57f57cdc3af84"
+line = "static_assert(test());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/const_reference.pass.cpp"
+sha256 = "b2c54fc371d858255f12176d0bd81261fb309f4c74e6cfdcc76e1e650ca07779"
+line = "static_assert(test());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_default.pass.cpp"
+sha256 = "91e7235d968d312105753e0900d2774d2b4c22d328dff4e01924803c9d9f41c1"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_from_range.pass.cpp"
+sha256 = "ae75de83eac21f2c81c6bca9968edede8d566a69edf0f39924aa92a1a8d60e62"
+line = "static_assert(test());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_iter_iter.pass.cpp"
+sha256 = "c858cf3457f94615e611d11fa37535543ff20825ac6fc17c13a73db91e264684"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_size.pass.cpp"
+sha256 = "cadd143ad1be3268aa333f3240255cae78980589795db98fbc680735fba9b93b"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_size_value.pass.cpp"
+sha256 = "a95b41f6af6a8fa1a394e2270920a6f31392c1e05896e87111fcb548ca7781ad"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/copy.pass.cpp"
+sha256 = "099b47ccca0a2dfdb2ff6b04dfd90424d2c90f93eb46061108170a40dfe366ca"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/emplace.pass.cpp"
+sha256 = "a95b4892a7f16e33b4f4c6798b10212012268a623446843db3e5859d815a6861"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/emplace_back.pass.cpp"
+sha256 = "f5c231ec0d5b5fb9e7c16948eeecce4ba9bd9723e5ad75b47ea9c02699b984c5"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/empty.pass.cpp"
+sha256 = "c02fbea895f1653a40eec3c7c381de01201a681dab71adde54141a7aa2d705e4"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/erase_iter.pass.cpp"
+sha256 = "1626d6e39a3b13d6191f14eca011eed48e8a831b3e0e5802ce13991fafef4de4"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/erase_iter_iter.pass.cpp"
+sha256 = "4308b6117e67d00dfee4c2893d2b16ce4e940838cc6d646b357ac86630d8c29c"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/initializer_list.pass.cpp"
+sha256 = "3925ac3909fe6e706e55f7f7deda94d06e36beac6abc0b5a662b002d85882d75"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/insert_iter_initializer_list.pass.cpp"
+sha256 = "8eac48e5232b02a3205546741391b7e1b9374e2fecb0be55988c74fb09d81e4d"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/insert_iter_iter_iter.pass.cpp"
+sha256 = "fa5e3a7327053e3041066e9acc09cd2e5545d096eb1b9c272a91151871ff49e1"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/insert_iter_size_value.pass.cpp"
+sha256 = "c1141d3da82b82d2bb45540ed53964b3982127c12536b63022d7fa73da26b402"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/insert_iter_value.pass.cpp"
+sha256 = "9c67396f68b160f2528382ea7eb2053149f4b3e6f67c2caaf7d07b8ec418800e"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/insert_range.pass.cpp"
+sha256 = "74eee090d5000e2a38e986e39895e7b29b944e3dbde136aedb6787ed56640152"
+line = "static_assert(test());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/op_equal_initializer_list.pass.cpp"
+sha256 = "13a3e3eb7f469e5b3fa49dc5e947b50d57c8c2d4dc61bbf2a7e44f2f9074981d"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/push_back.pass.cpp"
+sha256 = "11b111d47b140dbe7d32382134af5e6f40338a3a12e3c0cf6b8265ed339cd263"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/reference/assign_bool.pass.cpp"
+sha256 = "1345f2bbf12311bccb5ef6adc02c93eee4f0c94fbb77fb7a8fdc173efa9785ce"
+line = "static_assert(test());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/reference/assign_copy.pass.cpp"
+sha256 = "2147006250fc2daccdee807d771bab105e20b287ee32afebd8fa9aaf1d361a9c"
+line = "static_assert(test());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/reference/ctor_copy.pass.cpp"
+sha256 = "3b5e218787b78ee3300e6d4b6bf7c00963d70e4570fa1e50152789ab368c1ef3"
+line = "static_assert(test());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/reference/operator_bool.pass.cpp"
+sha256 = "4ef15a3c29e8007f96d0c9171711694aaedc3da52575eb59c5194e9c28894968"
+line = "static_assert(test());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/reserve.pass.cpp"
+sha256 = "a8eceb876f6048c355c7b39046076b65f437344b3d5c38fec6dbdf2b5b78dfd1"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/resize_size.pass.cpp"
+sha256 = "de77f47f77c11bf2f61cc3e9a3d87489bd0d753cac473e6b0e2a0f4e7e751bc6"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/resize_size_value.pass.cpp"
+sha256 = "64ec1aac47265e47be336aafdda8a60f5df3f573415f5a83034b9e8faec882d6"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/shrink_to_fit.pass.cpp"
+sha256 = "0728d15aaa564c44bb8411abd91a35bd87a8298987d2284293a93e86518c1a4a"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/size.pass.cpp"
+sha256 = "47bd59fb0f7f03ab0f18ee4cd7931878fea79fb6d0516e123f354b2e049dbc0b"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/swap.pass.cpp"
+sha256 = "314da3d047e13a898b74c6a92b7eceaa3b41448b245e17a2768be25b88a0b4cd"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/vector_bool.pass.cpp"
+sha256 = "7dd9a484a1160f4c5cfe29303cd63fa26876f309ea16cded2268401c3b4bfc00"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/capacity.pass.cpp"
+sha256 = "bd0cdf5c51481ca00f79e5f1e4c7991f385f8724183c10005c032ca5f89e76b1"
+line = "assert(v.capacity() == 0);"
+drop = true
+departure = "an empty small vector holds its first 64 bits inside it, so its capacity starts at 64"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/shrink_to_fit.pass.cpp"
+sha256 = "0728d15aaa564c44bb8411abd91a35bd87a8298987d2284293a93e86518c1a4a"
+line = "LIBCPP_ASSERT(v.capacity() == 0); // libc++ honors the shrink_to_fit request as a QOI matter"
+drop = true
+departure = "an empty small vector holds its first 64 bits inside it, so shrink_to_fit leaves it at 64"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/compare.three_way.pass.cpp"
+sha256 = "84536e3f356ed8cd538cf4a38d74e037fcc7d2041a6ffe4d1abde7f0bcef52ae"
+line = "static_assert(test_sequence_container_spaceship_vectorbool());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_iter_iter_alloc.pass.cpp"
+sha256 = "20896f7a3a5190983a56e1b06fe923d3da59e3897fa5900ab82d557b141dd066"
+fails = "compile"
+paragraph = "[container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/sequences/vector.bool/construct_size_value_alloc.pass.cpp"
+sha256 = "239cc590980b5468e9397cb6417ca8bdd6488143e1ab7899ec9165949f9a0504"
+fails = "compile"
+paragraph = "[container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/sequences/vector.bool/copy_alloc.pass.cpp"
+sha256 = "85df1926257b925fec12caeed7faf3672229040d195f4d1531b10c8a0a30500e"
+fails = "compile"
+paragraph = "[container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/sequences/vector.bool/get_allocator.pass.cpp"
+sha256 = "a2c1f841bc86237c2b1db061f8d2a155a4a8e63c358be06c70697a17ae676288"
+fails = "compile"
+paragraph = "[container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/sequences/vector.bool/ctor_exceptions.pass.cpp"
+sha256 = "f0a3662fb27d1b091f912dc20e1bd77beeab941b1f68f293d748463457a1eadd"
+fails = "compile"
+paragraph = "[container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/capacity/constexpr.cc"
+sha256 = "f379b00569692198b544dc394782b98320b7a184214ec910110e0fba03c6a1fb"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/cmp_c++20.cc"
+sha256 = "1804758f43e81f6b95e02a6b13affbf3d368bbd800f5b496b0a641392c71118c"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/cons/constexpr.cc"
+sha256 = "851108289086f23a718950e8d0f9f619e1cf7e322bbc6d0c184f04672cc02306"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/element_access/1.cc"
+sha256 = "411c76dc9f86cecb5456d0bfdb58267bdf245c5533d1568793439a6af1d7c8b2"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/element_access/constexpr.cc"
+sha256 = "a5004d73da49224fad4e3daf82206bbb34fe1459a698de94aac649a56a8afa04"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/constexpr.cc"
+sha256 = "5097184503d9f19b066ed106e27c76a24d7163471cf09c116ab3cd306e5fc500"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc"
+sha256 = "748b4a39e0bda63fae74eb6bca490bdcc047b3f99ee2fb41a42a0d6b9ba7d1b2"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/constexpr.cc"
+sha256 = "830691ce96813b0107a07c691d6f37f0cf3e0bf2776cf33715aeeec608767737"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"

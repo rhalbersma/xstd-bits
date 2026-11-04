@@ -109,8 +109,11 @@ public:
         // Not in [set.cons]: any value of a mask, as the enumeration it replaces takes it; no bit at or above N.
         [[nodiscard]] constexpr explicit(false) basic_bit_fixed_set(mask_type const& mask) noexcept // NOLINT(misc-explicit-constructor)
         {
-                assert(fits(mask));
-                bits::detail::storage_access::bits(*this).assign_bits(KeyMapping::to_block(mask));
+                // An explicit instantiation defines this body for any Key, where mask_type may have no value.
+                if constexpr (is_mask) {
+                        assert(fits(mask));
+                        bits::detail::storage_access::bits(*this).assign_bits(KeyMapping::to_block(mask));
+                }
         }
 
         using base_type::operator=;

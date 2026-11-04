@@ -3,8 +3,8 @@
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
 
-# The MSVC STL's own tests of vector<bool>, rewritten onto xstd::bit_vector, with each departure from them named.
-
+# The MSVC STL's own tests of vector<bool>, with each departure from them named. A subject's mapping beside this one
+# names the type they are read against.
 [msvc-stl]
 take = [
     { path = "tests/std/tests/Dev10_689595_back_inserter_vector_bool" },
@@ -12,12 +12,6 @@ take = [
     { path = "tests/std/tests/Dev11_0135139_vector_bool_comparisons" },
     { path = "tests/std/tests/GH_000625_vector_bool_optimization" },
     { path = "tests/std/tests/Dev10_563443_empty_vector_begin_plus_zero" },
-]
-include = ["xstd/bits/bit_vector.hpp"]
-# The tests name vector<bool> unqualified, under a using-directive for std; one with an allocator of its own stays std's.
-rewrite = [
-    { from = "std::vector<bool>", to = "xstd::bit_vector" },
-    { regex = '(?<![\w:])vector<bool>', to = 'xstd::bit_vector' },
 ]
 
 [[msvc-stl.assertion]]
@@ -74,4 +68,4 @@ file = "tests/std/tests/GH_000625_vector_bool_optimization/test.cpp"
 sha256 = "f8a75dba8e3465bc78fae3a63b25fde409220551a2e264c8fcb9967d859e2430"
 line = "void print_vec(const char* const name, const vector<T>& v) {"
 to = "void print_vec(const char* const name, const T& v) {"
-departure = "the test's diagnostic helper takes a std::vector<T>, which bit_vector is not, so it deduces the container instead"
+departure = "the test's diagnostic helper takes a std::vector<T>, which a bit vector is not, so it deduces the container instead"

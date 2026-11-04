@@ -1,0 +1,24 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+# The vector<bool> tests read against bit_vector, whose storage is a std::vector of blocks.
+include = ["xstd/bits/bit_vector.hpp"]
+
+# libc++ spells vector<bool> qualified.
+[libcxx]
+rewrite = [{ from = "std::vector<bool>", to = "xstd::bit_vector" }]
+
+# Spelled qualified, or unqualified under a using-directive for std; one with an allocator of its own stays std's.
+[libstdcxx]
+rewrite = [
+    { from = "std::vector<bool>", to = "xstd::bit_vector" },
+    { regex = '(?<![\w:])vector<bool>', to = 'xstd::bit_vector' },
+]
+
+[msvc-stl]
+rewrite = [
+    { from = "std::vector<bool>", to = "xstd::bit_vector" },
+    { regex = '(?<![\w:])vector<bool>', to = 'xstd::bit_vector' },
+]

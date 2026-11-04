@@ -34,14 +34,18 @@ TABLE = ROOT / "doc" / "vendor.md"
 
 NAMES = {"libcxx": "libc++", "libstdcxx": "libstdc++", "msvc-stl": "MSVC STL"}
 
+# The subjects a suite runs against, in the table's order: each run is named <suite>-<subject>.
+SUBJECTS = ["bit-vector", "bit-small-vector", "bit-set", "bit-fixed-set", "bit-inplace-set", "bit-small-set"]
+
 HEADER = """# Standard library test suites
 
 Each standard library's own tests of the containers this library generalizes, and what became of each one when it ran
-against them. `tools/vendor.py` writes a suite's section from the manifest that rhalbersma/cpp-ci's adapter leaves in
-the build, and each suite job's `std-test-suite.<suite>.table` test fails when the section no longer matches it.
+against each of them. A section is one suite against one subject. `tools/vendor.py` writes it from the manifest that
+rhalbersma/cpp-ci's adapter leaves in the build, and each suite job's `std-test-suite.<suite>-<subject>.table` test fails
+when the section no longer matches it.
 
-- **Mappings:** `test/std-test-suite/<suite>.toml` name the directories taken, the rewrites onto this library's types,
-  and each departure.
+- **Mappings:** `test/std-test-suite/<suite>-<directory>.toml` name the directories a suite takes and each departure
+  from their tests, and `<subject>.toml` the rewrites onto one of this library's types.
 - **Hashes:** the first twelve hexadecimal digits of the test file's SHA-256 at the pinned tag.
 
 A row's `outcome` is one of:
@@ -78,14 +82,19 @@ def outcome(test: dict) -> tuple[str, str]:
     return kind, ""
 
 
+def title(suite: str, subject: str) -> str:
+    return f"## {NAMES.get(suite, suite)} against {subject.replace('-', '_')}"
+
+
 def section(manifest: dict) -> str:
-    """A suite's section: its pin, a row per selected test, and a count of the files the selection leaves out."""
+    """A run's section: its pin, a row per selected test, and a count of the files the selection leaves out."""
     suite = manifest["suite"]
+    subject = manifest.get("name", suite).removeprefix(f"{suite}-")
     lines = [
-        f"## {NAMES.get(suite, suite)}",
+        title(suite, subject),
         "",
         f"- **Pinned:** [{manifest['repository']}]({manifest['repository']}) at `{manifest['tag']}`.",
-        f"- **Mapping:** `test/std-test-suite/{suite}.toml`.",
+        f"- **Mappings:** the suite's `test/std-test-suite/{suite}-*.toml` for the directories it takes, and `{subject}.toml` for the type.",
     ]
     unselected: dict[str, int] = {}
     rows = []
@@ -103,14 +112,14 @@ def section(manifest: dict) -> str:
 
 
 def sections(text: str) -> dict[str, str]:
-    """Each suite's section by its heading, as section() renders it: no trailing blank line."""
+    """Each run's section by its heading, as section() renders it: no trailing blank line."""
     return {m.group(0).splitlines()[0]: m.group(0).rstrip("\n") + "\n" for m in SECTION.finditer(text)}
 
 
-def order(title: str) -> int:
-    """The suites in NAMES' order, libc++ first; any other after them."""
-    names = [f"## {name}" for name in NAMES.values()]
-    return names.index(title) if title in names else len(names)
+def order(heading: str) -> int:
+    """The suites in NAMES' order, libc++ first, and each suite's subjects in SUBJECTS' order; any other after them."""
+    titles = [title(suite, subject) for suite in NAMES for subject in SUBJECTS]
+    return titles.index(heading) if heading in titles else len(titles)
 
 
 def main() -> int:
