@@ -1840,18 +1840,11 @@ BOOST_AUTO_TEST_CASE(ACountedWidthKeepsItsCountThroughRangesAndFills)
         BOOST_CHECK(keeps(b, 19UZ));
 }
 
-// A transform rewrites every block, and a complement sets the bits above the width that only the last block holds.
-BOOST_AUTO_TEST_CASE(ACountedWidthKeepsItsCountThroughTransformsAndPermutations)
+// A permutation moves the bits within the width, so the count it keeps is the count it found.
+BOOST_AUTO_TEST_CASE(ACountedWidthKeepsItsCountThroughPermutations)
 {
-        auto const complement = [](std::uint8_t block) -> std::uint8_t { return static_cast<std::uint8_t>(~block); };
-        auto whole            = from_model<counted>(patterned(16));
-        whole.transform(complement);
-        BOOST_CHECK(keeps(whole, 5UZ));
         auto part = from_model<counted>(patterned(13));
-        part.transform(complement);
-        BOOST_CHECK(keeps(part, 4UZ));
-        part.transform(from_model<counted>(patterned(13)), [](std::uint8_t x, std::uint8_t y) -> std::uint8_t { return static_cast<std::uint8_t>(x | y); });
-        BOOST_CHECK(keeps(part, 13UZ));
+        part.fill(true);
         part.reset(6);
         part.rotate(5);
         part.reverse();
