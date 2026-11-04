@@ -32,9 +32,6 @@
 #include <type_traits>                             // integral_constant, is_constructible_v, is_convertible_v, is_member_function_pointer_v
 #include <utility>                                 // declval, index_sequence, make_index_sequence
 
-// Defines every member whose constraints a set of std::size_t keys satisfies, the mask constructor among them.
-template class xstd::basic_bit_fixed_set<std::size_t, std::size_t, 128>;
-
 BOOST_AUTO_TEST_SUITE(BitFiniteSet)
 
 // The block and the width as the extents expand them, the key being std::size_t.
