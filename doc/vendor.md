@@ -656,19 +656,19 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/vector/bool/capacity/110498.cc` | `3e25b1ea157f` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/capacity/114758.cc` | `3e53f4132b5f` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/capacity/29134.cc` | `c9cd04e3b13f` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/vector/bool/capacity/constexpr.cc` | `f379b0056969` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/capacity/constexpr.cc` | `f379b0056969` | fails to compile | [containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/capacity/shrink_to_fit.cc` | `b49f915776e1` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/clear_allocator.cc` | `31ef8a5b6d38` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/vector/bool/cmp_c++20.cc` | `1804758f43e8` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/cmp_c++20.cc` | `1804758f43e8` | fails to compile | [containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/cons/1.cc` | `9c5f5ab72c9a` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/cons/2.cc` | `72819fbb826a` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/cons/87809.cc` | `5bc4c8d78579` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/vector/bool/cons/constexpr.cc` | `851108289086` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/cons/constexpr.cc` | `851108289086` | fails to compile | [containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/cons/from_range.cc` | `aa8df55bdebb` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/cons/lwg3778.cc` | `bb08ee37faf0` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/cons/noexcept_move_construct.cc` | `c2ae85a02695` | compiles, adapted | static_assert( std::is_nothrow_constructible<vbtype, ([vector.overview] declares the move constructor with an allocator without noexcept, which libstdc++ adds as an extension) |
-| `libstdc++-v3/testsuite/23_containers/vector/bool/element_access/1.cc` | `411c76dc9f86` | compiles |  |
-| `libstdc++-v3/testsuite/23_containers/vector/bool/element_access/constexpr.cc` | `a5004d73da49` | compiles |  |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/element_access/1.cc` | `411c76dc9f86` | fails to compile | [containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/element_access/constexpr.cc` | `a5004d73da49` | fails to compile | [containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/emplace.cc` | `5ff6b81c9f10` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/emplace_cxx17_return.cc` | `0f5832cb9801` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/emplace_rvalue.cc` | `ec86a3c0fdab` | compiles |  |
@@ -677,8 +677,8 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/vector/bool/iterator_c++20.cc` | `7e810e62f3e2` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/1.cc` | `1d66a207486d` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/assign_range.cc` | `b0ff689382a3` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/constexpr.cc` | `5097184503d9` | compiles |  |
-| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc` | `748b4a39e0bd` | compiles, adapted | v.flip(); (no flip(): [vector.bool.pspc]'s negation of every element is written element by element); v[2].flip(); (no reference::flip()); auto n = std::erase(e, false); ([vector.erasure]'s erase is std's for std::vector; a bit vector's is xstd's, found by argument-dependent lookup); n = std::erase_if(e, [](std::vector<bool>::reference val) { return !val; }); ([vector.erasure]'s erase_if is std's for std::vector; a bit vector's is xstd's, found by argument-dependent lookup) |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/constexpr.cc` | `5097184503d9` | fails to compile | [containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc` | `748b4a39e0bd` | fails to compile | [containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/erase/1.cc` | `7718fe8af97d` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/erase/54577.cc` | `39ed01e4b81c` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/insert/1.cc` | `d823df99a0f5` | runs |  |
@@ -689,7 +689,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/insert/insert_range.cc` | `7e37b4870485` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/1.cc` | `cb5c28334c21` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/2.cc` | `ebe64973f01f` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/constexpr.cc` | `830691ce9681` | compiles, adapted | std::vector<bool>::swap(v1[0], v1[1]); (no static swap(reference, reference): [vector.bool.pspc]'s exchange of two elements goes through the iterators) |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/constexpr.cc` | `830691ce9681` | fails to compile | [containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/requirements/citerators.cc` | `2f4a277f428a` | fails to compile | none of the bit vector's: libstdc++'s __gnu_test::citerator reads __gnu_test::traits, which describes the standard containers alone |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/requirements/dr438/constructor.cc` | `3fc8cf8bfb56` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/swap.cc` | `842f03de2a14` | runs |  |
@@ -833,7 +833,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/cons/from_range.cc` | `c55f94862e89` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/cons/moveable.cc` | `dd6e842f78a8` | runs, adapted | VERIFY( b.find(2) == b.end()); ([container.reqmts] leaves a moved-from container's value unspecified: libstdc++'s nodes leave it empty, and a fixed set's array of blocks moves by copying) |
 | `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_default_construct.cc` | `72ce52d65d70` | compiles |  |
-| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_move_construct.cc` | `c85c45fb3570` | compiles, adapted | static_assert( std::is_nothrow_constructible<stype, ([set.overview] declares the move constructor with an allocator without noexcept, which libstdc++ adds as an extension) |
+| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_move_construct.cc` | `c85c45fb3570` | fails to compile | [container.alloc.reqmts]: a fixed set allocates nothing, so it has no allocator_type to move with |
 | `libstdc++-v3/testsuite/23_containers/set/cons/self_move.cc` | `2dc2c7e0fd78` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/debug/114316.cc` | `38a5d4b4c86f` | not run | dg-require-debug-mode |
 | `libstdc++-v3/testsuite/23_containers/set/debug/60499.cc` | `c979b567b671` | not run | dg-require-debug-mode |
@@ -936,7 +936,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/cons/from_range.cc` | `c55f94862e89` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/cons/moveable.cc` | `dd6e842f78a8` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_default_construct.cc` | `72ce52d65d70` | compiles |  |
-| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_move_construct.cc` | `c85c45fb3570` | compiles, adapted | static_assert( std::is_nothrow_constructible<stype, ([set.overview] declares the move constructor with an allocator without noexcept, which libstdc++ adds as an extension) |
+| `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_move_construct.cc` | `c85c45fb3570` | fails to compile | [container.alloc.reqmts]: an inplace set allocates nothing, so it has no allocator_type to move with |
 | `libstdc++-v3/testsuite/23_containers/set/cons/self_move.cc` | `2dc2c7e0fd78` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/debug/114316.cc` | `38a5d4b4c86f` | not run | dg-require-debug-mode |
 | `libstdc++-v3/testsuite/23_containers/set/debug/60499.cc` | `c979b567b671` | not run | dg-require-debug-mode |
