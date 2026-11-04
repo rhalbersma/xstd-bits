@@ -32,3 +32,9 @@ file = "libcxx/test/std/containers/associative/set/get_allocator.pass.cpp"
 sha256 = "fc4089ed8899d9c9aed2333bded6b6ee83bd0313f8066ac0240712bea14c12f1"
 fails = "compile"
 paragraph = "[container.alloc.reqmts]: a fixed set allocates nothing, so it has no allocator to return"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/set/cons/noexcept_move_construct.cc"
+sha256 = "c85c45fb35708fdf211038d32e8bd4925a9a8eda600f1d92645c45aa07264a8d"
+fails = "compile"
+paragraph = "[container.alloc.reqmts]: a fixed set allocates nothing, so it has no allocator_type to move with"

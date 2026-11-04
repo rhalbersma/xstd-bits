@@ -353,3 +353,51 @@ file = "libcxx/test/std/containers/sequences/vector.bool/ctor_exceptions.pass.cp
 sha256 = "f0a3662fb27d1b091f912dc20e1bd77beeab941b1f68f293d748463457a1eadd"
 fails = "compile"
 paragraph = "[container.alloc.reqmts]: the allocator is the storage's, Boost's small_vector allocator of blocks, and takes none of the test's allocators of bool"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/capacity/constexpr.cc"
+sha256 = "f379b00569692198b544dc394782b98320b7a184214ec910110e0fba03c6a1fb"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/cmp_c++20.cc"
+sha256 = "1804758f43e81f6b95e02a6b13affbf3d368bbd800f5b496b0a641392c71118c"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/cons/constexpr.cc"
+sha256 = "851108289086f23a718950e8d0f9f619e1cf7e322bbc6d0c184f04672cc02306"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/element_access/1.cc"
+sha256 = "411c76dc9f86cecb5456d0bfdb58267bdf245c5533d1568793439a6af1d7c8b2"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/element_access/constexpr.cc"
+sha256 = "a5004d73da49224fad4e3daf82206bbb34fe1459a698de94aac649a56a8afa04"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/constexpr.cc"
+sha256 = "5097184503d9f19b066ed106e27c76a24d7163471cf09c116ab3cd306e5fc500"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc"
+sha256 = "748b4a39e0bda63fae74eb6bca490bdcc047b3f99ee2fb41a42a0d6b9ba7d1b2"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/constexpr.cc"
+sha256 = "830691ce96813b0107a07c691d6f37f0cf3e0bf2776cf33715aeeec608767737"
+fails = "compile"
+paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
