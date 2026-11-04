@@ -25,4 +25,4 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: rhalbersma/cpp-ci/.github/workflows/codeql.yml@4bd632358dfeb4c79fa606f9dcb70ba0052acd8e # main after rhalbersma/cpp-ci#92, with the install-clang key-fetch retry of rhalbersma/cpp-ci#91
+    uses: rhalbersma/cpp-ci/.github/workflows/codeql.yml@60aca0228b53b1bdf812604fd5ed12743f83ccc2 # main after rhalbersma/cpp-ci#94, with std_test_suite's NAME
