@@ -1,0 +1,21 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+# The set<int> tests read against bit_fixed_set, whose 64 keys are fixed by its type.
+include = ["xstd/bits/bit_set/bit_fixed_set.hpp", "xstd/bits/bit_set/erase_if.hpp"]
+
+# libc++ spells set<int> qualified.
+[libcxx]
+rewrite = [{ from = "std::set<int>", to = "xstd::bit_fixed_set<64>" }]
+
+# Spelled qualified, or unqualified under a using-directive for std; one with a comparator or allocator of its own stays
+# std's.
+[libstdcxx]
+rewrite = [
+    # An explicit instantiation names a class template, which an alias is not.
+    { from = "template class std::set<int>;", to = "template class xstd::basic_bit_fixed_set<std::size_t, std::size_t, 64>;" },
+    { from = "std::set<int>", to = "xstd::bit_fixed_set<64>" },
+    { regex = '(?<![\w:])set<int>', to = 'xstd::bit_fixed_set<64>' },
+]

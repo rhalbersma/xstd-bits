@@ -20,25 +20,35 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cpp-ci)
 include(${cpp-ci_SOURCE_DIR}/cmake/StdTestSuite.cmake)
 
-# A suite's tests, and a test that doc/vendor.md records what became of each of them in this build.
+# One suite's tests against one subject, from the suite's mappings of the directories it takes and the subject's mapping
+# of the type it reads them against, and a test that doc/vendor.md records what became of each of them in this build.
 find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
-function(xstd_bits_std_test_suite suite)
-    std_test_suite(${suite} MAPPING ${CMAKE_CURRENT_SOURCE_DIR}/${suite}.toml LINK_LIBRARIES xstd::bits)
+function(xstd_bits_std_test_suite suite subject)
+    set(name ${suite}-${subject})
+    list(TRANSFORM ARGN PREPEND ${CMAKE_CURRENT_SOURCE_DIR}/ OUTPUT_VARIABLE mappings)
+    std_test_suite(${suite} NAME ${name} MAPPING ${mappings} ${CMAKE_CURRENT_SOURCE_DIR}/${subject}.toml LINK_LIBRARIES xstd::bits)
     add_test(
-        NAME std-test-suite.${suite}.table
-        COMMAND ${Python3_EXECUTABLE} -I ${PROJECT_SOURCE_DIR}/tools/vendor.py check ${CMAKE_CURRENT_BINARY_DIR}/std-test-suite/${suite}/manifest.json
+        NAME std-test-suite.${name}.table
+        COMMAND ${Python3_EXECUTABLE} -I ${PROJECT_SOURCE_DIR}/tools/vendor.py check ${CMAKE_CURRENT_BINARY_DIR}/std-test-suite/${name}/manifest.json
     )
-    set_tests_properties(std-test-suite.${suite}.table PROPERTIES LABELS "std-test-suite;${suite}")
+    set_tests_properties(std-test-suite.${name}.table PROPERTIES LABELS "std-test-suite;${name}")
 endfunction()
 
 # Each library's own suite on the library it is written for, since each also checks its own library's choices.
 include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(_LIBCPP_VERSION version XSTD_BITS_STD_TEST_SUITE_LIBCPP)
 if(XSTD_BITS_STD_TEST_SUITE_LIBCPP)
-    xstd_bits_std_test_suite(libcxx)
+    set(suite libcxx)
 else()
-    xstd_bits_std_test_suite(libstdcxx)
+    set(suite libstdcxx)
 endif()
+xstd_bits_std_test_suite(${suite} bit-vector ${suite}-vector-bool.toml ${suite}-algorithms.toml)
+xstd_bits_std_test_suite(${suite} bit-small-vector ${suite}-vector-bool.toml)
+foreach(subject IN ITEMS bit-set bit-fixed-set bit-inplace-set bit-small-set)
+    xstd_bits_std_test_suite(${suite} ${subject} ${suite}-set.toml)
+endforeach()
 
 # The MSVC STL's tests reach none of its internals, and no Linux leg has the MSVC STL, so they run beside either.
-xstd_bits_std_test_suite(msvc-stl)
+foreach(subject IN ITEMS bit-vector bit-small-vector)
+    xstd_bits_std_test_suite(msvc-stl ${subject} msvc-stl-vector-bool.toml)
+endforeach()

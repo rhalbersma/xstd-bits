@@ -1,0 +1,102 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+# libstdc++'s tests of std::set over int keys, with each departure from them named. A subject's mapping beside this
+# one names the set they are read against, whose keys are std::size_t.
+[libstdcxx]
+take = [
+    { path = "libstdc++-v3/testsuite/23_containers/set" },
+]
+
+# std::set over int keys, read against bit_set.
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/23_containers/set/cons/noexcept_move_construct.cc"
+sha256 = "c85c45fb35708fdf211038d32e8bd4925a9a8eda600f1d92645c45aa07264a8d"
+line = "static_assert( std::is_nothrow_constructible<stype,"
+to = "static_assert( std::is_constructible<stype,"
+departure = "[set.overview] declares the move constructor with an allocator without noexcept, which libstdc++ adds as an extension"
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/23_containers/set/capacity/29134.cc"
+sha256 = "1b0c36dcf5862e294457b19e592abdd482f058270e2b487dda9847cc4d3e6037"
+line = "VERIFY( s.max_size() == __gnu_test::max_size(a) );"
+to = "VERIFY( s.max_size() >= s.size() );"
+departure = "max_size(), which [container.reqmts] leaves to the implementation, is libstdc++'s tree node count here"
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/23_containers/set/init-list.cc"
+sha256 = "1a32d769c68fbdb6243ad88a179bd56f4024cda7f39c606378684695406ba01e"
+line = "__gnu_test::set_memory_limits();"
+drop = true
+departure = "none of the set's: the memory limit is set by libstdc++'s test support library, which no consumer links"
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/23_containers/set/erasure.cc"
+sha256 = "f1448b4a42c4f1d6759ae09178452fe17b30169400edfc5867b63d6ece4e8295"
+line = "auto num = std::erase_if(s, is_odd);"
+to = "auto num = erase_if(s, is_odd);"
+departure = "erase_if is xstd's, found by argument-dependent lookup"
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/23_containers/set/erasure.cc"
+sha256 = "f1448b4a42c4f1d6759ae09178452fe17b30169400edfc5867b63d6ece4e8295"
+line = "std::erase_if(s, pred);"
+to = "erase_if(s, pred);"
+departure = "erase_if is xstd's, found by argument-dependent lookup"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc"
+sha256 = "31f823d5b496a30ebed2ccf844f1933773504efbbfa2a1a43f3f10fdb3083b64"
+fails = "compile"
+paragraph = "[set.overview]"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc"
+sha256 = "3898dc149ffb6b9b4225b86d67941479f7b7f068f1fce7243b5ddb2ffdffc966"
+fails = "compile"
+paragraph = "[container.node]"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc"
+sha256 = "63fba8bfd4ad817eaccb3e80547721b34b53e0854c95ed19c8160eea56546f48"
+fails = "compile"
+paragraph = "[container.node]"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc"
+sha256 = "64cd1d48163c44aeb4ecee5e22244ed4fec2bdd31e5223286c33399c18434afb"
+fails = "compile"
+paragraph = "[associative.reqmts.general]"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/set/requirements/citerators.cc"
+sha256 = "582b06fee64bb6ca33ecb63906b363fdb054e0f0cae705386ccb87a7c1a1c238"
+fails = "compile"
+paragraph = "none of the set's: libstdc++'s __gnu_test::citerator reads __gnu_test::traits, which describes the standard containers alone"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/set/requirements/typedefs.cc"
+sha256 = "0a0a7a569ecb913abe22871f2da97bc300cdf70f480f7d98a2d33fb097f91e68"
+fails = "compile"
+paragraph = "none of the set's: libstdc++'s __gnu_test::types reads __gnu_test::traits, which describes the standard containers alone"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/set/debug/90102.cc"
+sha256 = "53b22a10de5d23d7dd96a4850ac5d302a175ca67ca3f532bbb73aaabeb35f361"
+fails = "compile"
+paragraph = "none of the set's: a test of libstdc++'s debug-mode std::__debug::set"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/set/debug/invalidation/1.cc"
+sha256 = "916785fa1b1f287cd2f077e4c8c523f592373a804ef361ada188a18bbb737a46"
+fails = "compile"
+paragraph = "none of the set's: a test of libstdc++'s debug-mode iterator invalidation"
+
+[[libstdcxx.expect]]
+file = "libstdc++-v3/testsuite/23_containers/set/debug/invalidation/2.cc"
+sha256 = "9e5c00d1e9e03e5df12d27d30f7852596ba41baa2543dc85e473f016b99d3fca"
+fails = "compile"
+paragraph = "none of the set's: a test of libstdc++'s debug-mode iterator invalidation"

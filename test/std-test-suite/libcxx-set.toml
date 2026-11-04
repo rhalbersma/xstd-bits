@@ -1,0 +1,129 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+# libc++'s tests of std::set over int keys, with each departure from them named. A subject's mapping beside this one
+# names the set they are read against, whose keys are std::size_t.
+[libcxx]
+take = [
+  { path = "libcxx/test/std/containers/associative/set" },
+]
+
+# The member types std::set<int> names over int, which bit_set names over std::size_t or as its own proxies.
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/associative/set/types.pass.cpp"
+sha256 = "4b2d43c4a72ae9a5296b384f3b934f4ff096bfa381238038f9c8f46306aa1c41"
+line = "static_assert((std::is_same<C::key_type, int>::value), \"\");"
+drop = true
+departure = "the key the rewrite reads std::set<int> as, std::size_t"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/associative/set/types.pass.cpp"
+sha256 = "4b2d43c4a72ae9a5296b384f3b934f4ff096bfa381238038f9c8f46306aa1c41"
+line = "static_assert((std::is_same<C::value_type, int>::value), \"\");"
+drop = true
+departure = "the key the rewrite reads std::set<int> as, std::size_t"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/associative/set/types.pass.cpp"
+sha256 = "4b2d43c4a72ae9a5296b384f3b934f4ff096bfa381238038f9c8f46306aa1c41"
+line = "static_assert((std::is_same<C::key_compare, std::less<int> >::value), \"\");"
+drop = true
+departure = "the key the rewrite reads std::set<int> as, std::size_t"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/associative/set/types.pass.cpp"
+sha256 = "4b2d43c4a72ae9a5296b384f3b934f4ff096bfa381238038f9c8f46306aa1c41"
+line = "static_assert((std::is_same<C::value_compare, std::less<int> >::value), \"\");"
+drop = true
+departure = "the key the rewrite reads std::set<int> as, std::size_t"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/associative/set/types.pass.cpp"
+sha256 = "4b2d43c4a72ae9a5296b384f3b934f4ff096bfa381238038f9c8f46306aa1c41"
+line = "static_assert((std::is_same<C::allocator_type, std::allocator<int> >::value), \"\");"
+drop = true
+departure = "allocator_type is the block container's allocator"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/associative/set/types.pass.cpp"
+sha256 = "4b2d43c4a72ae9a5296b384f3b934f4ff096bfa381238038f9c8f46306aa1c41"
+line = "static_assert((std::is_same<C::reference, int&>::value), \"\");"
+drop = true
+departure = "reference is the set's own proxy"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/associative/set/types.pass.cpp"
+sha256 = "4b2d43c4a72ae9a5296b384f3b934f4ff096bfa381238038f9c8f46306aa1c41"
+line = "static_assert((std::is_same<C::const_reference, const int&>::value), \"\");"
+drop = true
+departure = "reference is the set's own proxy"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/associative/set/types.pass.cpp"
+sha256 = "4b2d43c4a72ae9a5296b384f3b934f4ff096bfa381238038f9c8f46306aa1c41"
+line = "static_assert((std::is_same<C::pointer, int*>::value), \"\");"
+drop = true
+departure = "pointer is the set's own proxy"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/associative/set/types.pass.cpp"
+sha256 = "4b2d43c4a72ae9a5296b384f3b934f4ff096bfa381238038f9c8f46306aa1c41"
+line = "static_assert((std::is_same<C::const_pointer, const int*>::value), \"\");"
+drop = true
+departure = "pointer is the set's own proxy"
+
+# [set.erasure] declares erase_if in std for std::set; bit_set's is xstd's, which the unqualified call finds.
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/associative/set/set.erasure/erase_if.pass.cpp"
+sha256 = "bf06247af20e8b6c235e218df2d06521bb58bf380daa9339f6375a1f098f8889"
+line = "ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase_if(s, p)));"
+to = "ASSERT_SAME_TYPE(typename S::size_type, decltype(erase_if(s, p)));"
+departure = "erase_if is xstd's, found by argument-dependent lookup"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/associative/set/set.erasure/erase_if.pass.cpp"
+sha256 = "bf06247af20e8b6c235e218df2d06521bb58bf380daa9339f6375a1f098f8889"
+line = "assert(expected_erased_count == std::erase_if(s, p));"
+to = "assert(expected_erased_count == erase_if(s, p));"
+departure = "erase_if is xstd's, found by argument-dependent lookup"
+
+# A bit_set holds its keys as bits, not nodes, so it has no node_type, extract or node-taking insert.
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/associative/set/extract_iterator.pass.cpp"
+sha256 = "9128487e04adb97a79c23235a72fa4989ef6cd72c24cfdd010912e13ccabd42b"
+fails = "compile"
+paragraph = "[container.node]"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/associative/set/extract_key.pass.cpp"
+sha256 = "772ad5bc75406815aedc395193782b9c06913bb33ca997d50d42cfd863b6d6d1"
+fails = "compile"
+paragraph = "[container.node]"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/associative/set/insert_node_type.pass.cpp"
+sha256 = "b35cd8ad958568e77d58e76deff99034a61cccd1b82e671e0dcf231f1c9d9ef3"
+fails = "compile"
+paragraph = "[container.node]"
+
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/associative/set/insert_node_type_hint.pass.cpp"
+sha256 = "bfa4b3367805162faac4240fd2f500e1230419ca5bbd4ec68bd1c5e7e7b4b29d"
+fails = "compile"
+paragraph = "[container.node]"
+
+# merge splices nodes from one set into another; bit_set has none to splice.
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/associative/set/merge.pass.cpp"
+sha256 = "658c775174c6ddf704c842fd3a4798496221ba1ca6bd64f02c6749916cb71f81"
+fails = "compile"
+paragraph = "[associative.reqmts.general]"
+
+# The test deduces std::set from int arguments and compares the result with the type the rewrite names.
+[[libcxx.expect]]
+file = "libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp"
+sha256 = "67892454971ee63aa00e0960941a7b77c8da1e0c1d0d54948ea508234ac93b43"
+fails = "compile"
+paragraph = "[set.overview]"
