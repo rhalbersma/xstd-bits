@@ -63,6 +63,18 @@ inline constexpr auto capacity<xstd::basic_bit_valarray<Blocks, N>> = N;
 template<class V>
 inline constexpr bool is_fixed = fixed_size<V> != std::dynamic_extent;
 
+// Whether a V is built from n elements: one of fixed size takes its own size alone.
+template<class V>
+[[nodiscard]] constexpr auto takes_size(std::size_t n) noexcept
+        -> bool
+{
+        if constexpr (is_fixed<V>) {
+                return n == fixed_size<V>;
+        } else {
+                return true;
+        }
+}
+
 // Sizes across block boundaries: the type's own where it fixes one, else up to its capacity or a few blocks.
 template<class V>
 [[nodiscard]] auto sizes()
@@ -77,8 +89,10 @@ template<class V>
                                 result.push_back(n);
                         }
                 }
-                if (capacity<V> != std::dynamic_extent and (result.empty() or result.back() != capacity<V>)) {
-                        result.push_back(capacity<V>);
+                if constexpr (capacity<V> != std::dynamic_extent) {
+                        if (result.empty() or result.back() != capacity<V>) {
+                                result.push_back(capacity<V>);
+                        }
                 }
                 return result;
         }
@@ -654,8 +668,10 @@ template<class V>
                                 result.push_back(n);
                         }
                 }
-                if (capacity<V> != std::dynamic_extent and result.back() != capacity<V>) {
-                        result.push_back(capacity<V>);
+                if constexpr (capacity<V> != std::dynamic_extent) {
+                        if (result.back() != capacity<V>) {
+                                result.push_back(capacity<V>);
+                        }
                 }
                 return result;
         }
@@ -830,7 +846,7 @@ auto check_reads(model const& a, Selector const& selector, ReferenceSelector con
         static_assert(std::same_as<decltype(v[selector]), gathered_t<V>>);
         check_equal(v[selector], expected);
         auto x = make<V>(a);
-        if (not is_fixed<V> or expected.size() == fixed_size<V>) {
+        if (takes_size<V>(expected.size())) {
                 auto const w = V(x[selector]);
                 check_equal(w, expected);
                 auto z = make<V>(a);
@@ -1016,7 +1032,7 @@ auto check_mask_with()
                         static_assert(std::same_as<decltype(v[mask]), gathered_t<V>>);
                         check_equal(v[mask], expected);
                         auto x = make<V>(a);
-                        if (not is_fixed<V> or count == fixed_size<V>) {
+                        if (takes_size<V>(count)) {
                                 check_equal(V(x[mask]), expected);
                                 x = x[mask];
                                 check_equal(x, expected);
