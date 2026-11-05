@@ -56,6 +56,9 @@ A row's `outcome` is one of:
 | `compiles` | a test of declarations alone, built as written |
 | `runs, adapted` | built and run with the lines the note lists changed or dropped, each for the departure it names |
 | `compiles, adapted` | as `compiles`, with lines changed as for `runs, adapted` |
+| `builds` | built and linked as written, never run |
+| `verified` | a test of diagnostics, compiled under Clang's `-verify`, which reports every diagnostic its markers expect |
+| `rejected` | a test of diagnostics, which fails to compile with every error its `dg-error` markers name |
 | `fails to compile` | expected not to compile, for the paragraph or reason the note gives |
 | `fails at run time` | expected to fail when run, for the paragraph or reason the note gives |
 | `not run` | left out, for the reason the note gives |
@@ -76,7 +79,10 @@ def outcome(test: dict) -> tuple[str, str]:
     if "expect" in test:
         stage = {"compile": "fails to compile", "run": "fails at run time"}[test["expect"]]
         return stage, test["paragraph"]
-    kind = {"run": "runs", "compile": "compiles"}[test["kind"]]
+    if test["path"].endswith(".verify.cpp"):
+        kind = "verified"
+    else:
+        kind = {"run": "runs", "build": "builds", "compile": "compiles", "diagnose": "rejected"}[test["kind"]]
     if test.get("exceptions"):
         return f"{kind}, adapted", "; ".join(test["exceptions"])
     return kind, ""

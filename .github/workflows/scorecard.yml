@@ -28,4 +28,4 @@ jobs:
       security-events: write
       id-token: write
       actions: read
-    uses: rhalbersma/cpp-ci/.github/workflows/scorecard.yml@60aca0228b53b1bdf812604fd5ed12743f83ccc2 # main after rhalbersma/cpp-ci#94, with std_test_suite's NAME
+    uses: rhalbersma/cpp-ci/.github/workflows/scorecard.yml@87611bc1559e6660588f09dbe2061b22c19a869f # main after rhalbersma/cpp-ci#95, with the suites' tests of diagnostics

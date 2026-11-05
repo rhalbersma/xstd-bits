@@ -52,6 +52,13 @@ drop = true
 departure = "Boost's small_vector is not usable in a constant expression"
 
 [[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/reference.swap.pass.cpp"
+sha256 = "61152ce772dcfb1ff7ac8f64e0d270416a4bb27f2317fbcfccfb2d15414aee2d"
+line = "static_assert(tests());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[libcxx.assertion]]
 file = "libcxx/test/std/containers/sequences/vector.bool/assign_iter_iter.pass.cpp"
 sha256 = "bf33e7e26c1311fb58d53109c1ba8bcfeaabff5c635e19a1bf624ef602feb220"
 line = "static_assert(tests());"
