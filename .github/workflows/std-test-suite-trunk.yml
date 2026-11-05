@@ -24,7 +24,7 @@ on:
 
 jobs:
   libstdcxx:
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@60aca0228b53b1bdf812604fd5ed12743f83ccc2 # main after rhalbersma/cpp-ci#94, with std_test_suite's NAME
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@778a607b49cdb290307c18511523abf40690bece # main after rhalbersma/cpp-ci#96, with std_test_suite's WARN_STALE
     with:
       tiers: development
       build_types: Debug

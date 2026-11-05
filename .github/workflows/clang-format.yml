@@ -21,7 +21,7 @@ jobs:
   # Its own tier, deliberately left at stable: a formatter release reformats
   # the code base, which is not something a compiler bump should decide.
   clang_format:
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-format.yml@87611bc1559e6660588f09dbe2061b22c19a869f # main after rhalbersma/cpp-ci#95, with the suites' tests of diagnostics
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-format.yml@778a607b49cdb290307c18511523abf40690bece # main after rhalbersma/cpp-ci#96, with std_test_suite's WARN_STALE
     with:
       # benchmark/ too, this repository carrying a benchmark tree of hand-written sources.
       paths: examples include test benchmark
