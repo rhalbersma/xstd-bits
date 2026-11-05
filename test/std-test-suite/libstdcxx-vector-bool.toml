@@ -22,21 +22,21 @@ file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc"
 sha256 = "748b4a39e0bda63fae74eb6bca490bdcc047b3f99ee2fb41a42a0d6b9ba7d1b2"
 line = "v.flip();"
 to = "for (auto&& bit : v) bit = !bit;"
-departure = "no flip(): [vector.bool.pspc]'s negation of every element is written element by element"
+departure = "[vector.bool.pspc]/12: no flip(); the negation of every element is written element by element"
 
 [[libstdcxx.assertion]]
 file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc"
 sha256 = "748b4a39e0bda63fae74eb6bca490bdcc047b3f99ee2fb41a42a0d6b9ba7d1b2"
 line = "v[2].flip();"
 to = "v[2] = !v[2];"
-departure = "no reference::flip()"
+departure = "[vector.bool.pspc]/10: no reference::flip(); an element is negated by assignment"
 
 [[libstdcxx.assertion]]
 file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/constexpr.cc"
 sha256 = "830691ce96813b0107a07c691d6f37f0cf3e0bf2776cf33715aeeec608767737"
 line = "std::vector<bool>::swap(v1[0], v1[1]);"
-to = "std::ranges::iter_swap(v1.begin(), v1.begin() + 1);"
-departure = "no static swap(reference, reference): [vector.bool.pspc]'s exchange of two elements goes through the iterators"
+to = "swap(v1[0], v1[1]);"
+departure = "[vector.bool.pspc]/11 swaps two references through a hidden friend of reference (P3612R1); the test calls the static member it replaced"
 
 [[libstdcxx.expect]]
 file = "libstdc++-v3/testsuite/23_containers/vector/bool/requirements/citerators.cc"

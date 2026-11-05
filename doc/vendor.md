@@ -17,6 +17,9 @@ A row's `outcome` is one of:
 | `compiles` | a test of declarations alone, built as written |
 | `runs, adapted` | built and run with the lines the note lists changed or dropped, each for the departure it names |
 | `compiles, adapted` | as `compiles`, with lines changed as for `runs, adapted` |
+| `builds` | built and linked as written, never run |
+| `verified` | a test of diagnostics, compiled under Clang's `-verify`, which reports every diagnostic its markers expect |
+| `rejected` | a test of diagnostics, which fails to compile with every error its `dg-error` markers name |
 | `fails to compile` | expected not to compile, for the paragraph or reason the note gives |
 | `fails at run time` | expected to fail when run, for the paragraph or reason the note gives |
 | `not run` | left out, for the reason the note gives |
@@ -84,7 +87,7 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/sequences/vector.bool/emplace.pass.cpp` | `a95b4892a7f1` | runs |  |
 | `libcxx/test/std/containers/sequences/vector.bool/emplace_back.pass.cpp` | `f5c231ec0d5b` | runs |  |
 | `libcxx/test/std/containers/sequences/vector.bool/empty.pass.cpp` | `c02fbea895f1` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/empty.verify.cpp` | `1782f8452118` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/sequences/vector.bool/empty.verify.cpp` | `1782f8452118` | verified |  |
 | `libcxx/test/std/containers/sequences/vector.bool/enabled_hash.pass.cpp` | `f3922952e6c6` | runs |  |
 | `libcxx/test/std/containers/sequences/vector.bool/erase_iter.pass.cpp` | `1626d6e39a3b` | runs |  |
 | `libcxx/test/std/containers/sequences/vector.bool/erase_iter_iter.pass.cpp` | `4308b6117e67` | runs |  |
@@ -108,12 +111,12 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/sequences/vector.bool/op_equal_initializer_list.pass.cpp` | `13a3e3eb7f46` | runs |  |
 | `libcxx/test/std/containers/sequences/vector.bool/push_back.pass.cpp` | `11b111d47b14` | runs |  |
 | `libcxx/test/std/containers/sequences/vector.bool/range_concept_conformance.compile.pass.cpp` | `64bbf9b43b1b` | compiles |  |
-| `libcxx/test/std/containers/sequences/vector.bool/reference.swap.pass.cpp` | `61152ce772dc` | fails to compile | [vector.bool.pspc] |
+| `libcxx/test/std/containers/sequences/vector.bool/reference.swap.pass.cpp` | `61152ce772dc` | runs, adapted | static_assert((noexcept(v.swap(r1, r2))), ""); ([vector.bool.pspc]/11 swaps two references through a hidden friend of reference (P3612R1); the test calls the static member it replaced); v.swap(r1, r2); ([vector.bool.pspc]/11 swaps two references through a hidden friend of reference (P3612R1); the test calls the static member it replaced) |
 | `libcxx/test/std/containers/sequences/vector.bool/reference/assign_bool.pass.cpp` | `1345f2bbf123` | runs |  |
 | `libcxx/test/std/containers/sequences/vector.bool/reference/assign_copy.pass.cpp` | `2147006250fc` | runs |  |
-| `libcxx/test/std/containers/sequences/vector.bool/reference/ctor_copy.pass.cpp` | `3b5e218787b7` | runs, adapted | ref.flip(); (no reference::flip()) |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/ctor_copy.pass.cpp` | `3b5e218787b7` | runs, adapted | ref.flip(); ([vector.bool.pspc]/10: no reference::flip(); an element is negated by assignment) |
 | `libcxx/test/std/containers/sequences/vector.bool/reference/ctor_no_default.compile.pass.cpp` | `6046838b48bc` | compiles |  |
-| `libcxx/test/std/containers/sequences/vector.bool/reference/flip.pass.cpp` | `14c46e44ed31` | fails to compile | [vector.bool.pspc] |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/flip.pass.cpp` | `14c46e44ed31` | fails to compile | [vector.bool.pspc]/10: no reference::flip(); an element is negated by assignment |
 | `libcxx/test/std/containers/sequences/vector.bool/reference/operator_bool.pass.cpp` | `4ef15a3c29e8` | runs |  |
 | `libcxx/test/std/containers/sequences/vector.bool/reference/triviality.compile.pass.cpp` | `84c3f15dab61` | compiles |  |
 | `libcxx/test/std/containers/sequences/vector.bool/reserve.pass.cpp` | `a8eceb876f60` | runs |  |
@@ -168,7 +171,7 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/sequences/vector.bool/emplace.pass.cpp` | `a95b4892a7f1` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
 | `libcxx/test/std/containers/sequences/vector.bool/emplace_back.pass.cpp` | `f5c231ec0d5b` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
 | `libcxx/test/std/containers/sequences/vector.bool/empty.pass.cpp` | `c02fbea895f1` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
-| `libcxx/test/std/containers/sequences/vector.bool/empty.verify.cpp` | `1782f8452118` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/sequences/vector.bool/empty.verify.cpp` | `1782f8452118` | verified |  |
 | `libcxx/test/std/containers/sequences/vector.bool/enabled_hash.pass.cpp` | `f3922952e6c6` | runs |  |
 | `libcxx/test/std/containers/sequences/vector.bool/erase_iter.pass.cpp` | `1626d6e39a3b` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
 | `libcxx/test/std/containers/sequences/vector.bool/erase_iter_iter.pass.cpp` | `4308b6117e67` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
@@ -192,12 +195,12 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/sequences/vector.bool/op_equal_initializer_list.pass.cpp` | `13a3e3eb7f46` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
 | `libcxx/test/std/containers/sequences/vector.bool/push_back.pass.cpp` | `11b111d47b14` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
 | `libcxx/test/std/containers/sequences/vector.bool/range_concept_conformance.compile.pass.cpp` | `64bbf9b43b1b` | compiles |  |
-| `libcxx/test/std/containers/sequences/vector.bool/reference.swap.pass.cpp` | `61152ce772dc` | fails to compile | [vector.bool.pspc] |
+| `libcxx/test/std/containers/sequences/vector.bool/reference.swap.pass.cpp` | `61152ce772dc` | runs, adapted | static_assert((noexcept(v.swap(r1, r2))), ""); ([vector.bool.pspc]/11 swaps two references through a hidden friend of reference (P3612R1); the test calls the static member it replaced); v.swap(r1, r2); ([vector.bool.pspc]/11 swaps two references through a hidden friend of reference (P3612R1); the test calls the static member it replaced); static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
 | `libcxx/test/std/containers/sequences/vector.bool/reference/assign_bool.pass.cpp` | `1345f2bbf123` | runs, adapted | static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
 | `libcxx/test/std/containers/sequences/vector.bool/reference/assign_copy.pass.cpp` | `2147006250fc` | runs, adapted | static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
-| `libcxx/test/std/containers/sequences/vector.bool/reference/ctor_copy.pass.cpp` | `3b5e218787b7` | runs, adapted | ref.flip(); (no reference::flip()); static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/ctor_copy.pass.cpp` | `3b5e218787b7` | runs, adapted | ref.flip(); ([vector.bool.pspc]/10: no reference::flip(); an element is negated by assignment); static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
 | `libcxx/test/std/containers/sequences/vector.bool/reference/ctor_no_default.compile.pass.cpp` | `6046838b48bc` | compiles |  |
-| `libcxx/test/std/containers/sequences/vector.bool/reference/flip.pass.cpp` | `14c46e44ed31` | fails to compile | [vector.bool.pspc] |
+| `libcxx/test/std/containers/sequences/vector.bool/reference/flip.pass.cpp` | `14c46e44ed31` | fails to compile | [vector.bool.pspc]/10: no reference::flip(); an element is negated by assignment |
 | `libcxx/test/std/containers/sequences/vector.bool/reference/operator_bool.pass.cpp` | `4ef15a3c29e8` | runs, adapted | static_assert(test()); (Boost's small_vector is not usable in a constant expression) |
 | `libcxx/test/std/containers/sequences/vector.bool/reference/triviality.compile.pass.cpp` | `84c3f15dab61` | compiles |  |
 | `libcxx/test/std/containers/sequences/vector.bool/reserve.pass.cpp` | `a8eceb876f60` | runs, adapted | static_assert(tests()); (Boost's small_vector is not usable in a constant expression) |
@@ -224,7 +227,7 @@ A row's `outcome` is one of:
 
 | test | sha256 | outcome | note |
 | :--- | :--- | :--- | :--- |
-| `libcxx/test/std/containers/associative/set/allocator_mismatch.verify.cpp` | `652e404d93f1` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/allocator_mismatch.verify.cpp` | `652e404d93f1` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/clear.pass.cpp` | `868ab0b8ffa2` | runs |  |
 | `libcxx/test/std/containers/associative/set/contains.pass.cpp` | `65f44690079c` | runs |  |
 | `libcxx/test/std/containers/associative/set/contains_transparent.pass.cpp` | `53e63173cb89` | not run | no rewrite reaches it, so it tests the standard library |
@@ -233,14 +236,14 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/associative/set/emplace.pass.cpp` | `a97e7837b0a8` | runs |  |
 | `libcxx/test/std/containers/associative/set/emplace_hint.pass.cpp` | `c34b803be01e` | runs |  |
 | `libcxx/test/std/containers/associative/set/empty.pass.cpp` | `867fff1dd206` | runs |  |
-| `libcxx/test/std/containers/associative/set/empty.verify.cpp` | `41e7e25fd205` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/empty.verify.cpp` | `41e7e25fd205` | verified |  |
 | `libcxx/test/std/containers/associative/set/equal_range.pass.cpp` | `4583b139b1cd` | runs |  |
 | `libcxx/test/std/containers/associative/set/equal_range_transparent.pass.cpp` | `da7036c6599d` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/erase_iter.pass.cpp` | `909c375d1481` | runs |  |
 | `libcxx/test/std/containers/associative/set/erase_iter_iter.pass.cpp` | `62ef8c22ae43` | runs |  |
 | `libcxx/test/std/containers/associative/set/erase_key.pass.cpp` | `60869d49ba8b` | runs |  |
-| `libcxx/test/std/containers/associative/set/extract_iterator.pass.cpp` | `9128487e04ad` | fails to compile | [container.node] |
-| `libcxx/test/std/containers/associative/set/extract_key.pass.cpp` | `772ad5bc7540` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/extract_iterator.pass.cpp` | `9128487e04ad` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
+| `libcxx/test/std/containers/associative/set/extract_key.pass.cpp` | `772ad5bc7540` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
 | `libcxx/test/std/containers/associative/set/find.pass.cpp` | `ade8c52b1955` | runs |  |
 | `libcxx/test/std/containers/associative/set/gcc_workaround.compile.pass.cpp` | `634150905da9` | compiles |  |
 | `libcxx/test/std/containers/associative/set/get_allocator.pass.cpp` | `fc4089ed8899` | runs |  |
@@ -251,27 +254,27 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/associative/set/insert_iter_cv.pass.cpp` | `f66a4fa7d485` | runs |  |
 | `libcxx/test/std/containers/associative/set/insert_iter_iter.pass.cpp` | `a3718a9c57f0` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/insert_iter_rv.pass.cpp` | `27478c59caea` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/insert_node_type.pass.cpp` | `b35cd8ad9585` | fails to compile | [container.node] |
-| `libcxx/test/std/containers/associative/set/insert_node_type_hint.pass.cpp` | `bfa4b3367805` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/insert_node_type.pass.cpp` | `b35cd8ad9585` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
+| `libcxx/test/std/containers/associative/set/insert_node_type_hint.pass.cpp` | `bfa4b3367805` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
 | `libcxx/test/std/containers/associative/set/insert_range.pass.cpp` | `5ae2955e9078` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/insert_rv.pass.cpp` | `4304561cb95c` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/iterator.pass.cpp` | `819b7372dfe6` | runs |  |
 | `libcxx/test/std/containers/associative/set/iterator_concept_conformance.compile.pass.cpp` | `a2025a27b5c2` | compiles |  |
 | `libcxx/test/std/containers/associative/set/lower_bound.pass.cpp` | `4f7a2603a0f6` | runs |  |
 | `libcxx/test/std/containers/associative/set/max_size.pass.cpp` | `ef6ff179df58` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/merge.pass.cpp` | `658c775174c6` | fails to compile | [associative.reqmts.general] |
+| `libcxx/test/std/containers/associative/set/merge.pass.cpp` | `658c775174c6` | fails to compile | [associative.reqmts.general]/112-117: no nodes to splice; a \|= b inserts every key of b and leaves b unchanged |
 | `libcxx/test/std/containers/associative/set/range_concept_conformance.compile.pass.cpp` | `44fbd721985e` | compiles |  |
 | `libcxx/test/std/containers/associative/set/set.cons/alloc.pass.cpp` | `aa43e9fcb26c` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/assign_initializer_list.pass.cpp` | `f964d9f95928` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.cons/compare.pass.cpp` | `0d8f91617a0f` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/compare_alloc.pass.cpp` | `6a6cfa91e0e2` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/set.cons/compare_copy_constructible.compile.fail.cpp` | `ef04ba8973f2` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/compare_copy_constructible.compile.fail.cpp` | `ef04ba8973f2` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy.pass.cpp` | `fb263a52b8d7` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy_alloc.pass.cpp` | `08bc9f7177b3` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy_assign.addressof.compile.pass.cpp` | `42e4ed735d3c` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy_assign.pass.cpp` | `980c27da3575` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp` | `67892454971e` | fails to compile | [set.overview] |
-| `libcxx/test/std/containers/associative/set/set.cons/deduct.verify.cpp` | `1bf1b172533f` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp` | `67892454971e` | fails to compile | [associative.reqmts.general]/181: the rewrite names the subject where std::set has arguments; a deduced std::set stays std::set<int>, which the test compares with the subject |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.verify.cpp` | `1bf1b172533f` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/default.pass.cpp` | `e9b906681a03` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.cons/default_noexcept.pass.cpp` | `c830d62c2869` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/dtor_noexcept.pass.cpp` | `3c74373bb576` | not run | no rewrite reaches it, so it tests the standard library |
@@ -289,7 +292,7 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/associative/set/set.cons/move_noexcept.pass.cpp` | `5e61f09993b3` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.erasure/erase_if.pass.cpp` | `bf06247af20e` | runs, adapted | ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase_if(s, p))); (erase_if is xstd's, found by argument-dependent lookup); assert(expected_erased_count == std::erase_if(s, p)); (erase_if is xstd's, found by argument-dependent lookup) |
 | `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.pass.cpp` | `83d05f3bef66` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.verify.cpp` | `5a78a712cc54` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.verify.cpp` | `5a78a712cc54` | verified |  |
 | `libcxx/test/std/containers/associative/set/set.nonmember/op_compare.pass.cpp` | `db0f2ccd8606` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.observers/comp.pass.cpp` | `7a51eb983905` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.special/member_swap.pass.cpp` | `e6db2e8ded52` | runs |  |
@@ -306,7 +309,7 @@ A row's `outcome` is one of:
 
 | test | sha256 | outcome | note |
 | :--- | :--- | :--- | :--- |
-| `libcxx/test/std/containers/associative/set/allocator_mismatch.verify.cpp` | `652e404d93f1` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/allocator_mismatch.verify.cpp` | `652e404d93f1` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/clear.pass.cpp` | `868ab0b8ffa2` | runs |  |
 | `libcxx/test/std/containers/associative/set/contains.pass.cpp` | `65f44690079c` | runs |  |
 | `libcxx/test/std/containers/associative/set/contains_transparent.pass.cpp` | `53e63173cb89` | not run | no rewrite reaches it, so it tests the standard library |
@@ -315,14 +318,14 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/associative/set/emplace.pass.cpp` | `a97e7837b0a8` | runs |  |
 | `libcxx/test/std/containers/associative/set/emplace_hint.pass.cpp` | `c34b803be01e` | runs |  |
 | `libcxx/test/std/containers/associative/set/empty.pass.cpp` | `867fff1dd206` | runs |  |
-| `libcxx/test/std/containers/associative/set/empty.verify.cpp` | `41e7e25fd205` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/empty.verify.cpp` | `41e7e25fd205` | verified |  |
 | `libcxx/test/std/containers/associative/set/equal_range.pass.cpp` | `4583b139b1cd` | runs |  |
 | `libcxx/test/std/containers/associative/set/equal_range_transparent.pass.cpp` | `da7036c6599d` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/erase_iter.pass.cpp` | `909c375d1481` | runs |  |
 | `libcxx/test/std/containers/associative/set/erase_iter_iter.pass.cpp` | `62ef8c22ae43` | runs |  |
 | `libcxx/test/std/containers/associative/set/erase_key.pass.cpp` | `60869d49ba8b` | runs |  |
-| `libcxx/test/std/containers/associative/set/extract_iterator.pass.cpp` | `9128487e04ad` | fails to compile | [container.node] |
-| `libcxx/test/std/containers/associative/set/extract_key.pass.cpp` | `772ad5bc7540` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/extract_iterator.pass.cpp` | `9128487e04ad` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
+| `libcxx/test/std/containers/associative/set/extract_key.pass.cpp` | `772ad5bc7540` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
 | `libcxx/test/std/containers/associative/set/find.pass.cpp` | `ade8c52b1955` | runs |  |
 | `libcxx/test/std/containers/associative/set/gcc_workaround.compile.pass.cpp` | `634150905da9` | compiles |  |
 | `libcxx/test/std/containers/associative/set/get_allocator.pass.cpp` | `fc4089ed8899` | fails to compile | [container.alloc.reqmts]: a fixed set allocates nothing, so it has no allocator to return |
@@ -333,27 +336,27 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/associative/set/insert_iter_cv.pass.cpp` | `f66a4fa7d485` | runs |  |
 | `libcxx/test/std/containers/associative/set/insert_iter_iter.pass.cpp` | `a3718a9c57f0` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/insert_iter_rv.pass.cpp` | `27478c59caea` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/insert_node_type.pass.cpp` | `b35cd8ad9585` | fails to compile | [container.node] |
-| `libcxx/test/std/containers/associative/set/insert_node_type_hint.pass.cpp` | `bfa4b3367805` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/insert_node_type.pass.cpp` | `b35cd8ad9585` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
+| `libcxx/test/std/containers/associative/set/insert_node_type_hint.pass.cpp` | `bfa4b3367805` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
 | `libcxx/test/std/containers/associative/set/insert_range.pass.cpp` | `5ae2955e9078` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/insert_rv.pass.cpp` | `4304561cb95c` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/iterator.pass.cpp` | `819b7372dfe6` | runs |  |
 | `libcxx/test/std/containers/associative/set/iterator_concept_conformance.compile.pass.cpp` | `a2025a27b5c2` | compiles |  |
 | `libcxx/test/std/containers/associative/set/lower_bound.pass.cpp` | `4f7a2603a0f6` | runs |  |
 | `libcxx/test/std/containers/associative/set/max_size.pass.cpp` | `ef6ff179df58` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/merge.pass.cpp` | `658c775174c6` | fails to compile | [associative.reqmts.general] |
+| `libcxx/test/std/containers/associative/set/merge.pass.cpp` | `658c775174c6` | fails to compile | [associative.reqmts.general]/112-117: no nodes to splice; a \|= b inserts every key of b and leaves b unchanged |
 | `libcxx/test/std/containers/associative/set/range_concept_conformance.compile.pass.cpp` | `44fbd721985e` | compiles |  |
 | `libcxx/test/std/containers/associative/set/set.cons/alloc.pass.cpp` | `aa43e9fcb26c` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/assign_initializer_list.pass.cpp` | `f964d9f95928` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.cons/compare.pass.cpp` | `0d8f91617a0f` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/compare_alloc.pass.cpp` | `6a6cfa91e0e2` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/set.cons/compare_copy_constructible.compile.fail.cpp` | `ef04ba8973f2` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/compare_copy_constructible.compile.fail.cpp` | `ef04ba8973f2` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy.pass.cpp` | `fb263a52b8d7` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy_alloc.pass.cpp` | `08bc9f7177b3` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy_assign.addressof.compile.pass.cpp` | `42e4ed735d3c` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy_assign.pass.cpp` | `980c27da3575` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp` | `67892454971e` | fails to compile | [set.overview] |
-| `libcxx/test/std/containers/associative/set/set.cons/deduct.verify.cpp` | `1bf1b172533f` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp` | `67892454971e` | fails to compile | [associative.reqmts.general]/181: the rewrite names the subject where std::set has arguments; a deduced std::set stays std::set<int>, which the test compares with the subject |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.verify.cpp` | `1bf1b172533f` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/default.pass.cpp` | `e9b906681a03` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.cons/default_noexcept.pass.cpp` | `c830d62c2869` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/dtor_noexcept.pass.cpp` | `3c74373bb576` | not run | no rewrite reaches it, so it tests the standard library |
@@ -371,7 +374,7 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/associative/set/set.cons/move_noexcept.pass.cpp` | `5e61f09993b3` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.erasure/erase_if.pass.cpp` | `bf06247af20e` | runs, adapted | ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase_if(s, p))); (erase_if is xstd's, found by argument-dependent lookup); assert(expected_erased_count == std::erase_if(s, p)); (erase_if is xstd's, found by argument-dependent lookup) |
 | `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.pass.cpp` | `83d05f3bef66` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.verify.cpp` | `5a78a712cc54` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.verify.cpp` | `5a78a712cc54` | verified |  |
 | `libcxx/test/std/containers/associative/set/set.nonmember/op_compare.pass.cpp` | `db0f2ccd8606` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.observers/comp.pass.cpp` | `7a51eb983905` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.special/member_swap.pass.cpp` | `e6db2e8ded52` | runs |  |
@@ -388,7 +391,7 @@ A row's `outcome` is one of:
 
 | test | sha256 | outcome | note |
 | :--- | :--- | :--- | :--- |
-| `libcxx/test/std/containers/associative/set/allocator_mismatch.verify.cpp` | `652e404d93f1` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/allocator_mismatch.verify.cpp` | `652e404d93f1` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/clear.pass.cpp` | `868ab0b8ffa2` | runs |  |
 | `libcxx/test/std/containers/associative/set/contains.pass.cpp` | `65f44690079c` | runs |  |
 | `libcxx/test/std/containers/associative/set/contains_transparent.pass.cpp` | `53e63173cb89` | not run | no rewrite reaches it, so it tests the standard library |
@@ -397,14 +400,14 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/associative/set/emplace.pass.cpp` | `a97e7837b0a8` | runs |  |
 | `libcxx/test/std/containers/associative/set/emplace_hint.pass.cpp` | `c34b803be01e` | runs |  |
 | `libcxx/test/std/containers/associative/set/empty.pass.cpp` | `867fff1dd206` | runs |  |
-| `libcxx/test/std/containers/associative/set/empty.verify.cpp` | `41e7e25fd205` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/empty.verify.cpp` | `41e7e25fd205` | verified |  |
 | `libcxx/test/std/containers/associative/set/equal_range.pass.cpp` | `4583b139b1cd` | runs |  |
 | `libcxx/test/std/containers/associative/set/equal_range_transparent.pass.cpp` | `da7036c6599d` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/erase_iter.pass.cpp` | `909c375d1481` | runs |  |
 | `libcxx/test/std/containers/associative/set/erase_iter_iter.pass.cpp` | `62ef8c22ae43` | runs |  |
 | `libcxx/test/std/containers/associative/set/erase_key.pass.cpp` | `60869d49ba8b` | runs |  |
-| `libcxx/test/std/containers/associative/set/extract_iterator.pass.cpp` | `9128487e04ad` | fails to compile | [container.node] |
-| `libcxx/test/std/containers/associative/set/extract_key.pass.cpp` | `772ad5bc7540` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/extract_iterator.pass.cpp` | `9128487e04ad` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
+| `libcxx/test/std/containers/associative/set/extract_key.pass.cpp` | `772ad5bc7540` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
 | `libcxx/test/std/containers/associative/set/find.pass.cpp` | `ade8c52b1955` | runs |  |
 | `libcxx/test/std/containers/associative/set/gcc_workaround.compile.pass.cpp` | `634150905da9` | compiles |  |
 | `libcxx/test/std/containers/associative/set/get_allocator.pass.cpp` | `fc4089ed8899` | fails to compile | [container.alloc.reqmts]: an inplace set allocates nothing, so it has no allocator to return |
@@ -415,27 +418,27 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/associative/set/insert_iter_cv.pass.cpp` | `f66a4fa7d485` | runs |  |
 | `libcxx/test/std/containers/associative/set/insert_iter_iter.pass.cpp` | `a3718a9c57f0` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/insert_iter_rv.pass.cpp` | `27478c59caea` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/insert_node_type.pass.cpp` | `b35cd8ad9585` | fails to compile | [container.node] |
-| `libcxx/test/std/containers/associative/set/insert_node_type_hint.pass.cpp` | `bfa4b3367805` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/insert_node_type.pass.cpp` | `b35cd8ad9585` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
+| `libcxx/test/std/containers/associative/set/insert_node_type_hint.pass.cpp` | `bfa4b3367805` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
 | `libcxx/test/std/containers/associative/set/insert_range.pass.cpp` | `5ae2955e9078` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/insert_rv.pass.cpp` | `4304561cb95c` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/iterator.pass.cpp` | `819b7372dfe6` | runs |  |
 | `libcxx/test/std/containers/associative/set/iterator_concept_conformance.compile.pass.cpp` | `a2025a27b5c2` | compiles |  |
 | `libcxx/test/std/containers/associative/set/lower_bound.pass.cpp` | `4f7a2603a0f6` | runs |  |
 | `libcxx/test/std/containers/associative/set/max_size.pass.cpp` | `ef6ff179df58` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/merge.pass.cpp` | `658c775174c6` | fails to compile | [associative.reqmts.general] |
+| `libcxx/test/std/containers/associative/set/merge.pass.cpp` | `658c775174c6` | fails to compile | [associative.reqmts.general]/112-117: no nodes to splice; a \|= b inserts every key of b and leaves b unchanged |
 | `libcxx/test/std/containers/associative/set/range_concept_conformance.compile.pass.cpp` | `44fbd721985e` | compiles |  |
 | `libcxx/test/std/containers/associative/set/set.cons/alloc.pass.cpp` | `aa43e9fcb26c` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/assign_initializer_list.pass.cpp` | `f964d9f95928` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.cons/compare.pass.cpp` | `0d8f91617a0f` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/compare_alloc.pass.cpp` | `6a6cfa91e0e2` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/set.cons/compare_copy_constructible.compile.fail.cpp` | `ef04ba8973f2` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/compare_copy_constructible.compile.fail.cpp` | `ef04ba8973f2` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy.pass.cpp` | `fb263a52b8d7` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy_alloc.pass.cpp` | `08bc9f7177b3` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy_assign.addressof.compile.pass.cpp` | `42e4ed735d3c` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy_assign.pass.cpp` | `980c27da3575` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp` | `67892454971e` | fails to compile | [set.overview] |
-| `libcxx/test/std/containers/associative/set/set.cons/deduct.verify.cpp` | `1bf1b172533f` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp` | `67892454971e` | fails to compile | [associative.reqmts.general]/181: the rewrite names the subject where std::set has arguments; a deduced std::set stays std::set<int>, which the test compares with the subject |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.verify.cpp` | `1bf1b172533f` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/default.pass.cpp` | `e9b906681a03` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.cons/default_noexcept.pass.cpp` | `c830d62c2869` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/dtor_noexcept.pass.cpp` | `3c74373bb576` | not run | no rewrite reaches it, so it tests the standard library |
@@ -453,7 +456,7 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/associative/set/set.cons/move_noexcept.pass.cpp` | `5e61f09993b3` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.erasure/erase_if.pass.cpp` | `bf06247af20e` | runs, adapted | ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase_if(s, p))); (erase_if is xstd's, found by argument-dependent lookup); assert(expected_erased_count == std::erase_if(s, p)); (erase_if is xstd's, found by argument-dependent lookup) |
 | `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.pass.cpp` | `83d05f3bef66` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.verify.cpp` | `5a78a712cc54` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.verify.cpp` | `5a78a712cc54` | verified |  |
 | `libcxx/test/std/containers/associative/set/set.nonmember/op_compare.pass.cpp` | `db0f2ccd8606` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.observers/comp.pass.cpp` | `7a51eb983905` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.special/member_swap.pass.cpp` | `e6db2e8ded52` | runs |  |
@@ -470,7 +473,7 @@ A row's `outcome` is one of:
 
 | test | sha256 | outcome | note |
 | :--- | :--- | :--- | :--- |
-| `libcxx/test/std/containers/associative/set/allocator_mismatch.verify.cpp` | `652e404d93f1` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/allocator_mismatch.verify.cpp` | `652e404d93f1` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/clear.pass.cpp` | `868ab0b8ffa2` | runs |  |
 | `libcxx/test/std/containers/associative/set/contains.pass.cpp` | `65f44690079c` | runs |  |
 | `libcxx/test/std/containers/associative/set/contains_transparent.pass.cpp` | `53e63173cb89` | not run | no rewrite reaches it, so it tests the standard library |
@@ -479,14 +482,14 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/associative/set/emplace.pass.cpp` | `a97e7837b0a8` | runs |  |
 | `libcxx/test/std/containers/associative/set/emplace_hint.pass.cpp` | `c34b803be01e` | runs |  |
 | `libcxx/test/std/containers/associative/set/empty.pass.cpp` | `867fff1dd206` | runs |  |
-| `libcxx/test/std/containers/associative/set/empty.verify.cpp` | `41e7e25fd205` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/empty.verify.cpp` | `41e7e25fd205` | verified |  |
 | `libcxx/test/std/containers/associative/set/equal_range.pass.cpp` | `4583b139b1cd` | runs |  |
 | `libcxx/test/std/containers/associative/set/equal_range_transparent.pass.cpp` | `da7036c6599d` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/erase_iter.pass.cpp` | `909c375d1481` | runs |  |
 | `libcxx/test/std/containers/associative/set/erase_iter_iter.pass.cpp` | `62ef8c22ae43` | runs |  |
 | `libcxx/test/std/containers/associative/set/erase_key.pass.cpp` | `60869d49ba8b` | runs |  |
-| `libcxx/test/std/containers/associative/set/extract_iterator.pass.cpp` | `9128487e04ad` | fails to compile | [container.node] |
-| `libcxx/test/std/containers/associative/set/extract_key.pass.cpp` | `772ad5bc7540` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/extract_iterator.pass.cpp` | `9128487e04ad` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
+| `libcxx/test/std/containers/associative/set/extract_key.pass.cpp` | `772ad5bc7540` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
 | `libcxx/test/std/containers/associative/set/find.pass.cpp` | `ade8c52b1955` | runs |  |
 | `libcxx/test/std/containers/associative/set/gcc_workaround.compile.pass.cpp` | `634150905da9` | compiles |  |
 | `libcxx/test/std/containers/associative/set/get_allocator.pass.cpp` | `fc4089ed8899` | fails to compile | [container.alloc.reqmts]: the set's allocator is its storage's, Boost's small_vector allocator of blocks, not std::allocator<int> |
@@ -497,27 +500,27 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/associative/set/insert_iter_cv.pass.cpp` | `f66a4fa7d485` | runs |  |
 | `libcxx/test/std/containers/associative/set/insert_iter_iter.pass.cpp` | `a3718a9c57f0` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/insert_iter_rv.pass.cpp` | `27478c59caea` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/insert_node_type.pass.cpp` | `b35cd8ad9585` | fails to compile | [container.node] |
-| `libcxx/test/std/containers/associative/set/insert_node_type_hint.pass.cpp` | `bfa4b3367805` | fails to compile | [container.node] |
+| `libcxx/test/std/containers/associative/set/insert_node_type.pass.cpp` | `b35cd8ad9585` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
+| `libcxx/test/std/containers/associative/set/insert_node_type_hint.pass.cpp` | `bfa4b3367805` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert |
 | `libcxx/test/std/containers/associative/set/insert_range.pass.cpp` | `5ae2955e9078` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/insert_rv.pass.cpp` | `4304561cb95c` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/iterator.pass.cpp` | `819b7372dfe6` | runs |  |
 | `libcxx/test/std/containers/associative/set/iterator_concept_conformance.compile.pass.cpp` | `a2025a27b5c2` | compiles |  |
 | `libcxx/test/std/containers/associative/set/lower_bound.pass.cpp` | `4f7a2603a0f6` | runs |  |
 | `libcxx/test/std/containers/associative/set/max_size.pass.cpp` | `ef6ff179df58` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/merge.pass.cpp` | `658c775174c6` | fails to compile | [associative.reqmts.general] |
+| `libcxx/test/std/containers/associative/set/merge.pass.cpp` | `658c775174c6` | fails to compile | [associative.reqmts.general]/112-117: no nodes to splice; a \|= b inserts every key of b and leaves b unchanged |
 | `libcxx/test/std/containers/associative/set/range_concept_conformance.compile.pass.cpp` | `44fbd721985e` | compiles |  |
 | `libcxx/test/std/containers/associative/set/set.cons/alloc.pass.cpp` | `aa43e9fcb26c` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/assign_initializer_list.pass.cpp` | `f964d9f95928` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.cons/compare.pass.cpp` | `0d8f91617a0f` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/compare_alloc.pass.cpp` | `6a6cfa91e0e2` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/set.cons/compare_copy_constructible.compile.fail.cpp` | `ef04ba8973f2` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/compare_copy_constructible.compile.fail.cpp` | `ef04ba8973f2` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy.pass.cpp` | `fb263a52b8d7` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy_alloc.pass.cpp` | `08bc9f7177b3` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy_assign.addressof.compile.pass.cpp` | `42e4ed735d3c` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/copy_assign.pass.cpp` | `980c27da3575` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp` | `67892454971e` | fails to compile | [set.overview] |
-| `libcxx/test/std/containers/associative/set/set.cons/deduct.verify.cpp` | `1bf1b172533f` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp` | `67892454971e` | fails to compile | [associative.reqmts.general]/181: the rewrite names the subject where std::set has arguments; a deduced std::set stays std::set<int>, which the test compares with the subject |
+| `libcxx/test/std/containers/associative/set/set.cons/deduct.verify.cpp` | `1bf1b172533f` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/default.pass.cpp` | `e9b906681a03` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.cons/default_noexcept.pass.cpp` | `c830d62c2869` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.cons/dtor_noexcept.pass.cpp` | `3c74373bb576` | not run | no rewrite reaches it, so it tests the standard library |
@@ -535,7 +538,7 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/associative/set/set.cons/move_noexcept.pass.cpp` | `5e61f09993b3` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/associative/set/set.erasure/erase_if.pass.cpp` | `bf06247af20e` | runs, adapted | ASSERT_SAME_TYPE(typename S::size_type, decltype(std::erase_if(s, p))); (erase_if is xstd's, found by argument-dependent lookup); assert(expected_erased_count == std::erase_if(s, p)); (erase_if is xstd's, found by argument-dependent lookup) |
 | `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.pass.cpp` | `83d05f3bef66` | not run | no rewrite reaches it, so it tests the standard library |
-| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.verify.cpp` | `5a78a712cc54` | not run | a test of diagnostics, run in a second pass |
+| `libcxx/test/std/containers/associative/set/set.nonmember/compare.three_way.verify.cpp` | `5a78a712cc54` | verified |  |
 | `libcxx/test/std/containers/associative/set/set.nonmember/op_compare.pass.cpp` | `db0f2ccd8606` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.observers/comp.pass.cpp` | `7a51eb983905` | runs |  |
 | `libcxx/test/std/containers/associative/set/set.special/member_swap.pass.cpp` | `e6db2e8ded52` | runs |  |
@@ -598,7 +601,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/1.cc` | `1d66a207486d` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/assign_range.cc` | `b0ff689382a3` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/assign/constexpr.cc` | `5097184503d9` | compiles |  |
-| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc` | `748b4a39e0bd` | compiles, adapted | v.flip(); (no flip(): [vector.bool.pspc]'s negation of every element is written element by element); v[2].flip(); (no reference::flip()); auto n = std::erase(e, false); ([vector.erasure]'s erase is std's for std::vector; a bit vector's is xstd's, found by argument-dependent lookup); n = std::erase_if(e, [](std::vector<bool>::reference val) { return !val; }); ([vector.erasure]'s erase_if is std's for std::vector; a bit vector's is xstd's, found by argument-dependent lookup) |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/constexpr.cc` | `748b4a39e0bd` | compiles, adapted | v.flip(); ([vector.bool.pspc]/12: no flip(); the negation of every element is written element by element); v[2].flip(); ([vector.bool.pspc]/10: no reference::flip(); an element is negated by assignment); auto n = std::erase(e, false); ([vector.erasure]'s erase is std's for std::vector; a bit vector's is xstd's, found by argument-dependent lookup); n = std::erase_if(e, [](std::vector<bool>::reference val) { return !val; }); ([vector.erasure]'s erase_if is std's for std::vector; a bit vector's is xstd's, found by argument-dependent lookup) |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/erase/1.cc` | `7718fe8af97d` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/erase/54577.cc` | `39ed01e4b81c` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/insert/1.cc` | `d823df99a0f5` | runs |  |
@@ -609,7 +612,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/insert/insert_range.cc` | `7e37b4870485` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/1.cc` | `cb5c28334c21` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/2.cc` | `ebe64973f01f` | runs |  |
-| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/constexpr.cc` | `830691ce9681` | compiles, adapted | std::vector<bool>::swap(v1[0], v1[1]); (no static swap(reference, reference): [vector.bool.pspc]'s exchange of two elements goes through the iterators) |
+| `libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/constexpr.cc` | `830691ce9681` | compiles, adapted | std::vector<bool>::swap(v1[0], v1[1]); ([vector.bool.pspc]/11 swaps two references through a hidden friend of reference (P3612R1); the test calls the static member it replaced) |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/requirements/citerators.cc` | `2f4a277f428a` | fails to compile | none of the bit vector's: libstdc++'s __gnu_test::citerator reads __gnu_test::traits, which describes the standard containers alone |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/requirements/dr438/constructor.cc` | `3fc8cf8bfb56` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/swap.cc` | `842f03de2a14` | runs |  |
@@ -703,10 +706,10 @@ A row's `outcome` is one of:
 | :--- | :--- | :--- | :--- |
 | `libstdc++-v3/testsuite/23_containers/set/14340.cc` | `8ca7c4598091` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/set/18604.cc` | `e75fd7a7647e` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/23781_neg.cc` | `385b02b013d2` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/23781_neg.cc` | `385b02b013d2` | rejected |  |
 | `libstdc++-v3/testsuite/23_containers/set/48101-2_neg.cc` | `b1ae60d36967` | not run | dg-add-options strict_std, which this adapter does not interpret |
-| `libstdc++-v3/testsuite/23_containers/set/48101-3_neg.cc` | `2801895e66c1` | not run | a test of diagnostics, run in a second pass |
-| `libstdc++-v3/testsuite/23_containers/set/48101_neg.cc` | `61e673eef398` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/48101-3_neg.cc` | `2801895e66c1` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/48101_neg.cc` | `61e673eef398` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/58764.cc` | `d30ac2979c4b` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/set/85965.cc` | `46628f3c5814` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/92124.cc` | `b525b7998dca` | not run | no rewrite reaches it, so it tests the standard library |
@@ -726,7 +729,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/capacity/29134.cc` | `1b0c36dcf586` | runs, adapted | VERIFY( s.max_size() == __gnu_test::max_size(a) ); (max_size(), which [container.reqmts] leaves to the implementation, is libstdc++'s tree node count here) |
 | `libstdc++-v3/testsuite/23_containers/set/check_construct_destroy.cc` | `9cd7336b0b12` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/cons/61023.cc` | `04cb8b499db4` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc` | `31f823d5b496` | fails to compile | [set.overview] |
+| `libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc` | `31f823d5b496` | fails to compile | [associative.reqmts.general]/181: the rewrite names the subject where std::set has arguments; a deduced std::set stays std::set<int>, which the test compares with the subject |
 | `libstdc++-v3/testsuite/23_containers/set/cons/from_range.cc` | `c55f94862e89` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/cons/moveable.cc` | `dd6e842f78a8` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_default_construct.cc` | `72ce52d65d70` | compiles |  |
@@ -759,14 +762,14 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/51142.cc` | `4c12ac79a9a9` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/abi_tag.cc` | `4172e524714b` | not run | dg-require-normal-mode |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/dr130-linkage-check.cc` | `79abb42457bf` | not run | dg-require-effective-target ia32 |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc` | `3898dc149ffb` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc` | `3898dc149ffb` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or swap |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/1.cc` | `425016942069` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/2.cc` | `777671a9096e` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/3.cc` | `1093d434d546` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/87194.cc` | `bae69d6f2d40` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/insert_range.cc` | `d627bab8eb3f` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc` | `64cd1d48163c` | fails to compile | [associative.reqmts.general] |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc` | `63fba8bfd4ad` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc` | `64cd1d48163c` | fails to compile | [associative.reqmts.general]/112-117: no nodes to splice; a \|= b inserts every key of b and leaves b unchanged |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc` | `63fba8bfd4ad` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or swap |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/1.cc` | `7f3e45d73237` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/2.cc` | `c512b7aaaff0` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/3.cc` | `5f03aec3b103` | not run | no rewrite reaches it, so it tests the standard library |
@@ -777,7 +780,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/operations/contains.cc` | `945a453d9816` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/operations/count.cc` | `9c059115dcfa` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/operations/equal_range_adl.cc` | `91eae0255523` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/operators/1_neg.cc` | `2a8d8b8fde22` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/operators/1_neg.cc` | `2a8d8b8fde22` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/operators/cmp_c++20.cc` | `97c181291623` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs.cc` | `bd4cdd0b6bea` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs_debug.cc` | `5b648ccf1e94` | not run | no rewrite reaches it, so it tests the standard library |
@@ -806,10 +809,10 @@ A row's `outcome` is one of:
 | :--- | :--- | :--- | :--- |
 | `libstdc++-v3/testsuite/23_containers/set/14340.cc` | `8ca7c4598091` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/set/18604.cc` | `e75fd7a7647e` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/23781_neg.cc` | `385b02b013d2` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/23781_neg.cc` | `385b02b013d2` | rejected |  |
 | `libstdc++-v3/testsuite/23_containers/set/48101-2_neg.cc` | `b1ae60d36967` | not run | dg-add-options strict_std, which this adapter does not interpret |
-| `libstdc++-v3/testsuite/23_containers/set/48101-3_neg.cc` | `2801895e66c1` | not run | a test of diagnostics, run in a second pass |
-| `libstdc++-v3/testsuite/23_containers/set/48101_neg.cc` | `61e673eef398` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/48101-3_neg.cc` | `2801895e66c1` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/48101_neg.cc` | `61e673eef398` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/58764.cc` | `d30ac2979c4b` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/set/85965.cc` | `46628f3c5814` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/92124.cc` | `b525b7998dca` | not run | no rewrite reaches it, so it tests the standard library |
@@ -829,7 +832,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/capacity/29134.cc` | `1b0c36dcf586` | runs, adapted | VERIFY( s.max_size() == __gnu_test::max_size(a) ); (max_size(), which [container.reqmts] leaves to the implementation, is libstdc++'s tree node count here) |
 | `libstdc++-v3/testsuite/23_containers/set/check_construct_destroy.cc` | `9cd7336b0b12` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/cons/61023.cc` | `04cb8b499db4` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc` | `31f823d5b496` | fails to compile | [set.overview] |
+| `libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc` | `31f823d5b496` | fails to compile | [associative.reqmts.general]/181: the rewrite names the subject where std::set has arguments; a deduced std::set stays std::set<int>, which the test compares with the subject |
 | `libstdc++-v3/testsuite/23_containers/set/cons/from_range.cc` | `c55f94862e89` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/cons/moveable.cc` | `dd6e842f78a8` | runs, adapted | VERIFY( b.find(2) == b.end()); ([container.reqmts] leaves a moved-from container's value unspecified: libstdc++'s nodes leave it empty, and a fixed set's array of blocks moves by copying) |
 | `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_default_construct.cc` | `72ce52d65d70` | compiles |  |
@@ -862,14 +865,14 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/51142.cc` | `4c12ac79a9a9` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/abi_tag.cc` | `4172e524714b` | not run | dg-require-normal-mode |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/dr130-linkage-check.cc` | `79abb42457bf` | not run | dg-require-effective-target ia32 |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc` | `3898dc149ffb` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc` | `3898dc149ffb` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or swap |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/1.cc` | `425016942069` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/2.cc` | `777671a9096e` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/3.cc` | `1093d434d546` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/87194.cc` | `bae69d6f2d40` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/insert_range.cc` | `d627bab8eb3f` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc` | `64cd1d48163c` | fails to compile | [associative.reqmts.general] |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc` | `63fba8bfd4ad` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc` | `64cd1d48163c` | fails to compile | [associative.reqmts.general]/112-117: no nodes to splice; a \|= b inserts every key of b and leaves b unchanged |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc` | `63fba8bfd4ad` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or swap |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/1.cc` | `7f3e45d73237` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/2.cc` | `c512b7aaaff0` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/3.cc` | `5f03aec3b103` | not run | no rewrite reaches it, so it tests the standard library |
@@ -880,7 +883,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/operations/contains.cc` | `945a453d9816` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/operations/count.cc` | `9c059115dcfa` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/operations/equal_range_adl.cc` | `91eae0255523` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/operators/1_neg.cc` | `2a8d8b8fde22` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/operators/1_neg.cc` | `2a8d8b8fde22` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/operators/cmp_c++20.cc` | `97c181291623` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs.cc` | `bd4cdd0b6bea` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs_debug.cc` | `5b648ccf1e94` | not run | no rewrite reaches it, so it tests the standard library |
@@ -909,10 +912,10 @@ A row's `outcome` is one of:
 | :--- | :--- | :--- | :--- |
 | `libstdc++-v3/testsuite/23_containers/set/14340.cc` | `8ca7c4598091` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/set/18604.cc` | `e75fd7a7647e` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/23781_neg.cc` | `385b02b013d2` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/23781_neg.cc` | `385b02b013d2` | rejected |  |
 | `libstdc++-v3/testsuite/23_containers/set/48101-2_neg.cc` | `b1ae60d36967` | not run | dg-add-options strict_std, which this adapter does not interpret |
-| `libstdc++-v3/testsuite/23_containers/set/48101-3_neg.cc` | `2801895e66c1` | not run | a test of diagnostics, run in a second pass |
-| `libstdc++-v3/testsuite/23_containers/set/48101_neg.cc` | `61e673eef398` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/48101-3_neg.cc` | `2801895e66c1` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/48101_neg.cc` | `61e673eef398` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/58764.cc` | `d30ac2979c4b` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/set/85965.cc` | `46628f3c5814` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/92124.cc` | `b525b7998dca` | not run | no rewrite reaches it, so it tests the standard library |
@@ -932,7 +935,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/capacity/29134.cc` | `1b0c36dcf586` | runs, adapted | VERIFY( s.max_size() == __gnu_test::max_size(a) ); (max_size(), which [container.reqmts] leaves to the implementation, is libstdc++'s tree node count here) |
 | `libstdc++-v3/testsuite/23_containers/set/check_construct_destroy.cc` | `9cd7336b0b12` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/cons/61023.cc` | `04cb8b499db4` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc` | `31f823d5b496` | fails to compile | [set.overview] |
+| `libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc` | `31f823d5b496` | fails to compile | [associative.reqmts.general]/181: the rewrite names the subject where std::set has arguments; a deduced std::set stays std::set<int>, which the test compares with the subject |
 | `libstdc++-v3/testsuite/23_containers/set/cons/from_range.cc` | `c55f94862e89` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/cons/moveable.cc` | `dd6e842f78a8` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_default_construct.cc` | `72ce52d65d70` | compiles |  |
@@ -965,14 +968,14 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/51142.cc` | `4c12ac79a9a9` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/abi_tag.cc` | `4172e524714b` | not run | dg-require-normal-mode |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/dr130-linkage-check.cc` | `79abb42457bf` | not run | dg-require-effective-target ia32 |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc` | `3898dc149ffb` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc` | `3898dc149ffb` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or swap |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/1.cc` | `425016942069` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/2.cc` | `777671a9096e` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/3.cc` | `1093d434d546` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/87194.cc` | `bae69d6f2d40` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/insert_range.cc` | `d627bab8eb3f` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc` | `64cd1d48163c` | fails to compile | [associative.reqmts.general] |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc` | `63fba8bfd4ad` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc` | `64cd1d48163c` | fails to compile | [associative.reqmts.general]/112-117: no nodes to splice; a \|= b inserts every key of b and leaves b unchanged |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc` | `63fba8bfd4ad` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or swap |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/1.cc` | `7f3e45d73237` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/2.cc` | `c512b7aaaff0` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/3.cc` | `5f03aec3b103` | not run | no rewrite reaches it, so it tests the standard library |
@@ -983,7 +986,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/operations/contains.cc` | `945a453d9816` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/operations/count.cc` | `9c059115dcfa` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/operations/equal_range_adl.cc` | `91eae0255523` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/operators/1_neg.cc` | `2a8d8b8fde22` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/operators/1_neg.cc` | `2a8d8b8fde22` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/operators/cmp_c++20.cc` | `97c181291623` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs.cc` | `bd4cdd0b6bea` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs_debug.cc` | `5b648ccf1e94` | not run | no rewrite reaches it, so it tests the standard library |
@@ -1012,10 +1015,10 @@ A row's `outcome` is one of:
 | :--- | :--- | :--- | :--- |
 | `libstdc++-v3/testsuite/23_containers/set/14340.cc` | `8ca7c4598091` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/set/18604.cc` | `e75fd7a7647e` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/23781_neg.cc` | `385b02b013d2` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/23781_neg.cc` | `385b02b013d2` | rejected |  |
 | `libstdc++-v3/testsuite/23_containers/set/48101-2_neg.cc` | `b1ae60d36967` | not run | dg-add-options strict_std, which this adapter does not interpret |
-| `libstdc++-v3/testsuite/23_containers/set/48101-3_neg.cc` | `2801895e66c1` | not run | a test of diagnostics, run in a second pass |
-| `libstdc++-v3/testsuite/23_containers/set/48101_neg.cc` | `61e673eef398` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/48101-3_neg.cc` | `2801895e66c1` | not run | no rewrite reaches it, so it tests the standard library |
+| `libstdc++-v3/testsuite/23_containers/set/48101_neg.cc` | `61e673eef398` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/58764.cc` | `d30ac2979c4b` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/set/85965.cc` | `46628f3c5814` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/92124.cc` | `b525b7998dca` | not run | no rewrite reaches it, so it tests the standard library |
@@ -1035,7 +1038,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/capacity/29134.cc` | `1b0c36dcf586` | runs, adapted | VERIFY( s.max_size() == __gnu_test::max_size(a) ); (max_size(), which [container.reqmts] leaves to the implementation, is libstdc++'s tree node count here) |
 | `libstdc++-v3/testsuite/23_containers/set/check_construct_destroy.cc` | `9cd7336b0b12` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/cons/61023.cc` | `04cb8b499db4` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc` | `31f823d5b496` | fails to compile | [set.overview] |
+| `libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc` | `31f823d5b496` | fails to compile | [associative.reqmts.general]/181: the rewrite names the subject where std::set has arguments; a deduced std::set stays std::set<int>, which the test compares with the subject |
 | `libstdc++-v3/testsuite/23_containers/set/cons/from_range.cc` | `c55f94862e89` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/cons/moveable.cc` | `dd6e842f78a8` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/cons/noexcept_default_construct.cc` | `72ce52d65d70` | compiles |  |
@@ -1068,14 +1071,14 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/51142.cc` | `4c12ac79a9a9` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/abi_tag.cc` | `4172e524714b` | not run | dg-require-normal-mode |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/erase/dr130-linkage-check.cc` | `79abb42457bf` | not run | dg-require-effective-target ia32 |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc` | `3898dc149ffb` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc` | `3898dc149ffb` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or swap |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/1.cc` | `425016942069` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/2.cc` | `777671a9096e` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/3.cc` | `1093d434d546` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/87194.cc` | `bae69d6f2d40` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/insert/insert_range.cc` | `d627bab8eb3f` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc` | `64cd1d48163c` | fails to compile | [associative.reqmts.general] |
-| `libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc` | `63fba8bfd4ad` | fails to compile | [container.node] |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc` | `64cd1d48163c` | fails to compile | [associative.reqmts.general]/112-117: no nodes to splice; a \|= b inserts every key of b and leaves b unchanged |
+| `libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc` | `63fba8bfd4ad` | fails to compile | [associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or swap |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/1.cc` | `7f3e45d73237` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/2.cc` | `c512b7aaaff0` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/modifiers/swap/3.cc` | `5f03aec3b103` | not run | no rewrite reaches it, so it tests the standard library |
@@ -1086,7 +1089,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/set/operations/contains.cc` | `945a453d9816` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/operations/count.cc` | `9c059115dcfa` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/operations/equal_range_adl.cc` | `91eae0255523` | not run | no rewrite reaches it, so it tests the standard library |
-| `libstdc++-v3/testsuite/23_containers/set/operators/1_neg.cc` | `2a8d8b8fde22` | not run | a test of diagnostics, run in a second pass |
+| `libstdc++-v3/testsuite/23_containers/set/operators/1_neg.cc` | `2a8d8b8fde22` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/operators/cmp_c++20.cc` | `97c181291623` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs.cc` | `bd4cdd0b6bea` | not run | no rewrite reaches it, so it tests the standard library |
 | `libstdc++-v3/testsuite/23_containers/set/pmr_typedefs_debug.cc` | `5b648ccf1e94` | not run | no rewrite reaches it, so it tests the standard library |

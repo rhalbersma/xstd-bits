@@ -94,36 +94,36 @@ departure = "erase_if is xstd's, found by argument-dependent lookup"
 file = "libcxx/test/std/containers/associative/set/extract_iterator.pass.cpp"
 sha256 = "9128487e04adb97a79c23235a72fa4989ef6cd72c24cfdd010912e13ccabd42b"
 fails = "compile"
-paragraph = "[container.node]"
+paragraph = "[associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert"
 
 [[libcxx.expect]]
 file = "libcxx/test/std/containers/associative/set/extract_key.pass.cpp"
 sha256 = "772ad5bc75406815aedc395193782b9c06913bb33ca997d50d42cfd863b6d6d1"
 fails = "compile"
-paragraph = "[container.node]"
+paragraph = "[associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert"
 
 [[libcxx.expect]]
 file = "libcxx/test/std/containers/associative/set/insert_node_type.pass.cpp"
 sha256 = "b35cd8ad958568e77d58e76deff99034a61cccd1b82e671e0dcf231f1c9d9ef3"
 fails = "compile"
-paragraph = "[container.node]"
+paragraph = "[associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert"
 
 [[libcxx.expect]]
 file = "libcxx/test/std/containers/associative/set/insert_node_type_hint.pass.cpp"
 sha256 = "bfa4b3367805162faac4240fd2f500e1230419ca5bbd4ec68bd1c5e7e7b4b29d"
 fails = "compile"
-paragraph = "[container.node]"
+paragraph = "[associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or insert"
 
 # merge splices nodes from one set into another; bit_set has none to splice.
 [[libcxx.expect]]
 file = "libcxx/test/std/containers/associative/set/merge.pass.cpp"
 sha256 = "658c775174c6ddf704c842fd3a4798496221ba1ca6bd64f02c6749916cb71f81"
 fails = "compile"
-paragraph = "[associative.reqmts.general]"
+paragraph = "[associative.reqmts.general]/112-117: no nodes to splice; a |= b inserts every key of b and leaves b unchanged"
 
 # The test deduces std::set from int arguments and compares the result with the type the rewrite names.
 [[libcxx.expect]]
 file = "libcxx/test/std/containers/associative/set/set.cons/deduct.pass.cpp"
 sha256 = "67892454971ee63aa00e0960941a7b77c8da1e0c1d0d54948ea508234ac93b43"
 fails = "compile"
-paragraph = "[set.overview]"
+paragraph = "[associative.reqmts.general]/181: the rewrite names the subject where std::set has arguments; a deduced std::set stays std::set<int>, which the test compares with the subject"

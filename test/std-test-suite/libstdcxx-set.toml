@@ -51,25 +51,25 @@ departure = "erase_if is xstd's, found by argument-dependent lookup"
 file = "libstdc++-v3/testsuite/23_containers/set/cons/deduction.cc"
 sha256 = "31f823d5b496a30ebed2ccf844f1933773504efbbfa2a1a43f3f10fdb3083b64"
 fails = "compile"
-paragraph = "[set.overview]"
+paragraph = "[associative.reqmts.general]/181: the rewrite names the subject where std::set has arguments; a deduced std::set stays std::set<int>, which the test compares with the subject"
 
 [[libstdcxx.expect]]
 file = "libstdc++-v3/testsuite/23_containers/set/modifiers/extract.cc"
 sha256 = "3898dc149ffb6b9b4225b86d67941479f7b7f068f1fce7243b5ddb2ffdffc966"
 fails = "compile"
-paragraph = "[container.node]"
+paragraph = "[associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or swap"
 
 [[libstdcxx.expect]]
 file = "libstdc++-v3/testsuite/23_containers/set/modifiers/node_swap.cc"
 sha256 = "63fba8bfd4ad817eaccb3e80547721b34b53e0854c95ed19c8160eea56546f48"
 fails = "compile"
-paragraph = "[container.node]"
+paragraph = "[associative.reqmts.general]/17: no nodes; a key is a bit in a block, so there is no node_type to extract or swap"
 
 [[libstdcxx.expect]]
 file = "libstdc++-v3/testsuite/23_containers/set/modifiers/merge.cc"
 sha256 = "64cd1d48163c44aeb4ecee5e22244ed4fec2bdd31e5223286c33399c18434afb"
 fails = "compile"
-paragraph = "[associative.reqmts.general]"
+paragraph = "[associative.reqmts.general]/112-117: no nodes to splice; a |= b inserts every key of b and leaves b unchanged"
 
 [[libstdcxx.expect]]
 file = "libstdc++-v3/testsuite/23_containers/set/requirements/citerators.cc"
