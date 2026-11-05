@@ -133,20 +133,28 @@ file = "libcxx/test/std/containers/sequences/vector.bool/reference/ctor_copy.pas
 sha256 = "3b5e218787b78ee3300e6d4b6bf7c00963d70e4570fa1e50152789ab368c1ef3"
 line = "ref.flip();"
 to = "ref = !ref;"
-departure = "no reference::flip()"
+departure = "[vector.bool.pspc]/10: no reference::flip(); an element is negated by assignment"
 
 [[libcxx.expect]]
 file = "libcxx/test/std/containers/sequences/vector.bool/reference/flip.pass.cpp"
 sha256 = "14c46e44ed31299acde45c92a0b23eb11ca64addf8929ccdec8ab5a3bf083b80"
 fails = "compile"
-paragraph = "[vector.bool.pspc]"
+paragraph = "[vector.bool.pspc]/10: no reference::flip(); an element is negated by assignment"
 
-# [vector.bool.pspc] gives vector<bool> a static swap(reference, reference); bit_vector swaps two references with std::swap.
-[[libcxx.expect]]
+# The draft's [vector.bool.pspc] makes swap(reference, reference) three hidden friends of reference, found by argument-dependent lookup.
+[[libcxx.assertion]]
 file = "libcxx/test/std/containers/sequences/vector.bool/reference.swap.pass.cpp"
 sha256 = "61152ce772dcfb1ff7ac8f64e0d270416a4bb27f2317fbcfccfb2d15414aee2d"
-fails = "compile"
-paragraph = "[vector.bool.pspc]"
+line = "static_assert((noexcept(v.swap(r1, r2))), \"\");"
+to = "static_assert((noexcept(swap(r1, r2))), \"\");"
+departure = "[vector.bool.pspc]/11 swaps two references through a hidden friend of reference (P3612R1); the test calls the static member it replaced"
+
+[[libcxx.assertion]]
+file = "libcxx/test/std/containers/sequences/vector.bool/reference.swap.pass.cpp"
+sha256 = "61152ce772dcfb1ff7ac8f64e0d270416a4bb27f2317fbcfccfb2d15414aee2d"
+line = "v.swap(r1, r2);"
+to = "swap(r1, r2);"
+departure = "[vector.bool.pspc]/11 swaps two references through a hidden friend of reference (P3612R1); the test calls the static member it replaced"
 
 # The helper is written over std::vector<bool, Alloc> and its libc++-only __storage_type, so bit_vector cannot reach it.
 [[libcxx.assertion]]
