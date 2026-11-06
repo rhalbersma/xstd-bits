@@ -1,0 +1,31 @@
+#          Copyright Rein Halbersma 2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+name: Test-suite trunk
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Weekly, the standard library's own tests at its trunk, read through mappings written for the stable rung's release: an
+# early warning of what the next release's tests change and break, and no gate. No pull request runs it and no ruleset
+# requires it. Configuration reports each mapping entry trunk has edited rather than failing, so a red run names the
+# tests to review before the next release's pin moves to them. GCC trunk alone, the one development rung cpp-ci pins a
+# suite for.
+on:
+  schedule:
+    - cron: '23 4 * * 2'
+  workflow_dispatch:
+
+jobs:
+  libstdcxx:
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@778a607b49cdb290307c18511523abf40690bece # main after rhalbersma/cpp-ci#96, with std_test_suite's WARN_STALE
+    with:
+      tiers: development
+      build_types: Debug
+      cmake_args: -DXSTD_BITS_BUILD_STD_TEST_SUITES=ON -DXSTD_BITS_STD_TEST_SUITE_RUNG=development
