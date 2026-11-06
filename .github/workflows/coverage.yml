@@ -25,7 +25,7 @@ on:
 jobs:
   coverage:
     # Ahead of v0.8.1, for the unwind-resume exclusion on a bare closing brace, without which 100 can never be met.
-    uses: rhalbersma/cpp-ci/.github/workflows/coverage.yml@778a607b49cdb290307c18511523abf40690bece # main after rhalbersma/cpp-ci#96, with std_test_suite's WARN_STALE
+    uses: rhalbersma/cpp-ci/.github/workflows/coverage.yml@44959e6406514e5a433d28d532c9300a6650d563 # main after rhalbersma/cpp-ci#97, with every apt call under a time limit
     with:
       # Not built here at all, which the exclude alone could not achieve: gcovr drops benchmark/ as a SOURCE path, but a benchmark TU instantiates the library's templates and those instantiations are counted in include/. This job configures Debug, where benchmark/CMakeLists.txt registers no test, so they would compile and never run -- every branch of an instantiation no test also makes, uncovered by construction.
       # The hardened test is left out for the same reason: built with NDEBUG, its instantiations are counted apart from the Debug ones, and every branch they add is uncovered by construction.
