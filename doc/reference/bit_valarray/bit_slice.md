@@ -8,6 +8,7 @@ public:
   bit_slice() = default;
   constexpr bit_slice(size_t start, size_t size, size_t stride) noexcept;
   explicit bit_slice(const slice& s) noexcept;
+  operator slice() const;
 
   constexpr auto start() const noexcept -> size_t;
   constexpr auto size() const noexcept -> size_t;
@@ -20,3 +21,7 @@ public:
 - As [[class.slice]](https://eel.is/c++draft/class.slice), usable in a constant expression, where `slice`'s
   constructors are not, so `v[bit_slice(start, size, stride)]` runs in one.
 - It selects what the `slice` of the same three numbers selects.
+- It converts to that `slice` implicitly and without loss, so it subscripts a `valarray` too:
+  `v[bit_slice(start, size, stride)]` takes the `slice` overload of
+  [[valarray.sub]](https://eel.is/c++draft/valarray.sub). The conversion is not `constexpr`, as `slice`'s
+  constructors are not. From a `slice` to a `bit_slice` is the explicit constructor.

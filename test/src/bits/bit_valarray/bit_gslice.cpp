@@ -12,7 +12,10 @@
 #include <concepts>                                      // copyable
 #include <cstddef>                                       // size_t
 #include <cstdint>                                       // uint8_t
-#include <valarray>                                      // valarray
+#include <ranges>                                        // views::iota
+#include <type_traits>                                   // is_convertible_v
+#include <utility>                                       // as_const
+#include <valarray>                                      // gslice, valarray
 #include <vector>                                        // vector
 
 BOOST_AUTO_TEST_SUITE(BitGslice)
@@ -55,6 +58,33 @@ BOOST_AUTO_TEST_CASE(OneIndexServesEveryOwnerAndEveryBlock)
                 test::valarray::check_equal(narrow[b], test::valarray::model_of(r[g]));
                 auto const fixed = test::valarray::make<xstd::basic_bit_fixed_valarray<std::uint8_t, 130>>(a);
                 test::valarray::check_equal(fixed[b], test::valarray::model_of(r[g]));
+        }
+}
+
+// [valarray.sub]: a std::valarray takes it as the std::gslice it converts to, which holds the same numbers.
+BOOST_AUTO_TEST_CASE(ItSubscriptsAStdValarrayAsTheSameStdGslice)
+{
+        static_assert(std::is_convertible_v<xstd::bit_gslice, std::gslice>);
+        static_assert(not std::is_convertible_v<std::gslice, xstd::bit_gslice>);
+        auto ints  = std::valarray<int>(30UZ);
+        auto bools = std::valarray<bool>(30UZ);
+        for (auto const i : std::views::iota(0UZ, ints.size())) {
+                ints[i]  = static_cast<int>(i * 7UZ % 11UZ);
+                bools[i] = i % 3UZ == 1UZ;
+        }
+        for (auto const& g : {test::valarray::gslice_of(1UZ, {2UZ, 3UZ}, {10UZ, 3UZ}), test::valarray::gslice_of(4UZ, {3UZ, 2UZ}, {2UZ, 0UZ})}) {
+                auto const b         = xstd::bit_gslice(g);
+                auto const converted = std::gslice(b);
+                BOOST_CHECK_EQUAL(converted.start(), g.start());
+                BOOST_CHECK(equal(converted.size(), g.size()));
+                BOOST_CHECK(equal(converted.stride(), g.stride()));
+                BOOST_CHECK(std::ranges::equal(std::valarray<int>(std::as_const(ints)[b]), std::valarray<int>(std::as_const(ints)[g])));
+                BOOST_CHECK(std::ranges::equal(std::valarray<bool>(std::as_const(bools)[b]), std::valarray<bool>(std::as_const(bools)[g])));
+                auto by_bit_gslice = ints;
+                by_bit_gslice[b]   = -1;
+                auto by_gslice     = ints;
+                by_gslice[g]       = -1;
+                BOOST_CHECK(std::ranges::equal(by_bit_gslice, by_gslice));
         }
 }
 

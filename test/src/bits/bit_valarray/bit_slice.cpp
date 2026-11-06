@@ -8,9 +8,10 @@
 #include <xstd/bits/bit_valarray/bit_slice.hpp>          // bit_slice
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>       // bit_valarray
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK
+#include <algorithm>                                     // ranges::equal
 #include <concepts>                                      // regular
-#include <type_traits>                                   // is_trivially_copyable_v
-#include <valarray>                                      // slice
+#include <type_traits>                                   // is_convertible_v, is_trivially_copyable_v
+#include <valarray>                                      // slice, valarray
 
 BOOST_AUTO_TEST_SUITE(BitSlice)
 
@@ -44,6 +45,26 @@ BOOST_AUTO_TEST_CASE(ItSelectsWhatTheSameStdSliceSelects)
         auto const r = test::valarray::reference_of(a);
         for (auto const& s : {std::slice(0UZ, 130UZ, 1UZ), std::slice(3UZ, 40UZ, 3UZ), std::slice(64UZ, 3UZ, 0UZ), std::slice(1UZ, 2UZ, 100UZ)}) {
                 test::valarray::check_equal(v[xstd::bit_slice(s)], test::valarray::model_of(r[s]));
+        }
+}
+
+// [valarray.sub]: a std::valarray takes it as the std::slice it converts to, which converts back to it unchanged.
+BOOST_AUTO_TEST_CASE(ItSubscriptsAStdValarrayAsTheSameStdSlice)
+{
+        static_assert(std::is_convertible_v<xstd::bit_slice, std::slice>);
+        static_assert(not std::is_convertible_v<std::slice, xstd::bit_slice>);
+        auto const ints  = std::valarray<int>{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7};
+        auto const bools = std::valarray<bool>{true, false, false, true, true, false, true, true, false, false, true, false, true, true};
+        for (auto const& s : {std::slice(0UZ, 14UZ, 1UZ), std::slice(1UZ, 4UZ, 3UZ), std::slice(5UZ, 3UZ, 0UZ), std::slice(13UZ, 1UZ, 9UZ)}) {
+                auto const b = xstd::bit_slice(s);
+                BOOST_CHECK(xstd::bit_slice(std::slice(b)) == b);
+                BOOST_CHECK(std::ranges::equal(std::valarray<int>(ints[b]), std::valarray<int>(ints[s])));
+                BOOST_CHECK(std::ranges::equal(std::valarray<bool>(bools[b]), std::valarray<bool>(bools[s])));
+                auto by_bit_slice = ints;
+                by_bit_slice[b]   = -1;
+                auto by_slice     = ints;
+                by_slice[s]       = -1;
+                BOOST_CHECK(std::ranges::equal(by_bit_slice, by_slice));
         }
 }
 

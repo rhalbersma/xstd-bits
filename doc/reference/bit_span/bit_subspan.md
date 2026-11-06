@@ -22,6 +22,8 @@ with:
 - It stores what `span` stores, the start split over a pointer and a position because bits are not addressable,
   and the count where `Extent` is `dynamic_extent`: three words, or two at a static extent.
 - It is made by `first`, `last` and `subspan`, which on a window return a window over the same `Blocks` and `N`.
+  It has no deduction guide: the whole of an owner or a block container is viewed by `bit_span`, so `bit_subspan(c)`
+  deduces nothing, and `bit_span(c).subspan(0)` is the window over all of it.
   Between extents the rule is `span`'s: a static window converts to a dynamic one implicitly, and a dynamic one to a
   static one explicitly. *Preconditions:* the sizes agree. A window of mutable bits converts to one of `const` bits.
 - At a static extent, `size`, `empty` and `max_size` are constants of the type, as for `basic_bit_array`; at the
