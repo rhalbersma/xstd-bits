@@ -3,9 +3,9 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/set/enums.hpp>                  // wind
+#include <test/set/enums.hpp>                  // IWYU pragma: keep; wind
 #include <xstd/bits/bit_array.hpp>             // bit_array
-#include <xstd/bits/bit_set/bit_enum_set.hpp>  // bit_enum_set
+#include <xstd/bits/bit_set/bit_enum_set.hpp>  // IWYU pragma: keep; bit_enum_set
 #include <xstd/bits/bit_set/bit_fixed_set.hpp> // bit_fixed_set
 #include <xstd/bits/bit_set/bit_set.hpp>       // bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>  // bit_set_view
@@ -15,7 +15,7 @@
 #include <array>                               // array
 #include <cstdint>                             // uint8_t
 #include <format>                              // enable_nonlocking_formatter_optimization, format
-#include <ranges>                              // range_reference_t
+#include <ranges>                              // IWYU pragma: keep; range_reference_t
 #include <version>                             // __cpp_lib_print
 
 BOOST_AUTO_TEST_SUITE(Format)

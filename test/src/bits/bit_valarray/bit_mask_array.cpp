@@ -108,7 +108,7 @@ BOOST_AUTO_TEST_CASE(AMaskCrossesToAStdValarrayOfBoolAndSelectsTheSameElements)
 {
         auto const a     = test::valarray::patterns(130UZ)[4];
         auto const m     = test::valarray::patterns(130UZ)[5];
-        auto const check = [&]<class V>() -> void {
+        auto const check = [&]<class V> -> void {
                 auto const mask     = xstd::bit_convert<V>(test::valarray::reference_of(m));
                 auto const unpacked = xstd::bit_convert<test::valarray::reference_array>(mask);
                 test::valarray::check_equal(mask, m);

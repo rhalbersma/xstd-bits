@@ -45,7 +45,7 @@ public:
         // [valarray.sub] subscripts a std::valarray by a std::gslice alone, which this one converts to without loss.
         [[nodiscard]] explicit(false) operator std::gslice() const // NOLINT(misc-explicit-constructor)
         {
-                return std::gslice(start(), size(), stride());
+                return {start(), size(), stride()};
         }
 
         // [gslice.access]

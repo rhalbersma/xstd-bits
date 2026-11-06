@@ -41,8 +41,8 @@ struct bit_source<std::valarray<bool>>
                 auto const n = std::ranges::min((from.size() + bits_per_byte - 1UZ) / bits_per_byte, value_bytes(dst));
                 for (auto const j : std::views::iota(0UZ, n)) {
                         auto byte = 0U;
-                        for (auto const k : std::views::iota(0UZ, std::ranges::min(bits_per_byte, from.size() - j * bits_per_byte))) {
-                                byte |= static_cast<unsigned>(from[j * bits_per_byte + k]) << k;
+                        for (auto const k : std::views::iota(0UZ, std::ranges::min(bits_per_byte, from.size() - (j * bits_per_byte)))) {
+                                byte |= static_cast<unsigned>(from[(j * bits_per_byte) + k]) << k;
                         }
                         or_block_byte(dst, j, static_cast<unsigned char>(byte));
                 }
@@ -63,7 +63,7 @@ struct bit_target<std::valarray<bool>>
                 source::copy(from, std::span(bytes));
                 auto to = std::valarray<bool>(width);
                 for (auto const i : std::views::iota(0UZ, width)) {
-                        to[i] = ((block_byte(bytes, i / bits_per_byte) >> (i % bits_per_byte)) & 1U) != 0U;
+                        to[i] = ((static_cast<unsigned>(block_byte(bytes, i / bits_per_byte)) >> (i % bits_per_byte)) & 1U) != 0U;
                 }
                 return to;
         }
