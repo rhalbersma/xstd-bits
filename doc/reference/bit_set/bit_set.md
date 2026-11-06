@@ -85,6 +85,7 @@ As [[set]](https://eel.is/c++draft/set) for `set<Key, Compare>`, over the blocks
   below.
 - **A proxy reference.** `reference` is a read-only proxy: copyable, not assignable, converting to `Key`, and `&ref`
   answers the iterator. `pointer` names `void`. It formats as `Key` does, and the set formats in braces.
+  `enable_nonlocking_formatter_optimization` for it, where the library has the variable, is `Key`'s.
 - `iterator` is bidirectional, its `value_type` `Key`, its `reference` the proxy; `iterator` and `const_iterator`
   are one type. Iteration visits the keys in `Compare`'s order. An iterator is the storage object and a position, so
   growth that reallocates the blocks invalidates none.
