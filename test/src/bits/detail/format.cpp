@@ -3,7 +3,9 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/set/enums.hpp>                  // IWYU pragma: keep; wind
 #include <xstd/bits/bit_array.hpp>             // bit_array
+#include <xstd/bits/bit_set/bit_enum_set.hpp>  // IWYU pragma: keep; bit_enum_set
 #include <xstd/bits/bit_set/bit_fixed_set.hpp> // bit_fixed_set
 #include <xstd/bits/bit_set/bit_set.hpp>       // bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>  // bit_set_view
@@ -12,7 +14,9 @@
 #include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <array>                               // array
 #include <cstdint>                             // uint8_t
-#include <format>                              // format
+#include <format>                              // enable_nonlocking_formatter_optimization, format
+#include <ranges>                              // IWYU pragma: keep; range_reference_t
+#include <version>                             // __cpp_lib_print
 
 BOOST_AUTO_TEST_SUITE(Format)
 
@@ -88,5 +92,22 @@ BOOST_AUTO_TEST_CASE(AProxyFormatsAsItsValue)
         BOOST_CHECK_EQUAL(std::format("{:>7}", v[0]), "  false");
         BOOST_CHECK_EQUAL(std::format("{:d}", v[1]), "1");
 }
+
+#if defined(__cpp_lib_print) && __cpp_lib_print >= 202403L
+// [format.formatter.locking]: a proxy prints without a lock where its value's formatter does.
+BOOST_AUTO_TEST_CASE(AProxyFormatsWithoutALockWhereItsValueDoes)
+{
+        static_assert(std::enable_nonlocking_formatter_optimization<xstd::bit_vector::reference>);
+        static_assert(std::enable_nonlocking_formatter_optimization<xstd::bit_vector::const_reference>);
+        static_assert(std::enable_nonlocking_formatter_optimization<xstd::bit_array<4>::reference>);
+        auto b = std::array<std::uint8_t, 1>{};
+        static_assert(std::enable_nonlocking_formatter_optimization<std::ranges::range_reference_t<decltype(xstd::bit_span(b))>>);
+        static_assert(std::enable_nonlocking_formatter_optimization<std::ranges::range_reference_t<xstd::bit_set>>);
+        static_assert(std::enable_nonlocking_formatter_optimization<std::ranges::range_reference_t<xstd::bit_fixed_set<8>>>);
+
+        // An enum key prints through the user's own formatter, which the library cannot vouch for.
+        static_assert(not std::enable_nonlocking_formatter_optimization<std::ranges::range_reference_t<xstd::bit_enum_set<test::set::wind>>>);
+}
+#endif
 
 BOOST_AUTO_TEST_SUITE_END()

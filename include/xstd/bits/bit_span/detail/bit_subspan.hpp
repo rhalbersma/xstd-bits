@@ -6,20 +6,18 @@
 #ifndef XSTD_BITS_BIT_SPAN_DETAIL_BIT_SUBSPAN_HPP
 #define XSTD_BITS_BIT_SPAN_DETAIL_BIT_SUBSPAN_HPP
 
-#include <xstd/bits/bit_span/detail/views.hpp>      // IWYU pragma: keep; window_of
-#include <xstd/bits/detail/bit_block_container.hpp> // bit_block_container_type
-#include <xstd/bits/detail/bit_blocks.hpp>          // bit_blocks
-#include <xstd/bits/detail/bit_blocks_extent.hpp>   // bit_blocks_extent_v
-#include <xstd/bits/detail/blocks.hpp>              // blocks_of_t, blocks_width_v
-#include <xstd/bits/detail/borrowed_bits.hpp>       // view_storage_t
-#include <xstd/bits/detail/ownership.hpp>           // owned_bits_t, owner_reading, sequence_reading_tag, storage, window
-#include <xstd/bits/detail/sequence_adaptor.hpp>    // sequence_adaptor
-#include <boost/container_hash/is_range.hpp>        // is_range
-#include <boost/container_hash/is_tuple_like.hpp>   // is_tuple_like
-#include <cstddef>                                  // size_t
-#include <ranges>                                   // enable_borrowed_range, enable_view
-#include <span>                                     // dynamic_extent
-#include <type_traits>                              // conditional_t, false_type, is_const_v
+#include <xstd/bits/bit_span/detail/views.hpp>    // IWYU pragma: keep; window_of
+#include <xstd/bits/detail/bit_blocks.hpp>        // bit_blocks
+#include <xstd/bits/detail/bit_blocks_extent.hpp> // bit_blocks_extent_v
+#include <xstd/bits/detail/borrowed_bits.hpp>     // view_storage_t
+#include <xstd/bits/detail/ownership.hpp>         // storage, window
+#include <xstd/bits/detail/sequence_adaptor.hpp>  // sequence_adaptor
+#include <boost/container_hash/is_range.hpp>      // is_range
+#include <boost/container_hash/is_tuple_like.hpp> // is_tuple_like
+#include <cstddef>                                // size_t
+#include <ranges>                                 // enable_borrowed_range, enable_view
+#include <span>                                   // dynamic_extent
+#include <type_traits>                            // conditional_t, false_type, is_const_v
 
 namespace xstd {
 
@@ -38,13 +36,6 @@ public:
         using base_type::base_type;
         using base_type::operator=;
 };
-
-// The vehicle's two guides, restated on the view so a consumer deduces the name rather than what it is built on.
-template<bits::detail::bit_block_container_type Bits>
-bit_subspan(Bits&) -> bit_subspan<bits::detail::blocks_of_t<Bits>, std::dynamic_extent, bits::detail::blocks_width_v<Bits>>;
-
-template<bits::detail::owner_reading<bits::detail::sequence_reading_tag> Owner>
-bit_subspan(Owner&) -> bit_subspan<bits::detail::blocks_of_t<bits::detail::owned_bits_t<Owner>>, std::dynamic_extent, bits::detail::blocks_width_v<bits::detail::owned_bits_t<Owner>>>;
 
 } // namespace xstd
 

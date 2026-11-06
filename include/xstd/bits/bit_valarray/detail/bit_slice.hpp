@@ -31,6 +31,12 @@ public:
                 : bit_slice(s.start(), s.size(), s.stride())
         {}
 
+        // [valarray.sub] subscripts a std::valarray by a std::slice alone, which this one converts to without loss.
+        [[nodiscard]] explicit(false) operator std::slice() const // NOLINT(misc-explicit-constructor)
+        {
+                return {m_start, m_size, m_stride};
+        }
+
         // [slice.access]
         [[nodiscard]] constexpr auto start() const noexcept
                 -> std::size_t

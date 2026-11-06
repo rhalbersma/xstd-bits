@@ -131,6 +131,10 @@ As [[template.valarray]](https://eel.is/c++draft/template.valarray) for `valarra
   over `Block` of the array's size, held by reference. `v[slice]` forwards to `v[bit_slice]` and `v[gslice]` to
   `v[bit_gslice]`. A slice or a mask gathers and scatters a block at a time, through
   [P3104](https://wg21.link/P3104)'s `bit_compress` and `bit_expand`.
+- **A mask for a `std::valarray`.** `bit_convert<valarray<bool>>(m)` unpacks a mask into the `valarray<bool>` that
+  [[valarray.sub]](https://eel.is/c++draft/valarray.sub) subscripts a `std::valarray` by, and
+  `bit_convert<bit_valarray>(b)` packs one back. The unpacking allocates a `bool` per position, so it is never
+  implicit. Every source `bit_convert` takes unpacks the same way, and `valarray<bool>` is a source to every target.
 - *`from_blocks` constructor:* As `basic_bit_vector`'s. A valarray has no `replace` or `extract`.
 - Each member that returns a valarray is `noexcept` where copying the blocks is, and the `from_blocks` constructor
   where moving them is.

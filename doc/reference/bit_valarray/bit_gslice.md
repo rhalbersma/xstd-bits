@@ -8,6 +8,7 @@ public:
   bit_gslice();
   bit_gslice(size_t start, const valarray<size_t>& lengths, const valarray<size_t>& strides);
   explicit bit_gslice(const gslice& g);
+  operator gslice() const;
 
   auto start() const noexcept -> size_t;
   auto size() const -> valarray<size_t>;
@@ -19,5 +20,8 @@ public:
   and kept for every subscript that reuses it: as one bit per position where they ascend, and as the positions
   themselves where they repeat or turn back.
 - It selects what the `gslice` of the same numbers selects, over every owner and block.
+- It converts to that `gslice` implicitly, copying its start, lengths and strides, so it subscripts a `valarray` too:
+  `v[g]` takes the `gslice` overload of [[valarray.sub]](https://eel.is/c++draft/valarray.sub). From a `gslice` to
+  a `bit_gslice` is the explicit constructor, which works the positions out.
 - Copies share the positions, and a proxy holds a copy, so a `bit_gslice_array` outlives the `bit_gslice` it was
   made from.

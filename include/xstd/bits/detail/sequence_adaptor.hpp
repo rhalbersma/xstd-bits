@@ -32,7 +32,7 @@
 #include <compare>                                           // strong_ordering
 #include <concepts>                                          // constructible_from, derived_from, same_as
 #include <cstddef>                                           // ptrdiff_t, size_t
-#include <format>                                            // format, formatter
+#include <format>                                            // enable_nonlocking_formatter_optimization, format, formatter
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator, make_reverse_iterator, random_access_iterator_tag, reverse_iterator, sentinel_for
 #include <memory>                                            // addressof
@@ -45,6 +45,7 @@
 #include <tuple>                                             // tuple_element, tuple_size
 #include <type_traits>                                       // bool_constant, conditional_t, false_type, integral_constant, is_const_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, remove_const_t, remove_cvref_t, remove_reference_t
 #include <utility>                                           // as_const, declval, forward, in_place, move
+#include <version>                                           // __cpp_lib_print
 
 // The sequence reading, [array] over a bit_block_container, owning it or referring to it.
 namespace xstd::bits::detail {
@@ -1578,6 +1579,12 @@ struct formatter<R, CharT> : formatter<bool, CharT>
                 return formatter<bool, CharT>::format(format_as(ref), ctx);
         }
 };
+
+#if defined(__cpp_lib_print) && __cpp_lib_print >= 202403L
+// [format.formatter.locking]/1 admits this: the proxy prints through a bool's formatter, which takes no lock.
+template<xstd::bits::detail::sequence_reference R>
+constexpr bool enable_nonlocking_formatter_optimization<R> = true;
+#endif
 
 } // namespace std
 

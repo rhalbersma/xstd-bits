@@ -4,14 +4,18 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/valarray.hpp>                               // check_equal, make, model, model_of, patterns, reference_array, reference_of, writes
+#include <xstd/bits/bit/bit_convert.hpp>                   // bit_convert
+#include <xstd/bits/bit_span/bit_span.hpp>                 // bit_span
 #include <xstd/bits/bit_valarray/bit_fixed_valarray.hpp>   // bit_fixed_valarray
 #include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp> // bit_inplace_valarray
 #include <xstd/bits/bit_valarray/bit_mask_array.hpp>       // bit_mask_array
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>         // bit_valarray
-#include <boost/test/unit_test.hpp>                        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <xstd/bits/bit_vector.hpp>                        // bit_vector
+#include <boost/test/unit_test.hpp>                        // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL, BOOST_CHECK_THROW
 #include <concepts>                                        // same_as
 #include <cstddef>                                         // size_t
 #include <ranges>                                          // iota
+#include <stdexcept>                                       // overflow_error
 #include <type_traits>                                     // is_copy_constructible_v, is_default_constructible_v
 #include <utility>                                         // declval
 #include <valarray>                                        // valarray
@@ -97,6 +101,55 @@ BOOST_AUTO_TEST_CASE(EveryOwnerOverTheSameBlocksReadsAnotherOwnersProxy)
         auto const mask = xstd::bit_inplace_valarray<130>(test::valarray::make<xstd::bit_valarray>(m)[std::slice(0UZ, 130UZ, 1UZ)]);
         test::valarray::check_equal(xstd::bit_fixed_valarray<8>(x[mask]), test::valarray::model_of(r[test::valarray::reference_of(m)]));
         test::valarray::check_equal(xstd::bit_inplace_valarray<64>(x[mask]), test::valarray::model_of(r[test::valarray::reference_of(m)]));
+}
+
+// [valarray.sub] subscripts a std::valarray by a std::valarray<bool>, which bit_convert unpacks a mask into and packs back.
+BOOST_AUTO_TEST_CASE(AMaskCrossesToAStdValarrayOfBoolAndSelectsTheSameElements)
+{
+        auto const a     = test::valarray::patterns(130UZ)[4];
+        auto const m     = test::valarray::patterns(130UZ)[5];
+        auto const check = [&]<class V> -> void {
+                auto const mask     = xstd::bit_convert<V>(test::valarray::reference_of(m));
+                auto const unpacked = xstd::bit_convert<test::valarray::reference_array>(mask);
+                test::valarray::check_equal(mask, m);
+                BOOST_CHECK(test::valarray::model_of(unpacked) == m);
+
+                auto const x = test::valarray::make<xstd::bit_valarray>(a);
+                auto const r = test::valarray::reference_of(a);
+                BOOST_CHECK(test::valarray::model_of(xstd::bit_valarray(x[mask])) == test::valarray::model_of(test::valarray::reference_array(r[unpacked])));
+        };
+        check.template operator()<xstd::bit_valarray>();
+        check.template operator()<xstd::bit_fixed_valarray<130>>();
+        check.template operator()<xstd::bit_inplace_valarray<130>>();
+}
+
+// Any source unpacks at its own width, a sequence and a window included; an empty one is an empty valarray.
+BOOST_AUTO_TEST_CASE(EverySourceUnpacksAtItsWidth)
+{
+        auto const m = test::valarray::patterns(70UZ)[3];
+        auto v       = xstd::bit_vector(m.size());
+        for (auto const i : std::views::iota(0UZ, m.size())) {
+                v[i] = m[i];
+        }
+        BOOST_CHECK(test::valarray::model_of(xstd::bit_convert<test::valarray::reference_array>(v)) == m);
+
+        auto const window = xstd::bit_span(v).subspan(3UZ, 60UZ);
+        auto const tail   = test::valarray::model(m.begin() + 3, m.begin() + 63);
+        BOOST_CHECK(test::valarray::model_of(xstd::bit_convert<test::valarray::reference_array>(window)) == tail);
+
+        BOOST_CHECK_EQUAL(xstd::bit_convert<test::valarray::reference_array>(xstd::bit_valarray()).size(), 0UZ);
+        BOOST_CHECK(xstd::bit_convert<xstd::bit_valarray>(test::valarray::reference_array()).size() == 0UZ);
+}
+
+// Into a fixed width, as from any run-time source: a set position past it throws rather than drops.
+BOOST_AUTO_TEST_CASE(AFixedMaskRefusesAPositionPastItsWidth)
+{
+        auto wide = test::valarray::reference_array(false, 70UZ);
+        wide[69]  = true;
+        BOOST_CHECK_THROW(static_cast<void>(xstd::bit_convert<xstd::bit_fixed_valarray<64>>(wide)), std::overflow_error);
+        wide[69] = false;
+        wide[63] = true;
+        BOOST_CHECK(xstd::bit_convert<xstd::bit_fixed_valarray<64>>(wide)[63]);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

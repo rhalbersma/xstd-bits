@@ -550,9 +550,9 @@ A row's `outcome` is one of:
 
 ## libstdc++ against bit_vector
 
-- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.2.0`.
+- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.3.0`.
 - **Mappings:** the suite's `test/std-test-suite/libstdcxx-*.toml` for the directories it takes, and `bit-vector.toml` for the type.
-- **Not selected:** 807 files that do not match `vector<bool>`, left to the standard library.
+- **Not selected:** 812 files that do not match `vector<bool>`, left to the standard library.
 
 | test | sha256 | outcome | note |
 | :--- | :--- | :--- | :--- |
@@ -631,7 +631,7 @@ A row's `outcome` is one of:
 
 ## libstdc++ against bit_small_vector
 
-- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.2.0`.
+- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.3.0`.
 - **Mappings:** the suite's `test/std-test-suite/libstdcxx-*.toml` for the directories it takes, and `bit-small-vector.toml` for the type.
 
 | test | sha256 | outcome | note |
@@ -699,7 +699,7 @@ A row's `outcome` is one of:
 
 ## libstdc++ against bit_set
 
-- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.2.0`.
+- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.3.0`.
 - **Mappings:** the suite's `test/std-test-suite/libstdcxx-*.toml` for the directories it takes, and `bit-set.toml` for the type.
 
 | test | sha256 | outcome | note |
@@ -802,7 +802,7 @@ A row's `outcome` is one of:
 
 ## libstdc++ against bit_fixed_set
 
-- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.2.0`.
+- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.3.0`.
 - **Mappings:** the suite's `test/std-test-suite/libstdcxx-*.toml` for the directories it takes, and `bit-fixed-set.toml` for the type.
 
 | test | sha256 | outcome | note |
@@ -905,7 +905,7 @@ A row's `outcome` is one of:
 
 ## libstdc++ against bit_inplace_set
 
-- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.2.0`.
+- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.3.0`.
 - **Mappings:** the suite's `test/std-test-suite/libstdcxx-*.toml` for the directories it takes, and `bit-inplace-set.toml` for the type.
 
 | test | sha256 | outcome | note |
@@ -1008,7 +1008,7 @@ A row's `outcome` is one of:
 
 ## libstdc++ against bit_small_set
 
-- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.2.0`.
+- **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.3.0`.
 - **Mappings:** the suite's `test/std-test-suite/libstdcxx-*.toml` for the directories it takes, and `bit-small-set.toml` for the type.
 
 | test | sha256 | outcome | note |

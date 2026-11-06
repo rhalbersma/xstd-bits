@@ -37,7 +37,7 @@
 #include <compare>                                      // strong_ordering
 #include <concepts>                                     // constructible_from, convertible_to, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                      // ptrdiff_t, size_t
-#include <format>                                       // format, formatter
+#include <format>                                       // enable_nonlocking_formatter_optimization, format, formatter
 #include <functional>                                   // greater, hash, less
 #include <initializer_list>                             // initializer_list
 #include <iterator>                                     // bidirectional_iterator_tag, iter_reference_t, make_reverse_iterator, reverse_iterator
@@ -47,6 +47,7 @@
 #include <stdexcept>                                    // out_of_range
 #include <type_traits>                                  // conditional_t, false_type, integral_constant, is_enum_v, is_nothrow_constructible_v, is_nothrow_default_constructible_v, is_nothrow_move_constructible_v, remove_const_t, remove_cvref_t
 #include <utility>                                      // forward, in_place, move, pair
+#include <version>                                      // __cpp_lib_print
 
 // The set reading, [set] over a bit_block_container, owning it or referring to it.
 namespace xstd::bits::detail {
@@ -1514,6 +1515,12 @@ struct formatter<R, CharT> : formatter<typename R::value_type, CharT>
                 return formatter<typename R::value_type, CharT>::format(format_as(ref), ctx);
         }
 };
+
+#if defined(__cpp_lib_print) && __cpp_lib_print >= 202403L
+// [format.formatter.locking]: the key's formatter, so a key whose own formatter locks makes the proxy lock too.
+template<xstd::bits::detail::set_reference R>
+constexpr bool enable_nonlocking_formatter_optimization<R> = enable_nonlocking_formatter_optimization<typename R::value_type>;
+#endif
 
 // Owned or viewed, as std::string_view hashes and std::set does not: the bits, by bit_hash.
 template<class Bits, xstd::bits::detail::storage Store, class Derived, class Key, class KeyMapping, class Compare>

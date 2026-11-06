@@ -115,7 +115,9 @@ As `vector<bool>::reference` in [[vector.bool.pspc]](https://eel.is/c++draft/vec
 - `&ref` answers an iterator, so `&*it == it` holds in iterator arithmetic. `bool` is the one conversion, so
   comparisons are the built-in ones through it.
 - `formatter<reference, charT>` formats it as `bool`, as [[vector.bool.fmt]](https://eel.is/c++draft/vector.bool.fmt)
-  formats `vector<bool>::reference`, and a sequence formats as a range, in brackets.
+  formats `vector<bool>::reference`, and a sequence formats as a range, in brackets. Where the library has
+  `enable_nonlocking_formatter_optimization`, it is `true` for `reference` and `const_reference`, as a `bool` prints
+  without a lock ([[format.formatter.locking]](https://eel.is/c++draft/format.formatter.locking)).
 
 **`iterator`, shared by every owner and view of the sequence reading.**
 

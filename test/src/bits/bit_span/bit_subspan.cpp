@@ -49,6 +49,9 @@ constexpr bool has_bulk_ops = requires (X x) { x &= x; x |= x; x ^= x; };
 template<class X>
 constexpr bool has_shifts = requires (X x) { x <<= 1UZ; x >>= 1UZ; };
 
+template<class X>
+constexpr bool deduces_a_window = requires (X& x) { xstd::bit_subspan(x); };
+
 // Twenty bits of any viewed storage: a static width has them, a run-time one is resized to them, as the sieve does.
 template<class T>
 auto twenty()
@@ -98,6 +101,16 @@ BOOST_AUTO_TEST_CASE(TheWindowIsTheAdaptorWindowed)
         static_assert(not can_fill<CSpan>);
         static_assert(std::ranges::random_access_range<CSub>); // reading is untouched
         static_assert(has_subspan<CSub>);
+}
+
+// The whole of an owner or a block container is viewed by a bit_span: no constructor makes a window of all of it.
+BOOST_AUTO_TEST_CASE(AWholeSequenceIsViewedByABitSpanNotAWindow)
+{
+        static_assert(not deduces_a_window<Owner>);
+        static_assert(not deduces_a_window<xstd::basic_bit_vector<std::vector<std::uint8_t>>>);
+        static_assert(not deduces_a_window<Storage>);
+        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<Owner&>())), Span>);
+        static_assert(std::same_as<decltype(xstd::bit_span(std::declval<Owner&>()).subspan(0UZ)), Sub>);
 }
 
 // A window holds as many positions as it views, and no more: max_size, which span lacks, is its size.

@@ -42,6 +42,12 @@ public:
                 : bit_gslice(g.start(), g.size(), g.stride())
         {}
 
+        // [valarray.sub] subscripts a std::valarray by a std::gslice alone, which this one converts to without loss.
+        [[nodiscard]] explicit(false) operator std::gslice() const // NOLINT(misc-explicit-constructor)
+        {
+                return {start(), size(), stride()};
+        }
+
         // [gslice.access]
         [[nodiscard]] auto start() const noexcept
                 -> std::size_t
