@@ -27,7 +27,7 @@ jobs:
   clang_libcxx_ladder:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@44959e6406514e5a433d28d532c9300a6650d563 # main after rhalbersma/cpp-ci#97, with every apt call under a time limit
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@3387d6b86177322b3b2a81b84b45339fc2c47d5c # main after rhalbersma/cpp-ci#101, with each trunk suite test built on its own
     with:
       # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so
       # the nightly canary covers it, building every rung and build type on main.
@@ -37,7 +37,7 @@ jobs:
   hardened:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@44959e6406514e5a433d28d532c9300a6650d563 # main after rhalbersma/cpp-ci#97, with every apt call under a time limit
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@3387d6b86177322b3b2a81b84b45339fc2c47d5c # main after rhalbersma/cpp-ci#101, with each trunk suite test built on its own
     with:
       tiers: stable
       build_types: Release
@@ -48,7 +48,7 @@ jobs:
   std_test_suites:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@44959e6406514e5a433d28d532c9300a6650d563 # main after rhalbersma/cpp-ci#97, with every apt call under a time limit
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-libc++.yml@3387d6b86177322b3b2a81b84b45339fc2c47d5c # main after rhalbersma/cpp-ci#101, with each trunk suite test built on its own
     with:
       tiers: stable
       build_types: Debug

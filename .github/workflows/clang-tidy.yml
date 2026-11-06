@@ -25,7 +25,7 @@ jobs:
   clang_tidy_ladder:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/clang-tidy.yml@44959e6406514e5a433d28d532c9300a6650d563 # main after rhalbersma/cpp-ci#97, with every apt call under a time limit
+    uses: rhalbersma/cpp-ci/.github/workflows/clang-tidy.yml@3387d6b86177322b3b2a81b84b45339fc2c47d5c # main after rhalbersma/cpp-ci#101, with each trunk suite test built on its own
     with:
       # The generated per-header units, as run-clang-tidy matches them against the compile database's absolute paths. They are the one tree that cannot be named as a directory: they live in the build tree, under a path only this project's CMake knows.
       self_sufficiency_regex: ${{ github.workspace }}/build/test/header_self_sufficiency/.*
