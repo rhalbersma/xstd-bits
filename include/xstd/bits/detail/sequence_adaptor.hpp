@@ -1581,7 +1581,7 @@ struct formatter<R, CharT> : formatter<bool, CharT>
 };
 
 #if defined(__cpp_lib_print) && __cpp_lib_print >= 202403L
-// [format.formatter.locking]: a bool's formatter, as std::vector<bool>::reference's is, takes no lock to print.
+// [format.formatter.locking]/1 admits this: the proxy prints through a bool's formatter, which takes no lock.
 template<xstd::bits::detail::sequence_reference R>
 constexpr bool enable_nonlocking_formatter_optimization<R> = true;
 #endif

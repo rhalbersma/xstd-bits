@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE(AProxyFormatsAsItsValue)
 }
 
 #if defined(__cpp_lib_print) && __cpp_lib_print >= 202403L
-// [format.formatter.locking]: a proxy prints without a lock where its value's formatter does, as vector<bool>'s does.
+// [format.formatter.locking]: a proxy prints without a lock where its value's formatter does.
 BOOST_AUTO_TEST_CASE(AProxyFormatsWithoutALockWhereItsValueDoes)
 {
         static_assert(std::enable_nonlocking_formatter_optimization<xstd::bit_vector::reference>);
