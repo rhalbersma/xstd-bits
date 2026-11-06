@@ -25,7 +25,8 @@ Let `F` be `remove_cvref_t<From>` and `T` be `remove_cv_t<To>`.
 - A *fixed target* is a fixed width that is neither a view nor a built-in array.
 - A *run-time target* is an owner of ours that stores its width, a capacity included: the vectors, the run-time and
   inplace sets and valarrays, and the Boost extension's small owners.
-- A *source* is a fixed width, an owner of ours, a whole view of ours of run-time width, or a window.
+- A *source* is a fixed width, an owner of ours, a whole view of ours of run-time width, a window, or, wherever a
+  valarray header of ours is included, `valarray<bool>`, its width its size and position `i` its element `i`.
 
 ### Conversions
 
@@ -34,6 +35,7 @@ Let `F` be `remove_cvref_t<From>` and `T` be `remove_cv_t<To>`.
 | a fixed target | a fixed width of `W(F) <= W(T)` | the `W(F)` positions, the positions `[W(F), W(T))` clear |
 | a fixed target | a source that is no fixed width | its positions below `W(T)`, zero-extended; a position at or past `W(T)` throws |
 | a run-time target | a source | the source's positions at the source's width, as under Return value |
+| `valarray<bool>`, wherever a valarray header of ours is included | a source | a `bool` per position, at the source's width |
 | a type an extension makes a target | a source the extension admits | as the extension specifies |
 
 ### Template parameters
@@ -105,6 +107,7 @@ run-time end can allocate, refuse a capacity or throw `overflow_error`.
 | Entity | Relation |
 | :----- | :------- |
 | [`bit_convert` with `boost::dynamic_bitset`](../ext_boost_dynamic_bitset/index.md) | the extension that makes `boost::dynamic_bitset` either end |
+| [`basic_bit_valarray`](../bit_valarray/bit_valarray.md) | whose header makes `valarray<bool>`, the mask [[valarray.sub]](https://eel.is/c++draft/valarray.sub) takes, either end |
 | [`from_blocks`](../bit_ranges/from_blocks.md) | the tag through which an owner reads blocks it takes as they are |
 | [`bit_blocks_extent_v`](../bit_type_traits/bit_blocks_extent.md) | the width of a block or an array of them |
 | [`std::bit_cast`](https://en.cppreference.com/w/cpp/numeric/bit_cast) | the standard's reinterpretation of an object, whose role this function takes across bit storages |

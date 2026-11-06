@@ -12,6 +12,7 @@
 #include <xstd/bits/bit_valarray/detail/bit_mask_array.hpp>     // bit_mask_array
 #include <xstd/bits/bit_valarray/detail/bit_slice.hpp>          // bit_slice
 #include <xstd/bits/bit_valarray/detail/bit_slice_array.hpp>    // bit_slice_array
+#include <xstd/bits/bit_valarray/detail/valarray_bool.hpp>      // IWYU pragma: keep; bit_source, bit_target
 #include <xstd/bits/bit_valarray/detail/valarray_proxy.hpp>     // gslice_selection, indirect_selection, mask_selection, proxy_access, slice_selection, valarray_owner_of
 #include <xstd/bits/detail/adapted_bits.hpp>                    // adapted_bits
 #include <xstd/bits/detail/assert.hpp>                          // XSTD_BITS_ASSERT
