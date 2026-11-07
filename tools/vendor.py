@@ -47,6 +47,14 @@ when the section no longer matches it.
 - **Mappings:** `test/std-test-suite/<suite>-<directory>.toml` name the directories a suite takes and each departure
   from their tests, and `<subject>.toml` the rewrites onto one of this library's types.
 - **Hashes:** the first twelve hexadecimal digits of the test file's SHA-256 at the pinned tag.
+- **Taken from:** each suite's own tests of `vector<bool>` and `set`, and its tests elsewhere that use `vector<bool>`: the
+  algorithms, and libc++'s utilities or libstdc++'s iterators, range adaptors and hash.
+
+The other containers this library generalizes have nothing at the pins for a subject to take. Neither suite tests
+`inplace_vector`. Their `array` tests are over `int` and the like, and none over `bool`. Their `span` tests have no
+`span<bool>` but libstdc++'s `span<const bool>` over a `bool` array, which no bit span views. Their `valarray` tests use
+`valarray<bool>` only as the mask a `valarray<int>` is subscripted by or the result its comparisons answer. A pin that
+brings such a test is reviewed when it moves.
 
 A row's `outcome` is one of:
 

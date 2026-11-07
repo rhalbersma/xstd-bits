@@ -9,3 +9,41 @@
 take = [
     { path = "libstdc++-v3/testsuite/24_iterators", select = "vector<bool>" },
 ]
+
+# A bit vector's iter_move answers the bool, where vector<bool>'s iterator moves out its proxy by the default.
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/24_iterators/move_iterator/dr2106.cc"
+sha256 = "fb2dbfe6dc3bb78dfc7b9286cbdf88dee6ab985e116c4539f52c2758cf06f748"
+line = "static_assert(std::is_same<MIt::reference, Ref>::value,\"\");"
+to = "static_assert(std::is_same<MIt::reference, Vec::value_type>::value,\"\");"
+departure = "iter_move answers the bool, so a move_iterator's reference is bool rather than the proxy"
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/24_iterators/move_iterator/dr2106.cc"
+sha256 = "fb2dbfe6dc3bb78dfc7b9286cbdf88dee6ab985e116c4539f52c2758cf06f748"
+line = "static_assert(std::is_same<MCIt::reference, CRef>::value,\"\");"
+to = "static_assert(std::is_same<MCIt::reference, Vec::value_type>::value,\"\");"
+departure = "iter_move answers the bool, so a move_iterator's reference is bool rather than the proxy"
+
+# [vector.bool.pspc] gives const_reference as bool, which makes const_iterator a constant iterator. A bit vector's is a
+# proxy that no bool converts to, so std::const_iterator wraps its const_iterator as it wraps its iterator.
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/24_iterators/const_iterator/1.cc"
+sha256 = "83bb53643f29251fcca105f6445a58da3076574e90775f7c4cc75ae0dc7fb76e"
+line = "test01<std::vector<bool>::const_iterator, true>();"
+to = "test01<std::vector<bool>::const_iterator, false>();"
+departure = "const_reference is the bit vector's own proxy, so const_iterator is no constant iterator"
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/24_iterators/const_iterator/1.cc"
+sha256 = "83bb53643f29251fcca105f6445a58da3076574e90775f7c4cc75ae0dc7fb76e"
+line = "test02<std::vector<bool>, false, true>();"
+drop = true
+departure = "const_reference is the bit vector's own proxy, so const_iterator_t is basic_const_iterator<const_iterator>, neither iterator_t<const R> nor basic_const_iterator<iterator>"
+
+[[libstdcxx.assertion]]
+file = "libstdc++-v3/testsuite/24_iterators/const_iterator/1.cc"
+sha256 = "83bb53643f29251fcca105f6445a58da3076574e90775f7c4cc75ae0dc7fb76e"
+line = "test02<const std::vector<bool>, true>();"
+to = "test02<const std::vector<bool>, false>();"
+departure = "const_reference is the bit vector's own proxy, so a const bit vector is no constant_range"
