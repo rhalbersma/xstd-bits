@@ -71,6 +71,9 @@ concept transparent = requires { typename Compare::is_transparent; };
 template<bit_block_container_type Bits, storage Store = storage::owned, class Derived = void, class Key = std::size_t, bit_index_mapping<Key> KeyMapping = bit_key_mapping<Key>, class Compare = std::less<Key>>
 class set_adaptor;
 
+template<auto Owner, class Value>
+class set_reference;
+
 namespace set {
 
 // The storage an owner has or a view's handle into another's, in a base public exactly where the owner is structural.
@@ -170,11 +173,14 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
                 }
         }
 
-        // Members rather than templates over Bits or KeyMapping, so ADL looks in the key's namespaces alone.
-        template<class Value>
-        class basic_reference;
+        // The proxy, keyed by this adaptor as a value: std's specializations match it, and ADL sees the key's alone.
+        template<class Value = Key>
+        using basic_reference = set_reference<std::type_identity<set_adaptor>{}, Value>;
 
-        // A position in the set reading, read-only whatever Bits' qualification: a key is nothing to write through.
+        template<auto, class>
+        friend class set_reference;
+
+        // A position in the set reading, read-only whatever Bits' qualification; a member, so ADL skips Bits'.
         template<class Value = Key>
         class basic_iterator
         {
@@ -186,7 +192,7 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
 
                 friend set_adaptor;
 
-                friend class basic_reference<Value>;
+                friend basic_reference<Value>;
 
                 // The algorithms that step or write a block at a time reach the storage and position through this door.
                 friend struct storage_access;
@@ -260,56 +266,6 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
                         auto nrv = *this;
                         --*this;
                         return nrv;
-                }
-        };
-
-        // The key at a position, arriving by conversion; & hands the iterator back, so the pair round-trips.
-        template<class Value = Key>
-        class basic_reference
-        {
-                // Value exists only to put the key's namespaces among the associated ones: it is no second axis.
-                static_assert(std::same_as<Value, Key>);
-
-                storage_ptr_t<bits_type const> m_ptr;
-                std::size_t m_idx;
-
-                friend set_adaptor;
-
-                friend class basic_iterator<Value>;
-
-                [[nodiscard]] constexpr basic_reference(storage_ptr_t<bits_type const> ptr, std::size_t idx) noexcept
-                        : m_ptr(ptr)
-                        , m_idx(idx)
-                {
-                        assert(m_ptr != nullptr);
-                }
-
-        public:
-                using value_type   = Value;
-                using iterator     = basic_iterator<Value>;
-                using adaptor_type = set_adaptor;
-
-                // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
-                basic_reference(basic_reference const&)                    = default;
-                auto operator=(basic_reference const&) -> basic_reference& = delete;
-
-                [[nodiscard]] constexpr auto operator&() const noexcept
-                        -> iterator
-                {
-                        return {m_ptr, m_idx};
-                }
-
-                // The one conversion: comparisons are the key's own through it.
-                [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept // NOLINT(misc-explicit-constructor)
-                {
-                        return set_adaptor::key_at(m_idx);
-                }
-
-                // What this proxy prints as, said once: our std::formatter calls it unqualified, fmt finds it by ADL.
-                [[nodiscard]] friend constexpr auto format_as(basic_reference ref) noexcept
-                        -> value_type
-                {
-                        return ref;
                 }
         };
 
@@ -1403,9 +1359,57 @@ private:
         }
 };
 
-// A proxy some set_adaptor hands out, recognized through the adaptor it names: no deduction reaches into a member.
-template<class R>
-concept set_reference = reads<typename R::adaptor_type, set_reading_tag> and std::same_as<R, typename R::adaptor_type::reference>;
+// The key at a position, arriving by conversion; & hands the iterator back, so the pair round-trips.
+template<auto Owner, class Value>
+class set_reference
+{
+public:
+        using value_type   = Value;
+        using adaptor_type = decltype(Owner)::type;
+        using iterator     = adaptor_type::template basic_iterator<Value>;
+
+private:
+        // Value exists only to put the key's namespaces among the associated ones: it is no second axis.
+        static_assert(std::same_as<Value, typename adaptor_type::key_type>);
+
+        storage_ptr_t<typename adaptor_type::bits_type const> m_ptr;
+        std::size_t m_idx;
+
+        friend adaptor_type;
+
+        friend iterator;
+
+        [[nodiscard]] constexpr set_reference(storage_ptr_t<typename adaptor_type::bits_type const> ptr, std::size_t idx) noexcept
+                : m_ptr(ptr)
+                , m_idx(idx)
+        {
+                assert(m_ptr != nullptr);
+        }
+
+public:
+        // A value, not a handle to rebind: trivially copyable, never assignable, as a reference to a key is.
+        set_reference(set_reference const&)                    = default;
+        auto operator=(set_reference const&) -> set_reference& = delete;
+
+        [[nodiscard]] constexpr auto operator&() const noexcept
+                -> iterator
+        {
+                return {m_ptr, m_idx};
+        }
+
+        // The one conversion: comparisons are the key's own through it.
+        [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept // NOLINT(misc-explicit-constructor)
+        {
+                return adaptor_type::key_at(m_idx);
+        }
+
+        // What this proxy prints as, said once: our std::formatter calls it unqualified, fmt finds it by ADL.
+        [[nodiscard]] friend constexpr auto format_as(set_reference ref) noexcept
+                -> value_type
+        {
+                return ref;
+        }
+};
 
 // What a set owner wraps, so that a view over it names the same storage and reading.
 template<class Bits, class Derived, class Key, class KeyMapping, class Compare>
@@ -1505,21 +1509,21 @@ struct is_range<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMa
 namespace std {
 
 // std::format over the containers, which prints the key as the key's own formatter does.
-template<xstd::bits::detail::set_reference R, class CharT>
-struct formatter<R, CharT> : formatter<typename R::value_type, CharT>
+template<auto Owner, class Value, class CharT>
+struct formatter<xstd::bits::detail::set_reference<Owner, Value>, CharT> : formatter<Value, CharT>
 {
         template<class Context>
-        [[nodiscard]] constexpr auto format(R ref, Context& ctx) const
+        [[nodiscard]] constexpr auto format(xstd::bits::detail::set_reference<Owner, Value> ref, Context& ctx) const
         {
                 // Unqualified, so ADL finds the proxy's own hidden friend.
-                return formatter<typename R::value_type, CharT>::format(format_as(ref), ctx);
+                return formatter<Value, CharT>::format(format_as(ref), ctx);
         }
 };
 
 #if defined(__cpp_lib_print) && __cpp_lib_print >= 202403L
 // [format.formatter.locking]: the key's formatter, so a key whose own formatter locks makes the proxy lock too.
-template<xstd::bits::detail::set_reference R>
-constexpr bool enable_nonlocking_formatter_optimization<R> = enable_nonlocking_formatter_optimization<typename R::value_type>;
+template<auto Owner, class Value>
+constexpr bool enable_nonlocking_formatter_optimization<xstd::bits::detail::set_reference<Owner, Value>> = enable_nonlocking_formatter_optimization<Value>;
 #endif
 
 // Owned or viewed, as std::string_view hashes and std::set does not: the bits, by bit_hash.

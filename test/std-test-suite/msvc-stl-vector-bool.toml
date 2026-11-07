@@ -215,11 +215,11 @@ line = "std::erase_if(value, validating_falsity{});"
 to = "erase_if(value, validating_falsity{});"
 departure = "erase_if is xstd's, found by argument-dependent lookup, as it finds std::erase_if for the standard containers"
 
-# The bit references opt into nonlocking formatting through a constrained partial specialization, as libstdc++'s
-# floating-point types do. Asking the trait of any type checks that constraint, which instantiates the type: here
-# chrono::duration<unoptimized>, whose instantiation the MSVC STL rejects.
+
+# MSVC exports the specializations of a static member variable template that a base's members instantiate, and rejects
+# them as having no storage class to export: C2071 on the newest compiler, an internal compiler error on VS 2022.
 [[msvc-stl.expect]]
-file = "tests/std/tests/P3107R5_enabled_specializations/test.compile.pass.cpp"
-sha256 = "bb3888805987996dd52db968f330f93c13becdf80a234e1f36a502b543d3d706"
+file = "tests/std/tests/GH_001638_dllexport_derived_classes/test.compile.pass.cpp"
+sha256 = "8f5be5f6ee2be8103515818659d69b8c85ef4b74b347b9d1d94526b3d7d5cc10"
 fails = "compile"
-paragraph = "[format.formatter.locking]/1: the proxies opt in by a constraint, not a pattern, so the trait instantiates every type it is asked of"
+paragraph = "none of the bit vector's: MSVC rejects exporting a class whose base instantiates a static data member template, reported as rhalbersma/xstd-bits#529"

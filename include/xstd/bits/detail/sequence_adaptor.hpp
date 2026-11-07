@@ -70,6 +70,9 @@ struct window_ptr
 template<bit_block_container_type Bits, storage Store = storage::owned, window W = window::all, class Derived = void, std::size_t E = std::dynamic_extent>
 class sequence_adaptor;
 
+template<auto Owner, bool IsConst>
+class sequence_reference;
+
 // The window a view hands back, which each public view specializes; the vehicle used directly windows itself.
 template<class Derived, class Bits, std::size_t E>
 struct window_of
@@ -310,11 +313,14 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
         template<class Self>
         using storage_t = std::remove_reference_t<decltype(std::declval<Self>().bits())>;
 
-        // Members rather than templates over Bits, so ADL looks in none of Bits' namespaces for an iterator or a proxy.
+        // The proxy, keyed by this adaptor as a value: std's specializations match it, and ADL skips Bits' namespaces.
         template<bool IsConst>
-        class basic_reference;
+        using basic_reference = sequence_reference<std::type_identity<sequence_adaptor>{}, IsConst>;
 
-        // A position in the sequence reading, through the storage as Bits or, IsConst, as Bits const.
+        template<auto, bool>
+        friend class sequence_reference;
+
+        // A position in the sequence reading, through Bits or Bits const; a member, so ADL skips Bits' namespaces.
         template<bool IsConst>
         class basic_iterator
         {
@@ -328,7 +334,7 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
 
                 friend sequence_adaptor;
 
-                friend class basic_reference<IsConst>;
+                friend basic_reference<IsConst>;
 
                 // The algorithms that step or write a block at a time reach the storage and position through this door.
                 friend struct storage_access;
@@ -478,120 +484,15 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
                 }
         };
 
-        // A proxy bool spelled as [vector.bool] spells std::vector<bool>::reference, less its flip().
-        template<bool IsConst>
-        class basic_reference
-        {
-        public:
-                using value_type   = bool;
-                using iterator     = basic_iterator<IsConst>;
-                using adaptor_type = sequence_adaptor;
-
-        private:
-                using storage_type = std::conditional_t<IsConst, Bits const, Bits>;
-
-                storage_ptr_t<storage_type> m_ptr;
-                std::size_t m_idx;
-
-                // Writable where the storage is not const: a const storage has no assign to reach.
-                static constexpr bool is_writable = not std::is_const_v<storage_type> and requires (storage_type& c, std::size_t n, value_type value) { c.assign(n, value); };
-
-                // The const twin, whose conversion below reads these members; names itself where this is the const one.
-                friend class basic_reference<true>;
-
-                friend sequence_adaptor;
-
-                friend class basic_iterator<IsConst>;
-
-                [[nodiscard]] constexpr basic_reference(storage_ptr_t<storage_type> ptr, std::size_t idx) noexcept
-                        : m_ptr(ptr)
-                        , m_idx(idx)
-                {
-                        assert(m_ptr != nullptr);
-                }
-
-        public:
-                // Said out loud: the assignments below are user-provided, deprecating the implicit copy constructor.
-                basic_reference(basic_reference const&) = default;
-
-                // A mutable reference converts to its const twin, as std::vector<bool>::reference does to bool.
-                template<bool OtherConst>
-                        requires (IsConst and not OtherConst)
-                [[nodiscard]] constexpr explicit(false) basic_reference(basic_reference<OtherConst> other) noexcept // NOLINT(misc-explicit-constructor)
-                        : m_ptr(other.m_ptr)
-                        , m_idx(other.m_idx)
-                {}
-
-                [[nodiscard]] constexpr auto operator&() const noexcept
-                        -> iterator
-                {
-                        return {m_ptr, m_idx};
-                }
-
-                // The one conversion, as std::vector<bool>::reference has: comparisons are built-in ones through it.
-                [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept // NOLINT(misc-explicit-constructor)
-                {
-                        return m_ptr->test(m_idx);
-                }
-
-                // const-qualified and returning const&, the proxy shape P2321R2 gave std::vector<bool>::reference.
-                constexpr auto operator=(value_type value) const noexcept // NOLINT(misc-unconventional-assign-operator)
-                        -> basic_reference const&
-                        requires is_writable
-                {
-                        m_ptr->assign(m_idx, value);
-                        return *this;
-                }
-
-                // Assigns the bit, not the proxy: rebinding would break the swaps below.
-                constexpr auto operator=(basic_reference const& other) const noexcept // NOLINT(misc-unconventional-assign-operator,bugprone-unhandled-self-assignment)
-                        -> basic_reference const&
-                        requires is_writable
-                {
-                        return *this = static_cast<value_type>(other);
-                }
-
-                // The pre-ranges spelling of iter_swap, for std::swap and the algorithms still built on it.
-                friend constexpr auto swap(basic_reference x, basic_reference y) noexcept
-                        -> void
-                        requires is_writable
-                {
-                        value_type const t = x;
-                        x                  = y;
-                        y                  = t;
-                }
-
-                friend constexpr auto swap(basic_reference x, value_type& y) noexcept
-                        -> void
-                        requires is_writable
-                {
-                        value_type const t = x;
-                        x                  = y;
-                        y                  = t;
-                }
-
-                friend constexpr auto swap(value_type& x, basic_reference y) noexcept
-                        -> void
-                        requires is_writable
-                {
-                        value_type const t = x;
-                        x                  = y;
-                        y                  = t;
-                }
-
-                // What this proxy prints as, said once: our std::formatter calls it unqualified, fmt finds it by ADL.
-                [[nodiscard]] friend constexpr auto format_as(basic_reference ref) noexcept
-                        -> value_type
-                {
-                        return ref;
-                }
-        };
-
         template<class Self>
         using iterator_t = basic_iterator<std::is_const_v<storage_t<Self>>>;
 
         template<class Self>
         using reference_t = basic_reference<std::is_const_v<storage_t<Self>>>;
+
+        // A source the blit can read by block, of this storage's own block type.
+        template<class S>
+        static constexpr bool blittable = blit_source<S, typename bits_type::block_type>;
 
         // The container needs constraints only the vehicle can name; [class.friend]/3 ignores the void a view passes.
         friend Derived;
@@ -812,7 +713,7 @@ public:
         constexpr auto append_range(R&& rg)
                 -> void
         {
-                if constexpr (blit_source<std::remove_cvref_t<R>, typename bits_type::block_type>) {
+                if constexpr (blittable<std::remove_cvref_t<R>>) {
                         blit(rg.bits(), rg.offset(), rg.size());
                 } else if constexpr (not std::ranges::sized_range<R>) {
                         // No size to check first, so a failure part way, at a capacity or an allocation, is undone.
@@ -848,7 +749,7 @@ public:
                 -> iterator
         {
                 auto const pos = index_of(position);
-                if constexpr (not blit_source<std::remove_cvref_t<R>, typename bits_type::block_type> and (std::ranges::forward_range<R> or std::ranges::sized_range<R>)) {
+                if constexpr (not blittable<std::remove_cvref_t<R>> and (std::ranges::forward_range<R> or std::ranges::sized_range<R>)) {
                         auto const n = static_cast<size_type>(std::ranges::distance(rg));
                         open_gap(pos, n);
                         // Reading the range is all that can throw here, and closing the gap again cannot.
@@ -864,7 +765,7 @@ public:
 #endif
                         return begin() + static_cast<difference_type>(pos);
                 } else {
-                        if constexpr (blit_source<std::remove_cvref_t<R>, typename bits_type::block_type>) {
+                        if constexpr (blittable<std::remove_cvref_t<R>>) {
                                 // A window of this storage would move with its own tail, so it takes the rebuild.
                                 if (not is_storage_of(rg.bits())) {
                                         open_gap(pos, rg.size());
@@ -1479,9 +1380,114 @@ private:
         }
 };
 
-// A proxy some sequence_adaptor hands out, recognized through the adaptor it names: no deduction reaches into a member.
-template<class R>
-concept sequence_reference = reads<typename R::adaptor_type, sequence_reading_tag> and (std::same_as<R, typename R::adaptor_type::reference> or std::same_as<R, typename R::adaptor_type::const_reference>);
+// A proxy bool spelled as [vector.bool] spells std::vector<bool>::reference, less its flip().
+template<auto Owner, bool IsConst>
+class sequence_reference
+{
+public:
+        using value_type   = bool;
+        using adaptor_type = decltype(Owner)::type;
+        using iterator     = adaptor_type::template basic_iterator<IsConst>;
+
+private:
+        using storage_type = std::conditional_t<IsConst, typename adaptor_type::adapted_type const, typename adaptor_type::adapted_type>;
+
+        storage_ptr_t<storage_type> m_ptr;
+        std::size_t m_idx;
+
+        // Writable where the storage is not const: a const storage has no assign to reach.
+        static constexpr bool is_writable = not std::is_const_v<storage_type> and requires (storage_type& c, std::size_t n, value_type value) { c.assign(n, value); };
+
+        // The const twin, whose conversion below reads these members; names itself where this is the const one.
+        friend class sequence_reference<Owner, true>;
+
+        friend adaptor_type;
+
+        friend iterator;
+
+        [[nodiscard]] constexpr sequence_reference(storage_ptr_t<storage_type> ptr, std::size_t idx) noexcept
+                : m_ptr(ptr)
+                , m_idx(idx)
+        {
+                assert(m_ptr != nullptr);
+        }
+
+public:
+        // Said out loud: the assignments below are user-provided, deprecating the implicit copy constructor.
+        sequence_reference(sequence_reference const&) = default;
+
+        // A mutable reference converts to its const twin, as std::vector<bool>::reference does to bool.
+        template<bool OtherConst>
+                requires (IsConst and not OtherConst)
+        [[nodiscard]] constexpr explicit(false) sequence_reference(sequence_reference<Owner, OtherConst> other) noexcept // NOLINT(misc-explicit-constructor)
+                : m_ptr(other.m_ptr)
+                , m_idx(other.m_idx)
+        {}
+
+        [[nodiscard]] constexpr auto operator&() const noexcept
+                -> iterator
+        {
+                return {m_ptr, m_idx};
+        }
+
+        // The one conversion, as std::vector<bool>::reference has: comparisons are built-in ones through it.
+        [[nodiscard]] constexpr explicit(false) operator value_type() const noexcept // NOLINT(misc-explicit-constructor)
+        {
+                return m_ptr->test(m_idx);
+        }
+
+        // const-qualified and returning const&, the proxy shape P2321R2 gave std::vector<bool>::reference.
+        constexpr auto operator=(value_type value) const noexcept // NOLINT(misc-unconventional-assign-operator)
+                -> sequence_reference const&
+                requires is_writable
+        {
+                m_ptr->assign(m_idx, value);
+                return *this;
+        }
+
+        // Assigns the bit, not the proxy: rebinding would break the swaps below.
+        constexpr auto operator=(sequence_reference const& other) const noexcept // NOLINT(misc-unconventional-assign-operator,bugprone-unhandled-self-assignment)
+                -> sequence_reference const&
+                requires is_writable
+        {
+                return *this = static_cast<value_type>(other);
+        }
+
+        // The pre-ranges spelling of iter_swap, for std::swap and the algorithms still built on it.
+        friend constexpr auto swap(sequence_reference x, sequence_reference y) noexcept
+                -> void
+                requires is_writable
+        {
+                value_type const t = x;
+                x                  = y;
+                y                  = t;
+        }
+
+        friend constexpr auto swap(sequence_reference x, value_type& y) noexcept
+                -> void
+                requires is_writable
+        {
+                value_type const t = x;
+                x                  = y;
+                y                  = t;
+        }
+
+        friend constexpr auto swap(value_type& x, sequence_reference y) noexcept
+                -> void
+                requires is_writable
+        {
+                value_type const t = x;
+                x                  = y;
+                y                  = t;
+        }
+
+        // What this proxy prints as, said once: our std::formatter calls it unqualified, fmt finds it by ADL.
+        [[nodiscard]] friend constexpr auto format_as(sequence_reference ref) noexcept
+                -> value_type
+        {
+                return ref;
+        }
+};
 
 // What a sequence owner wraps, so that a view over it names the same storage and reading.
 template<class Bits, class Derived>
@@ -1565,11 +1571,11 @@ struct tuple_element<I, const xstd::bits::detail::sequence_adaptor<Bits, Store, 
 };
 
 // std::format over the containers, which needs nothing said about the containers themselves.
-template<xstd::bits::detail::sequence_reference R, class CharT>
-struct formatter<R, CharT> : formatter<bool, CharT>
+template<auto Owner, bool IsConst, class CharT>
+struct formatter<xstd::bits::detail::sequence_reference<Owner, IsConst>, CharT> : formatter<bool, CharT>
 {
         template<class Context>
-        [[nodiscard]] constexpr auto format(R ref, Context& ctx) const
+        [[nodiscard]] constexpr auto format(xstd::bits::detail::sequence_reference<Owner, IsConst> ref, Context& ctx) const
         {
                 // Unqualified, so ADL finds the proxy's own hidden friend.
                 return formatter<bool, CharT>::format(format_as(ref), ctx);
@@ -1578,8 +1584,8 @@ struct formatter<R, CharT> : formatter<bool, CharT>
 
 #if defined(__cpp_lib_print) && __cpp_lib_print >= 202403L
 // [format.formatter.locking]/1 admits this: the proxy prints through a bool's formatter, which takes no lock.
-template<xstd::bits::detail::sequence_reference R>
-constexpr bool enable_nonlocking_formatter_optimization<R> = true;
+template<auto Owner, bool IsConst>
+constexpr bool enable_nonlocking_formatter_optimization<xstd::bits::detail::sequence_reference<Owner, IsConst>> = true;
 #endif
 
 } // namespace std
