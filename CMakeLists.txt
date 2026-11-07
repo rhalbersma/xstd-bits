@@ -29,8 +29,8 @@ if(NOT xstd-ints_FOUND)
     FetchContent_Declare(
         xstd-ints
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-ints.git
-        # Pinned to a commit on xstd-ints' main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 2762980d657f3482059ca9cefc350dd6ff1674a8
+        # Pinned to the commit xstd-ints' v0.1.0 tag names, not a branch head; move consumption.yml's dependency_repos with it.
+        GIT_TAG e7cf26aea50d1877c315cbe14ba0b4704ece4226
     )
     FetchContent_MakeAvailable(xstd-ints)
 endif()
@@ -42,8 +42,8 @@ if(NOT xstd-misc_FOUND)
     FetchContent_Declare(
         xstd-misc
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-misc.git
-        # Pinned to a commit on xstd-misc's main, not a branch head; move consumption.yml's dependency_repos with it.
-        GIT_TAG 7154a9ee869ef1768b834ac419120baa4bec0098
+        # Pinned to the commit xstd-misc's v0.1.0 tag names, not a branch head; move consumption.yml's dependency_repos with it.
+        GIT_TAG 8921a26d9f1dc961bc79e37a44b9e070949aed79
     )
     FetchContent_MakeAvailable(xstd-misc)
 endif()
