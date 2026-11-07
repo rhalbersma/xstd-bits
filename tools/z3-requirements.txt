@@ -1,0 +1,6 @@
+# Copyright Rein Halbersma 2014-2026. Distributed under the Boost Software License, Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+# The kernel proofs' solver, Z3's Python bindings, pinned by hash for test/proofs/, as xstd-ints pins it: the manylinux wheels for x86_64 and aarch64.
+z3-solver==5.1.0.0 \
+    --hash=sha256:dfad9e309d7010b1ff6bdb33f21570a1603ef4727373221c7117a74448f0cfef \
+    --hash=sha256:1dcfcccb4b027951d7adf267b5b236e7a67b8433cc358d802dcb0280151587bf

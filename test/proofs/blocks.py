@@ -13,7 +13,7 @@ promoted width, and the bits it moves past the block's own width are cut when th
 operations.py comes from the pinned xstd-ints, imported from where FetchContent put it: see load().
 """
 
-import importlib
+import importlib.util
 import os
 import sys
 
@@ -22,12 +22,18 @@ INT_BITS = 32
 
 
 def load(directory=None):
-    """xstd-ints' operations module, from the directory given, or from XSTD_INTS_PROOFS."""
+    """xstd-ints' operations.py, from the directory given or from XSTD_INTS_PROOFS, under a name of its own.
+
+    Loaded by path, and not by putting the directory on sys.path, where its kernels.py would shadow this one's.
+    """
     directory = directory or os.environ.get("XSTD_INTS_PROOFS")
     if not directory:
         raise SystemExit("set XSTD_INTS_PROOFS to xstd-ints' test/proofs directory, or pass --ints-proofs")
-    sys.path.insert(0, directory)
-    return importlib.import_module("operations")
+    spec = importlib.util.spec_from_file_location("xstd_ints_operations", os.path.join(directory, "operations.py"))
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def promoted_width(width):
