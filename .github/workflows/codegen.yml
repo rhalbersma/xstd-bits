@@ -43,17 +43,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: rhalbersma/cpp-ci/.github/actions/apt-retry@3387d6b86177322b3b2a81b84b45339fc2c47d5c
+      - uses: rhalbersma/cpp-ci/.github/actions/apt-retry@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
 
       - name: Install GCC
-        uses: rhalbersma/cpp-ci/.github/actions/install-gcc@3387d6b86177322b3b2a81b84b45339fc2c47d5c
+        uses: rhalbersma/cpp-ci/.github/actions/install-gcc@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
         with:
           version: "15"
           trunk: false
 
       - name: Install Clang
         if: startsWith(matrix.compiler, 'clang')
-        uses: rhalbersma/cpp-ci/.github/actions/install-clang@3387d6b86177322b3b2a81b84b45339fc2c47d5c
+        uses: rhalbersma/cpp-ci/.github/actions/install-clang@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
         with:
           version: "22"
           llvm_suffix: "-22"
@@ -68,7 +68,7 @@ jobs:
 
       - name: Locate the overlay triplets
         id: overlay
-        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-overlay@3387d6b86177322b3b2a81b84b45339fc2c47d5c
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-overlay@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
 
       - name: Restore vcpkg binary cache
         id: vcpkg-cache
@@ -79,10 +79,10 @@ jobs:
           restore-keys: ${{ env.VCPKG_CACHE_KEY }}
 
       - name: Check out vcpkg at the pinned commit
-        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-setup@3387d6b86177322b3b2a81b84b45339fc2c47d5c
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-setup@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
 
       - name: Install the dependencies
-        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-install@3387d6b86177322b3b2a81b84b45339fc2c47d5c
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-install@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
         with:
           triplet: ${{ env.TRIPLET }}
           overlay_triplets: ${{ steps.overlay.outputs.triplets }}
