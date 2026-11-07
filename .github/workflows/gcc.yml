@@ -74,8 +74,8 @@ jobs:
       build_types: Release
       cxx_flags: -D_GLIBCXX_ASSERTIONS
 
-  # libstdc++'s own tests of the containers with a counterpart, and the MSVC STL's, at the stable rung's tags. One rung in
-  # Debug, since what is under test is the mapping onto bit_vector, not the compiler.
+  # libstdc++'s own tests of the containers with a counterpart, at the stable rung's tag. One rung in Debug, since what is
+  # under test is the mapping onto the subjects, not the compiler.
   std_test_suites:
     needs: changes
     if: needs.changes.outputs.build == 'true'
