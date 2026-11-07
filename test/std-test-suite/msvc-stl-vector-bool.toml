@@ -197,23 +197,23 @@ departure = "const_reference is the bit vector's own proxy, so const_iterator is
 file = "tests/std/tests/VSO_0000000_instantiate_containers/test.compile.pass.cpp"
 sha256 = "690dfaa178c5a86134618366a36bd40526bc843bc817dd1b877fdff305357b80"
 line = "std::erase(vb, true);"
-to = "erase(vb, true);"
-departure = "erase is xstd's, found by argument-dependent lookup"
+to = "xstd::erase(vb, true);"
+departure = "erase is xstd's, called qualified as the test calls std's"
 
-# The test's helpers call std::erase_if over every container it instantiates, the bit vector among them.
+# The test's helpers call std::erase_if qualified over every container it instantiates, the bit vector among them.
 [[msvc-stl.assertion]]
 file = "tests/std/tests/VSO_0000000_instantiate_containers/test.compile.pass.cpp"
 sha256 = "690dfaa178c5a86134618366a36bd40526bc843bc817dd1b877fdff305357b80"
 line = "std::erase_if(value, pr1);"
-to = "erase_if(value, pr1);"
-departure = "erase_if is xstd's, found by argument-dependent lookup, as it finds std::erase_if for the standard containers"
+to = "if constexpr (is_same_v<T, vector<bool>>) { xstd::erase_if(value, pr1); } else { std::erase_if(value, pr1); }"
+departure = "erase_if is xstd's, called qualified as the test calls std's, so that no argument-dependent lookup completes its predicate's type"
 
 [[msvc-stl.assertion]]
 file = "tests/std/tests/VSO_0000000_instantiate_containers/test.compile.pass.cpp"
 sha256 = "690dfaa178c5a86134618366a36bd40526bc843bc817dd1b877fdff305357b80"
 line = "std::erase_if(value, validating_falsity{});"
-to = "erase_if(value, validating_falsity{});"
-departure = "erase_if is xstd's, found by argument-dependent lookup, as it finds std::erase_if for the standard containers"
+to = "if constexpr (is_same_v<T, vector<bool>>) { xstd::erase_if(value, validating_falsity{}); } else { std::erase_if(value, validating_falsity{}); }"
+departure = "erase_if is xstd's, called qualified as the test calls std's, so that no argument-dependent lookup completes its predicate's type"
 
 
 # MSVC exports the specializations of a static member variable template that a base's members instantiate, and rejects
