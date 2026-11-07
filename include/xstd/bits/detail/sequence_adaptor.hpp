@@ -593,10 +593,6 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
         template<class Self>
         using reference_t = basic_reference<std::is_const_v<storage_t<Self>>>;
 
-        // A source the blit can read by block, of this storage's own block type.
-        template<class S>
-        static constexpr bool blittable = blit_source<S, typename bits_type::block_type>;
-
         // The container needs constraints only the vehicle can name; [class.friend]/3 ignores the void a view passes.
         friend Derived;
 
@@ -816,7 +812,7 @@ public:
         constexpr auto append_range(R&& rg)
                 -> void
         {
-                if constexpr (blittable<std::remove_cvref_t<R>>) {
+                if constexpr (blit_source<std::remove_cvref_t<R>, typename bits_type::block_type>) {
                         blit(rg.bits(), rg.offset(), rg.size());
                 } else if constexpr (not std::ranges::sized_range<R>) {
                         // No size to check first, so a failure part way, at a capacity or an allocation, is undone.
@@ -852,7 +848,7 @@ public:
                 -> iterator
         {
                 auto const pos = index_of(position);
-                if constexpr (not blittable<std::remove_cvref_t<R>> and (std::ranges::forward_range<R> or std::ranges::sized_range<R>)) {
+                if constexpr (not blit_source<std::remove_cvref_t<R>, typename bits_type::block_type> and (std::ranges::forward_range<R> or std::ranges::sized_range<R>)) {
                         auto const n = static_cast<size_type>(std::ranges::distance(rg));
                         open_gap(pos, n);
                         // Reading the range is all that can throw here, and closing the gap again cannot.
@@ -868,7 +864,7 @@ public:
 #endif
                         return begin() + static_cast<difference_type>(pos);
                 } else {
-                        if constexpr (blittable<std::remove_cvref_t<R>>) {
+                        if constexpr (blit_source<std::remove_cvref_t<R>, typename bits_type::block_type>) {
                                 // A window of this storage would move with its own tail, so it takes the rebuild.
                                 if (not is_storage_of(rg.bits())) {
                                         open_gap(pos, rg.size());
