@@ -1,0 +1,10 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+# libstdc++'s tests of the general utilities that name std::vector<bool>: its hash.
+[libstdcxx]
+take = [
+    { path = "libstdc++-v3/testsuite/20_util/hash", select = "vector<bool>" },
+]

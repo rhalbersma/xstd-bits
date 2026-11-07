@@ -1,0 +1,11 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+# libstdc++'s iterator tests over std::vector<bool>'s iterators, which run the iterator adaptors and concepts over a
+# subject's, with each departure from them named.
+[libstdcxx]
+take = [
+    { path = "libstdc++-v3/testsuite/24_iterators", select = "vector<bool>" },
+]
