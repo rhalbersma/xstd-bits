@@ -8,6 +8,14 @@ when the section no longer matches it.
 - **Mappings:** `test/std-test-suite/<suite>-<directory>.toml` name the directories a suite takes and each departure
   from their tests, and `<subject>.toml` the rewrites onto one of this library's types.
 - **Hashes:** the first twelve hexadecimal digits of the test file's SHA-256 at the pinned tag.
+- **Taken from:** each suite's own tests of `vector<bool>` and `set`, and its tests elsewhere that use `vector<bool>`: the
+  algorithms, and libc++'s utilities or libstdc++'s iterators, range adaptors and hash.
+
+The other containers this library generalizes have nothing at the pins for a subject to take. Neither suite tests
+`inplace_vector`. Their `array` tests are over `int` and the like, and none over `bool`. Their `span` tests have no
+`span<bool>` but libstdc++'s `span<const bool>` over a `bool` array, which no bit span views. Their `valarray` tests use
+`valarray<bool>` only as the mask a `valarray<int>` is subscripted by or the result its comparisons answer. A pin that
+brings such a test is reviewed when it moves.
 
 A row's `outcome` is one of:
 
@@ -28,7 +36,7 @@ A row's `outcome` is one of:
 
 - **Pinned:** [https://github.com/llvm/llvm-project](https://github.com/llvm/llvm-project) at `llvmorg-22.1.8`.
 - **Mappings:** the suite's `test/std-test-suite/libcxx-*.toml` for the directories it takes, and `bit-vector.toml` for the type.
-- **Not selected:** 285 files that do not match `vector<bool>`, left to the standard library.
+- **Not selected:** 1734 files that do not match `vector<bool>`, left to the standard library.
 
 | test | sha256 | outcome | note |
 | :--- | :--- | :--- | :--- |
@@ -135,6 +143,10 @@ A row's `outcome` is one of:
 | `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/parse.pass.cpp` | `1e8daf4e26c8` | not run | no rewrite reaches it, so it tests the standard library |
 | `libcxx/test/std/containers/sequences/vector.bool/vector.bool.fmt/types.compile.pass.cpp` | `22eeadf5632f` | compiles |  |
 | `libcxx/test/std/containers/sequences/vector.bool/vector_bool.pass.cpp` | `7dd9a484a116` | runs |  |
+| `libcxx/test/std/utilities/format/format.formattable/concept.formattable.compile.pass.cpp` | `77256003513a` | compiles |  |
+| `libcxx/test/std/utilities/format/format.formatter/format.formatter.locking/enable_nonlocking_formatter_optimization.compile.pass.cpp` | `4f31cc88c669` | compiles |  |
+| `libcxx/test/std/utilities/variant/variant.variant/variant.assign/T.pass.cpp` | `5fb4429ca96b` | runs |  |
+| `libcxx/test/std/utilities/variant/variant.variant/variant.ctor/T.pass.cpp` | `28c308a17d14` | runs |  |
 
 ## libc++ against bit_small_vector
 
@@ -552,10 +564,11 @@ A row's `outcome` is one of:
 
 - **Pinned:** [https://github.com/gcc-mirror/gcc](https://github.com/gcc-mirror/gcc) at `releases/gcc-15.3.0`.
 - **Mappings:** the suite's `test/std-test-suite/libstdcxx-*.toml` for the directories it takes, and `bit-vector.toml` for the type.
-- **Not selected:** 812 files that do not match `vector<bool>`, left to the standard library.
+- **Not selected:** 1096 files that do not match `vector<bool>`, left to the standard library.
 
 | test | sha256 | outcome | note |
 | :--- | :--- | :--- | :--- |
+| `libstdc++-v3/testsuite/20_util/hash/84998.cc` | `27d02cad19c6` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/1.cc` | `b239d71e27f2` | runs |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/110807.cc` | `be1300b70a53` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/115098.cc` | `269eaf59548f` | compiles |  |
@@ -616,6 +629,9 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/23_containers/vector/bool/requirements/citerators.cc` | `2f4a277f428a` | fails to compile | none of the bit vector's: libstdc++'s __gnu_test::citerator reads __gnu_test::traits, which describes the standard containers alone |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/requirements/dr438/constructor.cc` | `3fc8cf8bfb56` | compiles |  |
 | `libstdc++-v3/testsuite/23_containers/vector/bool/swap.cc` | `842f03de2a14` | runs |  |
+| `libstdc++-v3/testsuite/24_iterators/const_iterator/1.cc` | `83bb53643f29` | runs, adapted | test01<std::vector<bool>::const_iterator, true>(); (const_reference is the bit vector's own proxy, so const_iterator is no constant iterator); test02<std::vector<bool>, false, true>(); (const_reference is the bit vector's own proxy, so const_iterator_t is basic_const_iterator<const_iterator>, neither iterator_t<const R> nor basic_const_iterator<iterator>); test02<const std::vector<bool>, true>(); (const_reference is the bit vector's own proxy, so a const bit vector is no constant_range) |
+| `libstdc++-v3/testsuite/24_iterators/contiguous/concept.cc` | `771d85e7bd6b` | compiles |  |
+| `libstdc++-v3/testsuite/24_iterators/move_iterator/dr2106.cc` | `fb2dbfe6dc3b` | compiles, adapted | static_assert(std::is_same<MIt::reference, Ref>::value,""); (iter_move answers the bool, so a move_iterator's reference is bool rather than the proxy); static_assert(std::is_same<MCIt::reference, CRef>::value,""); (iter_move answers the bool, so a move_iterator's reference is bool rather than the proxy) |
 | `libstdc++-v3/testsuite/25_algorithms/adjacent_find/vectorbool.cc` | `74612885f4f4` | runs |  |
 | `libstdc++-v3/testsuite/25_algorithms/fill/bvector/1.cc` | `a830ac806c2d` | runs |  |
 | `libstdc++-v3/testsuite/25_algorithms/find/vectorbool.cc` | `1f3b0788f453` | runs |  |
@@ -628,6 +644,7 @@ A row's `outcome` is one of:
 | `libstdc++-v3/testsuite/25_algorithms/iter_swap/20577.cc` | `c8a748e46430` | runs |  |
 | `libstdc++-v3/testsuite/25_algorithms/sort/vectorbool.cc` | `b0ed19fb9b70` | runs |  |
 | `libstdc++-v3/testsuite/25_algorithms/stable_sort/3.cc` | `26d4f78595b9` | runs |  |
+| `libstdc++-v3/testsuite/std/ranges/adaptors/chunk_by/1.cc` | `e3dc711cf4a3` | runs |  |
 
 ## libstdc++ against bit_small_vector
 
