@@ -3,15 +3,11 @@
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
 
-# The MSVC STL's own tests of vector<bool>, with each departure from them named. A subject's mapping beside this one
+# The MSVC STL's tests that name vector<bool>, with each departure from them named. A subject's mapping beside this one
 # names the type they are read against.
 [msvc-stl]
 take = [
-    { path = "tests/std/tests/Dev10_689595_back_inserter_vector_bool" },
-    { path = "tests/std/tests/Dev10_816787_swap_vector_bool_elements" },
-    { path = "tests/std/tests/Dev11_0135139_vector_bool_comparisons" },
-    { path = "tests/std/tests/GH_000625_vector_bool_optimization" },
-    { path = "tests/std/tests/Dev10_563443_empty_vector_begin_plus_zero" },
+    { path = "tests/std/tests", select = "vector<bool>" },
 ]
 
 [[msvc-stl.assertion]]
