@@ -2949,8 +2949,8 @@ containers, where it can be named and its cost seen.
 
 **If a user never spells it, it lives in `detail/`.** The name or the header, either counts. That is the whole
 rule, and it is a test rather than a judgement: `bit_fixed_set` is spelled, `bit_block_container` is not;
-`set_adaptor`'s nested `basic_reference` is reached only through the `iterator` and `reference` typedefs and is
-spelled by nobody.
+`set_reference`, the proxy `set_adaptor` hands out, is reached only through the `iterator` and `reference` typedefs
+and is spelled by nobody.
 
 What the rule keeps on the interface side: **the eleven owners and the three views** -- the set and sequence
 readings over four storages each, the small ones among them under `ext/`, and the valarray reading over three --
@@ -4431,19 +4431,21 @@ never a bit ([test-not-subscript](#test-not-subscript)), so a fallback would fin
 The set and sequence iterators are a pointer and a position, and they reach the bits through the storage alone.
 Their constructors from a pointer and a position, and their references' too, are **private**: a user reaches a
 proxy through a container and never builds one over storage it cannot see. Two kinds of caller may: the adaptor
-that hands proxies out -- `sequence_adaptor` or `set_adaptor`, of which they are members -- and the proxy's twin,
-since the iterator's `*` builds a reference and the reference's `&` builds an iterator. An enclosing class has
-no special access to a nested one's private members, nor one nested class to another's, so each iterator
-befriends its reference and its adaptor, and each reference its iterator and its adaptor.
+that hands proxies out -- `sequence_adaptor` or `set_adaptor`, of which the iterators are members and the
+proxies are keyed by -- and the proxy's twin, since the iterator's `*` builds a reference and the reference's `&`
+builds an iterator. Neither class reaches the other's private members unasked, so each iterator befriends its
+reference and its adaptor, each reference its iterator and its adaptor, and each adaptor its references.
 
 The pointer is to the **storage** an owner wraps, never to the owner: `bit_fixed_set`'s iterator holds a pointer
 to its `bit_block_container<std::array<B, K>, N>`, which is why an owner is never itself the thing a view is
 parameterized on.
 
-**Where they live, and what they are called.** Each pair is a member of the adaptor that hands it out --
-`basic_iterator` and `basic_reference` in both, over a `bool` saying whether the storage is read as const in
-`sequence_adaptor`, and over the key in `set_adaptor` -- and is reached through a container's `iterator` and
-`reference` typedefs and through nothing else; [the-adl-firewall](#the-adl-firewall) says why they are members.
+**Where they live, and what they are called.** Each iterator is a member of the adaptor that hands it out,
+`basic_iterator` in both, over a `bool` saying whether the storage is read as const in `sequence_adaptor`, and
+over the key in `set_adaptor`. Each proxy is a namespace-scope template keyed by that adaptor as a value,
+`sequence_reference` and `set_reference`, which the adaptor names `basic_reference`. Both are reached through a
+container's `iterator` and `reference` typedefs and through nothing else; [the-adl-firewall](#the-adl-firewall)
+says why they are shaped so.
 Every container therefore has iterators of its own, an owner and its view included, as `std::string` and
 `std::string_view` do. The test tree keeps a source for each pair, `detail/random_access.cpp` and
 `detail/bidirectional.cpp`, rather than taking the exception `detail/` is granted: unnameable is not
@@ -4503,14 +4505,20 @@ the enclosing template, so its enclosing class's arguments never reach it. A spe
 class template is a specialization, but of that member template, and contributes its own arguments alone.
 GCC 15 and Clang 22 both read it so.
 
-**The shape.** The iterator and the proxy are members of the adaptor that hands them out, so the adaptor's
-template arguments -- the storage, the derived container, the key mapping and the comparator -- never reach them:
+**The shape.** The iterator is a member of the adaptor that hands it out, so the adaptor's template arguments --
+the storage, the derived container, the key mapping and the comparator -- never reach it. The proxy is a
+namespace-scope template whose first argument is the adaptor as a value, a `std::type_identity` of it: a
+non-type template argument associates nothing, so the adaptor's arguments never reach the proxy either, and
+`std`'s specializations can still match the proxy by pattern.
 
 ```cpp
+template<auto Owner, bool IsConst> class sequence_reference;   // & yields the adaptor's basic_iterator<IsConst>
+template<auto Owner, class Value>  class set_reference;        // & yields the adaptor's basic_iterator<Value>
+
 template<bit_block_container_type Bits, storage Store, window W, class Derived, std::size_t E>
 class sequence_adaptor
 {
-        template<bool IsConst> class basic_reference;      // & yields basic_iterator<IsConst>
+        template<bool IsConst> using basic_reference = sequence_reference<std::type_identity<sequence_adaptor>{}, IsConst>;
         template<bool IsConst> class basic_iterator;       // * yields basic_reference<IsConst>
         using reference       = basic_reference<std::is_const_v<Bits>>;
         using const_reference = basic_reference<true>;
@@ -4521,7 +4529,7 @@ class sequence_adaptor
 template<bit_block_container_type Bits, storage Store, class Derived, class Key, bit_index_mapping<Key> KeyMapping, class Compare>
 class set_adaptor
 {
-        template<class Value = Key> class basic_reference; // & yields basic_iterator<Value>
+        template<class Value = Key> using basic_reference = set_reference<std::type_identity<set_adaptor>{}, Value>;
         template<class Value = Key> class basic_iterator;  // * yields basic_reference<Value>
         using reference      = basic_reference<>;
         using iterator       = basic_iterator<>;
@@ -4547,17 +4555,20 @@ sequence reading, which brings no namespace, and the key for the set reading, wh
 `*it == *jt` and `*it == 3` reach a class key's own comparisons, hidden friends among them, as a real
 `Key const&` would. Without that, a key whose `operator==` is a hidden friend would not compare through its
 proxy at all. A reading whose value is a character type keeps that type the same way. `xstd::bits::detail` is
-associated as well, and so is the adaptor itself, being the class the proxy is a member of: its hidden friends
-take adaptors, which a proxy is not, so they join the candidates and are never viable. The proxies' own hidden
-friends -- `swap`, `iter_move`, `iter_swap` and `format_as` -- are found by ADL on the proxy itself.
+associated as well, and so is the adaptor with an iterator, being the class the iterator is a member of: its
+hidden friends take adaptors, which an iterator is not, so they join the candidates and are never viable. The
+proxies' own hidden friends -- `swap` and `format_as` -- and the iterators' -- `iter_move` and `iter_swap` -- are
+found by ADL on the proxy or the iterator itself.
 
-**What it costs.** No deduction reaches the adaptor's arguments through a member, so the `std::formatter`
-specializations cannot be written as `formatter<sequence_adaptor<...>::reference>`. Each is a partial
-specialization constrained by a `detail` concept instead, `sequence_reference` or `set_reference`, which
-recognizes a proxy through the adaptor it names as `adaptor_type`: true for exactly the references some
-adaptor declares. And an owner's iterator is not its view's, so code that compares the two, or an iterator of a
-view over a storage with one of a view over the same storage made const, names one adaptor's `iterator` and
-`const_iterator` throughout.
+**What it costs.** The proxy names its adaptor through a value, so its body reads the adaptor's members as
+`decltype(Owner)::type`, and the adaptor befriends it. In exchange the `std::formatter` and
+`std::enable_nonlocking_formatter_optimization` specializations are partial specializations over
+`sequence_reference<Owner, IsConst>` and `set_reference<Owner, Value>`, matched by pattern. A specialization
+constrained by a concept instead would check that constraint for every type the trait is asked of, and the check
+instantiates the type: the MSVC STL's P3107R5 test asks the trait of `chrono::duration<unoptimized>`, whose
+instantiation `<chrono>` rejects. And an owner's iterator is not its view's, so code that compares the two, or an
+iterator of a view over a storage with one of a view over the same storage made const, names one adaptor's
+`iterator` and `const_iterator` throughout.
 
 ### the-set-for-each
 
