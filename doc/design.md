@@ -4565,7 +4565,7 @@ found by ADL on the proxy or the iterator itself.
 `std::enable_nonlocking_formatter_optimization` specializations are partial specializations over
 `sequence_reference<Owner, IsConst>` and `set_reference<Owner, Value>`, matched by pattern. A specialization
 constrained by a concept instead would check that constraint for every type the trait is asked of, and the check
-instantiates the type: the MSVC STL's P3107R5 test asks the trait of `chrono::duration<unoptimized>`, whose
+instantiates the type: the MSVC STL's [P3107R5](https://wg21.link/P3107R5) test asks the trait of `chrono::duration<unoptimized>`, whose
 instantiation `<chrono>` rejects. And an owner's iterator is not its view's, so code that compares the two, or an
 iterator of a view over a storage with one of a view over the same storage made const, names one adaptor's
 `iterator` and `const_iterator` throughout.
