@@ -668,3 +668,10 @@ sha256 = "07edc91415d6a3e11fba4a46c0d35e60408aa65d83fd97fda071e27046682322"
 line = "static_assert(test_vector_bool(11, R{some_ints}, other_long_result));"
 drop = true
 departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/GH_005315_destructor_tombstones/test.cpp"
+sha256 = "60086bed07244353eee14cff887d39e72979fd5ae7499c3b9a2922c67cb3136a"
+line = "test_vector_bool,"
+drop = true
+departure = "the MSVC STL's destructor tombstones are its own containers'; Boost's small_vector writes none, and keeps the first 64 bits inside the object"

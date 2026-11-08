@@ -223,3 +223,17 @@ file = "tests/std/tests/GH_001638_dllexport_derived_classes/test.compile.pass.cp
 sha256 = "8f5be5f6ee2be8103515818659d69b8c85ef4b74b347b9d1d94526b3d7d5cc10"
 fails = "compile"
 paragraph = "none of the bit vector's: MSVC rejects exporting a class whose base instantiates a static data member template, reported as rhalbersma/xstd-bits#529"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/VSO_0830211_container_debugging_range_checks/test.cpp"
+sha256 = "f37d5e2a0797914022ae2330aac1e7d4ba909aea667af3a3e1a0f4368470ee95"
+line = "TestCases<VectorBoolTestCaseTraits>::add_cases(exec);"
+drop = true
+departure = "the MSVC STL's iterator debugging, which tracks each of its own iterators' container to stop value-initialized, incompatible and out-of-range iterator operations that the standard leaves undefined"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/VSO_0830211_container_debugging_range_checks/test.cpp"
+sha256 = "f37d5e2a0797914022ae2330aac1e7d4ba909aea667af3a3e1a0f4368470ee95"
+line = "TestCases<ConstVectorBoolTestCaseTraits>::add_cases(exec);"
+drop = true
+departure = "the MSVC STL's iterator debugging, which tracks each of its own iterators' container to stop value-initialized, incompatible and out-of-range iterator operations that the standard leaves undefined"
