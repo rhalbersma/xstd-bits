@@ -36,6 +36,6 @@ jobs:
         run: python3 tools/qualified_ranges.py
 
       - name: Check that the headers are layered and no container family includes another
-        uses: rhalbersma/cpp-ci/.github/actions/layering@3387d6b86177322b3b2a81b84b45339fc2c47d5c # main after rhalbersma/cpp-ci#101, with each trunk suite test built on its own
+        uses: rhalbersma/cpp-ci/.github/actions/layering@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
         with:
           config: tools/layering.toml

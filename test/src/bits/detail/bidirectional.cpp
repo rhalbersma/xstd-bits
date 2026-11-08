@@ -31,7 +31,7 @@
 #include <optional>                                 // optional
 #include <ranges>                                   // iota
 #include <set>                                      // set
-#include <type_traits>                              // is_assignable_v, is_constructible_v, is_convertible_v, is_trivially_destructible_v
+#include <type_traits>                              // is_assignable_v, is_constructible_v, is_convertible_v, is_trivially_destructible_v, type_identity
 #include <utility>                                  // cmp_equal, declval
 #include <vector>                                   // vector
 
@@ -478,13 +478,14 @@ BOOST_AUTO_TEST_CASE(EverySetClosesItsProxyPair)
         BOOST_CHECK(true);
 }
 
-// What std::formatter is specialized for: the proxies themselves, which no deduction reaches through the class.
+// What std::formatter is specialized for: the proxies, by the template they instantiate, keyed by their adaptor.
 BOOST_AUTO_TEST_CASE(TheFormatterIsSpecializedForExactlyTheProxies)
 {
-        static_assert(xstd::bits::detail::set_reference<borrowed_set<Bits>::reference>);
-        static_assert(xstd::bits::detail::set_reference<borrowed_set<Bits, key, key_mapping>::reference>);
-        static_assert(not xstd::bits::detail::set_reference<borrowed_set<Bits>::iterator>);
-        static_assert(not xstd::bits::detail::set_reference<std::size_t>);
+        using adaptor       = borrowed_set<Bits>::adaptor_type;
+        using keyed_adaptor = borrowed_set<Bits, key, key_mapping>::adaptor_type;
+        static_assert(std::same_as<adaptor::reference, xstd::bits::detail::set_reference<std::type_identity<adaptor>{}, std::size_t>>);
+        static_assert(std::same_as<keyed_adaptor::reference, xstd::bits::detail::set_reference<std::type_identity<keyed_adaptor>{}, key>>);
+        static_assert(not std::formattable<adaptor::iterator, char>);
 
         static_assert(std::formattable<borrowed_set<Bits>::reference, char>);
         static_assert(std::formattable<std::iter_reference_t<hostile_set::iterator>, char>);

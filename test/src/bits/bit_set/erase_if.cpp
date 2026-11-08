@@ -26,4 +26,14 @@ BOOST_AUTO_TEST_CASE(ItErasesAsAStdSetDoes)
         BOOST_CHECK(std::ranges::equal(s, m) and std::ranges::equal(f, m) and std::ranges::equal(i, m));
 }
 
+// A port replaces std:: with xstd::, so the qualified name that skips argument-dependent lookup answers as std's does.
+BOOST_AUTO_TEST_CASE(ItAnswersByItsQualifiedName)
+{
+        auto const odd = [](std::size_t k) -> bool { return k % 2UZ == 1UZ; };
+        auto m         = std::set<std::size_t>({1UZ, 2UZ, 3UZ, 64UZ, 65UZ});
+        auto s         = xstd::bit_set({1UZ, 2UZ, 3UZ, 64UZ, 65UZ});
+        BOOST_CHECK_EQUAL(xstd::erase_if(s, odd), std::erase_if(m, odd));
+        BOOST_CHECK(std::ranges::equal(s, m));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

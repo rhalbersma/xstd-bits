@@ -8,4 +8,12 @@
 
 #include <xstd/bits/detail/sequence_erasure.hpp> // IWYU pragma: export; erase, erase_if
 
+namespace xstd {
+
+// [vector.erasure]'s std::erase and std::erase_if, spelled with xstd:: as a port spells them; ADL finds them too.
+using bits::detail::erase;
+using bits::detail::erase_if;
+
+} // namespace xstd
+
 #endif // XSTD_BITS_BIT_INPLACE_VECTOR_ERASE_IF_HPP
