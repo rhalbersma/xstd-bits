@@ -18,10 +18,14 @@ rewrite = [
     { regex = '(?<![\w:])vector<bool>', to = 'xstd::bit_small_vector<64>' },
 ]
 
+# A Boost small_vector puts no std among the bit vector's associated namespaces, so the unqualified begin and end a
+# support helper calls on it find nothing: they are spelled std::, as a two-step using std::begin would find them.
 [msvc-stl]
+support = [{ path = "tests/std/include/instantiate_containers_iterators_common.hpp" }]
 rewrite = [
     { from = "std::vector<bool>", to = "xstd::bit_small_vector<64>" },
     { regex = '(?<![\w:])vector<bool>', to = 'xstd::bit_small_vector<64>' },
+    { regex = '(?<![\w:.])(begin|end)\(value\)', to = 'std::\1(value)' },
 ]
 
 [[libstdcxx.assertion]]
