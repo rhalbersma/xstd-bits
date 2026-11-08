@@ -44,30 +44,29 @@ function(xstd_bits_std_test_suite suite subject)
     set_tests_properties(std-test-suite.${name}.table PROPERTIES LABELS "std-test-suite;${name}")
 endfunction()
 
-# Each library's own suite on the library it is written for, since each also checks its own library's choices.
+# Each library's own suite on the library it is written for, since each also checks its own library's choices, and its
+# test support reaches into that library's internals: the MSVC STL's, into <yvals_core.h>, stdext and its debug runtime.
 include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(_LIBCPP_VERSION version XSTD_BITS_STD_TEST_SUITE_LIBCPP)
-if(XSTD_BITS_STD_TEST_SUITE_LIBCPP)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(suite msvc-stl)
+elseif(XSTD_BITS_STD_TEST_SUITE_LIBCPP)
     set(suite libcxx)
 else()
     set(suite libstdcxx)
 endif()
-# The tests that use vector<bool> without testing it run against bit_vector alone, as the algorithms do.
+
+# The tests that use vector<bool> without testing it run against bit_vector alone, as the algorithms do. The MSVC STL's
+# mapping selects every test that names vector<bool>, those included.
 if(suite STREQUAL "libcxx")
     set(users libcxx-algorithms.toml libcxx-utilities.toml)
-else()
+elseif(suite STREQUAL "libstdcxx")
     set(users libstdcxx-algorithms.toml libstdcxx-iterators.toml libstdcxx-ranges.toml libstdcxx-utilities.toml)
+else()
+    set(users)
 endif()
 xstd_bits_std_test_suite(${suite} bit-vector ${suite}-vector-bool.toml ${users})
 xstd_bits_std_test_suite(${suite} bit-small-vector ${suite}-vector-bool.toml)
 foreach(subject IN ITEMS bit-set bit-fixed-set bit-inplace-set bit-small-set)
     xstd_bits_std_test_suite(${suite} ${subject} ${suite}-set.toml)
 endforeach()
-
-# The MSVC STL's tests reach none of its internals, and no Linux leg has the MSVC STL, so they run beside either. cpp-ci
-# pins them on the stable rung alone.
-if(rung STREQUAL "stable")
-    foreach(subject IN ITEMS bit-vector bit-small-vector)
-        xstd_bits_std_test_suite(msvc-stl ${subject} msvc-stl-vector-bool.toml)
-    endforeach()
-endif()

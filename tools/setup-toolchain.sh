@@ -144,6 +144,7 @@ for target in "${BOOST_PREFIX}:" "${BOOST_PREFIX_I686}:-m32"; do
                 tar -xf "${boost}/boost.tar.xz" -C "${boost}"
         fi
         "${CMAKE}" -S "${boost}/boost-${BOOST_VERSION}" -B "${boost}/build${flags}" -G Ninja -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER="gcc-${GCC_VERSION}" -DCMAKE_C_FLAGS="${flags}" \
                 -DCMAKE_CXX_COMPILER="g++-${GCC_VERSION}" -DCMAKE_CXX_FLAGS="${flags}" -DBUILD_SHARED_LIBS=OFF \
                 -DBOOST_INCLUDE_LIBRARIES="${BOOST_LIBRARIES}" > /dev/null
         "${CMAKE}" --build "${boost}/build${flags}" --parallel "$(nproc)" > /dev/null
