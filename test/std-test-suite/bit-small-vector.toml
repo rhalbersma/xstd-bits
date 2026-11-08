@@ -3,8 +3,9 @@
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
 
-# The vector<bool> tests read against bit_small_vector, whose first 64 bits live inside it, in a Boost small_vector.
-include = ["xstd/bits/ext/boost/bit_small_vector.hpp"]
+# The vector<bool> tests read against bit_small_vector, whose first 64 bits live inside it, in a Boost small_vector, and
+# reach erase and erase_if where <vector> declares them for std::vector<bool>.
+include = ["xstd/bits/ext/boost/bit_small_vector.hpp", "xstd/bits/bit_vector/erase_if.hpp"]
 
 # libc++ spells vector<bool> qualified.
 [libcxx]
@@ -17,10 +18,14 @@ rewrite = [
     { regex = '(?<![\w:])vector<bool>', to = 'xstd::bit_small_vector<64>' },
 ]
 
+# A Boost small_vector puts no std among the bit vector's associated namespaces, so the unqualified begin and end a
+# support helper calls on it find nothing: they are spelled std::, as a two-step using std::begin would find them.
 [msvc-stl]
+support = [{ path = "tests/std/include/instantiate_containers_iterators_common.hpp" }]
 rewrite = [
     { from = "std::vector<bool>", to = "xstd::bit_small_vector<64>" },
     { regex = '(?<![\w:])vector<bool>', to = 'xstd::bit_small_vector<64>' },
+    { regex = '(?<![\w:.])(begin|end)\(value\)', to = 'std::\1(value)' },
 ]
 
 [[libstdcxx.assertion]]
@@ -408,3 +413,265 @@ file = "libstdc++-v3/testsuite/23_containers/vector/bool/modifiers/swap/constexp
 sha256 = "830691ce96813b0107a07c691d6f37f0cf3e0bf2776cf33715aeeec608767737"
 fails = "compile"
 paragraph = "[containers]: Boost's small_vector is not usable in a constant expression, so neither is a bit vector over it"
+
+# The MSVC STL evaluates these vector<bool> checks in constant expressions only under its own _HAS_CXX20 and _HAS_CXX23,
+# so they reach the small bit vector on the MSVC leg alone, where Boost's small_vector cannot follow.
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/GH_005315_destructor_tombstones/test.cpp"
+sha256 = "60086bed07244353eee14cff887d39e72979fd5ae7499c3b9a2922c67cb3136a"
+line = "static_assert(test_constexpr());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P0009R18_mdspan_mdspan/test.cpp"
+sha256 = "7a9d4f5ed8c151cdcd65b8d3c3ba09d9ae12f926a284b4690cd19fcbfb9f58a6"
+line = "static_assert(test());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1004R2_constexpr_vector_bool/test.cpp"
+sha256 = "5efb070d49bb37dd077a248e8362839e78d816acdfb336bdd63a754d22e72873"
+line = "static_assert(test_interface());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_append_range/test.cpp"
+sha256 = "30d24c0a6778d2f6dda7bf1f32c949292cb0b179373ade4dc088ccaa01087207"
+line = "static_assert(test_copyable_view());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_append_range/test.cpp"
+sha256 = "30d24c0a6778d2f6dda7bf1f32c949292cb0b179373ade4dc088ccaa01087207"
+line = "static_assert(test_move_only_view());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_append_range/test.cpp"
+sha256 = "30d24c0a6778d2f6dda7bf1f32c949292cb0b179373ade4dc088ccaa01087207"
+line = "static_assert(test_c_array());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_append_range/test.cpp"
+sha256 = "30d24c0a6778d2f6dda7bf1f32c949292cb0b179373ade4dc088ccaa01087207"
+line = "static_assert(test_lvalue_vector());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_assign_range/test.cpp"
+sha256 = "1f23ff2fc0321e93686fe414d4116991ffd7ad886b5f06e12f1785eebf9af8f7"
+line = "static_assert(test_copyable_views());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_assign_range/test.cpp"
+sha256 = "1f23ff2fc0321e93686fe414d4116991ffd7ad886b5f06e12f1785eebf9af8f7"
+line = "static_assert(test_move_only_views());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_assign_range/test.cpp"
+sha256 = "1f23ff2fc0321e93686fe414d4116991ffd7ad886b5f06e12f1785eebf9af8f7"
+line = "static_assert(test_c_array());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_assign_range/test.cpp"
+sha256 = "1f23ff2fc0321e93686fe414d4116991ffd7ad886b5f06e12f1785eebf9af8f7"
+line = "static_assert(test_lvalue_vector());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_from_range/test.cpp"
+sha256 = "d009462ae64e1bb63a3b65383583e9a1387f7e6a691846386bb475be7386e157"
+line = "static_assert(test_copyable_views());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_from_range/test.cpp"
+sha256 = "d009462ae64e1bb63a3b65383583e9a1387f7e6a691846386bb475be7386e157"
+line = "static_assert(test_move_only_views());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_from_range/test.cpp"
+sha256 = "d009462ae64e1bb63a3b65383583e9a1387f7e6a691846386bb475be7386e157"
+line = "static_assert(test_c_array());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_from_range/test.cpp"
+sha256 = "d009462ae64e1bb63a3b65383583e9a1387f7e6a691846386bb475be7386e157"
+line = "static_assert(test_lvalue_vector());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_insert_range/test.cpp"
+sha256 = "07edc91415d6a3e11fba4a46c0d35e60408aa65d83fd97fda071e27046682322"
+line = "static_assert(test_copyable_views());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_insert_range/test.cpp"
+sha256 = "07edc91415d6a3e11fba4a46c0d35e60408aa65d83fd97fda071e27046682322"
+line = "static_assert(test_move_only_views());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_insert_range/test.cpp"
+sha256 = "07edc91415d6a3e11fba4a46c0d35e60408aa65d83fd97fda071e27046682322"
+line = "static_assert(test_c_array());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_insert_range/test.cpp"
+sha256 = "07edc91415d6a3e11fba4a46c0d35e60408aa65d83fd97fda071e27046682322"
+line = "static_assert(test_lvalue_vector());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1614R2_spaceship/test.cpp"
+sha256 = "a07edb1d484035aa4a918239c473fcdfc177cc0e63971463c8bbb6f909727a38"
+line = "static_assert(test_vector());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P2165R4_tuple_like_pair/test.cpp"
+sha256 = "368134487c675ead699f6c08610c32f381f179d85577f82ca141d12d5a15f26f"
+line = "static_assert(test_pair_like_const_assignment<BinaryArray>());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P2165R4_tuple_like_pair/test.cpp"
+sha256 = "368134487c675ead699f6c08610c32f381f179d85577f82ca141d12d5a15f26f"
+line = "static_assert(test_pair_like_const_assignment<BinaryTuple>());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P2165R4_tuple_like_tuple_members/test.cpp"
+sha256 = "85226b2778e4582cab29b7c1cefa672a8006933dc4ac9876948f04b94ca871d9"
+line = "static_assert(test_pair_like_const_assignment(Seq{}));"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P2321R2_proxy_reference/test.cpp"
+sha256 = "9bc2bd6701e60e86ee07ced858e1d6f2811abdd4f9430951bbcd5744b5b78628"
+line = "static_assert(test());"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_append_range/test.cpp"
+sha256 = "30d24c0a6778d2f6dda7bf1f32c949292cb0b179373ade4dc088ccaa01087207"
+line = "static_assert(test_vector_bool<R>(other_ints));"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_assign_range/test.cpp"
+sha256 = "1f23ff2fc0321e93686fe414d4116991ffd7ad886b5f06e12f1785eebf9af8f7"
+line = "static_assert(test_vector_bool(0, R{other_ints}, other_ints));"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_assign_range/test.cpp"
+sha256 = "1f23ff2fc0321e93686fe414d4116991ffd7ad886b5f06e12f1785eebf9af8f7"
+line = "static_assert(test_vector_bool(40, R{other_ints}, other_ints));"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_assign_range/test.cpp"
+sha256 = "1f23ff2fc0321e93686fe414d4116991ffd7ad886b5f06e12f1785eebf9af8f7"
+line = "static_assert(test_vector_bool(ranges::size(other_ints), R{other_ints}, other_ints));"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_assign_range/test.cpp"
+sha256 = "1f23ff2fc0321e93686fe414d4116991ffd7ad886b5f06e12f1785eebf9af8f7"
+line = "static_assert(test_vector_bool(0, R{first64_ints}, first64_ints));"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_assign_range/test.cpp"
+sha256 = "1f23ff2fc0321e93686fe414d4116991ffd7ad886b5f06e12f1785eebf9af8f7"
+line = "static_assert(test_vector_bool(40, R{first64_ints}, first64_ints));"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_assign_range/test.cpp"
+sha256 = "1f23ff2fc0321e93686fe414d4116991ffd7ad886b5f06e12f1785eebf9af8f7"
+line = "static_assert(test_vector_bool(64, R{first64_ints}, first64_ints));"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_from_range/test.cpp"
+sha256 = "d009462ae64e1bb63a3b65383583e9a1387f7e6a691846386bb475be7386e157"
+line = "static_assert(test_vector_bool(R{other_ints}, other_ints));"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_from_range/test.cpp"
+sha256 = "d009462ae64e1bb63a3b65383583e9a1387f7e6a691846386bb475be7386e157"
+line = "static_assert(test_vector_bool(R{first64_ints}, first64_ints));"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_insert_range/test.cpp"
+sha256 = "07edc91415d6a3e11fba4a46c0d35e60408aa65d83fd97fda071e27046682322"
+line = "static_assert(test_vector_bool(0, R{some_ints}, some_ints));"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_insert_range/test.cpp"
+sha256 = "07edc91415d6a3e11fba4a46c0d35e60408aa65d83fd97fda071e27046682322"
+line = "static_assert(test_vector_bool(5, R{some_ints}, other_short_result));"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1206R7_vector_insert_range/test.cpp"
+sha256 = "07edc91415d6a3e11fba4a46c0d35e60408aa65d83fd97fda071e27046682322"
+line = "static_assert(test_vector_bool(11, R{some_ints}, other_long_result));"
+drop = true
+departure = "Boost's small_vector is not usable in a constant expression"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/GH_005315_destructor_tombstones/test.cpp"
+sha256 = "60086bed07244353eee14cff887d39e72979fd5ae7499c3b9a2922c67cb3136a"
+line = "test_vector_bool,"
+drop = true
+departure = "the MSVC STL's destructor tombstones are its own containers'; Boost's small_vector writes none, and keeps the first 64 bits inside the object"

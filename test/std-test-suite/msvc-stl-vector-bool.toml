@@ -3,15 +3,11 @@
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
 
-# The MSVC STL's own tests of vector<bool>, with each departure from them named. A subject's mapping beside this one
+# The MSVC STL's tests that name vector<bool>, with each departure from them named. A subject's mapping beside this one
 # names the type they are read against.
 [msvc-stl]
 take = [
-    { path = "tests/std/tests/Dev10_689595_back_inserter_vector_bool" },
-    { path = "tests/std/tests/Dev10_816787_swap_vector_bool_elements" },
-    { path = "tests/std/tests/Dev11_0135139_vector_bool_comparisons" },
-    { path = "tests/std/tests/GH_000625_vector_bool_optimization" },
-    { path = "tests/std/tests/Dev10_563443_empty_vector_begin_plus_zero" },
+    { path = "tests/std/tests", select = "vector<bool>" },
 ]
 
 [[msvc-stl.assertion]]
@@ -69,3 +65,175 @@ sha256 = "f8a75dba8e3465bc78fae3a63b25fde409220551a2e264c8fcb9967d859e2430"
 line = "void print_vec(const char* const name, const vector<T>& v) {"
 to = "void print_vec(const char* const name, const T& v) {"
 departure = "the test's diagnostic helper takes a std::vector<T>, which a bit vector is not, so it deduces the container instead"
+
+# The MSVC STL marks its own iterators as checked for its debug machinery; a bit vector's are not its own.
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev10_709168_marking_iterators_as_checked/test.compile.pass.cpp"
+sha256 = "1b28f193ecf360cb759335c8235fa94c1abe205a2841c36f9a47ec4dd1dc0d4d"
+line = "STATIC_ASSERT(stl_checked == _Range_verifiable_v<vector<bool>::iterator>);"
+drop = true
+departure = "the MSVC STL's internal _Range_verifiable_v, true only for the iterators it marks as checked"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev10_709168_marking_iterators_as_checked/test.compile.pass.cpp"
+sha256 = "1b28f193ecf360cb759335c8235fa94c1abe205a2841c36f9a47ec4dd1dc0d4d"
+line = "STATIC_ASSERT(stl_checked == _Range_verifiable_v<vector<bool>::const_iterator>);"
+drop = true
+departure = "the MSVC STL's internal _Range_verifiable_v, true only for the iterators it marks as checked"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev10_709168_marking_iterators_as_checked/test.compile.pass.cpp"
+sha256 = "1b28f193ecf360cb759335c8235fa94c1abe205a2841c36f9a47ec4dd1dc0d4d"
+line = "STATIC_ASSERT(stl_checked == _Range_verifiable_v<vector<bool>::reverse_iterator>);"
+drop = true
+departure = "the MSVC STL's internal _Range_verifiable_v, true only for the iterators it marks as checked"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev10_709168_marking_iterators_as_checked/test.compile.pass.cpp"
+sha256 = "1b28f193ecf360cb759335c8235fa94c1abe205a2841c36f9a47ec4dd1dc0d4d"
+line = "STATIC_ASSERT(stl_checked == _Range_verifiable_v<vector<bool>::const_reverse_iterator>);"
+drop = true
+departure = "the MSVC STL's internal _Range_verifiable_v, true only for the iterators it marks as checked"
+
+# The test deduces std::vector from bool arguments and compares the result with the type the rewrite names.
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P0433R2_deduction_guides/test.cpp"
+sha256 = "c5fde58179929c96e18f076ec237c7ee0e6950ed65bf24b15d8a0a995c66fc12"
+line = "static_assert(is_same_v<decltype(vb1), vector<bool>>);"
+drop = true
+departure = "class template argument deduction names std::vector, which deduces std::vector<bool> where the rewrite names the bit vector"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P0433R2_deduction_guides/test.cpp"
+sha256 = "c5fde58179929c96e18f076ec237c7ee0e6950ed65bf24b15d8a0a995c66fc12"
+line = "static_assert(is_same_v<decltype(vb3), vector<bool>>);"
+drop = true
+departure = "class template argument deduction names std::vector, which deduces std::vector<bool> where the rewrite names the bit vector"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P0433R2_deduction_guides/test.cpp"
+sha256 = "c5fde58179929c96e18f076ec237c7ee0e6950ed65bf24b15d8a0a995c66fc12"
+line = "static_assert(is_same_v<decltype(vb5), vector<bool>>);"
+drop = true
+departure = "class template argument deduction names std::vector, which deduces std::vector<bool> where the rewrite names the bit vector"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P0433R2_deduction_guides/test.cpp"
+sha256 = "c5fde58179929c96e18f076ec237c7ee0e6950ed65bf24b15d8a0a995c66fc12"
+line = "static_assert(is_same_v<decltype(vb8), vector<bool>>);"
+drop = true
+departure = "class template argument deduction names std::vector, which deduces std::vector<bool> where the rewrite names the bit vector"
+
+# The MSVC STL keeps hash's argument_type and result_type under _HAS_DEPRECATED_ADAPTOR_TYPEDEFS; the bit vector's hash has neither.
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P0513R0_poisoning_the_hash/test.cpp"
+sha256 = "242167bcf11d228848d0ecc4957facbc0738fcfe2c03e6d06fd20ced92297bc3"
+line = "STATIC_ASSERT(standard_hash_enabled<vector<bool>>());"
+to = "STATIC_ASSERT(is_trivially_copyable_v<hash<vector<bool>>> && is_trivially_default_constructible_v<hash<vector<bool>>> && noexcept(hash<vector<bool>>{}(declval<const vector<bool>&>())) && hash_disabled<const vector<bool>>() && hash_disabled<volatile vector<bool>>() && hash_disabled<const volatile vector<bool>>());"
+departure = "argument_type and result_type, deprecated in C++17 and removed in C++20; the rest of the check is kept"
+
+# [vector.bool.pspc] gives const_reference as bool, which makes const_iterator a constant iterator. A bit vector's is a proxy, so the test's expectations of its four const accesses name the wrong type.
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P0896R4_ranges_range_machinery/test.cpp"
+sha256 = "7478f5a6fe7285d61e75ac3438c7a520e70af38f7cf144741821c574a809773a"
+line = "static_assert(test_std_container<std::vector<bool>, std::random_access_iterator_tag>());"
+to = "static_assert(test_begin<std::vector<bool>>() && test_end<std::vector<bool>>() && test_rbegin<std::vector<bool>>() && test_rend<std::vector<bool>>() && test_size<std::vector<bool>, std::size_t>() && test_empty<std::vector<bool>, true>() && !ranges::view<std::vector<bool>> && test_begin<std::vector<bool> const>() && test_end<std::vector<bool> const>() && test_rbegin<std::vector<bool> const>() && test_rend<std::vector<bool> const>() && test_size<std::vector<bool> const, std::size_t>() && test_empty<std::vector<bool> const, true>());"
+departure = "const_reference is the bit vector's own proxy, so ranges::cbegin, cend, crbegin and crend wrap its iterators in basic_const_iterator; the container's other range accesses are kept"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P2278R4_ranges_const_iterator_machinery/test.compile.pass.cpp"
+sha256 = "d285f11785397a7c09a1fc3f7391e8236c958ddac51a9a72fa1659b76022a587"
+line = "static_assert(same_as<const_iterator<ConstIter>, ConstIter>);"
+to = "static_assert(same_as<const_iterator<ConstIter>, conditional_t<same_as<ConstIter, vector<bool>::const_iterator>, basic_const_iterator<ConstIter>, ConstIter>>);"
+departure = "const_reference is the bit vector's own proxy, so const_iterator is no constant iterator"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P2278R4_ranges_const_iterator_machinery/test.compile.pass.cpp"
+sha256 = "d285f11785397a7c09a1fc3f7391e8236c958ddac51a9a72fa1659b76022a587"
+line = "static_assert(same_as<const_sentinel<ConstIter>, ConstIter>);"
+to = "static_assert(same_as<const_sentinel<ConstIter>, conditional_t<same_as<ConstIter, vector<bool>::const_iterator>, basic_const_iterator<ConstIter>, ConstIter>>);"
+departure = "const_reference is the bit vector's own proxy, so const_iterator is no constant iterator"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P2278R4_ranges_const_range_machinery/test.cpp"
+sha256 = "a6db4764729e2437a38afe40f1051513ab997518b6d10cfa55be653e4024b688"
+line = "static_assert(same_as<ranges::const_iterator_t<Vb>, Vb::const_iterator>);"
+to = "static_assert(same_as<ranges::const_iterator_t<Vb>, basic_const_iterator<Vb::const_iterator>>);"
+departure = "const_reference is the bit vector's own proxy, so const_iterator is no constant iterator"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P2278R4_ranges_const_range_machinery/test.cpp"
+sha256 = "a6db4764729e2437a38afe40f1051513ab997518b6d10cfa55be653e4024b688"
+line = "static_assert(same_as<ranges::const_sentinel_t<Vb>, Vb::const_iterator>);"
+to = "static_assert(same_as<ranges::const_sentinel_t<Vb>, basic_const_iterator<Vb::const_iterator>>);"
+departure = "const_reference is the bit vector's own proxy, so const_iterator is no constant iterator"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P2278R4_ranges_const_range_machinery/test.cpp"
+sha256 = "a6db4764729e2437a38afe40f1051513ab997518b6d10cfa55be653e4024b688"
+line = "static_assert(same_as<ranges::const_iterator_t<ConstVb>, ConstVb::const_iterator>);"
+to = "static_assert(same_as<ranges::const_iterator_t<ConstVb>, basic_const_iterator<ConstVb::const_iterator>>);"
+departure = "const_reference is the bit vector's own proxy, so const_iterator is no constant iterator"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P2278R4_ranges_const_range_machinery/test.cpp"
+sha256 = "a6db4764729e2437a38afe40f1051513ab997518b6d10cfa55be653e4024b688"
+line = "static_assert(same_as<ranges::const_sentinel_t<ConstVb>, ConstVb::const_iterator>);"
+to = "static_assert(same_as<ranges::const_sentinel_t<ConstVb>, basic_const_iterator<ConstVb::const_iterator>>);"
+departure = "const_reference is the bit vector's own proxy, so const_iterator is no constant iterator"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P2278R4_ranges_const_range_machinery/test.cpp"
+sha256 = "a6db4764729e2437a38afe40f1051513ab997518b6d10cfa55be653e4024b688"
+line = "static_assert(ranges::constant_range<ConstVb>);"
+to = "static_assert(!ranges::constant_range<ConstVb>);"
+departure = "const_reference is the bit vector's own proxy, so const_iterator is no constant iterator"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/VSO_0000000_instantiate_containers/test.compile.pass.cpp"
+sha256 = "690dfaa178c5a86134618366a36bd40526bc843bc817dd1b877fdff305357b80"
+line = "std::erase(vb, true);"
+to = "xstd::erase(vb, true);"
+departure = "erase is xstd's, called qualified as the test calls std's"
+
+# The test's helpers call std::erase_if qualified over every container it instantiates, the bit vector among them.
+[[msvc-stl.assertion]]
+file = "tests/std/tests/VSO_0000000_instantiate_containers/test.compile.pass.cpp"
+sha256 = "690dfaa178c5a86134618366a36bd40526bc843bc817dd1b877fdff305357b80"
+line = "std::erase_if(value, pr1);"
+to = "if constexpr (is_same_v<T, vector<bool>>) { xstd::erase_if(value, pr1); } else { std::erase_if(value, pr1); }"
+departure = "erase_if is xstd's, called qualified as the test calls std's, so that no argument-dependent lookup completes its predicate's type"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/VSO_0000000_instantiate_containers/test.compile.pass.cpp"
+sha256 = "690dfaa178c5a86134618366a36bd40526bc843bc817dd1b877fdff305357b80"
+line = "std::erase_if(value, validating_falsity{});"
+to = "if constexpr (is_same_v<T, vector<bool>>) { xstd::erase_if(value, validating_falsity{}); } else { std::erase_if(value, validating_falsity{}); }"
+departure = "erase_if is xstd's, called qualified as the test calls std's, so that no argument-dependent lookup completes its predicate's type"
+
+
+# MSVC exports the specializations of a static member variable template that a base's members instantiate, and rejects
+# them as having no storage class to export: C2071 on the newest compiler, an internal compiler error on VS 2022.
+[[msvc-stl.expect]]
+file = "tests/std/tests/GH_001638_dllexport_derived_classes/test.compile.pass.cpp"
+sha256 = "8f5be5f6ee2be8103515818659d69b8c85ef4b74b347b9d1d94526b3d7d5cc10"
+fails = "compile"
+paragraph = "none of the bit vector's: MSVC rejects exporting a class whose base instantiates a static data member template, reported as rhalbersma/xstd-bits#529"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/VSO_0830211_container_debugging_range_checks/test.cpp"
+sha256 = "f37d5e2a0797914022ae2330aac1e7d4ba909aea667af3a3e1a0f4368470ee95"
+line = "TestCases<VectorBoolTestCaseTraits>::add_cases(exec);"
+drop = true
+departure = "the MSVC STL's iterator debugging, which tracks each of its own iterators' container to stop value-initialized, incompatible and out-of-range iterator operations that the standard leaves undefined"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/VSO_0830211_container_debugging_range_checks/test.cpp"
+sha256 = "f37d5e2a0797914022ae2330aac1e7d4ba909aea667af3a3e1a0f4368470ee95"
+line = "TestCases<ConstVectorBoolTestCaseTraits>::add_cases(exec);"
+drop = true
+departure = "the MSVC STL's iterator debugging, which tracks each of its own iterators' container to stop value-initialized, incompatible and out-of-range iterator operations that the standard leaves undefined"

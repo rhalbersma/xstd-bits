@@ -20,4 +20,4 @@ on:
 jobs:
   # New here; with almost every workflow a "uses" stub, a typo in an input name is most of what can go wrong.
   actionlint:
-    uses: rhalbersma/cpp-ci/.github/workflows/actionlint.yml@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
+    uses: rhalbersma/cpp-ci/.github/workflows/actionlint.yml@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes

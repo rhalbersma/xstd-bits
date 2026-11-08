@@ -27,7 +27,7 @@ jobs:
   mingw_ladder:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
+    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
     with:
       # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so
       # the nightly canary covers it, building every rung and build type on main.
@@ -39,7 +39,7 @@ jobs:
   mingw_cxx26:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
+    uses: rhalbersma/cpp-ci/.github/workflows/mingw.yml@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
     with:
       tiers: qualification
       cmake_args: -DXSTD_BITS_CXX_STANDARD=26

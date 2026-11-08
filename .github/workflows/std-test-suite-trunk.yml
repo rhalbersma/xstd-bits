@@ -24,7 +24,7 @@ on:
 
 jobs:
   libstdcxx:
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
     with:
       tiers: development
       build_types: Debug

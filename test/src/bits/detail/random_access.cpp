@@ -30,7 +30,7 @@
 #include <iterator>                                 // iter_move, next, prev, reverse_iterator
 #include <optional>                                 // optional
 #include <ranges>                                   // iota, subrange
-#include <type_traits>                              // is_assignable_v, is_constructible_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v
+#include <type_traits>                              // is_assignable_v, is_const_v, is_constructible_v, is_convertible_v, is_trivially_copy_constructible_v, is_trivially_destructible_v, type_identity
 #include <utility>                                  // as_const, declval
 #include <vector>                                   // vector
 
@@ -428,14 +428,14 @@ BOOST_AUTO_TEST_CASE(EverySequenceClosesItsProxyPair)
         BOOST_CHECK(true);
 }
 
-// What std::formatter is specialized for: the proxies themselves, which no deduction reaches through the class.
+// What std::formatter is specialized for: the proxies, by the template they instantiate, keyed by their adaptor.
 BOOST_AUTO_TEST_CASE(TheFormatterIsSpecializedForExactlyTheProxies)
 {
-        static_assert(xstd::bits::detail::sequence_reference<borrowed_sequence<Bits>::reference>);
-        static_assert(xstd::bits::detail::sequence_reference<borrowed_sequence<Bits>::const_reference>);
-        static_assert(not xstd::bits::detail::sequence_reference<borrowed_sequence<Bits>::iterator>);
-        static_assert(not xstd::bits::detail::sequence_reference<bool>);
-        static_assert(not xstd::bits::detail::sequence_reference<std::vector<bool>::reference>);
+        using adaptor      = borrowed_sequence<Bits>::adaptor_type;
+        constexpr auto key = std::type_identity<adaptor>{};
+        static_assert(std::same_as<adaptor::reference, xstd::bits::detail::sequence_reference<key, std::is_const_v<adaptor::adapted_type>>>);
+        static_assert(std::same_as<adaptor::const_reference, xstd::bits::detail::sequence_reference<key, true>>);
+        static_assert(not std::formattable<adaptor::iterator, char>);
 
         static_assert(std::formattable<borrowed_sequence<Bits>::reference, char>);
         static_assert(std::formattable<borrowed_sequence<hostile_bits>::reference, char>);

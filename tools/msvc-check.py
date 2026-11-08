@@ -249,7 +249,8 @@ def for_msvc(lines, stub):
             current, number = marker.group(2), int(marker.group(1))
             if opened is not None and current.startswith(stub):
                 out[opened] = "#if 1 /* the standard header itself */"
-            out.append(f'#line {number} "{current}"')
+            # A source that numbers its own lines from one leaves clang a marker of line 0, which MSVC refuses.
+            out.append(f'#line {max(number, 1)} "{current}"')
             skipped = False
             continue
         third_party = current is not None and not current.startswith((str(ROOT), stub)) and "/xstd-" not in current and not current.startswith("<")
@@ -259,7 +260,7 @@ def for_msvc(lines, stub):
             skipped = True
             continue
         if skipped:
-            out.append(f'#line {number} "{current}"')
+            out.append(f'#line {max(number, 1)} "{current}"')
             skipped = False
         continued = line.endswith("\\")
         if opens:

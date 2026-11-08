@@ -37,4 +37,15 @@ BOOST_AUTO_TEST_CASE(ItTakesAPredicateOverTheReference)
         BOOST_CHECK(std::ranges::equal(x, m));
 }
 
+// A port replaces std:: with xstd::, so the qualified names that skip argument-dependent lookup answer as std's do.
+BOOST_AUTO_TEST_CASE(ItAnswersByItsQualifiedNames)
+{
+        auto const bools = std::vector<bool>({true, false, true, true, false, false, true});
+        auto x           = xstd::bit_vector(bools.begin(), bools.end());
+        auto m           = bools;
+        BOOST_CHECK_EQUAL(xstd::erase(x, false), std::erase(m, false));
+        BOOST_CHECK_EQUAL(xstd::erase_if(x, [](bool b) -> bool { return b; }), std::erase_if(m, [](bool b) -> bool { return b; }));
+        BOOST_CHECK(std::ranges::equal(x, m));
+}
+
 BOOST_AUTO_TEST_SUITE_END()

@@ -27,7 +27,7 @@ jobs:
   gcc_ladder:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
     with:
       cmake_args: -DXSTD_BITS_BUILD_BENCHMARKS=ON
       # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so
@@ -48,7 +48,7 @@ jobs:
   gcc_cxx26:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
     with:
       tiers: qualification,development
       cmake_args: -DXSTD_BITS_CXX_STANDARD=26
@@ -57,7 +57,7 @@ jobs:
   i686:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
     with:
       arch: x86
       tiers: stable
@@ -68,18 +68,18 @@ jobs:
   hardened:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
     with:
       tiers: stable
       build_types: Release
       cxx_flags: -D_GLIBCXX_ASSERTIONS
 
-  # libstdc++'s own tests of the containers with a counterpart, and the MSVC STL's, at the stable rung's tags. One rung in
-  # Debug, since what is under test is the mapping onto bit_vector, not the compiler.
+  # libstdc++'s own tests of the containers with a counterpart, at the stable rung's tag. One rung in Debug, since what is
+  # under test is the mapping onto the subjects, not the compiler.
   std_test_suites:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@9f3e580868b62debec276f6f257bfa9105fbb252 # main after rhalbersma/cpp-ci#108, which runs the compile budget
+    uses: rhalbersma/cpp-ci/.github/workflows/gcc.yml@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
     with:
       tiers: stable
       build_types: Debug
