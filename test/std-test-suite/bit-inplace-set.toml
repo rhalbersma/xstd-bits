@@ -20,6 +20,15 @@ rewrite = [
     { regex = '(?<![\w:])set<int>', to = 'xstd::bit_inplace_set<128>' },
 ]
 
+# Spelled qualified, or unqualified under a using-directive for std, as libstdc++'s are.
+[msvc-stl]
+rewrite = [
+    # An explicit instantiation names a class template, which an alias is not.
+    { from = "template class std::set<int>;", to = "template class xstd::basic_bit_set<std::size_t, xstd::bits::detail::inplace_blocks_for<std::size_t, 2>, 128>;" },
+    { from = "std::set<int>", to = "xstd::bit_inplace_set<128>" },
+    { regex = '(?<![\w:])set<int>', to = 'xstd::bit_inplace_set<128>' },
+]
+
 [[libcxx.expect]]
 file = "libcxx/test/std/containers/associative/set/get_allocator.pass.cpp"
 sha256 = "fc4089ed8899d9c9aed2333bded6b6ee83bd0313f8066ac0240712bea14c12f1"
@@ -31,3 +40,17 @@ file = "libstdc++-v3/testsuite/23_containers/set/cons/noexcept_move_construct.cc
 sha256 = "c85c45fb35708fdf211038d32e8bd4925a9a8eda600f1d92645c45aa07264a8d"
 fails = "compile"
 paragraph = "[container.alloc.reqmts]: an inplace set allocates nothing, so it has no allocator_type to move with"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/VSO_0000000_instantiate_containers/test.compile.pass.cpp"
+sha256 = "690dfaa178c5a86134618366a36bd40526bc843bc817dd1b877fdff305357b80"
+line = "T another3(begin(c), end(c), value.key_comp(), value.get_allocator());"
+drop = true
+departure = "an inplace set allocates nothing, so it has no allocator to construct another from"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/VSO_0000000_instantiate_containers/test.compile.pass.cpp"
+sha256 = "690dfaa178c5a86134618366a36bd40526bc843bc817dd1b877fdff305357b80"
+line = "T another_no_adl3(+arr, +arr, value.key_comp(), value.get_allocator());"
+drop = true
+departure = "an inplace set allocates nothing, so it has no allocator to construct another from"
