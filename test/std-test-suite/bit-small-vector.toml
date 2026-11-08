@@ -3,8 +3,9 @@
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          http://www.boost.org/LICENSE_1_0.txt)
 
-# The vector<bool> tests read against bit_small_vector, whose first 64 bits live inside it, in a Boost small_vector.
-include = ["xstd/bits/ext/boost/bit_small_vector.hpp"]
+# The vector<bool> tests read against bit_small_vector, whose first 64 bits live inside it, in a Boost small_vector, and
+# reach erase and erase_if where <vector> declares them for std::vector<bool>.
+include = ["xstd/bits/ext/boost/bit_small_vector.hpp", "xstd/bits/bit_vector/erase_if.hpp"]
 
 # libc++ spells vector<bool> qualified.
 [libcxx]
