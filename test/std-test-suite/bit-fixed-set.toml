@@ -20,6 +20,15 @@ rewrite = [
     { regex = '(?<![\w:])set<int>', to = 'xstd::bit_fixed_set<128>' },
 ]
 
+# Spelled qualified, or unqualified under a using-directive for std, as libstdc++'s are.
+[msvc-stl]
+rewrite = [
+    # An explicit instantiation names a class template, which an alias is not.
+    { from = "template class std::set<int>;", to = "template class xstd::basic_bit_fixed_set<std::size_t, std::size_t, 128>;" },
+    { from = "std::set<int>", to = "xstd::bit_fixed_set<128>" },
+    { regex = '(?<![\w:])set<int>', to = 'xstd::bit_fixed_set<128>' },
+]
+
 [[libstdcxx.assertion]]
 file = "libstdc++-v3/testsuite/23_containers/set/cons/moveable.cc"
 sha256 = "dd6e842f78a8e2a8683857a8ef1068dbb7c8f25945b1249521fe1064fcade182"

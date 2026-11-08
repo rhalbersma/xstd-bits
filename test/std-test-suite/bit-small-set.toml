@@ -20,6 +20,15 @@ rewrite = [
     { regex = '(?<![\w:])set<int>', to = 'xstd::bit_small_set<64>' },
 ]
 
+# Spelled qualified, or unqualified under a using-directive for std, as libstdc++'s are.
+[msvc-stl]
+rewrite = [
+    # An explicit instantiation names a class template, which an alias is not.
+    { from = "template class std::set<int>;", to = "template class xstd::basic_bit_set<std::size_t, boost::container::small_vector<std::size_t, 1>>;" },
+    { from = "std::set<int>", to = "xstd::bit_small_set<64>" },
+    { regex = '(?<![\w:])set<int>', to = 'xstd::bit_small_set<64>' },
+]
+
 [[libcxx.expect]]
 file = "libcxx/test/std/containers/associative/set/get_allocator.pass.cpp"
 sha256 = "fc4089ed8899d9c9aed2333bded6b6ee83bd0313f8066ac0240712bea14c12f1"
