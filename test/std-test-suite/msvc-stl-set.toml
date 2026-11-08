@@ -1,0 +1,120 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+# The MSVC STL's tests that name set<int>, with each departure from them named. A subject's mapping beside this one names
+# the set they are read against, whose keys are std::size_t.
+[msvc-stl]
+take = [
+    { path = "tests/std/tests", select = '(?<![\w:])set<int>|std::set<int>' },
+]
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev10_709168_marking_iterators_as_checked/test.compile.pass.cpp"
+sha256 = "1b28f193ecf360cb759335c8235fa94c1abe205a2841c36f9a47ec4dd1dc0d4d"
+line = "STATIC_ASSERT(stl_checked2 == _Range_verifiable_v<set<int>::iterator>);"
+drop = true
+departure = "the MSVC STL's internal _Range_verifiable_v, true only for the iterators it marks as checked"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev10_709168_marking_iterators_as_checked/test.compile.pass.cpp"
+sha256 = "1b28f193ecf360cb759335c8235fa94c1abe205a2841c36f9a47ec4dd1dc0d4d"
+line = "STATIC_ASSERT(stl_checked2 == _Range_verifiable_v<set<int>::const_iterator>);"
+drop = true
+departure = "the MSVC STL's internal _Range_verifiable_v, true only for the iterators it marks as checked"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev10_709168_marking_iterators_as_checked/test.compile.pass.cpp"
+sha256 = "1b28f193ecf360cb759335c8235fa94c1abe205a2841c36f9a47ec4dd1dc0d4d"
+line = "STATIC_ASSERT(stl_checked2 == _Range_verifiable_v<set<int>::reverse_iterator>);"
+drop = true
+departure = "the MSVC STL's internal _Range_verifiable_v, true only for the iterators it marks as checked"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev10_709168_marking_iterators_as_checked/test.compile.pass.cpp"
+sha256 = "1b28f193ecf360cb759335c8235fa94c1abe205a2841c36f9a47ec4dd1dc0d4d"
+line = "STATIC_ASSERT(stl_checked2 == _Range_verifiable_v<set<int>::const_reverse_iterator>);"
+drop = true
+departure = "the MSVC STL's internal _Range_verifiable_v, true only for the iterators it marks as checked"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev10_709168_marking_iterators_as_checked/test.compile.pass.cpp"
+sha256 = "1b28f193ecf360cb759335c8235fa94c1abe205a2841c36f9a47ec4dd1dc0d4d"
+line = "STATIC_ASSERT(test_unwrappable<set<int>::iterator, true>());"
+drop = true
+departure = "the MSVC STL's internal _Unwrappable_v, true only for the iterators it unwraps"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev10_709168_marking_iterators_as_checked/test.compile.pass.cpp"
+sha256 = "1b28f193ecf360cb759335c8235fa94c1abe205a2841c36f9a47ec4dd1dc0d4d"
+line = "STATIC_ASSERT(test_unwrappable<set<int>::const_iterator, true>());"
+drop = true
+departure = "the MSVC STL's internal _Unwrappable_v, true only for the iterators it unwraps"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev10_709168_marking_iterators_as_checked/test.compile.pass.cpp"
+sha256 = "1b28f193ecf360cb759335c8235fa94c1abe205a2841c36f9a47ec4dd1dc0d4d"
+line = "STATIC_ASSERT(test_unwrappable<set<int>::reverse_iterator, true>());"
+drop = true
+departure = "the MSVC STL's internal _Unwrappable_v, true only for the iterators it unwraps"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/Dev10_709168_marking_iterators_as_checked/test.compile.pass.cpp"
+sha256 = "1b28f193ecf360cb759335c8235fa94c1abe205a2841c36f9a47ec4dd1dc0d4d"
+line = "STATIC_ASSERT(test_unwrappable<set<int>::const_reverse_iterator, true>());"
+drop = true
+departure = "the MSVC STL's internal _Unwrappable_v, true only for the iterators it unwraps"
+
+[[msvc-stl.expect]]
+file = "tests/std/tests/GH_001638_dllexport_derived_classes/test.compile.pass.cpp"
+sha256 = "8f5be5f6ee2be8103515818659d69b8c85ef4b74b347b9d1d94526b3d7d5cc10"
+fails = "compile"
+paragraph = "none of the bit set's: MSVC rejects exporting a class whose base instantiates a static data member template, reported as rhalbersma/xstd-bits#529"
+
+[[msvc-stl.expect]]
+file = "tests/std/tests/GH_002992_unwrappable_iter_sent_pairs/test.compile.pass.cpp"
+sha256 = "d21c02ed734f1dc0e573039cd3c9b0e22e660efdaebcd8d3ca16f441f5d62b57"
+fails = "compile"
+paragraph = "the MSVC STL's internal unwrapping, _Unwrapped and _Unwrappable_sentinel_for, in which only its own iterators take part"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P0896R4_ranges_range_machinery/test.cpp"
+sha256 = "7478f5a6fe7285d61e75ac3438c7a520e70af38f7cf144741821c574a809773a"
+line = "static_assert(test_std_container<std::set<int>, std::bidirectional_iterator_tag>());"
+to = "static_assert(test_begin<std::set<int>>() && test_end<std::set<int>>() && test_rbegin<std::set<int>>() && test_rend<std::set<int>>() && test_size<std::set<int>, std::size_t>() && test_empty<std::set<int>, true>() && !ranges::view<std::set<int>> && test_begin<std::set<int> const>() && test_end<std::set<int> const>() && test_rbegin<std::set<int> const>() && test_rend<std::set<int> const>() && test_size<std::set<int> const, std::size_t>() && test_empty<std::set<int> const, true>());"
+departure = "const_reference is the bit set's own proxy, so ranges::cbegin, cend, crbegin and crend wrap its iterators in basic_const_iterator; the container's other range accesses are kept"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P1209R0_erase_if_erase/test.cpp"
+sha256 = "41746f995666bbc7e7bf5cea5f36b2ee1688edbe72bbe67e7edc77ebc0acf9cf"
+line = "const auto s_removed = std::erase_if(s, is_odd{});"
+to = "const is_odd odd{}; const auto s_removed = xstd::erase_if(s, [&odd](const std::size_t i) { return odd(static_cast<int>(i)); });"
+departure = "erase_if is xstd's, called qualified as the test calls std's, and the set's keys are std::size_t, which is_odd takes as int; it is still never copied"
+
+[[msvc-stl.expect]]
+file = "tests/std/tests/P1425R4_queue_stack_constructors/test.cpp"
+sha256 = "ec8d6979cbf1a0008507b4d81daa39f9770b422bcb68278d9a00b76187356c05"
+fails = "compile"
+paragraph = "[set.overview]: the bit set's value_type is its key, std::size_t, so the stacks and queues its iterators deduce hold std::size_t where the test asserts int, and its allocator-extended ones are ill-formed"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/P2286R8_text_formatting_range_set/test.cpp"
+sha256 = "b5de4e2ad352a344845e9ece4d29e42973169bff638bd0c5c358eb0a2e28078f"
+line = "test_int<CharT>(check, check_exception, adaptor{set{1, 42, 2, -42}});"
+to = "(void) check; (void) check_exception;"
+departure = "the bit set's keys are std::size_t, which -42 is not, and set{...} deduces the standard set, which the adaptor no longer holds"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/VSO_0000000_instantiate_containers/test.compile.pass.cpp"
+sha256 = "690dfaa178c5a86134618366a36bd40526bc843bc817dd1b877fdff305357b80"
+line = "std::erase_if(value, pr1);"
+to = "if constexpr (is_same_v<T, set<int>>) { xstd::erase_if(value, pr1); } else { std::erase_if(value, pr1); }"
+departure = "erase_if is xstd's, called qualified as the test calls std's, so that no argument-dependent lookup completes its predicate's type"
+
+[[msvc-stl.assertion]]
+file = "tests/std/tests/VSO_0000000_instantiate_containers/test.compile.pass.cpp"
+sha256 = "690dfaa178c5a86134618366a36bd40526bc843bc817dd1b877fdff305357b80"
+line = "std::erase_if(value, validating_falsity{});"
+to = "if constexpr (is_same_v<T, set<int>>) { xstd::erase_if(value, validating_falsity{}); } else { std::erase_if(value, validating_falsity{}); }"
+departure = "erase_if is xstd's, called qualified as the test calls std's, so that no argument-dependent lookup completes its predicate's type"

@@ -19,3 +19,12 @@ rewrite = [
     { from = "std::set<int>", to = "xstd::bit_set" },
     { regex = '(?<![\w:])set<int>', to = 'xstd::bit_set' },
 ]
+
+# Spelled qualified, or unqualified under a using-directive for std, as libstdc++'s are.
+[msvc-stl]
+rewrite = [
+    # An explicit instantiation names a class template, which an alias is not.
+    { from = "template class std::set<int>;", to = "template class xstd::basic_bit_set<std::size_t>;" },
+    { from = "std::set<int>", to = "xstd::bit_set" },
+    { regex = '(?<![\w:])set<int>', to = 'xstd::bit_set' },
+]
