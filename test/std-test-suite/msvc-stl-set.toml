@@ -89,8 +89,8 @@ departure = "const_reference is the bit set's own proxy, so ranges::cbegin, cend
 file = "tests/std/tests/P1209R0_erase_if_erase/test.cpp"
 sha256 = "41746f995666bbc7e7bf5cea5f36b2ee1688edbe72bbe67e7edc77ebc0acf9cf"
 line = "const auto s_removed = std::erase_if(s, is_odd{});"
-to = "const auto s_removed = xstd::erase_if(s, is_odd{});"
-departure = "erase_if is xstd's, called qualified as the test calls std's"
+to = "const is_odd odd{}; const auto s_removed = xstd::erase_if(s, [&odd](const std::size_t i) { return odd(static_cast<int>(i)); });"
+departure = "erase_if is xstd's, called qualified as the test calls std's, and the set's keys are std::size_t, which is_odd takes as int; it is still never copied"
 
 [[msvc-stl.expect]]
 file = "tests/std/tests/P1425R4_queue_stack_constructors/test.cpp"
@@ -102,8 +102,8 @@ paragraph = "[set.overview]: the bit set's value_type is its key, std::size_t, s
 file = "tests/std/tests/P2286R8_text_formatting_range_set/test.cpp"
 sha256 = "b5de4e2ad352a344845e9ece4d29e42973169bff638bd0c5c358eb0a2e28078f"
 line = "test_int<CharT>(check, check_exception, adaptor{set{1, 42, 2, -42}});"
-drop = true
-departure = "the bit set's keys are std::size_t, which -42 is not, and set{...} deduces std::set<int>, which the adaptor no longer holds"
+to = "(void) check; (void) check_exception;"
+departure = "the bit set's keys are std::size_t, which -42 is not, and set{...} deduces the standard set, which the adaptor no longer holds"
 
 [[msvc-stl.assertion]]
 file = "tests/std/tests/VSO_0000000_instantiate_containers/test.compile.pass.cpp"
