@@ -25,4 +25,4 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: rhalbersma/cpp-ci/.github/workflows/codeql.yml@a634ddb30dc4da914d7eb281029e8f9bb85e2d63 # v0.16.0
+    uses: rhalbersma/cpp-ci/.github/workflows/codeql.yml@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes

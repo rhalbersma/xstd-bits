@@ -43,17 +43,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: rhalbersma/cpp-ci/.github/actions/apt-retry@a634ddb30dc4da914d7eb281029e8f9bb85e2d63 # v0.16.0
+      - uses: rhalbersma/cpp-ci/.github/actions/apt-retry@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
 
       - name: Install GCC
-        uses: rhalbersma/cpp-ci/.github/actions/install-gcc@a634ddb30dc4da914d7eb281029e8f9bb85e2d63 # v0.16.0
+        uses: rhalbersma/cpp-ci/.github/actions/install-gcc@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
         with:
           version: "15"
           trunk: false
 
       - name: Install Clang
         if: startsWith(matrix.compiler, 'clang')
-        uses: rhalbersma/cpp-ci/.github/actions/install-clang@a634ddb30dc4da914d7eb281029e8f9bb85e2d63 # v0.16.0
+        uses: rhalbersma/cpp-ci/.github/actions/install-clang@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
         with:
           version: "22"
           llvm_suffix: "-22"
@@ -68,7 +68,7 @@ jobs:
 
       - name: Locate the overlay triplets
         id: overlay
-        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-overlay@a634ddb30dc4da914d7eb281029e8f9bb85e2d63 # v0.16.0
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-overlay@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
 
       - name: Restore vcpkg binary cache
         id: vcpkg-cache
@@ -79,10 +79,10 @@ jobs:
           restore-keys: ${{ env.VCPKG_CACHE_KEY }}
 
       - name: Check out vcpkg at the pinned commit
-        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-setup@a634ddb30dc4da914d7eb281029e8f9bb85e2d63 # v0.16.0
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-setup@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
 
       - name: Install the dependencies
-        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-install@a634ddb30dc4da914d7eb281029e8f9bb85e2d63 # v0.16.0
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-install@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
         with:
           triplet: ${{ env.TRIPLET }}
           overlay_triplets: ${{ steps.overlay.outputs.triplets }}
