@@ -248,9 +248,7 @@ Each ladder's required `all` is this repository's own job, carrying the name bes
 
 ## Releases
 
-A release is a tag `vX.Y.Z` matching `project(VERSION)`, made after xstd-ints and xstd-misc have tagged the releases
-it pins. Before the tag, [CHANGELOG.md](CHANGELOG.md) has the release's entry, written from the pull requests merged
-since the previous tag and grouped by what a user meets, with its date in place of "unreleased".
+A release is a tag `vX.Y.Z` matching `project(VERSION)`, made after xstd-ints and xstd-misc have tagged the releases it pins. Before the tag, [CHANGELOG.md](CHANGELOG.md) has the release's entry, written from the pull requests merged since the previous tag and grouped by what a user meets, with its date in place of "unreleased".
 
 ## License
 
