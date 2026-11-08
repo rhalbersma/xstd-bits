@@ -23,7 +23,7 @@
 #include <xstd/bits/detail/input_iterator_pair.hpp>     // input_iterator_pair
 #include <xstd/bits/detail/non_volatile.hpp>            // non_volatile
 #include <xstd/bits/detail/owner_members.hpp>           // owner_members
-#include <xstd/bits/detail/ownership.hpp>               // owned_storage, owner_of, owns, reads, set_reading_tag, storage, storage_access
+#include <xstd/bits/detail/ownership.hpp>               // owned_storage, owner_of, owns, set_reading_tag, storage, storage_access
 #include <xstd/bits/detail/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
 #include <xstd/bits/detail/storage_ptr.hpp>             // storage_ptr_t, storage_ref_t
 #include <xstd/bits/detail/throw.hpp>                   // throw_exception
