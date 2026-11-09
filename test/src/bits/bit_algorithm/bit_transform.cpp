@@ -3,19 +3,19 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>              // bools_of, for_each_sequence, for_each_window, offsets, patterned, sequences, striped_vector
-#include <test/for_each_type.hpp>                    // for_each_type
 #include <xstd/bits/bit_algorithm/bit_transform.hpp> // bit_transform
 #include <xstd/bits/bit_array.hpp>                   // basic_bit_array, bit_array
 #include <xstd/bits/bit_span/bit_span.hpp>           // bit_span
 #include <xstd/bits/bit_vector.hpp>                  // bit_vector
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <test/algorithm/sequences.hpp>              // agrees_through_iterators, bools_of, for_each_sequence, for_each_window, offsets, patterned, sequences, striped_vector
+#include <test/for_each_type.hpp>                    // for_each_type
 #include <algorithm>                                 // binary_transform_result, transform, unary_transform_result
 #include <concepts>                                  // same_as
 #include <cstddef>                                   // ptrdiff_t, size_t
 #include <cstdint>                                   // uint64_t, uint8_t
 #include <functional>                                // bit_and, bit_or, bit_xor, equal_to, greater_equal, identity, less, logical_and, logical_not, logical_or, not_equal_to
-#include <ranges>                                    // begin, dangling, end, iterator_t
+#include <ranges>                                    // begin, dangling, end, iterator_t, size
 #include <string>                                    // string
 #include <tuple>                                     // apply, tuple
 #include <utility>                                   // declval
@@ -24,6 +24,9 @@
 BOOST_AUTO_TEST_SUITE(BitTransform)
 
 namespace {
+
+template<class I>
+concept transform_between = requires (I i) { xstd::ranges::bit_transform(i, i, xstd::bit_vector().begin(), std::logical_not()); xstd::bit_transform(i, i, i, xstd::bit_vector().begin(), std::not_equal_to()); };
 
 template<class R, class O, class F>
 concept transformable = requires (R const& r, O out, F f) { xstd::ranges::bit_transform(r, out, f); };
@@ -150,6 +153,30 @@ BOOST_AUTO_TEST_CASE(TransformsBetweenOurSequencesAlone)
         static_assert(std::same_as<decltype(xstd::ranges::bit_transform(A(), std::declval<It>(), Not())), std::ranges::unary_transform_result<std::ranges::dangling, It>>);
         static_assert(std::same_as<decltype(xstd::ranges::bit_transform(A(), std::declval<A&>(), std::declval<It>(), std::bit_and<>())), std::ranges::binary_transform_result<std::ranges::dangling, It, It>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// From between two iterators, as std::ranges::transform and as std::transform, into a destination at an offset across a block.
+BOOST_AUTO_TEST_CASE(TransformsFromBetweenTwoIterators)
+{
+        auto const agrees = [](auto first, auto last, auto const& w) -> bool {
+                auto const n = static_cast<std::ptrdiff_t>(std::ranges::size(w));
+                auto want    = xstd::bit_vector(140UZ);
+                auto got     = want;
+                auto classic = want;
+                auto const range_result = xstd::ranges::bit_transform(w, w, want.begin() + 67, std::not_equal_to());
+                auto const iter_result  = xstd::ranges::bit_transform(first, last, first, last, got.begin() + 67, std::not_equal_to());
+                auto const classic_end  = xstd::bit_transform(first, last, classic.begin() + 67, std::logical_not());
+                auto unary = want;
+                (void)xstd::ranges::bit_transform(w, unary.begin() + 67, std::logical_not());
+                auto unary_iter = want;
+                auto const unary_result = xstd::ranges::bit_transform(first, last, unary_iter.begin() + 67, std::logical_not());
+                auto binary_classic = want;
+                auto const binary_end = xstd::bit_transform(first, last, first, binary_classic.begin() + 67, std::not_equal_to());
+                return got == want and classic == unary and unary_iter == unary and binary_classic == want and iter_result.in1 == last and iter_result.in2 == last and iter_result.out - got.begin() == range_result.out - want.begin() and unary_result.in == last and classic_end - classic.begin() == 67 + n and binary_end - binary_classic.begin() == 67 + n;
+        };
+        BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::bit_array<70>()), agrees) == 0);
+        static_assert(transform_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not transform_between<std::vector<bool>::const_iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

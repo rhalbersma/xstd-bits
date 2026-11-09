@@ -7,7 +7,9 @@ As `ranges::rotate` in [[alg.rotate]](https://eel.is/c++draft/alg.rotate), with:
 - *Constraints:* As for `bit_reverse`.
 - *Preconditions:* `middle` is in `[ranges::begin(r), ranges::end(r)]`, checked by an `assert`.
 - *Effects:* Position `i` takes position (`i` + `m`) mod `N`, for `m = middle - ranges::begin(r)`, so a whole turn
-  is no turn. The blocks rotate by whole blocks, then a funnel shift moves the remaining bits across each boundary.
+  is no turn. A whole sequence whose storage rotates itself rotates by whole blocks, then a funnel shift moves the
+  remaining bits across each boundary. A window reverses `[begin, middle)`, then `[middle, end)`, then itself, as
+  `bit_reverse` does.
 - *Returns:* `{ranges::begin(r) + (ranges::end(r) - middle), ranges::end(r)}`.
 - *Complexity:* O(`N`/`D`), without allocating.
 - *Remarks:* It moves no proxy through the standard library, so it is exact over proxy references where libstdc++'s

@@ -3,21 +3,25 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>           // for_each_window, patterned
 #include <xstd/bits/bit_algorithm/bit_any_of.hpp> // bit_any_of
 #include <xstd/bits/bit_array.hpp>                // basic_bit_array, bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>    // bit_fixed_set
 #include <xstd/bits/bit_span/bit_span.hpp>        // bit_span
 #include <xstd/bits/bit_vector.hpp>               // bit_vector
 #include <boost/test/unit_test.hpp>               // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <test/algorithm/sequences.hpp>           // agrees_through_iterators, for_each_window, patterned
 #include <algorithm>                              // any_of
 #include <cstdint>                                // uint8_t
 #include <functional>                             // identity
+#include <ranges>                                 // iterator_t
 #include <vector>                                 // vector
 
 BOOST_AUTO_TEST_SUITE(BitAnyOf)
 
 namespace {
+
+template<class I>
+concept any_of_between = requires (I i) { xstd::ranges::bit_any_of(i, i); xstd::bit_any_of(i, i); };
 
 template<class R>
 concept quantifiable = requires (R const& r) { xstd::ranges::bit_any_of(r); };
@@ -70,6 +74,17 @@ BOOST_AUTO_TEST_CASE(AsksOurSequencesAlone)
         static_assert(agrees(test::algorithm::patterned(xstd::bit_array<70>())));
         static_assert(quantifiable<xstd::bit_array<8>> and not quantifiable<std::vector<bool>> and not quantifiable<xstd::bit_fixed_set<8>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// Between two iterators, as std::ranges::any_of(first, last) and as std::any_of, at every offset and length.
+BOOST_AUTO_TEST_CASE(AnyOfBetweenTwoIterators)
+{
+        auto const agrees = [](auto first, auto last, auto const& w) -> bool {
+                return xstd::ranges::bit_any_of(first, last) == xstd::ranges::bit_any_of(w) and xstd::bit_any_of(first, last) == xstd::ranges::bit_any_of(w);
+        };
+        BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::bit_array<70>()), agrees) == 0);
+        static_assert(any_of_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not any_of_between<std::vector<bool>::const_iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

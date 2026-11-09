@@ -14,5 +14,6 @@ As `ranges::shift_left` and `ranges::shift_right` in [[alg.shift]](https://eel.i
   otherwise; for `bit_shift_right`, `{ranges::begin(r) + n, ranges::end(r)}` where `n < N` and
   `{ranges::end(r), ranges::end(r)}` otherwise.
 - *Complexity:* O(`N`/`D`).
-- *Remarks:* A sequence's front is a bit string's low end, so `bit_shift_left` is the storage's `>>=` and
-  `bit_shift_right` its `<<=`.
+- *Remarks:* A sequence's front is a bit string's low end, so on a whole sequence `bit_shift_left` is the storage's
+  `>>=` and `bit_shift_right` its `<<=`. A window copies within itself, `bit_shift_left` lowest first and
+  `bit_shift_right` highest first so that nothing is overwritten before it is read, then clears the `n` vacated.

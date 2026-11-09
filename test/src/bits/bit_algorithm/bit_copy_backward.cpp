@@ -3,25 +3,28 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>                  // bools_of, for_each_sequence, for_each_window, offsets, patterned, sequences, striped_vector
-#include <test/for_each_type.hpp>                        // for_each_type
 #include <xstd/bits/bit_algorithm/bit_copy_backward.hpp> // bit_copy_backward
 #include <xstd/bits/bit_array.hpp>                       // basic_bit_array, bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>           // bit_fixed_set
 #include <xstd/bits/bit_span/bit_span.hpp>               // bit_span
 #include <xstd/bits/bit_vector.hpp>                      // basic_bit_vector, bit_vector
 #include <boost/test/unit_test.hpp>                      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <test/algorithm/sequences.hpp>                  // agrees_through_iterators, bools_of, for_each_sequence, for_each_window, offsets, patterned, sequences, striped_vector
+#include <test/for_each_type.hpp>                        // for_each_type
 #include <algorithm>                                     // copy_backward, copy_backward_result
 #include <concepts>                                      // same_as
 #include <cstddef>                                       // ptrdiff_t, size_t
 #include <cstdint>                                       // uint64_t, uint8_t
-#include <ranges>                                        // dangling, end, iterator_t
+#include <ranges>                                        // dangling, end, iterator_t, size
 #include <utility>                                       // declval, pair
 #include <vector>                                        // vector
 
 BOOST_AUTO_TEST_SUITE(BitCopyBackward)
 
 namespace {
+
+template<class I>
+concept copy_backward_between = requires (I i) { xstd::ranges::bit_copy_backward(i, i, xstd::bit_vector().end()); xstd::bit_copy_backward(i, i, xstd::bit_vector().end()); };
 
 template<class R, class O>
 concept copyable = requires (R const& r, O out) { xstd::ranges::bit_copy_backward(r, out); };
@@ -113,6 +116,24 @@ BOOST_AUTO_TEST_CASE(CopiesBetweenOurSequencesAlone)
         static_assert(not copyable<std::vector<bool>, std::ranges::iterator_t<A>> and not copyable<xstd::bit_fixed_set<8>, std::ranges::iterator_t<A>>);
         static_assert(std::same_as<decltype(xstd::ranges::bit_copy_backward(A(), std::declval<std::ranges::iterator_t<A>>())), std::ranges::copy_backward_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// From between two iterators, as std::ranges::copy_backward and as std::copy_backward, into a destination at an offset across a block.
+BOOST_AUTO_TEST_CASE(CopiesBackwardFromBetweenTwoIterators)
+{
+        auto const agrees = [](auto first, auto last, auto const& w) -> bool {
+                auto const n = static_cast<std::ptrdiff_t>(std::ranges::size(w));
+                auto want    = xstd::bit_vector(140UZ);
+                auto got     = want;
+                auto classic = want;
+                auto const range_result = xstd::ranges::bit_copy_backward(w, want.begin() + 90);
+                auto const iter_result  = xstd::ranges::bit_copy_backward(first, last, got.begin() + 90);
+                auto const classic_end  = xstd::bit_copy_backward(first, last, classic.begin() + 90);
+                return got == want and classic == want and iter_result.in == last and iter_result.out - got.begin() == range_result.out - want.begin() and classic_end - classic.begin() == 90 - n;
+        };
+        BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::bit_array<70>()), agrees) == 0);
+        static_assert(copy_backward_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not copy_backward_between<std::vector<bool>::const_iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

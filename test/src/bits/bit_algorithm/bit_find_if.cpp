@@ -3,26 +3,30 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>            // for_each_sequence, for_each_window, patterned, sequences
-#include <test/algorithm/sets.hpp>                 // for_each_set, sets
-#include <test/for_each_type.hpp>                  // for_each_type
 #include <xstd/bits/bit_algorithm/bit_find_if.hpp> // bit_find_if
 #include <xstd/bits/bit_array.hpp>                 // basic_bit_array, bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>     // bit_fixed_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>      // bit_set_view
 #include <xstd/bits/bit_span/bit_span.hpp>         // bit_span
 #include <boost/test/unit_test.hpp>                // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <test/algorithm/sequences.hpp>            // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences
+#include <test/algorithm/sets.hpp>                 // for_each_set, sets
+#include <test/for_each_type.hpp>                  // for_each_type
 #include <algorithm>                               // find_if
 #include <concepts>                                // same_as
 #include <cstddef>                                 // size_t
 #include <cstdint>                                 // uint8_t
-#include <ranges>                                  // begin, dangling, end
+#include <functional>                              // logical_not
+#include <ranges>                                  // begin, dangling, end, iterator_t
 #include <set>                                     // set
 #include <vector>                                  // vector
 
 BOOST_AUTO_TEST_SUITE(BitFindIf)
 
 namespace {
+
+template<class I>
+concept find_if_between = requires (I i) { xstd::ranges::bit_find_if(i, i, std::logical_not()); xstd::bit_find_if(i, i, std::logical_not()); };
 
 template<class R, class Pred>
 concept findable_if = requires (R const& r, Pred pred) { xstd::ranges::bit_find_if(r, pred); };
@@ -134,6 +138,18 @@ BOOST_AUTO_TEST_CASE(AnswersAsRangesFindIfDoes)
         static_assert(std::same_as<decltype(xstd::ranges::bit_find_if(S(), [](std::size_t) -> bool { return true; })), std::ranges::dangling>);
         static_assert(std::same_as<decltype(xstd::ranges::bit_find_if(A(), [](bool) -> bool { return true; })), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// Between two iterators, as std::ranges::find_if(first, last, pred) and as std::find_if, at the same position.
+BOOST_AUTO_TEST_CASE(FindsIfBetweenTwoIterators)
+{
+        auto const agrees = [](auto first, auto last, auto const& w) -> bool {
+                auto const at = xstd::ranges::bit_find_if(w, std::logical_not()) - std::ranges::begin(w);
+                return xstd::ranges::bit_find_if(first, last, std::logical_not()) - first == at and xstd::bit_find_if(first, last, std::logical_not()) - first == at;
+        };
+        BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::bit_array<70>()), agrees) == 0);
+        static_assert(find_if_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not find_if_between<std::vector<bool>::const_iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

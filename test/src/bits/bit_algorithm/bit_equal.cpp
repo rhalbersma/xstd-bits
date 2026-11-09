@@ -3,10 +3,6 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/partner.hpp>            // partner_t
-#include <test/algorithm/sequences.hpp>          // for_each_sequence, for_each_window, patterned, sequences
-#include <test/algorithm/sets.hpp>               // for_each_set, sets
-#include <test/for_each_type.hpp>                // for_each_type
 #include <xstd/bits/bit_algorithm/bit_equal.hpp> // bit_equal
 #include <xstd/bits/bit_array.hpp>               // basic_bit_array, bit_array
 #include <xstd/bits/bit_inplace_vector.hpp>      // basic_bit_inplace_vector
@@ -17,16 +13,23 @@
 #include <xstd/bits/bit_span/bit_span.hpp>       // bit_span
 #include <xstd/bits/bit_vector.hpp>              // basic_bit_vector, bit_vector
 #include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <test/algorithm/partner.hpp>            // partner_t
+#include <test/algorithm/sequences.hpp>          // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences
+#include <test/algorithm/sets.hpp>               // for_each_set, sets
+#include <test/for_each_type.hpp>                // for_each_type
 #include <algorithm>                             // equal
-#include <cstddef>                               // size_t
+#include <cstddef>                               // ptrdiff_t, size_t
 #include <cstdint>                               // uint64_t, uint8_t
 #include <functional>                            // greater
-#include <ranges>                                // range_value_t
+#include <ranges>                                // iterator_t, range_value_t
 #include <vector>                                // vector
 
 BOOST_AUTO_TEST_SUITE(BitEqual)
 
 namespace {
+
+template<class I>
+concept equal_between = requires (I i) { xstd::ranges::bit_equal(i, i, i, i); xstd::bit_equal(i, i, i); xstd::bit_equal(i, i, i, i); };
 
 template<class R1, class R2>
 concept comparable = requires (R1 const& r1, R2 const& r2) { xstd::ranges::bit_equal(r1, r2); };
@@ -123,6 +126,24 @@ BOOST_AUTO_TEST_CASE(ComparesOneReadingAndOneWidthKindAlone)
         static_assert(not comparable<xstd::bit_array<8>, xstd::bit_fixed_set<8>> and not comparable<std::vector<bool>, std::vector<bool>>);
         static_assert(not comparable<xstd::bit_fixed_set<8>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 8, xstd::bit_key_mapping<std::size_t>, std::greater<>>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// Between two pairs of iterators, as std::ranges::equal and as std::equal, against another sequence one bool apart.
+BOOST_AUTO_TEST_CASE(EqualBetweenTwoPairsOfIterators)
+{
+        auto const agrees = [](auto first, auto last, auto const& w) -> bool {
+                auto other = xstd::bit_vector(first, last);
+                auto const n = static_cast<std::ptrdiff_t>(other.size());
+                auto const same = xstd::ranges::bit_equal(first, last, other.begin(), other.end()) and xstd::bit_equal(first, last, other.begin()) and xstd::bit_equal(first, last, other.begin(), other.end());
+                if (n == 0) {
+                        return same and xstd::ranges::bit_equal(w, other);
+                }
+                other[0] = not other[0];
+                return same and not xstd::ranges::bit_equal(first, last, other.begin(), other.end()) and not xstd::bit_equal(first, last, other.begin());
+        };
+        BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::bit_array<70>()), agrees) == 0);
+        static_assert(equal_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not equal_between<std::vector<bool>::const_iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

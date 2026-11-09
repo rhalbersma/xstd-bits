@@ -6,11 +6,12 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_BLIT_HPP
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_BLIT_HPP
 
-#include <xstd/bits/detail/shift.hpp> // partial_block_mask, shl, shr
-#include <algorithm>                  // min
-#include <concepts>                   // convertible_to, invocable, same_as
-#include <cstddef>                    // size_t
-#include <type_traits>                // invoke_result_t, remove_cvref_t
+#include <xstd/bits/detail/intrinsic.hpp> // countr_zero
+#include <xstd/bits/detail/shift.hpp>     // partial_block_mask, shl, shr
+#include <algorithm>                      // min
+#include <concepts>                       // convertible_to, invocable, same_as
+#include <cstddef>                        // size_t
+#include <type_traits>                    // invoke_result_t, remove_cvref_t
 
 namespace xstd::bits::detail {
 
@@ -125,6 +126,23 @@ constexpr auto swap_bools(X&& x, std::size_t i, Y&& y, std::size_t j, std::size_
                 x.block_at(i + k, read_block<x_block>(y, j + k, count), partial_block_mask<x_block>(count));
                 y.block_at(j + k, from_x, partial_block_mask<y_block>(count));
         }
+}
+
+// The first of the len positions where x from position i and y from position j differ, or len: a block of x at a time.
+template<class X, class Y>
+[[nodiscard]] constexpr auto mismatch_bools(X const& x, std::size_t i, Y const& y, std::size_t j, std::size_t len) noexcept
+        -> std::size_t
+{
+        using block_type      = X::block_type;
+        constexpr auto digits = X::bits_per_block;
+        for (auto k = 0UZ; k < len; k += digits) {
+                auto const count = std::ranges::min(digits, len - k);
+                auto const diff  = static_cast<block_type>(static_cast<block_type>(read_block<block_type>(x, i + k, count) ^ read_block<block_type>(y, j + k, count)) & partial_block_mask<block_type>(count));
+                if (diff != block_type{}) {
+                        return k + countr_zero(diff);
+                }
+        }
+        return len;
 }
 
 // A function of one bool as a block expression: asked of false and of true, it is a constant, the identity or not.

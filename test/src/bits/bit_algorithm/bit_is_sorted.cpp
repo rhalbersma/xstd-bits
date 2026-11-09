@@ -3,21 +3,24 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>              // for_each_sequence, for_each_window, patterned, sequences, sorted
-#include <test/for_each_type.hpp>                    // for_each_type
 #include <xstd/bits/bit_algorithm/bit_is_sorted.hpp> // bit_is_sorted
 #include <xstd/bits/bit_array.hpp>                   // basic_bit_array, bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>       // bit_fixed_set
 #include <xstd/bits/bit_span/bit_span.hpp>           // bit_span
 #include <boost/test/unit_test.hpp>                  // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <test/algorithm/sequences.hpp>              // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences, sorted
+#include <test/for_each_type.hpp>                    // for_each_type
 #include <algorithm>                                 // is_sorted
 #include <cstdint>                                   // uint8_t
-#include <ranges>                                    // begin, end
+#include <ranges>                                    // begin, end, iterator_t
 #include <vector>                                    // vector
 
 BOOST_AUTO_TEST_SUITE(BitIsSorted)
 
 namespace {
+
+template<class I>
+concept is_sorted_between = requires (I i) { xstd::ranges::bit_is_sorted(i, i); xstd::bit_is_sorted(i, i); };
 
 template<class R>
 concept askable = requires (R const& r) { xstd::ranges::bit_is_sorted(r); };
@@ -59,6 +62,17 @@ BOOST_AUTO_TEST_CASE(AsksOurSequencesAlone)
         static_assert(agrees(test::algorithm::patterned(xstd::bit_array<70>())) and agrees(test::algorithm::sorted(xstd::bit_array<70>(), 30UZ)));
         static_assert(askable<xstd::bit_array<8>> and not askable<std::vector<bool>> and not askable<xstd::bit_fixed_set<8>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// Between two iterators, as std::ranges::is_sorted(first, last) and as std::is_sorted, at every offset and length.
+BOOST_AUTO_TEST_CASE(IsSortedBetweenTwoIterators)
+{
+        auto const agrees = [](auto first, auto last, auto const& w) -> bool {
+                return xstd::ranges::bit_is_sorted(first, last) == xstd::ranges::bit_is_sorted(w) and xstd::bit_is_sorted(first, last) == xstd::ranges::bit_is_sorted(w);
+        };
+        BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::bit_array<70>()), agrees) == 0);
+        static_assert(is_sorted_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not is_sorted_between<std::vector<bool>::const_iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

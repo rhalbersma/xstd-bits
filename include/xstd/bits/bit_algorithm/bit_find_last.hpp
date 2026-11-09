@@ -6,11 +6,13 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_FIND_LAST_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_FIND_LAST_HPP
 
-#include <xstd/bits/bit_algorithm/detail/find.hpp> // find_last_value
-#include <xstd/bits/detail/ownership.hpp>          // reads_bools, storage_access
-#include <xstd/bits/detail/sequence_storage.hpp>   // first_position
-#include <cstddef>                                 // ptrdiff_t
-#include <ranges>                                  // begin, borrowed_subrange_t, end, size
+#include <xstd/bits/bit_algorithm/detail/find.hpp>            // find_last_value
+#include <xstd/bits/bit_algorithm/detail/iterator_window.hpp> // bool_sentinel_for, iterator_window, rebased
+#include <xstd/bits/detail/iterator_concepts.hpp>             // bool_iterator
+#include <xstd/bits/detail/ownership.hpp>                     // reads_bools, storage_access
+#include <xstd/bits/detail/sequence_storage.hpp>              // first_position
+#include <cstddef>                                            // ptrdiff_t
+#include <ranges>                                             // begin, borrowed_subrange_t, end, size, subrange
 
 namespace xstd::ranges {
 
@@ -21,6 +23,16 @@ template<bits::detail::reads_bools R>
 {
         auto const i = bits::detail::find_last_value(bits::detail::storage_access::bits(r), bits::detail::first_position(r), std::ranges::size(r), value);
         return std::ranges::borrowed_subrange_t<R>(std::ranges::begin(r) + static_cast<std::ptrdiff_t>(i), std::ranges::end(r));
+}
+
+// std::ranges::find_last(first, last, value), over the positions [first, last) as a window.
+template<bits::detail::bool_iterator I, bits::detail::bool_sentinel_for<I> S>
+[[nodiscard]] constexpr auto bit_find_last(I first, S last, bool value) noexcept
+        -> std::ranges::subrange<I>
+{
+        auto w              = bits::detail::iterator_window(first, last);
+        auto const [lo, hi] = xstd::ranges::bit_find_last(w, value);
+        return {bits::detail::rebased(first, lo), bits::detail::rebased(first, hi)};
 }
 
 } // namespace xstd::ranges

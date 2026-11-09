@@ -6,14 +6,15 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_ROTATE_COPY_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_ROTATE_COPY_HPP
 
-#include <xstd/bits/bit_algorithm/detail/blit.hpp> // copy_bools
-#include <xstd/bits/detail/iterator_concepts.hpp>  // bool_output_iterator
-#include <xstd/bits/detail/ownership.hpp>          // reads_bools, storage_access
-#include <xstd/bits/detail/sequence_storage.hpp>   // first_position
-#include <algorithm>                               // rotate_copy_result
-#include <cassert>                                 // assert
-#include <cstddef>                                 // ptrdiff_t, size_t
-#include <ranges>                                  // begin, borrowed_iterator_t, end, iterator_t, size
+#include <xstd/bits/bit_algorithm/detail/blit.hpp>            // copy_bools
+#include <xstd/bits/bit_algorithm/detail/iterator_window.hpp> // bool_sentinel_for, iterator_window, rebased
+#include <xstd/bits/detail/iterator_concepts.hpp>             // bool_iterator, bool_output_iterator
+#include <xstd/bits/detail/ownership.hpp>                     // reads_bools, storage_access
+#include <xstd/bits/detail/sequence_storage.hpp>              // first_position
+#include <algorithm>                                          // rotate_copy_result
+#include <cassert>                                            // assert
+#include <cstddef>                                            // ptrdiff_t, size_t
+#include <ranges>                                             // begin, borrowed_iterator_t, end, iterator_t, size
 
 namespace xstd::ranges {
 
@@ -35,6 +36,28 @@ constexpr auto bit_rotate_copy(R&& r, std::ranges::iterator_t<R> middle, O out) 
         return {std::ranges::borrowed_iterator_t<R>(std::ranges::end(r)), out + static_cast<std::ptrdiff_t>(n)};
 }
 
+// std::ranges::rotate_copy(first, middle, last, out), over the positions [first, last) as a window.
+template<bits::detail::bool_iterator I, bits::detail::bool_sentinel_for<I> S, bits::detail::bool_output_iterator O>
+constexpr auto bit_rotate_copy(I first, I middle, S last, O out) noexcept
+        -> std::ranges::rotate_copy_result<I, O>
+{
+        auto w               = bits::detail::iterator_window(first, last);
+        auto const [in, end] = xstd::ranges::bit_rotate_copy(w, std::ranges::begin(w) + (middle - first), out);
+        return {bits::detail::rebased(first, in), end};
+}
+
 } // namespace xstd::ranges
+
+namespace xstd {
+
+// std::rotate_copy(first, middle, last, out): the end of what was written.
+template<bits::detail::bool_iterator I, bits::detail::bool_output_iterator O>
+constexpr auto bit_rotate_copy(I first, I middle, I last, O out) noexcept
+        -> O
+{
+        return ranges::bit_rotate_copy(first, middle, last, out).out;
+}
+
+} // namespace xstd
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_ROTATE_COPY_HPP
