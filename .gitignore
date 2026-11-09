@@ -10,5 +10,5 @@
 /coverage.txt
 /coverage.xml
 
-# Written beside a script by Python whenever the script is imported or compiled.
+# Written by Python beside a script it imports or compiles.
 __pycache__/

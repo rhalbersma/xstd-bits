@@ -4,42 +4,23 @@
 #          http://www.boost.org/LICENSE_1_0.txt)
 
 ---
-# Static analysis for the public headers and for the test tree, run by the
-# Clang-Tidy workflow over two passes: the generated header self-sufficiency
-# translation units, and the test sources named by its sources_regex.
-#
-# The filter below carries test/include as well as include/xstd, because a
-# diagnostic raised inside a header is reported only if the header matches it.
-# Without that half the test headers were analyzed and then filtered out, and
-# the two genuine defects #126 found -- a use-after-move and a pair of missing
-# parentheses -- had been sitting there unreported.
-# bugprone-easily-swappable-parameters is off because both sites it reports
-# are fixed by the interface rather than chosen: to_string(charT zero, charT
-# one) is the signature std::bitset::to_string carries, and
-# lexicographical_three_way compares two bitsets because that is what
-# comparing two bitsets means. Neither pair can be reordered or retyped.
-# bugprone-exception-escape is off because the small-vector column makes it
-# fire on a constructor that cannot throw. The adaptor's defaulted default
-# constructor is noexcept, and std::is_nothrow_default_constructible_v holds
-# for boost::container::small_vector, so the specification is honoured rather
-# than deleted and no allocation happens. The check reaches a throw anyway by
-# walking Boost's vector base into allocation_command, a path that default
-# construction never takes. It reports nothing for the std-backed columns, so
-# what is lost is a regression guard rather than a live finding, and there is
-# no narrower switch: the diagnostic lands on a header every column shares,
-# and IgnoredExceptions does not match a throw found through an indirect call.
-# bugprone-crtp-constructor-accessibility is off because the three adaptors
-# are not pure CRTP bases. Their trailing parameter defaults to void, and an
-# adaptor named at that default is its own container rather than a base, so
-# the constructors the check wants protected are the ones such a handle is
-# built out of, and every container inherits them with `using
-# base_type::base_type`, which keeps the base's access. Protecting them
-# deletes both; the check's other remedy, befriending the derived type, is
-# already done.
-#
-# Note for anyone adding to the list below: Checks is a folded scalar, so a
-# '#' inside it is literal text and not a comment. Explanations belong here,
-# above the key.
+# Static analysis for the public headers and the test tree, over the generated self-sufficiency units and the test
+# sources the Clang-Tidy workflow's sources_regex names.
+# A diagnostic raised inside a header is reported only if that header matches HeaderFilterRegex, which is why the
+# filter carries test/include as well as include/xstd: a test header left out of it is analyzed and then silently
+# discarded.
+# test/.clang-tidy inherits this and drops the checks that only misfire on fixtures.
+# bugprone-easily-swappable-parameters is off because both sites it reports are fixed by the interface: to_string(charT
+# zero, charT one) is std::bitset::to_string's signature, and lexicographical_three_way compares two bitsets.
+# bugprone-exception-escape is off because it fires on the small-vector column's defaulted default constructor, which
+# cannot throw: std::is_nothrow_default_constructible_v holds for boost::container::small_vector, and the check reaches
+# a throw only by walking Boost's vector base into allocation_command, a path default construction never takes. There
+# is no narrower switch: the diagnostic lands on a header every column shares, and IgnoredExceptions does not match a
+# throw found through an indirect call.
+# bugprone-crtp-constructor-accessibility is off because the three adaptors are not pure CRTP bases: one named at its
+# default trailing void is its own container, so the constructors the check wants protected are the ones it is built
+# from, and every container inherits them through `using base_type::base_type`, which keeps the base's access.
+# Checks is a folded scalar, so a '#' inside it is literal text and not a comment: explanations go above the key.
 Checks: >
   bugprone-*,
   clang-analyzer-*,
@@ -63,6 +44,7 @@ CheckOptions:
   # Prefer alternative tokens for logical operators.
   readability-operators-representation.BinaryOperators: 'not;and;or'
   # No Boost library ships IWYU pragmas, so nothing there is attributable to a header a consumer names.
+  # Any project including a Boost library needs this line of its own.
   misc-include-cleaner.IgnoreHeaders: 'boost/.*'
   # A lambda already writes its return type after the parameter list, which is
   # the whole of what this check is for, so for a generic one its suggestion is
