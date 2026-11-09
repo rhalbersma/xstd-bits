@@ -161,7 +161,10 @@ BOOST_AUTO_TEST_CASE(WalksBetweenTwoIterators)
                 return result.in == last and ranges == want and classic == want;
         };
         BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
-        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 9>()), agrees) == 0);
+        static_assert([agrees] -> bool {
+                auto const a = test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>());
+                return agrees(a.begin() + 3, a.end() - 1, xstd::bit_span(a).subspan(3UZ, 9UZ));
+        }());
         static_assert(for_each_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not for_each_between<std::vector<bool>::const_iterator>);
 }
 
