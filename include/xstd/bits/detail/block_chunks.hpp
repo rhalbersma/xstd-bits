@@ -16,30 +16,35 @@ template<std::size_t Digits, class Pred>
 constexpr auto find_chunk(std::size_t n, std::size_t len, Pred pred)
         -> bool
 {
-        auto count = std::ranges::min(len, Digits - (n % Digits));
-        for (auto k = 0UZ; k < len; k += count, count = std::ranges::min(Digits, len - k)) {
-                if (pred(k, count)) {
+        auto const head = std::ranges::min(len, (Digits - (n % Digits)) % Digits);
+        if (head != 0UZ and pred(0UZ, head)) {
+                return true;
+        }
+        auto const tail = head + (((len - head) / Digits) * Digits);
+        for (auto k = head; k < tail; k += Digits) {
+                if (pred(k, Digits)) {
                         return true;
                 }
         }
-        return false;
+        return tail < len and pred(tail, len - tail);
 }
 
-// The mirror, highest first: what lies above the last boundary, whole blocks, then the head below the first.
+// The mirror, highest first: what lies above the last multiple of Digits, whole blocks, then the head below the first.
 template<std::size_t Digits, class Pred>
 constexpr auto find_chunk_down(std::size_t n, std::size_t len, Pred pred)
         -> bool
 {
-        if (len == 0UZ) {
-                return false;
+        auto const head = std::ranges::min(len, (Digits - (n % Digits)) % Digits);
+        auto const tail = head + (((len - head) / Digits) * Digits);
+        if (tail < len and pred(tail, len - tail)) {
+                return true;
         }
-        auto count = std::ranges::min(len, ((n + len - 1UZ) % Digits) + 1UZ);
-        for (auto end = len; end != 0UZ; end -= count, count = std::ranges::min(Digits, end)) {
-                if (pred(end - count, count)) {
+        for (auto k = tail - Digits, m = (tail - head) / Digits; m != 0UZ; k -= Digits, --m) {
+                if (pred(k, Digits)) {
                         return true;
                 }
         }
-        return false;
+        return head != 0UZ and pred(0UZ, head);
 }
 
 // f(k, count) for every chunk find_chunk walks, lowest first.

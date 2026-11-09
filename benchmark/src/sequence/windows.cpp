@@ -92,9 +92,9 @@ auto bm_window_count(benchmark::State& state)
 auto bm_window_find(benchmark::State& state)
         -> void
 {
-        auto const n = width(state);
-        auto v       = xstd::bit_vector(n + (2UZ * bits_per_block));
-        auto const s = offset(state, 1);
+        auto const n   = width(state);
+        auto v         = xstd::bit_vector(n + (2UZ * bits_per_block));
+        auto const s   = offset(state, 1);
         v[s + n - 1UZ] = true;
         auto const w   = xstd::bit_span(v).subspan(s, n);
         for (auto _ : state) {
