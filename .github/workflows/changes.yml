@@ -59,7 +59,7 @@ jobs:
           # benchmark/ and examples/ build: the GCC ladder smoke-runs the one, and test/ compiles against the other's
           # include/. Anything else, a new directory included, builds.
           unbuilt='\.md$|^LICENSE_1_0\.txt$|^doc/|^tools/|^test/fuzz/|^test/codegen/|^test/proofs/|^mkdocs\.yml$|^\.clang-format$|^\.git-blame-ignore-revs$'
-          unbuilt="${unbuilt}"'|^\.github/workflows/(actionlint|audit|canary|cflite_batch|cflite_pr|clang-format|codegen|codeql|consumption|coverage|mutation|pages|proofs|scorecard)\.yml$'
+          unbuilt="${unbuilt}"'|^\.github/workflows/(actionlint|audit|canary|cflite_batch|cflite_pr|clang-format|codegen|codeql|compile-budget|consumption|coverage|mutation|pages|proofs|scorecard)\.yml$'
           if grep -qvE "${unbuilt}" "${RUNNER_TEMP}/changed"; then
             echo "build=true" >> "${GITHUB_OUTPUT}"
           else

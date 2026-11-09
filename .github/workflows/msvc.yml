@@ -27,7 +27,7 @@ jobs:
   msvc_ladder:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
+    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@028e1b27ed0b090bae643130d60112e974baeaba # main after rhalbersma/cpp-ci#119, v0.16.0 with compile-budget's exclude and dependency_repos
     with:
       tiers: stable,qualification,development
       # A pull request builds only the floor and ceiling rungs, in Debug. The all gate cannot see what was skipped, so
@@ -40,7 +40,7 @@ jobs:
   std_test_suites:
     needs: changes
     if: needs.changes.outputs.build == 'true'
-    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
+    uses: rhalbersma/cpp-ci/.github/workflows/visual-studio.yml@028e1b27ed0b090bae643130d60112e974baeaba # main after rhalbersma/cpp-ci#119, v0.16.0 with compile-budget's exclude and dependency_repos
     with:
       tiers: stable
       build_types: Debug
