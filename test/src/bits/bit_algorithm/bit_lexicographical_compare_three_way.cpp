@@ -70,6 +70,16 @@ template<class X, class ForEach>
         return nrv;
 }
 
+// Whether every iterator form orders [first, last) against other, both ways round, as the range form orders w.
+template<class I, class W, class V>
+[[nodiscard]] constexpr auto compares_alike(I first, I last, W const& w, V const& other)
+        -> bool
+{
+        auto const want = xstd::ranges::bit_lexicographical_compare_three_way(w, other);
+        auto const back = xstd::ranges::bit_lexicographical_compare_three_way(other, w);
+        return xstd::ranges::bit_lexicographical_compare_three_way(first, last, other.begin(), other.end()) == want and xstd::bit_lexicographical_compare_three_way(first, last, other.begin(), other.end()) == want and xstd::ranges::bit_lexicographical_compare_three_way(other.begin(), other.end(), first, last) == back;
+}
+
 } // namespace
 
 // Every pair of inputs of every sequence column of ours, against itself and against its kind over the other Block.
@@ -134,9 +144,15 @@ BOOST_AUTO_TEST_CASE(ComparesBetweenTwoPairsOfIterators)
 {
         auto const agrees = [](auto first, auto last, auto const& w) -> bool {
                 auto other = xstd::bit_vector(first, last);
+                auto right = compares_alike(first, last, w, other);
+                if (not other.empty()) {
+                        auto const mid = other.size() / 2UZ;
+                        other[mid]     = not other[mid];
+                        right          = right and compares_alike(first, last, w, other);
+                        other[mid]     = not other[mid];
+                }
                 other.push_back(false);
-                auto const want = xstd::ranges::bit_lexicographical_compare_three_way(w, other);
-                return xstd::ranges::bit_lexicographical_compare_three_way(first, last, other.begin(), other.end()) == want and xstd::bit_lexicographical_compare_three_way(first, last, other.begin(), other.end()) == want and std::is_lt(want);
+                return right and compares_alike(first, last, w, other) and std::is_lt(xstd::ranges::bit_lexicographical_compare_three_way(w, other));
         };
         BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
         static_assert([agrees] -> bool {

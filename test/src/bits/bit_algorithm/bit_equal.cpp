@@ -18,7 +18,7 @@
 #include <xstd/bits/bit_vector.hpp>              // basic_bit_vector, bit_vector
 #include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                             // equal
-#include <cstddef>                               // ptrdiff_t, size_t
+#include <cstddef>                               // size_t
 #include <cstdint>                               // uint64_t, uint8_t
 #include <functional>                            // greater
 #include <ranges>                                // iterator_t, range_value_t
@@ -67,6 +67,22 @@ template<class X, class ForEach>
         auto nrv = std::vector<X>();
         for_each([&](X const& x) -> void { nrv.push_back(x); });
         return nrv;
+}
+
+// Whether the range form over w and every iterator form over [first, last) find other equal.
+template<class I, class W, class V>
+[[nodiscard]] constexpr auto equal_in_every_form(I first, I last, W const& w, V const& other)
+        -> bool
+{
+        return xstd::ranges::bit_equal(w, other) and xstd::ranges::bit_equal(first, last, other.begin(), other.end()) and xstd::bit_equal(first, last, other.begin()) and xstd::bit_equal(first, last, other.begin(), other.end());
+}
+
+// Whether any of them does.
+template<class I, class W, class V>
+[[nodiscard]] constexpr auto equal_in_any_form(I first, I last, W const& w, V const& other)
+        -> bool
+{
+        return xstd::ranges::bit_equal(w, other) or xstd::ranges::bit_equal(first, last, other.begin(), other.end()) or xstd::bit_equal(first, last, other.begin()) or xstd::bit_equal(first, last, other.begin(), other.end());
 }
 
 } // namespace
@@ -133,13 +149,12 @@ BOOST_AUTO_TEST_CASE(EqualBetweenTwoPairsOfIterators)
 {
         auto const agrees = [](auto first, auto last, auto const& w) -> bool {
                 auto other      = xstd::bit_vector(first, last);
-                auto const n    = static_cast<std::ptrdiff_t>(other.size());
-                auto const same = xstd::ranges::bit_equal(first, last, other.begin(), other.end()) and xstd::bit_equal(first, last, other.begin()) and xstd::bit_equal(first, last, other.begin(), other.end());
-                if (n == 0) {
-                        return same and xstd::ranges::bit_equal(w, other);
+                auto const same = equal_in_every_form(first, last, w, other);
+                if (other.empty()) {
+                        return same;
                 }
-                other[0] = not other[0];
-                return same and not xstd::ranges::bit_equal(first, last, other.begin(), other.end()) and not xstd::bit_equal(first, last, other.begin());
+                other[other.size() / 2UZ] = not other[other.size() / 2UZ];
+                return same and not equal_in_any_form(first, last, w, other);
         };
         BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
         static_assert([agrees] -> bool {
