@@ -1,0 +1,37 @@
+#          Copyright Rein Halbersma 2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+name: Compile budget
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - include/**
+      - vcpkg.json
+      - .github/workflows/compile-budget.yml
+  workflow_dispatch:
+
+jobs:
+  # What each public header costs to include on its own, against the pull request's base: a count grown by more than 5% fails.
+  compile_budget:
+    uses: rhalbersma/cpp-ci/.github/workflows/compile-budget.yml@PIN # PIN_COMMENT
+    with:
+      glob: xstd/**/*.hpp
+      # The headers users include; a detail header is costed through the public ones that include it.
+      exclude: "*/detail/*"
+      # The revisions CMakeLists.txt pins, as headers on the include path; Boost comes from vcpkg.json.
+      dependency_repos: |
+        https://github.com/rhalbersma/xstd-ints.git e7cf26aea50d1877c315cbe14ba0b4704ece4226
+        https://github.com/rhalbersma/xstd-misc.git 8921a26d9f1dc961bc79e37a44b9e070949aed79
+      # One pass of the 126 headers takes about four minutes, and the time it reports never gates.
+      repeat: 1
