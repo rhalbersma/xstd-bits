@@ -19,6 +19,7 @@
 #include <xstd/bits/detail/non_volatile.hpp>                 // non_volatile
 #include <xstd/bits/detail/owner_members.hpp>                // owner_members
 #include <xstd/bits/detail/ownership.hpp>                    // owned_storage, owner_of, owns, sequence_reading_tag, storage, storage_access, window
+#include <xstd/bits/detail/refusal_message.hpp>              // refusal_message
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl
 #include <xstd/bits/detail/storage_ptr.hpp>                  // storage_ptr_t, storage_ref_t
 #include <xstd/bits/detail/throw.hpp>                        // throw_exception, XSTD_BITS_HAS_EXCEPTIONS
@@ -32,7 +33,7 @@
 #include <compare>                                           // strong_ordering
 #include <concepts>                                          // constructible_from, derived_from, same_as
 #include <cstddef>                                           // ptrdiff_t, size_t
-#include <format>                                            // enable_nonlocking_formatter_optimization, format, formatter
+#include <format>                                            // enable_nonlocking_formatter_optimization, formatter
 #include <initializer_list>                                  // initializer_list
 #include <iterator>                                          // input_iterator, make_reverse_iterator, random_access_iterator_tag, reverse_iterator, sentinel_for
 #include <memory>                                            // addressof
@@ -1371,10 +1372,7 @@ private:
         {
                 bits::detail::throw_exception(
                         std::out_of_range(
-                                std::format(
-                                        "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is out of range [{} >= {}]",
-                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, width
-                                )
+                                bits::detail::refusal_message(loc, "argument ‘n‘ is out of range", n, ">=", width)
                         )
                 );
         }

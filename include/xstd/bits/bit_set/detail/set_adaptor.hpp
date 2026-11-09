@@ -24,6 +24,7 @@
 #include <xstd/bits/detail/non_volatile.hpp>            // non_volatile
 #include <xstd/bits/detail/owner_members.hpp>           // owner_members
 #include <xstd/bits/detail/ownership.hpp>               // owned_storage, owner_of, owns, set_reading_tag, storage, storage_access
+#include <xstd/bits/detail/refusal_message.hpp>         // refusal_message
 #include <xstd/bits/detail/sized_bit_index_mapping.hpp> // sized_bit_index_mapping
 #include <xstd/bits/detail/storage_ptr.hpp>             // storage_ptr_t, storage_ref_t
 #include <xstd/bits/detail/throw.hpp>                   // throw_exception
@@ -37,7 +38,7 @@
 #include <compare>                                      // strong_ordering
 #include <concepts>                                     // constructible_from, convertible_to, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                      // ptrdiff_t, size_t
-#include <format>                                       // enable_nonlocking_formatter_optimization, format, formatter
+#include <format>                                       // enable_nonlocking_formatter_optimization, formatter
 #include <functional>                                   // greater, hash, less
 #include <initializer_list>                             // initializer_list
 #include <iterator>                                     // bidirectional_iterator_tag, iter_reference_t, make_reverse_iterator, reverse_iterator
@@ -1317,10 +1318,7 @@ private:
         {
                 bits::detail::throw_exception(
                         std::out_of_range(
-                                std::format(
-                                        "{}:{}:{}: exception: ‘{}‘: argument ‘x‘ is no key this set can hold [{} >= {}]",
-                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(), x, max_size()
-                                )
+                                bits::detail::refusal_message(loc, "argument ‘x‘ is no key this set can hold", x, ">=", max_size())
                         )
                 );
         }
