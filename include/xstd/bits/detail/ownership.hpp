@@ -91,6 +91,14 @@ struct storage_access
                 return static_cast<Reading::adaptor_type const&>(r).offset();
         }
 
+        // A window of count positions from offset, through the sequence adaptor's constructor that only windows reach.
+        template<class Window, class Bits>
+        [[nodiscard]] static constexpr auto window(Bits* bits, std::size_t offset, std::size_t count) noexcept
+                -> Window
+        {
+                return Window(bits, offset, count);
+        }
+
         // The storage a set's iterator steps over: what it points to, or storage rebuilt over the blocks it holds.
         template<class Iterator>
         [[nodiscard]] static constexpr auto iterated_bits(Iterator const& it) noexcept

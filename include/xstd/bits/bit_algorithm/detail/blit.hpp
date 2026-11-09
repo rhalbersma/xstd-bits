@@ -85,6 +85,32 @@ constexpr auto reverse_copy_bools(Dst&& dst, std::size_t d, Src const& src, std:
         });
 }
 
+// The len bools of c from position s reversed in place: a block from each end traded, then what remains in the middle.
+template<class Bits>
+constexpr auto reverse_bools(Bits&& c, std::size_t s, std::size_t len) noexcept
+        -> void
+{
+        using bits_type       = std::remove_cvref_t<Bits>;
+        using block_type      = bits_type::block_type;
+        constexpr auto digits = bits_type::bits_per_block;
+        auto const reversed_at = [&](std::size_t n, std::size_t count) -> block_type { return shr(bits_type::reversed(read_block<block_type>(c, n, count)), digits - count); };
+        auto lo = s;
+        auto hi = s + len;
+        while (hi - lo > digits) {
+                // Half of what remains at most, so the two ends traded never overlap.
+                auto const count = std::ranges::min(digits, (hi - lo) / 2UZ);
+                auto const low   = reversed_at(lo, count);
+                auto const high  = reversed_at(hi - count, count);
+                c.block_at(lo, high, partial_block_mask<block_type>(count));
+                c.block_at(hi - count, low, partial_block_mask<block_type>(count));
+                lo += count;
+                hi -= count;
+        }
+        if (lo < hi) {
+                c.block_at(lo, reversed_at(lo, hi - lo), partial_block_mask<block_type>(hi - lo));
+        }
+}
+
 // The len bools of x from position i and of y from position j traded, a block of the narrower at a time.
 template<class X, class Y>
 constexpr auto swap_bools(X&& x, std::size_t i, Y&& y, std::size_t j, std::size_t len) noexcept
