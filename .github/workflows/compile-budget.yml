@@ -24,7 +24,7 @@ on:
 jobs:
   # What each public header costs to include on its own, against the pull request's base: a count grown by more than 5% fails.
   compile_budget:
-    uses: rhalbersma/cpp-ci/.github/workflows/compile-budget.yml@PIN # PIN_COMMENT
+    uses: rhalbersma/cpp-ci/.github/workflows/compile-budget.yml@028e1b27ed0b090bae643130d60112e974baeaba # main after rhalbersma/cpp-ci#119, v0.16.0 with compile-budget's exclude and dependency_repos
     with:
       glob: xstd/**/*.hpp
       # The headers users include; a detail header is costed through the public ones that include it.
