@@ -612,12 +612,12 @@ BOOST_AUTO_TEST_CASE(ItTakesACpp17InputIteratorPairAsStdVectorDoes)
         BOOST_CHECK(w == (T{true, true}));
 }
 
-// A view rotates and reverses what it views, as it flips it; a window does neither.
+// A view rotates and reverses what it views, as it flips it, and a window the positions it spans; a const view neither.
 BOOST_AUTO_TEST_CASE(AViewOverItPermutesItAndAWindowDoesNot)
 {
         BOOST_CHECK_EQUAL(permutation_sweeps<T>(as_span()), 0);
         static_assert(can_permute<decltype(xstd::bit_span(std::declval<T&>()))>);
-        static_assert(not can_permute<decltype(xstd::bit_span(std::declval<T&>()).first(2))>);
+        static_assert(can_permute<decltype(xstd::bit_span(std::declval<T&>()).first(2))>);
         static_assert(not can_permute<decltype(xstd::bit_span(std::declval<T const&>()))>);
 }
 

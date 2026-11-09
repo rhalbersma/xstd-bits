@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>               // bools_of, for_each_sequence, patterned, sequences
+#include <test/algorithm/sequences.hpp>               // bools_of, for_each_sequence, patterned, sequences, writes_as_model, writes_through_iterators_as_model
 #include <test/for_each_type.hpp>                     // for_each_type
 #include <xstd/bits/bit_algorithm/bit_shift_left.hpp> // bit_shift_left
 #include <xstd/bits/bit_array.hpp>                    // bit_array
@@ -13,8 +13,8 @@
 #include <boost/test/unit_test.hpp>                   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                  // equal, shift_left
 #include <concepts>                                   // same_as
-#include <cstddef>                                    // ptrdiff_t
-#include <ranges>                                     // begin, dangling, end, subrange
+#include <cstddef>                                    // ptrdiff_t, size_t
+#include <ranges>                                     // begin, dangling, end, iota, iterator_t, size, subrange
 #include <utility>                                    // declval, forward
 #include <vector>                                     // vector
 
@@ -24,6 +24,9 @@ namespace {
 
 template<class R>
 concept shiftable = requires (R&& r) { xstd::ranges::bit_shift_left(std::forward<R>(r), 1); };
+
+template<class I>
+concept shiftable_between = requires (I i) { xstd::ranges::bit_shift_left(i, i, 1); xstd::bit_shift_left(i, i, 1); };
 
 // The algorithm on r and std::shift_left on its bools: where the subranges lie, and what stays, before the new end.
 template<class R>
@@ -65,8 +68,43 @@ BOOST_AUTO_TEST_CASE(AgreesWithRangesShiftLeftOverEveryColumn)
         });
 }
 
-// In a constant expression, and over whole writable sequences of ours alone: no window, which shares its end blocks.
-BOOST_AUTO_TEST_CASE(ShiftsWholeWritableSequencesAlone)
+// A window shifts the positions it spans, false into those vacated, and leaves its end blocks' other positions be.
+BOOST_AUTO_TEST_CASE(AWindowShiftsItsOwnPositions)
+{
+        auto wrong = 0;
+        for (auto const n : {0UZ, 1UZ, 3UZ, 8UZ, 13UZ, 64UZ, 65UZ, 200UZ}) {
+        auto const model = [n](auto m) -> void {
+                auto const at = [&m](std::size_t i) -> auto { return m.begin()[static_cast<std::ptrdiff_t>(i)]; };
+                auto const z  = std::ranges::size(m);
+                if (n == 0UZ or z <= n) {
+                        return;
+                }
+                for (auto const i : std::views::iota(0UZ, z - n)) {
+                        at(i) = static_cast<bool>(at(i + n));
+                }
+                for (auto const i : std::views::iota(z - n, z)) {
+                        at(i) = false;
+                }
+        };
+                auto const shift = [n](auto w) -> void { xstd::ranges::bit_shift_left(w, static_cast<std::ptrdiff_t>(n)); };
+                wrong += test::algorithm::writes_as_model(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), shift, model);
+                wrong += test::algorithm::writes_as_model(test::algorithm::patterned(xstd::bit_array<140>()), shift, model);
+                auto const d       = static_cast<std::ptrdiff_t>(n);
+                auto const ranges  = [d](auto first, auto last) -> bool { auto const [lo, hi] = xstd::ranges::bit_shift_left(first, last, d); return lo == first and hi == (d < last - first ? last - d : first); };
+                auto const classic = [d](auto first, auto last) -> bool { return xstd::bit_shift_left(first, last, d) == (d < last - first ? last - d : first); };
+                wrong += test::algorithm::writes_through_iterators_as_model(test::algorithm::patterned(xstd::basic_bit_vector<std::vector<std::uint8_t>>(21)), ranges, model);
+                wrong += test::algorithm::writes_through_iterators_as_model(test::algorithm::patterned(xstd::bit_array<140>()), classic, model);
+        }
+        BOOST_CHECK_EQUAL(wrong, 0);
+        static_assert([] -> bool {
+                auto b = test::algorithm::patterned(xstd::bit_array<70>());
+                xstd::bit_shift_left(b.begin() + 3, b.end() - 2, 1);
+                return static_cast<bool>(b[3]) == test::algorithm::in_pattern(4);
+        }());
+}
+
+// In a constant expression, and over writable sequences of ours alone, a window and a pair of iterators included.
+BOOST_AUTO_TEST_CASE(ShiftsWritableSequencesAlone)
 {
         constexpr auto shifts_across_a_block = [] -> bool {
                 auto a = test::algorithm::patterned(xstd::bit_array<70>());
@@ -79,7 +117,9 @@ BOOST_AUTO_TEST_CASE(ShiftsWholeWritableSequencesAlone)
         static_assert(shifts_across_a_block());
 #endif
         static_assert(shiftable<xstd::bit_array<8>&> and shiftable<xstd::bit_valarray&> and shiftable<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>()))>);
-        static_assert(not shiftable<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>()).subspan(1UZ, 3UZ))>);
+        static_assert(shiftable<decltype(xstd::bit_span(std::declval<xstd::bit_array<8>&>()).subspan(1UZ, 3UZ))>);
+        static_assert(shiftable_between<std::ranges::iterator_t<xstd::bit_array<8>>> and not shiftable_between<std::ranges::iterator_t<xstd::bit_array<8> const>>);
+        static_assert(not shiftable_between<std::vector<bool>::iterator>);
         static_assert(not shiftable<xstd::bit_array<8> const&> and not shiftable<std::vector<bool>&> and not shiftable<xstd::bit_fixed_set<8>&>);
         static_assert(std::same_as<decltype(xstd::ranges::bit_shift_left(xstd::bit_array<8>(), 1)), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"

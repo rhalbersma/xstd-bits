@@ -97,6 +97,25 @@ template<class A, class F, class G>
         return wrong;
 }
 
+// As writes_as_model, through every pair of a copy's iterators, where f also answers whether its result is right.
+template<class A, class F, class G>
+[[nodiscard]] auto writes_through_iterators_as_model(A const& a, F f, G g)
+        -> int
+{
+        auto const n = std::ranges::size(a);
+        auto wrong   = 0;
+        for (auto const lo : std::views::iota(0UZ, n + 1UZ)) {
+                for (auto const hi : std::views::iota(lo, n + 1UZ)) {
+                        auto b     = a;
+                        auto model = bools_of(a);
+                        auto const right = f(std::ranges::begin(b) + static_cast<std::ptrdiff_t>(lo), std::ranges::begin(b) + static_cast<std::ptrdiff_t>(hi));
+                        g(std::ranges::subrange(model.begin() + static_cast<std::ptrdiff_t>(lo), model.begin() + static_cast<std::ptrdiff_t>(hi)));
+                        wrong += static_cast<int>(not right or bools_of(b) != model);
+                }
+        }
+        return wrong;
+}
+
 // A destination of n bools over Block, striped so a write past its range or short of it shows.
 template<class Block>
 [[nodiscard]] auto striped_vector(std::size_t n)
