@@ -269,6 +269,7 @@ target_sources(
         include/xstd/bits/detail/walk_block.hpp
         include/xstd/bits/detail/storage_ptr.hpp
         include/xstd/bits/detail/throw.hpp
+        include/xstd/bits/detail/refusal_message.hpp
         include/xstd/bits/bit_span/detail/views.hpp
         include/xstd/bits/detail/blocks.hpp
         include/xstd/bits/detail/blocks_extent.hpp

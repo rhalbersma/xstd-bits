@@ -20,6 +20,7 @@
 #include <xstd/bits/detail/non_volatile.hpp>                 // non_volatile
 #include <xstd/bits/detail/num_blocks.hpp>                   // holds_width, num_blocks_v, whole_blocks_width_v
 #include <xstd/bits/detail/owned_bit_blocks.hpp>             // owned_bit_blocks
+#include <xstd/bits/detail/refusal_message.hpp>              // refusal_message
 #include <xstd/bits/detail/resizable_bit_blocks.hpp>         // resizable_bit_blocks
 #include <xstd/bits/detail/shift.hpp>                        // partial_block_mask, shl, shr
 #include <xstd/bits/detail/throw.hpp>                        // throw_exception, XSTD_BITS_HAS_EXCEPTIONS
@@ -37,7 +38,6 @@
 #include <concepts>                                          // default_initializable, same_as
 #include <cstddef>                                           // ptrdiff_t, size_t
 #include <cstdint>                                           // uint64_t
-#include <format>                                            // format
 #include <functional>                                        // plus
 #include <iterator>                                          // next, prev
 #include <limits>                                            // numeric_limits
@@ -2028,10 +2028,7 @@ private:
         {
                 bits::detail::throw_exception(
                         std::length_error(
-                                std::format(
-                                        "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width this storage can count [{} > {}]",
-                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_width
-                                )
+                                bits::detail::refusal_message(loc, "argument ‘n‘ is no width this storage can count", n, ">", max_width)
                         )
                 );
         }
@@ -2042,10 +2039,7 @@ private:
         {
                 bits::detail::throw_exception(
                         std::length_error(
-                                std::format(
-                                        "{}:{}:{}: exception: ‘{}‘: argument ‘n‘ is no width a distance can name [{} > {}]",
-                                        loc.file_name(), loc.line(), loc.column(), loc.function_name(), n, max_addressable_width
-                                )
+                                bits::detail::refusal_message(loc, "argument ‘n‘ is no width a distance can name", n, ">", max_addressable_width)
                         )
                 );
         }
