@@ -3,14 +3,14 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/algorithm/sequences.hpp>          // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences
+#include <test/for_each_type.hpp>                // for_each_type
 #include <xstd/bits/bit_algorithm/bit_count.hpp> // bit_count
 #include <xstd/bits/bit_array.hpp>               // basic_bit_array, bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>   // bit_fixed_set
 #include <xstd/bits/bit_span/bit_span.hpp>       // bit_span
 #include <xstd/bits/bit_vector.hpp>              // basic_bit_vector, bit_vector
 #include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <test/algorithm/sequences.hpp>          // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences
-#include <test/for_each_type.hpp>                // for_each_type
 #include <algorithm>                             // all_of, count
 #include <array>                                 // array
 #include <concepts>                              // same_as

@@ -3,6 +3,10 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
+#include <test/algorithm/partner.hpp>                                        // partner_t
+#include <test/algorithm/sequences.hpp>                                      // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences
+#include <test/algorithm/sets.hpp>                                           // for_each_set, sets
+#include <test/for_each_type.hpp>                                            // for_each_type
 #include <xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp> // bit_lexicographical_compare_three_way
 #include <xstd/bits/bit_array.hpp>                                           // basic_bit_array, bit_array
 #include <xstd/bits/bit_inplace_vector.hpp>                                  // basic_bit_inplace_vector
@@ -13,10 +17,6 @@
 #include <xstd/bits/bit_span/bit_span.hpp>                                   // bit_span
 #include <xstd/bits/bit_vector.hpp>                                          // basic_bit_vector, bit_vector
 #include <boost/test/unit_test.hpp>                                          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <test/algorithm/partner.hpp>                                        // partner_t
-#include <test/algorithm/sequences.hpp>                                      // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences
-#include <test/algorithm/sets.hpp>                                           // for_each_set, sets
-#include <test/for_each_type.hpp>                                            // for_each_type
 #include <algorithm>                                                         // lexicographical_compare_three_way
 #include <compare>                                                           // is_lt, strong_ordering
 #include <cstddef>                                                           // size_t
