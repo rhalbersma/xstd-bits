@@ -118,7 +118,7 @@ BOOST_AUTO_TEST_CASE(CopiesBetweenOurSequencesAlone)
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
-// From between two iterators, as std::ranges::copy_backward and as std::copy_backward, into a destination at an offset across a block.
+// From two iterators, as std::ranges::copy_backward and std::copy_backward, into a destination offset across a block.
 BOOST_AUTO_TEST_CASE(CopiesBackwardFromBetweenTwoIterators)
 {
         auto const agrees = [](auto first, auto last, auto const& w) -> bool {

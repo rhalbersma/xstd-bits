@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE(ComparesOneReadingAndOneWidthKindAlone)
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
-// Between two pairs of iterators, as std::ranges::lexicographical_compare_three_way and as std::lexicographical_compare_three_way, against another sequence one bool apart.
+// Two iterator pairs, in both namespaces' lexicographical_compare_three_way, against another sequence one bool apart.
 BOOST_AUTO_TEST_CASE(ComparesBetweenTwoPairsOfIterators)
 {
         auto const agrees = [](auto first, auto last, auto const& w) -> bool {

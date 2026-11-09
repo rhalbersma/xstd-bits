@@ -526,7 +526,7 @@ public:
         static constexpr bool is_windowed  = is_window;
         static constexpr bool owns_storage = is_owner;
 
-        // The window of a run-time width over storage of type Over, which is what a pair of this vehicle's iterators spans.
+        // The window of a run-time width over storage of type Over: what a pair of this vehicle's iterators spans.
         template<class Over>
         using window_over_t = sequence_adaptor<Over, storage::borrowed, window::sub, void, std::dynamic_extent>;
 

@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(PermutesOurWritableSequencesAlone)
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
-// Between two iterators, as std::ranges::partition and as std::partition, writing what the window over the same positions writes.
+// Between two iterators, as std::ranges::partition and std::partition, writing as the window of those positions does.
 BOOST_AUTO_TEST_CASE(PartitionsBetweenTwoIterators)
 {
         auto const ranges  = [](auto first, auto last) -> bool { auto const [lo, hi] = xstd::ranges::bit_partition(first, last); return hi == last and (lo == last or not *lo); };

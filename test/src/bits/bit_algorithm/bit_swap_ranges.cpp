@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(SwapsOurWritableSequencesAlone)
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
-// Between two iterators, as std::ranges::swap_ranges and as std::swap_ranges, writing what the window over the same positions writes.
+// Between two iterators, as std::ranges::swap_ranges and std::swap_ranges, writing as the window of those bools does.
 BOOST_AUTO_TEST_CASE(SwapsBetweenTwoPairsOfIterators)
 {
         auto const ranges  = [](auto first, auto last) -> bool { auto other = xstd::bit_vector(70UZ, true); auto const n = last - first; auto const [in1, in2] = xstd::ranges::bit_swap_ranges(first, last, other.begin(), other.end()); return in1 == last and in2 - other.begin() == n; };

@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(AnswersAsRangesMismatchDoes)
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
-// Between two pairs of iterators, as std::ranges::mismatch and as std::mismatch, against another sequence one bool apart.
+// Between two iterator pairs, as std::ranges::mismatch and std::mismatch, against another sequence one bool apart.
 BOOST_AUTO_TEST_CASE(MismatchesBetweenTwoPairsOfIterators)
 {
         auto const agrees = [](auto first, auto last, auto const& w) -> bool {

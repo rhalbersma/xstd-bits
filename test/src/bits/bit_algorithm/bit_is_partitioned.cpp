@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(AsksOurSequencesAlone)
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }
 
-// Between two iterators, as std::ranges::is_partitioned(first, last) and as std::is_partitioned, at every offset and length.
+// Between two iterators, as std::ranges::is_partitioned and std::is_partitioned, at every offset and length.
 BOOST_AUTO_TEST_CASE(IsPartitionedBetweenTwoIterators)
 {
         auto const agrees = [](auto first, auto last, auto const& w) -> bool {

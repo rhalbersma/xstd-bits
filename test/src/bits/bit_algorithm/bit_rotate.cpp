@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(AWholeViewRotatesWhatItViews)
         BOOST_CHECK(a[12] and std::ranges::count(a, true) == 1);
 }
 
-// A window turns the positions it spans and leaves its end blocks' other positions be, at every offset, length and turn.
+// A window turns the positions it spans and leaves its end blocks' others be, at every offset, length and turn.
 BOOST_AUTO_TEST_CASE(AWindowRotatesItsOwnPositions)
 {
         auto wrong = 0;
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(AWindowRotatesItsOwnPositions)
         BOOST_CHECK_EQUAL(wrong, 0);
 }
 
-// Between two iterators, as std::ranges::rotate(first, middle, last) and as std::rotate, with the result each hands back.
+// Between two iterators, as std::ranges::rotate(first, middle, last) and std::rotate, with the result each hands back.
 BOOST_AUTO_TEST_CASE(RotatesBetweenTwoIterators)
 {
         auto wrong = 0;
@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE(RotatesBetweenTwoIterators)
         }());
 }
 
-// Anything writable of ours, a window or its iterators included, but nothing const, and an rvalue owner's subrange dangles.
+// Anything writable of ours, windows and iterators included, but nothing const; an rvalue owner's subrange dangles.
 BOOST_AUTO_TEST_CASE(WhatItRotates)
 {
         using A = xstd::bit_array<8>;
