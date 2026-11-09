@@ -1,0 +1,110 @@
+#          Copyright Rein Halbersma 2014-2026.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
+
+name: Proofs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Weekly, by hand, and on a pull request that touches the proved kernels or their proofs. Not a required check: a path
+# filter would leave it pending on every pull request that does not.
+on:
+  schedule:
+    - cron: '17 4 * * 3'
+  workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'include/xstd/bits/detail/shift.hpp'
+      - 'include/xstd/bits/detail/bit_stream.hpp'
+      - 'include/xstd/bits/detail/bit_block_container.hpp'
+      - 'include/xstd/bits/bit_iterator/detail/select.hpp'
+      - 'include/xstd/bits/bit_algorithm/detail/blit.hpp'
+      - 'test/proofs/**'
+      - 'tools/z3-requirements.txt'
+      - '.github/workflows/proofs.yml'
+
+jobs:
+  # The proofs at every block width, and the drift check against the stable rung's GCC, whose libstdc++ the
+  # dependencies are built for.
+  proofs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      TRIPLET: x64-linux-gcc
+      VCPKG_BINARY_SOURCES: "clear;default,readwrite"
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/vcpkg-cache
+      VCPKG_GCC_VERSION: "15"
+      VCPKG_CACHE_KEY: vcpkg-proofs-gcc-15-
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: rhalbersma/cpp-ci/.github/actions/apt-retry@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
+
+      - name: Install GCC
+        uses: rhalbersma/cpp-ci/.github/actions/install-gcc@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
+        with:
+          version: "15"
+          trunk: false
+
+      - name: Install CMake and Z3
+        run: |
+          set -euo pipefail
+          for requirements in tools/cmake-requirements.txt tools/z3-requirements.txt; do
+            pip install --quiet --user --break-system-packages --require-hashes -r "${requirements}"
+          done
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+
+      - name: Locate the overlay triplets
+        id: overlay
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-overlay@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
+
+      - name: Restore vcpkg binary cache
+        id: vcpkg-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: ${{ env.VCPKG_CACHE_KEY }}
+          restore-keys: ${{ env.VCPKG_CACHE_KEY }}
+
+      - name: Check out vcpkg at the pinned commit
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-setup@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
+
+      - name: Install the dependencies
+        uses: rhalbersma/cpp-ci/.github/actions/vcpkg-install@36a6706f4bd71818af4f80ea97937aa31c2dc719 # main after rhalbersma/cpp-ci#116, v0.16.0 with rewritten tests written as bytes
+        with:
+          triplet: ${{ env.TRIPLET }}
+          overlay_triplets: ${{ steps.overlay.outputs.triplets }}
+
+      - name: Save vcpkg binary cache
+        if: >-
+          hashFiles('vcpkg-cache/**') != '' &&
+          steps.vcpkg-cache.outputs.cache-matched-key !=
+          format('{0}{1}', env.VCPKG_CACHE_KEY, hashFiles('vcpkg-cache/**'))
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: ${{ env.VCPKG_CACHE_KEY }}${{ hashFiles('vcpkg-cache/**') }}
+
+      - name: Configure
+        env:
+          OVERLAY_TRIPLETS: ${{ steps.overlay.outputs.triplets }}
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-15 \
+            -DCMAKE_TOOLCHAIN_FILE="${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_TARGET_TRIPLET="${TRIPLET}" -DVCPKG_OVERLAY_TRIPLETS="${OVERLAY_TRIPLETS}" \
+            -DBUILD_TESTING=OFF -DXSTD_BITS_BUILD_PROOFS=ON
+
+      - name: Build
+        run: cmake --build build --parallel "$(nproc)"
+
+      - name: Prove, and hold the models to the compiled kernels
+        run: ctest --test-dir build --output-on-failure --verbose

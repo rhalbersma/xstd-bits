@@ -218,6 +218,27 @@ ctest --test-dir build/codegen --output-on-failure
 
 `tools/ci-local.sh codegen` runs both compilers' stable rungs, as the [Codegen workflow](.github/workflows/codegen.yml) does. The expectations are written for x86-64 under GCC and Clang. The unit tests compile with `-march=native`, so each leg executes the branch its runner's processor selects, which GitHub does not fix; the codegen tests are what pin every branch.
 
+## Proofs
+
+The tests check the block kernels on chosen and enumerated inputs, but a 64-bit block has 2^64 values and 64 offsets, and a bug that needs one pattern at one offset can sit outside every enumeration. [`test/proofs/`](test/proofs) proves the straight-line kernels equal to their specifications for every input, with [Z3](https://github.com/Z3Prover/z3)'s Python bindings, at every block width the library takes: 8, 16, 32, 64 and 128 bits. The method, layout and workflow are xstd-ints', whose `test/proofs/` proves its portable `<bit>` kernels:
+
+- [`specifications.py`](test/proofs/specifications.py) states what each kernel computes as the obvious statement about each bit of its result: which bit of which input it is, or that it is clear.
+- [`kernels.py`](test/proofs/kernels.py) transcribes each kernel statement by statement: `shl`, `shr` and `partial_block_mask`, `shr_up_to_width`, `block_at`'s read and masked write, `masked_block`, and `unary_table` and `binary_table`. Each records what the C++ needs there to be defined, a shift by a count below the promoted width: a block narrower than `int` is promoted before it shifts.
+- [`blocks.py`](test/proofs/blocks.py) adds to the word operations of the pinned xstd-ints' `test/proofs/operations.py`, which it imports from the sources FetchContent fetched, the `std::size_t` counts these kernels shift by.
+- [`prove.py`](test/proofs/prove.py) proves each kernel under its preconditions, with every shift it executes defined. Four mutants, each a kernel with one deliberate error, must be refuted. One, a `partial_block_mask` without its full-width branch, is refuted only from 32 bits: below that, the promotion to `int` makes its shift by the width defined and its answer right.
+- [`drift.py`](test/proofs/drift.py) holds the models to the C++, since a proof is about the transcription: it runs the compiled kernels through [`drift.cpp`](test/proofs/drift.cpp) at every block width on edge values and pseudo-random blocks, and requires every output to equal the model's.
+
+Z3 is pinned by hash in [`tools/z3-requirements.txt`](tools/z3-requirements.txt), as xstd-ints pins it:
+
+```sh
+pip install --user --require-hashes -r tools/z3-requirements.txt
+cmake -S . -B build/proofs -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-15 -DBUILD_TESTING=OFF -DXSTD_BITS_BUILD_PROOFS=ON
+cmake --build build/proofs
+ctest --test-dir build/proofs --output-on-failure --verbose
+```
+
+`prove.py --widths 16 --jobs 4`, with `XSTD_INTS_PROOFS` naming xstd-ints' `test/proofs/`, is the quick check while editing a kernel or its model. The [Proofs workflow](.github/workflows/proofs.yml) runs every width weekly, by hand, and on a pull request touching a proved kernel or the proofs. It is not a required check, since its path filter would leave it pending on every pull request it does not cover. The loops above these kernels, the selects, the bit stream and the gathers, are the next step.
+
 ## Required status checks
 
 The names to tick under branch protection, exactly as GitHub reports them:

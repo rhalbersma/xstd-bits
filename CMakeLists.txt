@@ -443,6 +443,14 @@ if(PROJECT_IS_TOP_LEVEL)
         enable_testing()
         add_subdirectory(test/codegen)
     endif()
+
+    # Off by default, and outside BUILD_TESTING: the proofs need Z3's Python bindings and neither Boost.Test nor range-v3.
+    option(${project_option_prefix}_BUILD_PROOFS "Prove the block kernels with Z3, under test/proofs/" OFF)
+
+    if(${project_option_prefix}_BUILD_PROOFS)
+        enable_testing()
+        add_subdirectory(test/proofs)
+    endif()
 endif()
 
 install(
