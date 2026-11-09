@@ -9,7 +9,6 @@
 #include <xstd/bits/detail/block_chunks.hpp> // find_chunk, find_chunk_down
 #include <xstd/bits/detail/intrinsic.hpp>    // countl_zero, countr_zero
 #include <xstd/bits/detail/shift.hpp>        // partial_block_mask
-#include <algorithm>                         // min
 #include <cstddef>                           // size_t
 
 namespace xstd::bits::detail {

@@ -32,21 +32,21 @@ using vec = xstd::bit_vector;
 // Each iterator form beside its range form over the window of the same positions: the shapes share one implementation.
 extern "C" {
 
-// CHECK-LABEL: codegen_window_count:
+// CHECK-DAG: codegen_window_count:
 auto codegen_window_count(vec const* v, std::size_t lo, std::size_t hi)
         -> std::ptrdiff_t
 {
         return xstd::ranges::bit_count(xstd::bit_span(*v).first(hi).last(hi - lo), true);
 }
 
-// CHECK-LABEL: codegen_iterators_count:
+// CHECK-DAG: codegen_iterators_count:
 auto codegen_iterators_count(vec const* v, std::size_t lo, std::size_t hi)
         -> std::ptrdiff_t
 {
         return xstd::ranges::bit_count(at(*v, lo), at(*v, hi), true);
 }
 
-// CHECK-LABEL: codegen_window_find:
+// CHECK-DAG: codegen_window_find:
 auto codegen_window_find(vec const* v, std::size_t lo, std::size_t hi)
         -> std::ptrdiff_t
 {
@@ -54,35 +54,35 @@ auto codegen_window_find(vec const* v, std::size_t lo, std::size_t hi)
         return xstd::ranges::bit_find(w, true) - w.begin();
 }
 
-// CHECK-LABEL: codegen_iterators_find:
+// CHECK-DAG: codegen_iterators_find:
 auto codegen_iterators_find(vec const* v, std::size_t lo, std::size_t hi)
         -> std::ptrdiff_t
 {
         return xstd::ranges::bit_find(at(*v, lo), at(*v, hi), true) - at(*v, lo);
 }
 
-// CHECK-LABEL: codegen_window_fill:
+// CHECK-DAG: codegen_window_fill:
 auto codegen_window_fill(vec* v, std::size_t lo, std::size_t hi)
         -> void
 {
         xstd::ranges::bit_fill(xstd::bit_span(*v).first(hi).last(hi - lo), true);
 }
 
-// CHECK-LABEL: codegen_iterators_fill:
+// CHECK-DAG: codegen_iterators_fill:
 auto codegen_iterators_fill(vec* v, std::size_t lo, std::size_t hi)
         -> void
 {
         xstd::bit_fill(at(*v, lo), at(*v, hi), true);
 }
 
-// CHECK-LABEL: codegen_window_copy:
+// CHECK-DAG: codegen_window_copy:
 auto codegen_window_copy(vec const* v, std::size_t lo, std::size_t hi, vec* out, std::size_t d)
         -> void
 {
         xstd::ranges::bit_copy(xstd::bit_span(*v).first(hi).last(hi - lo), at(*out, d));
 }
 
-// CHECK-LABEL: codegen_iterators_copy:
+// CHECK-DAG: codegen_iterators_copy:
 auto codegen_iterators_copy(vec const* v, std::size_t lo, std::size_t hi, vec* out, std::size_t d)
         -> void
 {

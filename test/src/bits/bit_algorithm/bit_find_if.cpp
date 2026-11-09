@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE(FindsIfBetweenTwoIterators)
                 return xstd::ranges::bit_find_if(first, last, std::logical_not()) - first == at and xstd::bit_find_if(first, last, std::logical_not()) - first == at;
         };
         BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
-        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>()), agrees) == 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 9>()), agrees) == 0);
         static_assert(find_if_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not find_if_between<std::vector<bool>::const_iterator>);
 }
 

@@ -24,7 +24,7 @@ auto width(benchmark::State const& state)
         return static_cast<std::size_t>(state.range(0)) * bits_per_block;
 }
 
-auto offset(benchmark::State const& state, int i)
+auto offset(benchmark::State const& state, std::size_t i)
         -> std::size_t
 {
         return static_cast<std::size_t>(state.range(i));
@@ -49,8 +49,8 @@ auto bm_window_copy(benchmark::State& state)
         auto const n   = width(state);
         auto const src = striped(n + (2UZ * bits_per_block));
         auto dst       = xstd::bit_vector(n + (2UZ * bits_per_block));
-        auto const w   = xstd::bit_span(src).subspan(offset(state, 1), n);
-        auto const out = dst.begin() + static_cast<std::ptrdiff_t>(offset(state, 2));
+        auto const w   = xstd::bit_span(src).subspan(offset(state, 1UZ), n);
+        auto const out = dst.begin() + static_cast<std::ptrdiff_t>(offset(state, 2UZ));
         for (auto _ : state) {
                 xstd::ranges::bit_copy(w, out);
                 benchmark::ClobberMemory();
@@ -64,7 +64,7 @@ auto bm_window_fill(benchmark::State& state)
 {
         auto const n = width(state);
         auto v       = xstd::bit_vector(n + (2UZ * bits_per_block));
-        auto const w = xstd::bit_span(v).subspan(offset(state, 1), n);
+        auto const w = xstd::bit_span(v).subspan(offset(state, 1UZ), n);
         auto value   = false;
         for (auto _ : state) {
                 xstd::ranges::bit_fill(w, value);
@@ -80,7 +80,7 @@ auto bm_window_count(benchmark::State& state)
 {
         auto const n = width(state);
         auto const v = striped(n + (2UZ * bits_per_block));
-        auto const w = xstd::bit_span(v).subspan(offset(state, 1), n);
+        auto const w = xstd::bit_span(v).subspan(offset(state, 1UZ), n);
         for (auto _ : state) {
                 auto c = xstd::ranges::bit_count(w, true);
                 benchmark::DoNotOptimize(c);
@@ -94,7 +94,7 @@ auto bm_window_find(benchmark::State& state)
 {
         auto const n   = width(state);
         auto v         = xstd::bit_vector(n + (2UZ * bits_per_block));
-        auto const s   = offset(state, 1);
+        auto const s   = offset(state, 1UZ);
         v[s + n - 1UZ] = true;
         auto const w   = xstd::bit_span(v).subspan(s, n);
         for (auto _ : state) {

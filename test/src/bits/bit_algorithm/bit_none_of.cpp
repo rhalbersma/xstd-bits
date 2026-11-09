@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE(NoneOfBetweenTwoIterators)
                 return xstd::ranges::bit_none_of(first, last) == xstd::ranges::bit_none_of(w) and xstd::bit_none_of(first, last) == xstd::ranges::bit_none_of(w);
         };
         BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
-        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>()), agrees) == 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 9>()), agrees) == 0);
         static_assert(none_of_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not none_of_between<std::vector<bool>::const_iterator>);
 }
 

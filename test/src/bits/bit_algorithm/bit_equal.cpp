@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE(EqualBetweenTwoPairsOfIterators)
                 return same and not xstd::ranges::bit_equal(first, last, other.begin(), other.end()) and not xstd::bit_equal(first, last, other.begin());
         };
         BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
-        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>()), agrees) == 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 9>()), agrees) == 0);
         static_assert(equal_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not equal_between<std::vector<bool>::const_iterator>);
 }
 

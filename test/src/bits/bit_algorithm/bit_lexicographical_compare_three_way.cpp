@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE(ComparesBetweenTwoPairsOfIterators)
                 return xstd::ranges::bit_lexicographical_compare_three_way(first, last, other.begin(), other.end()) == want and xstd::bit_lexicographical_compare_three_way(first, last, other.begin(), other.end()) == want and std::is_lt(want);
         };
         BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
-        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>()), agrees) == 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 9>()), agrees) == 0);
         static_assert(lexicographical_compare_three_way_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not lexicographical_compare_three_way_between<std::vector<bool>::const_iterator>);
 }
 

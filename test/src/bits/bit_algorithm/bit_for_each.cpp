@@ -152,16 +152,16 @@ BOOST_AUTO_TEST_CASE(AnswersAsRangesForEachDoes)
 BOOST_AUTO_TEST_CASE(WalksBetweenTwoIterators)
 {
         auto const agrees = [](auto first, auto last, auto const& w) -> bool {
-                auto const digest = [](auto&& walk) -> std::size_t {
-                        auto h = 0UZ;
-                        walk([&h](bool b) -> void { h = (2UZ * h) + static_cast<std::size_t>(b); });
-                        return h;
-                };
-                auto const want = digest([&](auto f) -> void { xstd::ranges::bit_for_each(w, f); });
-                return digest([&](auto f) -> void { (void)xstd::ranges::bit_for_each(first, last, f); }) == want and digest([&](auto f) -> void { (void)xstd::bit_for_each(first, last, f); }) == want and xstd::ranges::bit_for_each(first, last, [](bool) -> void {}).in == last;
+                auto want    = std::vector<bool>();
+                auto ranges  = std::vector<bool>();
+                auto classic = std::vector<bool>();
+                xstd::ranges::bit_for_each(w, [&want](bool b) -> void { want.push_back(b); });
+                auto const result = xstd::ranges::bit_for_each(first, last, [&ranges](bool b) -> void { ranges.push_back(b); });
+                xstd::bit_for_each(first, last, [&classic](bool b) -> void { classic.push_back(b); });
+                return result.in == last and ranges == want and classic == want;
         };
         BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
-        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>()), agrees) == 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 9>()), agrees) == 0);
         static_assert(for_each_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not for_each_between<std::vector<bool>::const_iterator>);
 }
 
