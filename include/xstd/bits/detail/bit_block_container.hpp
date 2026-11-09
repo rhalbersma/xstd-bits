@@ -710,7 +710,7 @@ public:
                 -> block_type
         {
                 auto const [index, offset] = index_offset(n);
-                assert(index < num_blocks());
+                assert(index < num_blocks() and offset < bits_per_block);
                 if (offset == 0UZ or index == last_block()) {
                         return shr(m_blocks[index], offset);
                 }
