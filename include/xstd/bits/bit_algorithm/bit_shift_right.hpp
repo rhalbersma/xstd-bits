@@ -69,7 +69,7 @@ template<bits::detail::bool_iterator I>
 constexpr auto bit_shift_right(I first, I last, std::iter_difference_t<I> n) noexcept
         -> I
 {
-        return ranges::bit_shift_right(first, last, n).begin();
+        return xstd::ranges::bit_shift_right(first, last, n).begin();
 }
 
 } // namespace xstd

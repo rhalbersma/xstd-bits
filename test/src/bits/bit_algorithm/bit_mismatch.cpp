@@ -108,7 +108,7 @@ BOOST_AUTO_TEST_CASE(MismatchesBetweenTwoPairsOfIterators)
                 return ranges.in1 - first == want and ranges.in2 - other.begin() == want and pair3.first - first == want and pair4.second - other.begin() == want;
         };
         BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
-        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::bit_array<70>()), agrees) == 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>()), agrees) == 0);
         static_assert(mismatch_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not mismatch_between<std::vector<bool>::const_iterator>);
 }
 

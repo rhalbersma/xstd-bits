@@ -55,7 +55,7 @@ template<bits::detail::bool_iterator I, bits::detail::bool_output_iterator O>
 constexpr auto bit_rotate_copy(I first, I middle, I last, O out) noexcept
         -> O
 {
-        return ranges::bit_rotate_copy(first, middle, last, out).out;
+        return xstd::ranges::bit_rotate_copy(first, middle, last, out).out;
 }
 
 } // namespace xstd

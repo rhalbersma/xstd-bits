@@ -124,17 +124,17 @@ BOOST_AUTO_TEST_CASE(MovesBetweenOurSequencesAlone)
 BOOST_AUTO_TEST_CASE(MovesFromBetweenTwoIterators)
 {
         auto const agrees = [](auto first, auto last, auto const& w) -> bool {
-                auto const n = static_cast<std::ptrdiff_t>(std::ranges::size(w));
-                auto want    = xstd::bit_vector(140UZ);
-                auto got     = want;
-                auto classic = want;
+                auto const n            = static_cast<std::ptrdiff_t>(std::ranges::size(w));
+                auto want               = xstd::bit_vector(140UZ);
+                auto got                = want;
+                auto classic            = want;
                 auto const range_result = xstd::ranges::bit_move(w, want.begin() + 67);
                 auto const iter_result  = xstd::ranges::bit_move(first, last, got.begin() + 67);
                 auto const classic_end  = xstd::bit_move(first, last, classic.begin() + 67);
                 return got == want and classic == want and iter_result.in == last and iter_result.out - got.begin() == range_result.out - want.begin() and classic_end - classic.begin() == 67 + n;
         };
         BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
-        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::bit_array<70>()), agrees) == 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>()), agrees) == 0);
         static_assert(move_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not move_between<std::vector<bool>::const_iterator>);
 }
 

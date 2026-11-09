@@ -41,7 +41,7 @@ template<bits::detail::bool_iterator I>
 [[nodiscard]] constexpr auto bit_count(I first, I last, bool value) noexcept
         -> std::iter_difference_t<I>
 {
-        return ranges::bit_count(first, last, value);
+        return xstd::ranges::bit_count(first, last, value);
 }
 
 } // namespace xstd

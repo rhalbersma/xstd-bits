@@ -141,8 +141,8 @@ template<class A, class F, class G>
         auto wrong   = 0;
         for (auto const lo : std::views::iota(0UZ, n + 1UZ)) {
                 for (auto const hi : std::views::iota(lo, n + 1UZ)) {
-                        auto b     = a;
-                        auto model = bools_of(a);
+                        auto b           = a;
+                        auto model       = bools_of(a);
                         auto const right = f(std::ranges::begin(b) + static_cast<std::ptrdiff_t>(lo), std::ranges::begin(b) + static_cast<std::ptrdiff_t>(hi));
                         g(std::ranges::subrange(model.begin() + static_cast<std::ptrdiff_t>(lo), model.begin() + static_cast<std::ptrdiff_t>(hi)));
                         wrong += static_cast<int>(not right or bools_of(b) != model);

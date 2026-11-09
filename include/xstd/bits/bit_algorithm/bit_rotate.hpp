@@ -62,7 +62,7 @@ template<bits::detail::bool_iterator I>
 constexpr auto bit_rotate(I first, I middle, I last) noexcept
         -> I
 {
-        return ranges::bit_rotate(first, middle, last).begin();
+        return xstd::ranges::bit_rotate(first, middle, last).begin();
 }
 
 } // namespace xstd

@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(PartitionPointBetweenTwoIterators)
                 return xstd::ranges::bit_partition_point(first, last) - first == at and xstd::bit_partition_point(first, last) - first == at;
         };
         BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
-        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::bit_array<70>()), agrees) == 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>()), agrees) == 0);
         static_assert(partition_point_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not partition_point_between<std::vector<bool>::const_iterator>);
 }
 

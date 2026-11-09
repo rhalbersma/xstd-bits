@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(PartitionsBetweenTwoIterators)
         auto const window  = [](auto w) -> void { xstd::ranges::bit_partition(w); };
         BOOST_CHECK_EQUAL(test::algorithm::writes_through_iterators_as_window(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), ranges, window), 0);
         BOOST_CHECK_EQUAL(test::algorithm::writes_through_iterators_as_window(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), classic, window), 0);
-        static_assert(test::algorithm::writes_through_iterators_as_window(test::algorithm::patterned(xstd::bit_array<70>()), ranges, window) == 0);
+        static_assert(test::algorithm::writes_through_iterators_as_window(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>()), ranges, window) == 0);
         static_assert(partition_between<std::ranges::iterator_t<xstd::bit_array<8>>> and not partition_between<std::ranges::iterator_t<xstd::bit_array<8> const>>);
         static_assert(not partition_between<std::vector<bool>::iterator>);
 }

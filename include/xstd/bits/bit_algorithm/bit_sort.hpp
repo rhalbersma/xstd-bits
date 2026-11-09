@@ -48,7 +48,7 @@ template<bits::detail::bool_iterator I>
 constexpr auto bit_sort(I first, I last) noexcept
         -> void
 {
-        ranges::bit_sort(first, last);
+        xstd::ranges::bit_sort(first, last);
 }
 
 } // namespace xstd

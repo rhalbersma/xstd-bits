@@ -29,7 +29,7 @@ template<bits::detail::bool_iterator I1, bits::detail::bool_iterator I2>
 [[nodiscard]] constexpr auto bit_equal(I1 first1, I1 last1, I2 first2) noexcept
         -> bool
 {
-        return ranges::bit_equal(first1, last1, first2, first2 + (last1 - first1));
+        return xstd::ranges::bit_equal(first1, last1, first2, first2 + (last1 - first1));
 }
 
 // std::equal(first1, last1, first2, last2).
@@ -37,7 +37,7 @@ template<bits::detail::bool_iterator I1, bits::detail::bool_iterator I2>
 [[nodiscard]] constexpr auto bit_equal(I1 first1, I1 last1, I2 first2, I2 last2) noexcept
         -> bool
 {
-        return ranges::bit_equal(first1, last1, first2, last2);
+        return xstd::ranges::bit_equal(first1, last1, first2, last2);
 }
 
 } // namespace xstd

@@ -43,7 +43,7 @@ template<bits::detail::bool_iterator I>
 [[nodiscard]] constexpr auto bit_partition_point(I first, I last) noexcept
         -> I
 {
-        return ranges::bit_partition_point(first, last);
+        return xstd::ranges::bit_partition_point(first, last);
 }
 
 } // namespace xstd

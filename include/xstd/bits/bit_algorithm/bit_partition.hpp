@@ -50,7 +50,7 @@ template<bits::detail::bool_iterator I>
 constexpr auto bit_partition(I first, I last) noexcept
         -> I
 {
-        return ranges::bit_partition(first, last).begin();
+        return xstd::ranges::bit_partition(first, last).begin();
 }
 
 } // namespace xstd

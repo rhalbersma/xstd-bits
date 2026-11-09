@@ -64,7 +64,7 @@ template<bits::detail::bool_iterator I, class Pred>
 [[nodiscard]] constexpr auto bit_find_if(I first, I last, Pred pred)
         -> I
 {
-        return ranges::bit_find_if(first, last, std::move(pred));
+        return xstd::ranges::bit_find_if(first, last, std::move(pred));
 }
 
 } // namespace xstd

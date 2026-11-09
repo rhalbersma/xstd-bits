@@ -49,7 +49,7 @@ template<bits::detail::bool_iterator I>
 constexpr auto bit_reverse(I first, I last) noexcept
         -> void
 {
-        ranges::bit_reverse(first, last);
+        xstd::ranges::bit_reverse(first, last);
 }
 
 } // namespace xstd

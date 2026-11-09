@@ -47,7 +47,7 @@ template<bits::detail::bool_iterator I, bits::detail::bool_output_iterator O>
 constexpr auto bit_move(I first, I last, O out) noexcept
         -> O
 {
-        return ranges::bit_move(first, last, out).out;
+        return xstd::ranges::bit_move(first, last, out).out;
 }
 
 } // namespace xstd

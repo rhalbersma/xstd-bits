@@ -60,7 +60,7 @@ template<bits::detail::bool_iterator I1, bits::detail::bool_iterator I2>
 [[nodiscard]] constexpr auto bit_mismatch(I1 first1, I1 last1, I2 first2) noexcept
         -> std::pair<I1, I2>
 {
-        auto const [in1, in2] = ranges::bit_mismatch(first1, last1, first2, first2 + (last1 - first1));
+        auto const [in1, in2] = xstd::ranges::bit_mismatch(first1, last1, first2, first2 + (last1 - first1));
         return {in1, in2};
 }
 
@@ -69,7 +69,7 @@ template<bits::detail::bool_iterator I1, bits::detail::bool_iterator I2>
 [[nodiscard]] constexpr auto bit_mismatch(I1 first1, I1 last1, I2 first2, I2 last2) noexcept
         -> std::pair<I1, I2>
 {
-        auto const [in1, in2] = ranges::bit_mismatch(first1, last1, first2, last2);
+        auto const [in1, in2] = xstd::ranges::bit_mismatch(first1, last1, first2, last2);
         return {in1, in2};
 }
 

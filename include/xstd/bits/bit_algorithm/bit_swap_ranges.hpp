@@ -51,7 +51,7 @@ template<bits::detail::bool_iterator I1, bits::detail::bool_iterator I2>
 constexpr auto bit_swap_ranges(I1 first1, I1 last1, I2 first2) noexcept
         -> I2
 {
-        return ranges::bit_swap_ranges(first1, last1, first2, first2 + (last1 - first1)).in2;
+        return xstd::ranges::bit_swap_ranges(first1, last1, first2, first2 + (last1 - first1)).in2;
 }
 
 } // namespace xstd

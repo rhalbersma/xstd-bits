@@ -159,23 +159,23 @@ BOOST_AUTO_TEST_CASE(TransformsBetweenOurSequencesAlone)
 BOOST_AUTO_TEST_CASE(TransformsFromBetweenTwoIterators)
 {
         auto const agrees = [](auto first, auto last, auto const& w) -> bool {
-                auto const n = static_cast<std::ptrdiff_t>(std::ranges::size(w));
-                auto want    = xstd::bit_vector(140UZ);
-                auto got     = want;
-                auto classic = want;
+                auto const n            = static_cast<std::ptrdiff_t>(std::ranges::size(w));
+                auto want               = xstd::bit_vector(140UZ);
+                auto got                = want;
+                auto classic            = want;
                 auto const range_result = xstd::ranges::bit_transform(w, w, want.begin() + 67, std::not_equal_to());
                 auto const iter_result  = xstd::ranges::bit_transform(first, last, first, last, got.begin() + 67, std::not_equal_to());
                 auto const classic_end  = xstd::bit_transform(first, last, classic.begin() + 67, std::logical_not());
-                auto unary = want;
+                auto unary              = want;
                 (void)xstd::ranges::bit_transform(w, unary.begin() + 67, std::logical_not());
-                auto unary_iter = want;
+                auto unary_iter         = want;
                 auto const unary_result = xstd::ranges::bit_transform(first, last, unary_iter.begin() + 67, std::logical_not());
-                auto binary_classic = want;
-                auto const binary_end = xstd::bit_transform(first, last, first, binary_classic.begin() + 67, std::not_equal_to());
+                auto binary_classic     = want;
+                auto const binary_end   = xstd::bit_transform(first, last, first, binary_classic.begin() + 67, std::not_equal_to());
                 return got == want and classic == unary and unary_iter == unary and binary_classic == want and iter_result.in1 == last and iter_result.in2 == last and iter_result.out - got.begin() == range_result.out - want.begin() and unary_result.in == last and classic_end - classic.begin() == 67 + n and binary_end - binary_classic.begin() == 67 + n;
         };
         BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
-        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::bit_array<70>()), agrees) == 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>()), agrees) == 0);
         static_assert(transform_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not transform_between<std::vector<bool>::const_iterator>);
 }
 

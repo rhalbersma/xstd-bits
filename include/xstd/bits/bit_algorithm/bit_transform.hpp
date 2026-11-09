@@ -84,7 +84,7 @@ template<bits::detail::bool_iterator I, bits::detail::bool_output_iterator O, bi
 constexpr auto bit_transform(I first, I last, O out, F f)
         -> O
 {
-        return ranges::bit_transform(first, last, out, std::move(f)).out;
+        return xstd::ranges::bit_transform(first, last, out, std::move(f)).out;
 }
 
 // std::transform(first1, last1, first2, out, f): the end of what was written.
@@ -92,7 +92,7 @@ template<bits::detail::bool_iterator I1, bits::detail::bool_iterator I2, bits::d
 constexpr auto bit_transform(I1 first1, I1 last1, I2 first2, O out, F f)
         -> O
 {
-        return ranges::bit_transform(first1, last1, first2, first2 + (last1 - first1), out, std::move(f)).out;
+        return xstd::ranges::bit_transform(first1, last1, first2, first2 + (last1 - first1), out, std::move(f)).out;
 }
 
 } // namespace xstd

@@ -91,12 +91,12 @@ template<class Bits>
 constexpr auto reverse_bools(Bits&& c, std::size_t s, std::size_t len) noexcept
         -> void
 {
-        using bits_type       = std::remove_cvref_t<Bits>;
-        using block_type      = bits_type::block_type;
-        constexpr auto digits = bits_type::bits_per_block;
+        using bits_type        = std::remove_cvref_t<Bits>;
+        using block_type       = bits_type::block_type;
+        constexpr auto digits  = bits_type::bits_per_block;
         auto const reversed_at = [&](std::size_t n, std::size_t count) -> block_type { return shr(bits_type::reversed(read_block<block_type>(c, n, count)), digits - count); };
-        auto lo = s;
-        auto hi = s + len;
+        auto lo                = s;
+        auto hi                = s + len;
         while (hi - lo > digits) {
                 // Half of what remains at most, so the two ends traded never overlap.
                 auto const count = std::ranges::min(digits, (hi - lo) / 2UZ);

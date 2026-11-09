@@ -48,7 +48,7 @@ template<bits::detail::bool_iterator I1, bits::detail::bool_output_iterator I2>
 constexpr auto bit_copy_backward(I1 first, I1 last, I2 out_last) noexcept
         -> I2
 {
-        return ranges::bit_copy_backward(first, last, out_last).out;
+        return xstd::ranges::bit_copy_backward(first, last, out_last).out;
 }
 
 } // namespace xstd

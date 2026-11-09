@@ -30,7 +30,7 @@ template<bits::detail::bool_iterator I1, bits::detail::bool_iterator I2>
 [[nodiscard]] constexpr auto bit_lexicographical_compare_three_way(I1 first1, I1 last1, I2 first2, I2 last2) noexcept
         -> std::strong_ordering
 {
-        return ranges::bit_lexicographical_compare_three_way(first1, last1, first2, last2);
+        return xstd::ranges::bit_lexicographical_compare_three_way(first1, last1, first2, last2);
 }
 
 } // namespace xstd

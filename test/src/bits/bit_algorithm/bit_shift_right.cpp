@@ -73,19 +73,19 @@ BOOST_AUTO_TEST_CASE(AWindowShiftsItsOwnPositions)
 {
         auto wrong = 0;
         for (auto const n : {0UZ, 1UZ, 3UZ, 8UZ, 13UZ, 64UZ, 65UZ, 200UZ}) {
-        auto const model = [n](auto m) -> void {
-                auto const at = [&m](std::size_t i) -> auto { return m.begin()[static_cast<std::ptrdiff_t>(i)]; };
-                auto const z  = std::ranges::size(m);
-                if (n == 0UZ or z <= n) {
-                        return;
-                }
-                for (auto const k : std::views::iota(0UZ, z - n)) {
-                        at(z - 1UZ - k) = static_cast<bool>(at(z - 1UZ - k - n));
-                }
-                for (auto const i : std::views::iota(0UZ, n)) {
-                        at(i) = false;
-                }
-        };
+                auto const model = [n](auto m) -> void {
+                        auto const at = [&m](std::size_t i) -> auto { return m.begin()[static_cast<std::ptrdiff_t>(i)]; };
+                        auto const z  = std::ranges::size(m);
+                        if (n == 0UZ or z <= n) {
+                                return;
+                        }
+                        for (auto const k : std::views::iota(0UZ, z - n)) {
+                                at(z - 1UZ - k) = static_cast<bool>(at(z - 1UZ - k - n));
+                        }
+                        for (auto const i : std::views::iota(0UZ, n)) {
+                                at(i) = false;
+                        }
+                };
                 auto const shift = [n](auto w) -> void { xstd::ranges::bit_shift_right(w, static_cast<std::ptrdiff_t>(n)); };
                 wrong += test::algorithm::writes_as_model(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), shift, model);
                 wrong += test::algorithm::writes_as_model(test::algorithm::patterned(xstd::bit_array<140>()), shift, model);

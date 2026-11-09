@@ -38,7 +38,7 @@ template<bits::detail::bool_iterator I>
 [[nodiscard]] constexpr auto bit_none_of(I first, I last) noexcept
         -> bool
 {
-        return ranges::bit_none_of(first, last);
+        return xstd::ranges::bit_none_of(first, last);
 }
 
 } // namespace xstd

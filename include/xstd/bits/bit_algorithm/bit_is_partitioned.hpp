@@ -44,7 +44,7 @@ template<bits::detail::bool_iterator I>
 [[nodiscard]] constexpr auto bit_is_partitioned(I first, I last) noexcept
         -> bool
 {
-        return ranges::bit_is_partitioned(first, last);
+        return xstd::ranges::bit_is_partitioned(first, last);
 }
 
 } // namespace xstd

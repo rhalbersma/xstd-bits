@@ -58,7 +58,7 @@ template<bits::detail::bool_iterator I, class F>
 constexpr auto bit_for_each(I first, I last, F f)
         -> F
 {
-        return ranges::bit_for_each(first, last, std::move(f)).fun;
+        return xstd::ranges::bit_for_each(first, last, std::move(f)).fun;
 }
 
 } // namespace xstd

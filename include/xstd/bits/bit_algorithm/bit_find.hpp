@@ -43,7 +43,7 @@ template<bits::detail::bool_iterator I>
 [[nodiscard]] constexpr auto bit_find(I first, I last, bool value) noexcept
         -> I
 {
-        return ranges::bit_find(first, last, value);
+        return xstd::ranges::bit_find(first, last, value);
 }
 
 } // namespace xstd

@@ -47,7 +47,7 @@ template<bits::detail::bool_iterator O>
 constexpr auto bit_fill(O first, O last, bool value) noexcept
         -> void
 {
-        ranges::bit_fill(first, last, value);
+        xstd::ranges::bit_fill(first, last, value);
 }
 
 } // namespace xstd
