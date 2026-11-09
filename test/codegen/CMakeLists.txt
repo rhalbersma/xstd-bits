@@ -85,3 +85,14 @@ endforeach()
 
 # A set packed into an integer is a PEXT per block and no branch, and one block compiles as its word packed by hand.
 add_codegen_test(compress.cpp x86-64-v3 "-march=x86-64-v3" "CHECK,FAST-BMI2,BRANCH-FREE" SAME_BODIES codegen_compress_set1=codegen_compress_word1)
+
+# Each iterator form compiles to its range form over the window of the same positions.
+set(
+    shape_pairs
+    codegen_window_count=codegen_iterators_count
+    codegen_window_find=codegen_iterators_find
+    codegen_window_fill=codegen_iterators_fill
+    codegen_window_copy=codegen_iterators_copy
+)
+list(JOIN shape_pairs "," shape_pairs)
+add_codegen_test(shapes.cpp x86-64-v3 "-march=x86-64-v3" "CHECK" SAME_BODIES ${shape_pairs})

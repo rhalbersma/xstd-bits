@@ -238,6 +238,7 @@ target_sources(
         include/xstd/bits/detail/assert.hpp
         include/xstd/bits/detail/inplace_blocks.hpp
         include/xstd/bits/detail/bit_block_container.hpp
+        include/xstd/bits/detail/block_chunks.hpp
         include/xstd/bits/detail/block_intersects.hpp
         include/xstd/bits/detail/comparisons.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp

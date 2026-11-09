@@ -958,7 +958,17 @@ operations on a window ([windows](#windows)).
 is: the bits of `value` under `mask` land at `[pos, pos + digits)`, split over two blocks where `pos` is not
 aligned, the tail kept clear. Every masked write goes through it: the storage's ranged `set`,
 `xstd::ranges::bit_fill` over a window, the copy algorithms at any two offsets, and a window's bulk operators, each walking the blocks a range spans with the mask of what each
-holds, whole blocks and a partial one at the end.
+holds. A full mask at an aligned position is a plain store, with nothing of the old block read back.
+
+**Every walk is cut at block boundaries.** `detail::find_chunk` and `detail::for_each_chunk` hand a range of positions
+out in chunks: a head from its first position up to the next multiple of `digits`, whole blocks from there, and a
+tail with what remains of the last. Their `_down` mirrors hand out the same chunks highest first. The storage's ranged
+`count`, `any` and `all`, the searches behind `bit_find` and `bit_find_last`, the blit's writes and `bit_swap_ranges`
+and `bit_mismatch` all walk through them. So only the head and the tail of a window pay for its offset: every chunk
+between them is a whole block, read by `block_at` as the block itself and written as a plain store, and where a
+copy's source sits at the same offset modulo `digits` as its destination, the source's chunks are whole blocks too.
+Where the offsets differ, the destination still takes whole blocks, and each is assembled from two of the source's by
+one funnel shift. The range forms and the iterator forms both reach these primitives, so both get the same walk.
 
 ### the-funnel-shift
 
