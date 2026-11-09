@@ -6,17 +6,23 @@
 #ifndef XSTD_BITS_DETAIL_BLOCK_CHUNKS_HPP
 #define XSTD_BITS_DETAIL_BLOCK_CHUNKS_HPP
 
-#include <algorithm> // min
-#include <cstddef>   // size_t
+#include <cstddef> // size_t
 
 namespace xstd::bits::detail {
+
+// The smaller of two counts: one comparison, which <algorithm> would cost every header including this one.
+[[nodiscard]] constexpr auto min_count(std::size_t a, std::size_t b) noexcept
+        -> std::size_t
+{
+        return b < a ? b : a;
+}
 
 // Whether pred(k, count) holds for a chunk of [n, n + len), lowest first: a head to a multiple of Digits, whole blocks.
 template<std::size_t Digits, class Pred>
 constexpr auto find_chunk(std::size_t n, std::size_t len, Pred pred)
         -> bool
 {
-        auto const head = std::ranges::min(len, (Digits - (n % Digits)) % Digits);
+        auto const head = min_count(len, (Digits - (n % Digits)) % Digits);
         if (head != 0UZ and pred(0UZ, head)) {
                 return true;
         }
@@ -34,7 +40,7 @@ template<std::size_t Digits, class Pred>
 constexpr auto find_chunk_down(std::size_t n, std::size_t len, Pred pred)
         -> bool
 {
-        auto const head = std::ranges::min(len, (Digits - (n % Digits)) % Digits);
+        auto const head = min_count(len, (Digits - (n % Digits)) % Digits);
         auto const tail = head + (((len - head) / Digits) * Digits);
         if (tail < len and pred(tail, len - tail)) {
                 return true;

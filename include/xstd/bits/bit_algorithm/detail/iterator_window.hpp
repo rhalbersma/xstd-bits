@@ -7,11 +7,9 @@
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_ITERATOR_WINDOW_HPP
 
 #include <xstd/bits/detail/iterator_concepts.hpp> // bool_iterator
-#include <xstd/bits/detail/ownership.hpp>         // storage, storage_access, window
-#include <xstd/bits/detail/sequence_adaptor.hpp>  // sequence_adaptor
+#include <xstd/bits/detail/ownership.hpp>         // storage_access
 #include <cassert>                                // assert
-#include <iterator>                               // sentinel_for
-#include <span>                                   // dynamic_extent
+#include <iterator>                               // iter_reference_t, sentinel_for
 #include <type_traits>                            // remove_reference_t
 #include <utility>                                // declval
 
@@ -21,9 +19,9 @@ namespace xstd::bits::detail {
 template<class S, class I>
 concept bool_sentinel_for = bool_iterator<S> and std::sentinel_for<S, I>;
 
-// The window over the storage I steps over, through Bits const where I is a const_iterator.
+// The window over the storage I steps over, through Bits const where I is a const_iterator, named by I's own adaptor.
 template<bool_iterator I>
-using iterator_window_t = sequence_adaptor<std::remove_reference_t<decltype(storage_access::iterated_bits(std::declval<I const&>()))>, storage::borrowed, window::sub, void, std::dynamic_extent>;
+using iterator_window_t = std::iter_reference_t<I>::adaptor_type::template window_over_t<std::remove_reference_t<decltype(storage_access::iterated_bits(std::declval<I const&>()))>>;
 
 // The positions [first, last) as a window, which every range form takes as it takes a subspan.
 template<bool_iterator I, bool_sentinel_for<I> S>

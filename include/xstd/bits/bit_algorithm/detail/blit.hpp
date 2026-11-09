@@ -6,10 +6,8 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_BLIT_HPP
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_BLIT_HPP
 
-#include <xstd/bits/detail/block_chunks.hpp> // find_chunk, for_each_chunk, for_each_chunk_down
-#include <xstd/bits/detail/intrinsic.hpp>    // countr_zero
+#include <xstd/bits/detail/block_chunks.hpp> // for_each_chunk, for_each_chunk_down, min_count
 #include <xstd/bits/detail/shift.hpp>        // partial_block_mask, shl, shr
-#include <algorithm>                         // min
 #include <concepts>                          // convertible_to, invocable, same_as
 #include <cstddef>                           // size_t
 #include <type_traits>                       // invoke_result_t, remove_cvref_t
@@ -91,7 +89,7 @@ constexpr auto reverse_bools(Bits&& c, std::size_t s, std::size_t len) noexcept
         auto hi                = s + len;
         while (hi - lo > digits) {
                 // Half of what remains at most, so the two ends traded never overlap.
-                auto const count = std::ranges::min(digits, (hi - lo) / 2UZ);
+                auto const count = min_count(digits, (hi - lo) / 2UZ);
                 auto const low   = reversed_at(lo, count);
                 auto const high  = reversed_at(hi - count, count);
                 c.block_at(lo, high, partial_block_mask<block_type>(count));
@@ -111,30 +109,12 @@ constexpr auto swap_bools(X&& x, std::size_t i, Y&& y, std::size_t j, std::size_
 {
         using x_block       = std::remove_cvref_t<X>::block_type;
         using y_block       = std::remove_cvref_t<Y>::block_type;
-        constexpr auto step = std::ranges::min(std::remove_cvref_t<X>::bits_per_block, std::remove_cvref_t<Y>::bits_per_block);
+        constexpr auto step = min_count(std::remove_cvref_t<X>::bits_per_block, std::remove_cvref_t<Y>::bits_per_block);
         for_each_chunk<step>(i, len, [&](std::size_t k, std::size_t count) -> void {
                 auto const from_x = read_block<y_block>(x, i + k, count);
                 x.block_at(i + k, read_block<x_block>(y, j + k, count), partial_block_mask<x_block>(count));
                 y.block_at(j + k, from_x, partial_block_mask<y_block>(count));
         });
-}
-
-// The first of the len positions where x from position i and y from position j differ, or len: a block of x at a time.
-template<class X, class Y>
-[[nodiscard]] constexpr auto mismatch_bools(X const& x, std::size_t i, Y const& y, std::size_t j, std::size_t len) noexcept
-        -> std::size_t
-{
-        using block_type = X::block_type;
-        auto found       = len;
-        find_chunk<X::bits_per_block>(i, len, [&](std::size_t k, std::size_t count) -> bool {
-                auto const diff = static_cast<block_type>(static_cast<block_type>(read_block<block_type>(x, i + k, count) ^ read_block<block_type>(y, j + k, count)) & partial_block_mask<block_type>(count));
-                if (diff == block_type{}) {
-                        return false;
-                }
-                found = k + countr_zero(diff);
-                return true;
-        });
-        return found;
 }
 
 // A function of one bool as a block expression: asked of false and of true, it is a constant, the identity or not.

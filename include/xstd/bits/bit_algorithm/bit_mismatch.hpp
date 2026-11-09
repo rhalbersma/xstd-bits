@@ -6,8 +6,8 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_MISMATCH_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_MISMATCH_HPP
 
-#include <xstd/bits/bit_algorithm/detail/blit.hpp>            // mismatch_bools
 #include <xstd/bits/bit_algorithm/detail/iterator_window.hpp> // bool_sentinel_for, iterator_window, rebased
+#include <xstd/bits/bit_algorithm/detail/mismatch.hpp>        // mismatch_bools
 #include <xstd/bits/detail/first_mismatch.hpp>                // first_mismatch
 #include <xstd/bits/detail/iterator_concepts.hpp>             // bool_iterator
 #include <xstd/bits/detail/ownership.hpp>                     // reads_bools, storage_access

@@ -112,6 +112,7 @@ target_sources(
         include/xstd/bits/bit_algorithm/detail/find.hpp
         include/xstd/bits/bit_algorithm/detail/find_if.hpp
         include/xstd/bits/bit_algorithm/detail/iterator_window.hpp
+        include/xstd/bits/bit_algorithm/detail/mismatch.hpp
         include/xstd/bits/bit_algorithm/detail/walk.hpp
         include/xstd/bits/bit_algorithm/bit_all_of.hpp
         include/xstd/bits/bit_algorithm/bit_any_of.hpp
