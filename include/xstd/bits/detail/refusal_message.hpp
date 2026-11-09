@@ -19,9 +19,9 @@ namespace xstd::bits::detail {
 [[nodiscard]] constexpr auto decimal(std::size_t n)
         -> std::string
 {
-        auto digits     = std::array<char, std::numeric_limits<std::size_t>::digits10 + 1>{};
-        auto const last = std::to_chars(digits.data(), digits.data() + digits.size(), n).ptr;
-        return std::string(digits.data(), last);
+        auto digits      = std::array<char, std::numeric_limits<std::size_t>::digits10 + 1>{};
+        auto* const last = std::to_chars(digits.data(), digits.data() + digits.size(), n).ptr;
+        return {digits.data(), last};
 }
 
 // "file:line:column: exception: ‘function‘: complaint [n relation bound]", built without <format> and all it includes.
