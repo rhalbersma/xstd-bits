@@ -43,7 +43,7 @@ template<bits::detail::bool_iterator I, bits::detail::bool_sentinel_for<I> S, cl
 constexpr auto bit_for_each(I first, S last, F f)
         -> std::ranges::for_each_result<I, F>
 {
-        auto w         = bits::detail::iterator_window(first, last);
+        auto const w   = bits::detail::iterator_window(first, last);
         auto [in, fun] = xstd::ranges::bit_for_each(w, std::move(f));
         return {bits::detail::rebased(first, in), std::move(fun)};
 }
