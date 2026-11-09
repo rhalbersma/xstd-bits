@@ -108,9 +108,9 @@ BOOST_AUTO_TEST_CASE(RotateCopiesFromBetweenTwoIterators)
                 auto want               = xstd::bit_vector(140UZ);
                 auto got                = want;
                 auto classic            = want;
-                auto const range_result = xstd::ranges::bit_rotate_copy(w, std::ranges::begin(w) + n / 3, want.begin() + 67);
-                auto const iter_result  = xstd::ranges::bit_rotate_copy(first, first + n / 3, last, got.begin() + 67);
-                auto const classic_end  = xstd::bit_rotate_copy(first, first + n / 3, last, classic.begin() + 67);
+                auto const range_result = xstd::ranges::bit_rotate_copy(w, std::ranges::begin(w) + (n / 3), want.begin() + 67);
+                auto const iter_result  = xstd::ranges::bit_rotate_copy(first, first + (n / 3), last, got.begin() + 67);
+                auto const classic_end  = xstd::bit_rotate_copy(first, first + (n / 3), last, classic.begin() + 67);
                 return got == want and classic == want and iter_result.in == last and iter_result.out - got.begin() == range_result.out - want.begin() and classic_end - classic.begin() == 67 + n;
         };
         BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
