@@ -8,7 +8,7 @@
 #include <test/set/primitives.hpp>               // op_hash
 #include <test/spec/input.hpp>                   // context
 #include <test/spec/sequence.hpp>                // inplace_vector_all, pairs, sequences
-#include <xstd/bits/bit_inplace_vector/hash.hpp> // hash
+#include <xstd/bits/bit_inplace_vector/hash.hpp> // IWYU pragma: keep; hash
 #include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <concepts>                              // same_as
 #include <cstddef>                               // size_t

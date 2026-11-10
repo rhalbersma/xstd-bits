@@ -5,14 +5,14 @@
 
 #include <test/block_types.hpp>                            // all_block_types
 #include <xstd/bits/bit_array.hpp>                         // basic_bit_array
-#include <xstd/bits/bit_array/hash.hpp>                    // hash
+#include <xstd/bits/bit_array/hash.hpp>                    // IWYU pragma: keep; hash
 #include <xstd/bits/bit_concepts/bit_convertible_to.hpp>   // bit_convertible_to
 #include <xstd/bits/bit_functional/bit_hash.hpp>           // bit_hash
 #include <xstd/bits/bit_inplace_vector.hpp>                // basic_bit_inplace_vector
-#include <xstd/bits/bit_inplace_vector/hash.hpp>           // hash
+#include <xstd/bits/bit_inplace_vector/hash.hpp>           // IWYU pragma: keep; hash
 #include <xstd/bits/bit_ranges/from_blocks.hpp>            // from_blocks_t
 #include <xstd/bits/bit_set.hpp>                           // basic_bit_fixed_set, basic_bit_inplace_set, basic_bit_set, bit_set_view
-#include <xstd/bits/bit_set/hash.hpp>                      // hash
+#include <xstd/bits/bit_set/hash.hpp>                      // IWYU pragma: keep; hash
 #include <xstd/bits/bit_span/bit_span.hpp>                 // bit_span
 #include <xstd/bits/bit_type_traits/bit_rebind.hpp>        // bit_rebind
 #include <xstd/bits/bit_type_traits/bit_resize.hpp>        // bit_resize
@@ -20,7 +20,7 @@
 #include <xstd/bits/bit_valarray/bit_inplace_valarray.hpp> // basic_bit_inplace_valarray
 #include <xstd/bits/bit_valarray/bit_valarray.hpp>         // basic_bit_valarray
 #include <xstd/bits/bit_vector.hpp>                        // basic_bit_vector
-#include <xstd/bits/bit_vector/hash.hpp>                   // hash
+#include <xstd/bits/bit_vector/hash.hpp>                   // IWYU pragma: keep; hash
 #include <xstd/bits/ext/boost/bit_small_set.hpp>           // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_valarray.hpp>      // basic_bit_small_valarray
 #include <xstd/bits/ext/boost/bit_small_vector.hpp>        // basic_bit_small_vector
