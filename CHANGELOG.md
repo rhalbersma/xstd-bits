@@ -106,7 +106,7 @@ It needs a C++23 compiler, and CMake 3.30 or later for the supplied CMake projec
     #366, #368).
   - `bit_hash` and `bit_digest` hash the packed bits, and avalanche as `xstd::hash` does (#463).
   - Hashing is opt-in: `std::hash` and the `hash_append` hooks come with each family's `hash.hpp`, and `bit_hash` and
-    `bit_digest` with their own headers. No umbrella includes them, and only they need Boost.Hash2 (#439).
+    `bit_digest` with their own headers. No umbrella includes them, and only they need Boost.Hash2 (#542).
 - **Tags:** `from_blocks` reads an argument's blocks as bits. `indeterminate` leaves a fixed owner's blocks unwritten
   for a later assignment (#505).
 
