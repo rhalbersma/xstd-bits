@@ -1,7 +1,7 @@
-#Copyright Rein Halbersma 2014 - 2025.
-#Distributed under the Boost Software License, Version 1.0.
-#(See accompanying file LICENSE_1_0.txt or copy at
-#http: // www.boost.org/LICENSE_1_0.txt)
+#          Copyright Rein Halbersma 2014-2025.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          http://www.boost.org/LICENSE_1_0.txt)
 
 set(Boost_USE_STATIC_LIBS ON)
 find_package(
@@ -10,7 +10,7 @@ find_package(
 )
 find_package(range-v3 CONFIG REQUIRED)
 
-#The opt - in hash headers' one dependency, which the tests link as a consumer of those headers would.
+# The opt-in hash headers' one dependency, which the tests link as a consumer of those headers would.
 find_package(boost_hash2 CONFIG REQUIRED)
 
 set(cxx_compile_definitions
@@ -54,7 +54,7 @@ set(cxx_compile_options_warnings
         -Wno-ctad-maybe-unsupported         # std::reverse_iterator(it) uses the standard's own deduction guide
         -Wno-zero-as-null-pointer-constant  # triggered by <=> comparisons against 0
     >
-#Four - byte pointers beside 64 - bit members pad the test fixtures, whose layout nothing reads; 64 - bit legs keep the check.
+    # Four-byte pointers beside 64-bit members pad the test fixtures, whose layout nothing reads; 64-bit legs keep the check.
     $<$<AND:$<CXX_COMPILER_ID:Clang>,$<EQUAL:${CMAKE_SIZEOF_VOID_P},4>>:
         -Wno-padded
     >
@@ -81,24 +81,24 @@ set(cxx_compile_options_warnings
 )
 
 set(cxx_compile_options_optimization
-#The build machine 's processor only where the tests run on it: a cross build, such as Emscripten' s, has no native.
+    # The build machine's processor only where the tests run on it: a cross build, such as Emscripten's, has no native.
     $<$<AND:$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>,$<NOT:$<BOOL:${CMAKE_CROSSCOMPILING}>>>:
         -march=${${project_option_prefix}_TEST_ARCH}
     >
-#MinGW emits 32 - byte stores to a 16 - byte aligned stack; the assembler rewrites them unaligned(#54, GCC PR target / 54412).
+    # MinGW emits 32-byte stores to a 16-byte aligned stack; the assembler rewrites them unaligned (#54, GCC PR target/54412).
     $<$<AND:$<CXX_COMPILER_ID:GNU>,$<PLATFORM_ID:Windows>>:
         -Wa$<COMMA>-muse-unaligned-vector-move
     >
 )
 
-#Load - bearing in every configuration : without it two of three MinGW rungs cannot assemble these objects at all(#47).
+# Load-bearing in every configuration: without it two of three MinGW rungs cannot assemble these objects at all (#47).
 set(cxx_compile_options_mbig_obj
     $<$<AND:$<CXX_COMPILER_ID:GNU>,$<PLATFORM_ID:Windows>>:
 	    -Wa,-mbig-obj
     >
 )
 
-#Each public header compiled as its own translation unit, proving it self - sufficient; this is what Clang - Tidy analyzes.
+# Each public header compiled as its own translation unit, proving it self-sufficient; this is what Clang-Tidy analyzes.
 set(public_header_dir ${PROJECT_SOURCE_DIR}/include)
 file(
     GLOB_RECURSE public_headers
