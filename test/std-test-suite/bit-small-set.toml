@@ -4,7 +4,7 @@
 #          http://www.boost.org/LICENSE_1_0.txt)
 
 # The set<int> tests read against bit_small_set, whose first 64 keys live inside it, in a Boost small_vector.
-include = ["xstd/bits/ext/boost/bit_small_set.hpp", "xstd/bits/bit_set/erase_if.hpp"]
+include = ["xstd/bits/ext/boost/bit_small_set.hpp", "xstd/bits/bit_set/erase_if.hpp", "xstd/bits/bit_set/hash.hpp"]
 
 # libc++ spells set<int> qualified.
 [libcxx]

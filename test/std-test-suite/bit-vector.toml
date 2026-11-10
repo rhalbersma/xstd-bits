@@ -4,7 +4,7 @@
 #          http://www.boost.org/LICENSE_1_0.txt)
 
 # The vector<bool> tests read against bit_vector, whose storage is a std::vector of blocks.
-include = ["xstd/bits/bit_vector.hpp"]
+include = ["xstd/bits/bit_vector.hpp", "xstd/bits/bit_vector/hash.hpp"]
 
 # libc++ spells vector<bool> qualified.
 [libcxx]

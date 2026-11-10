@@ -4,7 +4,7 @@
 #          http://www.boost.org/LICENSE_1_0.txt)
 
 # The set<int> tests read against bit_set, whose storage grows with its largest key.
-include = ["xstd/bits/bit_set/bit_set.hpp", "xstd/bits/bit_set/erase_if.hpp"]
+include = ["xstd/bits/bit_set/bit_set.hpp", "xstd/bits/bit_set/erase_if.hpp", "xstd/bits/bit_set/hash.hpp"]
 
 # libc++ spells set<int> qualified.
 [libcxx]
