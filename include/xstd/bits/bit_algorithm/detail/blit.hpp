@@ -6,11 +6,11 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_DETAIL_BLIT_HPP
 #define XSTD_BITS_BIT_ALGORITHM_DETAIL_BLIT_HPP
 
-#include <xstd/bits/detail/shift.hpp> // partial_block_mask, shl, shr
-#include <algorithm>                  // min
-#include <concepts>                   // convertible_to, invocable, same_as
-#include <cstddef>                    // size_t
-#include <type_traits>                // invoke_result_t, remove_cvref_t
+#include <xstd/bits/detail/block_chunks.hpp> // for_each_chunk, for_each_chunk_down, min_count
+#include <xstd/bits/detail/shift.hpp>        // partial_block_mask, shl, shr
+#include <concepts>                          // convertible_to, invocable, same_as
+#include <cstddef>                           // size_t
+#include <type_traits>                       // invoke_result_t, remove_cvref_t
 
 namespace xstd::bits::detail {
 
@@ -30,17 +30,13 @@ template<class Block, class Bits>
         }
 }
 
-// The len positions of dst from d written a block at a time, lowest first, block(k, count) giving those from k.
+// The len positions of dst from d written a block at a time, lowest first, each block(k, count) giving those from k.
 template<class Dst, class F>
 constexpr auto write_up(Dst&& dst, std::size_t d, std::size_t len, F block) noexcept
         -> void
 {
-        using block_type      = std::remove_cvref_t<Dst>::block_type;
-        constexpr auto digits = std::remove_cvref_t<Dst>::bits_per_block;
-        for (auto k = 0UZ; k < len; k += digits) {
-                auto const count = std::ranges::min(digits, len - k);
-                dst.block_at(d + k, block(k, count), partial_block_mask<block_type>(count));
-        }
+        using bits_type = std::remove_cvref_t<Dst>;
+        for_each_chunk<bits_type::bits_per_block>(d, len, [&](std::size_t k, std::size_t count) -> void { dst.block_at(d + k, block(k, count), partial_block_mask<typename bits_type::block_type>(count)); });
 }
 
 // The mirror, highest first, so a destination above its source never overwrites what is still to be read.
@@ -48,13 +44,8 @@ template<class Dst, class F>
 constexpr auto write_down(Dst&& dst, std::size_t d, std::size_t len, F block) noexcept
         -> void
 {
-        using block_type      = std::remove_cvref_t<Dst>::block_type;
-        constexpr auto digits = std::remove_cvref_t<Dst>::bits_per_block;
-        auto const chunks     = (len + digits - 1UZ) / digits;
-        for (auto j = chunks - 1UZ; j < chunks; --j) {
-                auto const count = std::ranges::min(digits, len - (j * digits));
-                dst.block_at(d + (j * digits), block(j * digits, count), partial_block_mask<block_type>(count));
-        }
+        using bits_type = std::remove_cvref_t<Dst>;
+        for_each_chunk_down<bits_type::bits_per_block>(d, len, [&](std::size_t k, std::size_t count) -> void { dst.block_at(d + k, block(k, count), partial_block_mask<typename bits_type::block_type>(count)); });
 }
 
 // The len bools of src from position s, as copy writes them to dst from position d: lowest first, or Backward highest.
@@ -85,6 +76,32 @@ constexpr auto reverse_copy_bools(Dst&& dst, std::size_t d, Src const& src, std:
         });
 }
 
+// The len bools of c from position s reversed in place: a block from each end traded, then what remains in the middle.
+template<class Bits>
+constexpr auto reverse_bools(Bits&& c, std::size_t s, std::size_t len) noexcept
+        -> void
+{
+        using bits_type        = std::remove_cvref_t<Bits>;
+        using block_type       = bits_type::block_type;
+        constexpr auto digits  = bits_type::bits_per_block;
+        auto const reversed_at = [&](std::size_t n, std::size_t count) -> block_type { return shr(bits_type::reversed(read_block<block_type>(c, n, count)), digits - count); };
+        auto lo                = s;
+        auto hi                = s + len;
+        while (hi - lo > digits) {
+                // Half of what remains at most, so the two ends traded never overlap.
+                auto const count = min_count(digits, (hi - lo) / 2UZ);
+                auto const low   = reversed_at(lo, count);
+                auto const high  = reversed_at(hi - count, count);
+                c.block_at(lo, high, partial_block_mask<block_type>(count));
+                c.block_at(hi - count, low, partial_block_mask<block_type>(count));
+                lo += count;
+                hi -= count;
+        }
+        if (lo < hi) {
+                c.block_at(lo, reversed_at(lo, hi - lo), partial_block_mask<block_type>(hi - lo));
+        }
+}
+
 // The len bools of x from position i and of y from position j traded, a block of the narrower at a time.
 template<class X, class Y>
 constexpr auto swap_bools(X&& x, std::size_t i, Y&& y, std::size_t j, std::size_t len) noexcept
@@ -92,13 +109,12 @@ constexpr auto swap_bools(X&& x, std::size_t i, Y&& y, std::size_t j, std::size_
 {
         using x_block       = std::remove_cvref_t<X>::block_type;
         using y_block       = std::remove_cvref_t<Y>::block_type;
-        constexpr auto step = std::ranges::min(std::remove_cvref_t<X>::bits_per_block, std::remove_cvref_t<Y>::bits_per_block);
-        for (auto k = 0UZ; k < len; k += step) {
-                auto const count  = std::ranges::min(step, len - k);
+        constexpr auto step = min_count(std::remove_cvref_t<X>::bits_per_block, std::remove_cvref_t<Y>::bits_per_block);
+        for_each_chunk<step>(i, len, [&](std::size_t k, std::size_t count) -> void {
                 auto const from_x = read_block<y_block>(x, i + k, count);
                 x.block_at(i + k, read_block<x_block>(y, j + k, count), partial_block_mask<x_block>(count));
                 y.block_at(j + k, from_x, partial_block_mask<y_block>(count));
-        }
+        });
 }
 
 // A function of one bool as a block expression: asked of false and of true, it is a constant, the identity or not.

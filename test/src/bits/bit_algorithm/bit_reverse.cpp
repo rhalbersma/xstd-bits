@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>            // patterned
+#include <test/algorithm/sequences.hpp>            // in_pattern, patterned, writes_as_model, writes_through_iterators_as_model
 #include <xstd/bits/bit_algorithm/bit_reverse.hpp> // bit_reverse
 #include <xstd/bits/bit_array.hpp>                 // basic_bit_array, bit_array
 #include <xstd/bits/bit_span/bit_span.hpp>         // bit_span
@@ -22,6 +22,9 @@ namespace {
 
 template<class R>
 concept reversible = requires (R&& r) { xstd::ranges::bit_reverse(std::forward<R>(r)); };
+
+template<class I>
+concept reversible_between = requires (I i) { xstd::ranges::bit_reverse(i, i); xstd::bit_reverse(i, i); };
 
 // The algorithm on s against std::ranges::reverse on the same bools, and the end iterator it answers.
 template<class S>
@@ -61,14 +64,39 @@ BOOST_AUTO_TEST_CASE(AWholeViewReversesWhatItViews)
         static_assert(std::same_as<decltype(xstd::ranges::bit_reverse(xstd::bit_span(a))), std::ranges::iterator_t<decltype(xstd::bit_span(a))>>);
 }
 
-// Not a window, which shares its end blocks, nor anything const, and an rvalue owner's end dangles as in std::ranges.
+// A window reverses the positions it spans and leaves its end blocks' other positions be, at every offset and length.
+BOOST_AUTO_TEST_CASE(AWindowReversesItsOwnPositions)
+{
+        auto const reverse = [](auto w) -> void { xstd::ranges::bit_reverse(w); };
+        auto const model   = [](auto m) -> void { std::ranges::reverse(m); };
+        BOOST_CHECK_EQUAL(test::algorithm::writes_as_model(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), reverse, model), 0);
+        BOOST_CHECK_EQUAL(test::algorithm::writes_as_model(test::algorithm::patterned(xstd::bit_array<140>()), reverse, model), 0);
+}
+
+// Between two iterators, as std::ranges::reverse(first, last) and as std::reverse, the end handed back where asked.
+BOOST_AUTO_TEST_CASE(ReversesBetweenTwoIterators)
+{
+        auto const model = [](auto m) -> void { std::ranges::reverse(m); };
+        auto const a     = test::algorithm::patterned(xstd::basic_bit_vector<std::vector<std::uint8_t>>(21));
+        BOOST_CHECK_EQUAL(test::algorithm::writes_through_iterators_as_model(a, [](auto first, auto last) -> bool { return xstd::ranges::bit_reverse(first, last) == last; }, model), 0);
+        BOOST_CHECK_EQUAL(test::algorithm::writes_through_iterators_as_model(test::algorithm::patterned(xstd::bit_array<140>()), [](auto first, auto last) -> bool { xstd::bit_reverse(first, last); return true; }, model), 0);
+        static_assert([] -> bool {
+                auto b = test::algorithm::patterned(xstd::bit_array<70>());
+                xstd::bit_reverse(b.begin() + 3, b.end() - 2);
+                return static_cast<bool>(b[3]) == test::algorithm::in_pattern(67);
+        }());
+}
+
+// Anything writable of ours, a window or its iterators included, but nothing const, and an rvalue owner's end dangles.
 BOOST_AUTO_TEST_CASE(WhatItReverses)
 {
         using A = xstd::bit_array<8>;
         static_assert(reversible<A&> and reversible<xstd::bit_vector&> and reversible<decltype(xstd::bit_span(std::declval<A&>()))>);
+        static_assert(reversible<decltype(xstd::bit_span(std::declval<A&>()).subspan(1UZ, 4UZ))>);
         static_assert(not reversible<A const&> and not reversible<decltype(xstd::bit_span(std::declval<A const&>()))>);
-        static_assert(not reversible<decltype(xstd::bit_span(std::declval<A&>()).subspan(1UZ, 4UZ))>);
         static_assert(not reversible<std::vector<bool>&>);
+        static_assert(reversible_between<std::ranges::iterator_t<A>> and not reversible_between<std::ranges::iterator_t<A const>>);
+        static_assert(not reversible_between<std::vector<bool>::iterator>);
         static_assert(std::same_as<decltype(xstd::ranges::bit_reverse(A())), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
 }

@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>          // for_each_sequence, for_each_window, patterned, sequences
+#include <test/algorithm/sequences.hpp>          // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences
 #include <test/for_each_type.hpp>                // for_each_type
 #include <xstd/bits/bit_algorithm/bit_count.hpp> // bit_count
 #include <xstd/bits/bit_array.hpp>               // basic_bit_array, bit_array
@@ -11,15 +11,20 @@
 #include <xstd/bits/bit_span/bit_span.hpp>       // bit_span
 #include <xstd/bits/bit_vector.hpp>              // basic_bit_vector, bit_vector
 #include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <algorithm>                             // count
+#include <algorithm>                             // all_of, count
+#include <array>                                 // array
 #include <concepts>                              // same_as
 #include <cstddef>                               // ptrdiff_t
 #include <cstdint>                               // uint8_t
+#include <ranges>                                // iterator_t
 #include <vector>                                // vector
 
 BOOST_AUTO_TEST_SUITE(BitCount)
 
 namespace {
+
+template<class I>
+concept count_between = requires (I i) { xstd::ranges::bit_count(i, i, true); xstd::bit_count(i, i, true); };
 
 template<class R>
 concept countable = requires (R const& r) { xstd::ranges::bit_count(r, true); };
@@ -76,6 +81,20 @@ BOOST_AUTO_TEST_CASE(AnswersTheDifferenceTypeOverOurSequencesAlone)
         static_assert(countable<xstd::bit_vector> and countable<xstd::basic_bit_vector<std::vector<std::uint8_t>>>);
         static_assert(not countable<std::vector<bool>> and not countable<xstd::bit_fixed_set<8>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// Between two iterators, as std::ranges::count(first, last, value) and as std::count, for either value.
+BOOST_AUTO_TEST_CASE(CountsBetweenTwoIterators)
+{
+        auto const agrees = [](auto first, auto last, auto const& w) -> bool {
+                return std::ranges::all_of(std::array{false, true}, [&](bool value) -> bool {
+                        auto const n = xstd::ranges::bit_count(w, value);
+                        return xstd::ranges::bit_count(first, last, value) == n and xstd::bit_count(first, last, value) == n;
+                });
+        };
+        BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 9>()), agrees) == 0);
+        static_assert(count_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not count_between<std::vector<bool>::const_iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

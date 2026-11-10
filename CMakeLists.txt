@@ -111,6 +111,8 @@ target_sources(
         include/xstd/bits/bit_algorithm/detail/count.hpp
         include/xstd/bits/bit_algorithm/detail/find.hpp
         include/xstd/bits/bit_algorithm/detail/find_if.hpp
+        include/xstd/bits/bit_algorithm/detail/iterator_window.hpp
+        include/xstd/bits/bit_algorithm/detail/mismatch.hpp
         include/xstd/bits/bit_algorithm/detail/walk.hpp
         include/xstd/bits/bit_algorithm/bit_all_of.hpp
         include/xstd/bits/bit_algorithm/bit_any_of.hpp
@@ -237,6 +239,7 @@ target_sources(
         include/xstd/bits/detail/assert.hpp
         include/xstd/bits/detail/inplace_blocks.hpp
         include/xstd/bits/detail/bit_block_container.hpp
+        include/xstd/bits/detail/block_chunks.hpp
         include/xstd/bits/detail/block_intersects.hpp
         include/xstd/bits/detail/comparisons.hpp
         include/xstd/bits/detail/borrowed_block_span.hpp

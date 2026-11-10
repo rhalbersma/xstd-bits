@@ -3,23 +3,26 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>         // bools_of, for_each_sequence, patterned, sequences, writes_as_model
+#include <test/algorithm/sequences.hpp>         // bools_of, for_each_sequence, patterned, sequences, writes_as_model, writes_through_iterators_as_window
 #include <test/for_each_type.hpp>               // for_each_type
 #include <xstd/bits/bit_algorithm/bit_sort.hpp> // bit_sort
-#include <xstd/bits/bit_array.hpp>              // bit_array, basic_bit_array
+#include <xstd/bits/bit_array.hpp>              // basic_bit_array, bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>  // bit_fixed_set
 #include <xstd/bits/bit_span/bit_span.hpp>      // bit_span
 #include <boost/test/unit_test.hpp>             // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                            // sort
 #include <concepts>                             // same_as
 #include <cstdint>                              // uint8_t
-#include <ranges>                               // dangling, end
+#include <ranges>                               // dangling, end, iterator_t
 #include <utility>                              // declval, forward
 #include <vector>                               // vector
 
 BOOST_AUTO_TEST_SUITE(BitSort)
 
 namespace {
+
+template<class I>
+concept sort_between = requires (I i) { xstd::ranges::bit_sort(i, i); xstd::bit_sort(i, i); };
 
 template<class R>
 concept permutable = requires (R&& r) { xstd::ranges::bit_sort(std::forward<R>(r)); };
@@ -63,6 +66,19 @@ BOOST_AUTO_TEST_CASE(PermutesOurWritableSequencesAlone)
         static_assert(not permutable<xstd::bit_array<8> const&> and not permutable<std::vector<bool>&> and not permutable<xstd::bit_fixed_set<8>&>);
         static_assert(std::same_as<decltype(xstd::ranges::bit_sort(xstd::bit_array<8>())), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// Between two iterators, as std::ranges::sort and as std::sort, writing what the window over the same positions writes.
+BOOST_AUTO_TEST_CASE(SortsBetweenTwoIterators)
+{
+        auto const ranges  = [](auto first, auto last) -> bool { return xstd::ranges::bit_sort(first, last) == last; };
+        auto const classic = [](auto first, auto last) -> bool { xstd::bit_sort(first, last); return true; };
+        auto const window  = [](auto w) -> void { xstd::ranges::bit_sort(w); };
+        BOOST_CHECK_EQUAL(test::algorithm::writes_through_iterators_as_window(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), ranges, window), 0);
+        BOOST_CHECK_EQUAL(test::algorithm::writes_through_iterators_as_window(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), classic, window), 0);
+        static_assert(test::algorithm::writes_through_iterators_as_window(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 9>()), ranges, window) == 0);
+        static_assert(sort_between<std::ranges::iterator_t<xstd::bit_array<8>>> and not sort_between<std::ranges::iterator_t<xstd::bit_array<8> const>>);
+        static_assert(not sort_between<std::vector<bool>::iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

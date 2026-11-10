@@ -6,14 +6,17 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_FIND_IF_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_FIND_IF_HPP
 
-#include <xstd/bits/bit_algorithm/detail/find.hpp>    // find_value
-#include <xstd/bits/bit_algorithm/detail/find_if.hpp> // find_key_if
-#include <xstd/bits/detail/ownership.hpp>             // reads_bools, reads_keys, storage_access
-#include <xstd/bits/detail/sequence_storage.hpp>      // first_position
-#include <concepts>                                   // predicate
-#include <cstddef>                                    // ptrdiff_t
-#include <functional>                                 // invoke
-#include <ranges>                                     // begin, borrowed_iterator_t, end, range_value_t, size
+#include <xstd/bits/bit_algorithm/detail/find.hpp>            // find_value
+#include <xstd/bits/bit_algorithm/detail/find_if.hpp>         // find_key_if
+#include <xstd/bits/bit_algorithm/detail/iterator_window.hpp> // bool_sentinel_for, iterator_window, rebased
+#include <xstd/bits/detail/iterator_concepts.hpp>             // bool_iterator
+#include <xstd/bits/detail/ownership.hpp>                     // reads_bools, reads_keys, storage_access
+#include <xstd/bits/detail/sequence_storage.hpp>              // first_position
+#include <concepts>                                           // predicate
+#include <cstddef>                                            // ptrdiff_t
+#include <functional>                                         // invoke
+#include <ranges>                                             // begin, borrowed_iterator_t, end, range_value_t, size
+#include <utility>                                            // move
 
 namespace xstd::ranges {
 
@@ -41,6 +44,29 @@ template<class R, class Pred>
         }
 }
 
+// std::ranges::find_if(first, last, pred), over the positions [first, last) as a window.
+template<bits::detail::bool_iterator I, bits::detail::bool_sentinel_for<I> S, class Pred>
+        requires std::predicate<Pred&, bool>
+[[nodiscard]] constexpr auto bit_find_if(I first, S last, Pred pred)
+        -> I
+{
+        auto w = bits::detail::iterator_window(first, last);
+        return bits::detail::rebased(first, xstd::ranges::bit_find_if(w, pred));
+}
+
 } // namespace xstd::ranges
+
+namespace xstd {
+
+// std::find_if(first, last, pred).
+template<bits::detail::bool_iterator I, class Pred>
+        requires std::predicate<Pred&, bool>
+[[nodiscard]] constexpr auto bit_find_if(I first, I last, Pred pred)
+        -> I
+{
+        return xstd::ranges::bit_find_if(first, last, std::move(pred));
+}
+
+} // namespace xstd
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_FIND_IF_HPP

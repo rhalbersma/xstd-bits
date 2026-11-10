@@ -12,6 +12,7 @@
 #include <xstd/bits/detail/bit_blocks_capacity.hpp>          // bit_blocks_capacity_v
 #include <xstd/bits/detail/bit_blocks_extent.hpp>            // bit_blocks_extent_v
 #include <xstd/bits/detail/bit_layout.hpp>                   // bit_bytes, bit_layout, copy_bits, fixed_blocks_source
+#include <xstd/bits/detail/block_chunks.hpp>                 // find_chunk, for_each_chunk
 #include <xstd/bits/detail/block_intersects.hpp>             // block_intersects
 #include <xstd/bits/detail/borrowed_block_span.hpp>          // borrowed_block_span
 #include <xstd/bits/detail/from_blocks.hpp>                  // from_blocks_t
@@ -709,7 +710,7 @@ public:
                 -> block_type
         {
                 auto const [index, offset] = index_offset(n);
-                assert(index < num_blocks());
+                assert(index < num_blocks() and offset < bits_per_block);
                 if (offset == 0UZ or index == last_block()) {
                         return shr(m_blocks[index], offset);
                 }
@@ -724,6 +725,10 @@ public:
                 assert(index < num_blocks());
                 assert(n + bits_per_block <= size() or shr(mask, size() - n) == zero);
                 auto const bits = static_cast<block_type>(value & mask);
+                if (offset == 0UZ and mask == ones) {
+                        m_blocks[index] = bits;
+                        return;
+                }
 
                 // Each step lands back in block_type: a promoted operand is what bugprone-signed-bitwise reads.
                 auto const low_kept = static_cast<block_type>(m_blocks[index] & static_cast<block_type>(~shl(mask, offset)));
@@ -1825,15 +1830,12 @@ private:
                 return (num_blocks() * bits_per_block) - 1UZ;
         }
 
-        // The blocks a range of positions spans, each with its mask: whole blocks, a partial one at the end.
+        // The blocks a range of positions spans, each with its mask: a head to a block boundary, whole blocks, a tail.
         template<class F>
         constexpr auto for_each_block(std::size_t n, std::size_t len, F f) const noexcept
                 -> void
         {
-                for (auto pos = n; pos < n + len; pos += bits_per_block) {
-                        auto const count = std::ranges::min(bits_per_block, n + len - pos);
-                        f(pos, partial_block_mask<block_type>(count));
-                }
+                for_each_chunk<bits_per_block>(n, len, [&](std::size_t k, std::size_t count) -> void { f(n + k, partial_block_mask<block_type>(count)); });
         }
 
         // Whether a block of [n, n + len), masked to the range, satisfies pred; the first that does ends the walk.
@@ -1841,12 +1843,7 @@ private:
         [[nodiscard]] constexpr auto find_block(std::size_t n, std::size_t len, Pred pred) const noexcept
                 -> bool
         {
-                for (auto pos = n; pos < n + len; pos += bits_per_block) {
-                        if (pred(block_at(pos), partial_block_mask<block_type>(std::ranges::min(bits_per_block, n + len - pos)))) {
-                                return true;
-                        }
-                }
-                return false;
+                return find_chunk<bits_per_block>(n, len, [&](std::size_t k, std::size_t count) -> bool { return pred(block_at(n + k), partial_block_mask<block_type>(count)); });
         }
 
         [[nodiscard]] constexpr auto all_but_last_are_ones() const noexcept

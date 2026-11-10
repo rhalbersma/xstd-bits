@@ -6,13 +6,14 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_MOVE_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_MOVE_HPP
 
-#include <xstd/bits/bit_algorithm/detail/blit.hpp> // copy_bools
-#include <xstd/bits/detail/iterator_concepts.hpp>  // bool_output_iterator
-#include <xstd/bits/detail/ownership.hpp>          // reads_bools, storage_access
-#include <xstd/bits/detail/sequence_storage.hpp>   // first_position
-#include <algorithm>                               // move_result
-#include <cstddef>                                 // ptrdiff_t
-#include <ranges>                                  // borrowed_iterator_t, end, size
+#include <xstd/bits/bit_algorithm/detail/blit.hpp>            // copy_bools
+#include <xstd/bits/bit_algorithm/detail/iterator_window.hpp> // bool_sentinel_for, iterator_window, rebased
+#include <xstd/bits/detail/iterator_concepts.hpp>             // bool_iterator, bool_output_iterator
+#include <xstd/bits/detail/ownership.hpp>                     // reads_bools, storage_access
+#include <xstd/bits/detail/sequence_storage.hpp>              // first_position
+#include <algorithm>                                          // move_result
+#include <cstddef>                                            // ptrdiff_t
+#include <ranges>                                             // borrowed_iterator_t, end, size
 
 namespace xstd::ranges {
 
@@ -27,6 +28,28 @@ constexpr auto bit_move(R&& r, O out) noexcept
         return {std::ranges::borrowed_iterator_t<R>(std::ranges::end(r)), out + static_cast<std::ptrdiff_t>(n)};
 }
 
+// std::ranges::move(first, last, out), over the positions [first, last) as a window.
+template<bits::detail::bool_iterator I, bits::detail::bool_sentinel_for<I> S, bits::detail::bool_output_iterator O>
+constexpr auto bit_move(I first, S last, O out) noexcept
+        -> std::ranges::move_result<I, O>
+{
+        auto w               = bits::detail::iterator_window(first, last);
+        auto const [in, end] = xstd::ranges::bit_move(w, out);
+        return {bits::detail::rebased(first, in), end};
+}
+
 } // namespace xstd::ranges
+
+namespace xstd {
+
+// std::move(first, last, out): the end of what was written.
+template<bits::detail::bool_iterator I, bits::detail::bool_output_iterator O>
+constexpr auto bit_move(I first, I last, O out) noexcept
+        -> O
+{
+        return xstd::ranges::bit_move(first, last, out).out;
+}
+
+} // namespace xstd
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_MOVE_HPP

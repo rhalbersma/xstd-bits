@@ -3,10 +3,10 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>                // bools_of, for_each_sequence, offsets, patterned, sequences, striped_vector
+#include <test/algorithm/sequences.hpp>                // bools_of, for_each_sequence, offsets, patterned, sequences, striped_vector, writes_through_iterators_as_window
 #include <test/for_each_type.hpp>                      // for_each_type
 #include <xstd/bits/bit_algorithm/bit_swap_ranges.hpp> // bit_swap_ranges
-#include <xstd/bits/bit_array.hpp>                     // bit_array
+#include <xstd/bits/bit_array.hpp>                     // basic_bit_array, bit_array
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>         // bit_fixed_set
 #include <xstd/bits/bit_span/bit_span.hpp>             // bit_span
 #include <xstd/bits/bit_vector.hpp>                    // bit_vector
@@ -22,6 +22,9 @@
 BOOST_AUTO_TEST_SUITE(BitSwapRanges)
 
 namespace {
+
+template<class I>
+concept swap_ranges_between = requires (I i) { xstd::ranges::bit_swap_ranges(i, i, i, i); xstd::bit_swap_ranges(i, i, i); };
 
 template<class R1, class R2>
 concept swappable = requires (R1&& r1, R2&& r2) { xstd::ranges::bit_swap_ranges(std::forward<R1>(r1), std::forward<R2>(r2)); };
@@ -82,6 +85,19 @@ BOOST_AUTO_TEST_CASE(SwapsOurWritableSequencesAlone)
         static_assert(not swappable<A const&, A&> and not swappable<A&, std::vector<bool>&> and not swappable<A&, xstd::bit_fixed_set<8>&>);
         static_assert(std::same_as<decltype(xstd::ranges::bit_swap_ranges(A(), std::declval<A&>())), std::ranges::swap_ranges_result<std::ranges::dangling, std::ranges::iterator_t<A>>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// Between two iterators, as std::ranges::swap_ranges and std::swap_ranges, writing as the window of those bools does.
+BOOST_AUTO_TEST_CASE(SwapsBetweenTwoPairsOfIterators)
+{
+        auto const ranges  = [](auto first, auto last) -> bool { auto other = xstd::bit_vector(70UZ, true); auto const n = last - first; auto const [in1, in2] = xstd::ranges::bit_swap_ranges(first, last, other.begin(), other.end()); return in1 == last and in2 - other.begin() == n; };
+        auto const classic = [](auto first, auto last) -> bool { auto other = xstd::bit_vector(70UZ, true); auto const n = last - first; return xstd::bit_swap_ranges(first, last, other.begin()) - other.begin() == n; };
+        auto const window  = [](auto w) -> void { auto other = xstd::bit_vector(70UZ, true); xstd::ranges::bit_swap_ranges(w, other); };
+        BOOST_CHECK_EQUAL(test::algorithm::writes_through_iterators_as_window(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), ranges, window), 0);
+        BOOST_CHECK_EQUAL(test::algorithm::writes_through_iterators_as_window(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), classic, window), 0);
+        static_assert(test::algorithm::writes_through_iterators_as_window(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 9>()), ranges, window) == 0);
+        static_assert(swap_ranges_between<std::ranges::iterator_t<xstd::bit_array<8>>> and not swap_ranges_between<std::ranges::iterator_t<xstd::bit_array<8> const>>);
+        static_assert(not swap_ranges_between<std::vector<bool>::iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

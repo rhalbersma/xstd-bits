@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>         // for_each_sequence, for_each_window, patterned, sequences
+#include <test/algorithm/sequences.hpp>         // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences
 #include <test/for_each_type.hpp>               // for_each_type
 #include <xstd/bits/bit_algorithm/bit_find.hpp> // bit_find
 #include <xstd/bits/bit_array.hpp>              // basic_bit_array, bit_array
@@ -14,12 +14,15 @@
 #include <array>                                // array
 #include <concepts>                             // same_as
 #include <cstdint>                              // uint8_t
-#include <ranges>                               // begin, dangling, end
+#include <ranges>                               // begin, dangling, end, iterator_t
 #include <vector>                               // vector
 
 BOOST_AUTO_TEST_SUITE(BitFind)
 
 namespace {
+
+template<class I>
+concept find_between = requires (I i) { xstd::ranges::bit_find(i, i, true); xstd::bit_find(i, i, true); };
 
 template<class R>
 concept findable = requires (R const& r) { xstd::ranges::bit_find(r, true); };
@@ -61,6 +64,18 @@ BOOST_AUTO_TEST_CASE(AnswersAsRangesFindDoes)
         static_assert(findable<xstd::bit_array<8>> and not findable<std::vector<bool>> and not findable<xstd::bit_fixed_set<8>>);
         static_assert(std::same_as<decltype(xstd::ranges::bit_find(xstd::bit_array<8>(), true)), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// Between two iterators, as std::ranges::find(first, last, value) and as std::find, at the same position.
+BOOST_AUTO_TEST_CASE(FindsBetweenTwoIterators)
+{
+        auto const agrees = [](auto first, auto last, auto const& w) -> bool {
+                auto const at = xstd::ranges::bit_find(w, true) - std::ranges::begin(w);
+                return xstd::ranges::bit_find(first, last, true) - first == at and xstd::bit_find(first, last, true) - first == at;
+        };
+        BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 9>()), agrees) == 0);
+        static_assert(find_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not find_between<std::vector<bool>::const_iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

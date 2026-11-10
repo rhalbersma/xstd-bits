@@ -209,7 +209,7 @@ Coverage shows a line runs; [`tools/mutate.py`](tools/mutate.py) shows a test wo
 The unit tests show that a kernel computes the right values, but not which instructions it takes to do so. A branch chosen by the preprocessor, such as the hash's expansion of a block into bools, is right on every leg whichever branch the build picked, so a detection that stops firing passes every test. [`test/codegen/`](test/codegen) compiles small `extern "C"` wrappers to assembly once per target and reads the result two ways:
 
 - **FileCheck directives** above a wrapper, under a prefix per target configuration. They require the expansion's PDEP at `-march=x86-64-v3`, its single masked store at `-march=x86-64-v4`, and the byte table where PDEP is slow or absent, and they forbid a branch in the folded reductions and in taking a set's lowest key.
-- **Pairs of wrappers** that must compile to the same instructions: each operation on one- and two-block `bit_fixed_set`s beside the same operation written by hand on the words it holds. A pair that drifts apart is the library doing worse than hand-written code.
+- **Pairs of wrappers** that must compile to the same instructions: each operation on one- and two-block `bit_fixed_set`s beside the same operation written by hand on the words it holds, and each algorithm's iterator form beside its range form over the window of the same positions. A pair that drifts apart is the library doing worse than hand-written code, or one shape doing worse than the other.
 
 ```bash
 pip install --user --break-system-packages --require-hashes -r tools/filecheck-requirements.txt

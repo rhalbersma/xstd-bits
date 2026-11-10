@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>                    // for_each_sequence, for_each_window, sequences, sorted
+#include <test/algorithm/sequences.hpp>                    // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences, sorted
 #include <test/for_each_type.hpp>                          // for_each_type
 #include <xstd/bits/bit_algorithm/bit_partition_point.hpp> // bit_partition_point
 #include <xstd/bits/bit_array.hpp>                         // basic_bit_array, bit_array
@@ -14,12 +14,15 @@
 #include <concepts>                                        // same_as
 #include <cstdint>                                         // uint8_t
 #include <functional>                                      // identity
-#include <ranges>                                          // begin, dangling, end
+#include <ranges>                                          // begin, dangling, end, iterator_t
 #include <vector>                                          // vector
 
 BOOST_AUTO_TEST_SUITE(BitPartitionPoint)
 
 namespace {
+
+template<class I>
+concept partition_point_between = requires (I i) { xstd::ranges::bit_partition_point(i, i); xstd::bit_partition_point(i, i); };
 
 template<class R>
 concept askable = requires (R const& r) { xstd::ranges::bit_partition_point(r); };
@@ -74,6 +77,18 @@ BOOST_AUTO_TEST_CASE(AnswersAsRangesPartitionPointDoes)
         static_assert(askable<xstd::bit_array<8>> and not askable<std::vector<bool>> and not askable<xstd::bit_fixed_set<8>>);
         static_assert(std::same_as<decltype(xstd::ranges::bit_partition_point(xstd::bit_array<8>())), std::ranges::dangling>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// Between two iterators, as std::ranges::partition_point(first, last, std::identity()) and as std::partition_point.
+BOOST_AUTO_TEST_CASE(PartitionPointBetweenTwoIterators)
+{
+        auto const agrees = [](auto first, auto last, auto const& w) -> bool {
+                auto const at = xstd::ranges::bit_partition_point(w) - std::ranges::begin(w);
+                return xstd::ranges::bit_partition_point(first, last) - first == at and xstd::bit_partition_point(first, last) - first == at;
+        };
+        BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 9>()), agrees) == 0);
+        static_assert(partition_point_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not partition_point_between<std::vector<bool>::const_iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

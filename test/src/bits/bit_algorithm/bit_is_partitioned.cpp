@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>                   // for_each_sequence, for_each_window, patterned, sequences, sorted
+#include <test/algorithm/sequences.hpp>                   // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences, sorted
 #include <test/for_each_type.hpp>                         // for_each_type
 #include <xstd/bits/bit_algorithm/bit_is_partitioned.hpp> // bit_is_partitioned
 #include <xstd/bits/bit_array.hpp>                        // basic_bit_array, bit_array
@@ -13,12 +13,15 @@
 #include <algorithm>                                      // is_partitioned
 #include <cstdint>                                        // uint8_t
 #include <functional>                                     // identity
-#include <ranges>                                         // begin, end
+#include <ranges>                                         // begin, end, iterator_t
 #include <vector>                                         // vector
 
 BOOST_AUTO_TEST_SUITE(BitIsPartitioned)
 
 namespace {
+
+template<class I>
+concept is_partitioned_between = requires (I i) { xstd::ranges::bit_is_partitioned(i, i); xstd::bit_is_partitioned(i, i); };
 
 template<class R>
 concept askable = requires (R const& r) { xstd::ranges::bit_is_partitioned(r); };
@@ -60,6 +63,17 @@ BOOST_AUTO_TEST_CASE(AsksOurSequencesAlone)
         static_assert(agrees(test::algorithm::patterned(xstd::bit_array<70>())) and agrees(test::algorithm::sorted(xstd::bit_array<70>(), 30UZ)));
         static_assert(askable<xstd::bit_array<8>> and not askable<std::vector<bool>> and not askable<xstd::bit_fixed_set<8>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// Between two iterators, as std::ranges::is_partitioned and std::is_partitioned, at every offset and length.
+BOOST_AUTO_TEST_CASE(IsPartitionedBetweenTwoIterators)
+{
+        auto const agrees = [](auto first, auto last, auto const& w) -> bool {
+                return xstd::ranges::bit_is_partitioned(first, last) == xstd::ranges::bit_is_partitioned(w) and xstd::bit_is_partitioned(first, last) == xstd::ranges::bit_is_partitioned(w);
+        };
+        BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
+        static_assert(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 9>()), agrees) == 0);
+        static_assert(is_partitioned_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not is_partitioned_between<std::vector<bool>::const_iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/algorithm/partner.hpp>            // partner_t
-#include <test/algorithm/sequences.hpp>          // for_each_sequence, for_each_window, patterned, sequences
+#include <test/algorithm/sequences.hpp>          // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences
 #include <test/algorithm/sets.hpp>               // for_each_set, sets
 #include <test/for_each_type.hpp>                // for_each_type
 #include <xstd/bits/bit_algorithm/bit_equal.hpp> // bit_equal
@@ -21,12 +21,15 @@
 #include <cstddef>                               // size_t
 #include <cstdint>                               // uint64_t, uint8_t
 #include <functional>                            // greater
-#include <ranges>                                // range_value_t
+#include <ranges>                                // iterator_t, range_value_t
 #include <vector>                                // vector
 
 BOOST_AUTO_TEST_SUITE(BitEqual)
 
 namespace {
+
+template<class I>
+concept equal_between = requires (I i) { xstd::ranges::bit_equal(i, i, i, i); xstd::bit_equal(i, i, i); xstd::bit_equal(i, i, i, i); };
 
 template<class R1, class R2>
 concept comparable = requires (R1 const& r1, R2 const& r2) { xstd::ranges::bit_equal(r1, r2); };
@@ -64,6 +67,22 @@ template<class X, class ForEach>
         auto nrv = std::vector<X>();
         for_each([&](X const& x) -> void { nrv.push_back(x); });
         return nrv;
+}
+
+// Whether the range form over w and every iterator form over [first, last) find other equal.
+template<class I, class W, class V>
+[[nodiscard]] constexpr auto equal_in_every_form(I first, I last, W const& w, V const& other)
+        -> bool
+{
+        return xstd::ranges::bit_equal(w, other) and xstd::ranges::bit_equal(first, last, other.begin(), other.end()) and xstd::bit_equal(first, last, other.begin()) and xstd::bit_equal(first, last, other.begin(), other.end());
+}
+
+// Whether any of them does.
+template<class I, class W, class V>
+[[nodiscard]] constexpr auto equal_in_any_form(I first, I last, W const& w, V const& other)
+        -> bool
+{
+        return xstd::ranges::bit_equal(w, other) or xstd::ranges::bit_equal(first, last, other.begin(), other.end()) or xstd::bit_equal(first, last, other.begin()) or xstd::bit_equal(first, last, other.begin(), other.end());
 }
 
 } // namespace
@@ -123,6 +142,26 @@ BOOST_AUTO_TEST_CASE(ComparesOneReadingAndOneWidthKindAlone)
         static_assert(not comparable<xstd::bit_array<8>, xstd::bit_fixed_set<8>> and not comparable<std::vector<bool>, std::vector<bool>>);
         static_assert(not comparable<xstd::bit_fixed_set<8>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 8, xstd::bit_key_mapping<std::size_t>, std::greater<>>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// Between two pairs of iterators, as std::ranges::equal and as std::equal, against another sequence one bool apart.
+BOOST_AUTO_TEST_CASE(EqualBetweenTwoPairsOfIterators)
+{
+        auto const agrees = [](auto first, auto last, auto const& w) -> bool {
+                auto other      = xstd::bit_vector(first, last);
+                auto const same = equal_in_every_form(first, last, w, other);
+                if (other.empty()) {
+                        return same;
+                }
+                other[other.size() / 2UZ] = not other[other.size() / 2UZ];
+                return same and not equal_in_any_form(first, last, w, other);
+        };
+        BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
+        static_assert([agrees] -> bool {
+                auto const a = test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>());
+                return agrees(a.begin() + 3, a.end() - 1, xstd::bit_span(a).subspan(3UZ, 9UZ));
+        }());
+        static_assert(equal_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not equal_between<std::vector<bool>::const_iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

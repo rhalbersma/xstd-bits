@@ -6,14 +6,16 @@
 #ifndef XSTD_BITS_BIT_ALGORITHM_BIT_TRANSFORM_HPP
 #define XSTD_BITS_BIT_ALGORITHM_BIT_TRANSFORM_HPP
 
-#include <xstd/bits/bit_algorithm/detail/blit.hpp> // binary_table, bool_function, read_block, unary_table, write_up
-#include <xstd/bits/detail/iterator_concepts.hpp>  // bool_output_iterator
-#include <xstd/bits/detail/ownership.hpp>          // reads_bools, storage_access
-#include <xstd/bits/detail/sequence_storage.hpp>   // first_position
-#include <algorithm>                               // binary_transform_result, min, unary_transform_result
-#include <cstddef>                                 // ptrdiff_t, size_t
-#include <ranges>                                  // begin, borrowed_iterator_t, end, size
-#include <type_traits>                             // remove_cvref_t
+#include <xstd/bits/bit_algorithm/detail/blit.hpp>            // binary_table, bool_function, read_block, unary_table, write_up
+#include <xstd/bits/bit_algorithm/detail/iterator_window.hpp> // bool_sentinel_for, iterator_window, rebased
+#include <xstd/bits/detail/iterator_concepts.hpp>             // bool_iterator, bool_output_iterator
+#include <xstd/bits/detail/ownership.hpp>                     // reads_bools, storage_access
+#include <xstd/bits/detail/sequence_storage.hpp>              // first_position
+#include <algorithm>                                          // binary_transform_result, min, unary_transform_result
+#include <cstddef>                                            // ptrdiff_t, size_t
+#include <ranges>                                             // begin, borrowed_iterator_t, end, size
+#include <type_traits>                                        // remove_cvref_t
+#include <utility>                                            // move
 
 namespace xstd::ranges {
 
@@ -52,6 +54,47 @@ constexpr auto bit_transform(R1&& r1, R2&& r2, O out, F f)
         return {std::ranges::borrowed_iterator_t<R1>(std::ranges::begin(r1) + d), std::ranges::borrowed_iterator_t<R2>(std::ranges::begin(r2) + d), out + d};
 }
 
+// std::ranges::transform(first, last, out, f), over the positions [first, last) as a window.
+template<bits::detail::bool_iterator I, bits::detail::bool_sentinel_for<I> S, bits::detail::bool_output_iterator O, bits::detail::bool_function<bool> F>
+constexpr auto bit_transform(I first, S last, O out, F f)
+        -> std::ranges::unary_transform_result<I, O>
+{
+        auto w               = bits::detail::iterator_window(first, last);
+        auto const [in, end] = xstd::ranges::bit_transform(w, out, std::move(f));
+        return {bits::detail::rebased(first, in), end};
+}
+
+// std::ranges::transform(first1, last1, first2, last2, out, f), over both pairs' positions as windows.
+template<bits::detail::bool_iterator I1, bits::detail::bool_sentinel_for<I1> S1, bits::detail::bool_iterator I2, bits::detail::bool_sentinel_for<I2> S2, bits::detail::bool_output_iterator O, bits::detail::bool_function<bool, bool> F>
+constexpr auto bit_transform(I1 first1, S1 last1, I2 first2, S2 last2, O out, F f)
+        -> std::ranges::binary_transform_result<I1, I2, O>
+{
+        auto w1                    = bits::detail::iterator_window(first1, last1);
+        auto w2                    = bits::detail::iterator_window(first2, last2);
+        auto const [in1, in2, end] = xstd::ranges::bit_transform(w1, w2, out, std::move(f));
+        return {bits::detail::rebased(first1, in1), bits::detail::rebased(first2, in2), end};
+}
+
 } // namespace xstd::ranges
+
+namespace xstd {
+
+// std::transform(first, last, out, f): the end of what was written.
+template<bits::detail::bool_iterator I, bits::detail::bool_output_iterator O, bits::detail::bool_function<bool> F>
+constexpr auto bit_transform(I first, I last, O out, F f)
+        -> O
+{
+        return xstd::ranges::bit_transform(first, last, out, std::move(f)).out;
+}
+
+// std::transform(first1, last1, first2, out, f): the end of what was written.
+template<bits::detail::bool_iterator I1, bits::detail::bool_iterator I2, bits::detail::bool_output_iterator O, bits::detail::bool_function<bool, bool> F>
+constexpr auto bit_transform(I1 first1, I1 last1, I2 first2, O out, F f)
+        -> O
+{
+        return xstd::ranges::bit_transform(first1, last1, first2, first2 + (last1 - first1), out, std::move(f)).out;
+}
+
+} // namespace xstd
 
 #endif // XSTD_BITS_BIT_ALGORITHM_BIT_TRANSFORM_HPP

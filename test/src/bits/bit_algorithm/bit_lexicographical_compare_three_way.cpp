@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <test/algorithm/partner.hpp>                                        // partner_t
-#include <test/algorithm/sequences.hpp>                                      // for_each_sequence, for_each_window, patterned, sequences
+#include <test/algorithm/sequences.hpp>                                      // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences
 #include <test/algorithm/sets.hpp>                                           // for_each_set, sets
 #include <test/for_each_type.hpp>                                            // for_each_type
 #include <xstd/bits/bit_algorithm/bit_lexicographical_compare_three_way.hpp> // bit_lexicographical_compare_three_way
@@ -18,16 +18,19 @@
 #include <xstd/bits/bit_vector.hpp>                                          // basic_bit_vector, bit_vector
 #include <boost/test/unit_test.hpp>                                          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
 #include <algorithm>                                                         // lexicographical_compare_three_way
-#include <compare>                                                           // strong_ordering
+#include <compare>                                                           // is_lt, strong_ordering
 #include <cstddef>                                                           // size_t
 #include <cstdint>                                                           // uint64_t, uint8_t
 #include <functional>                                                        // greater
-#include <ranges>                                                            // range_value_t
+#include <ranges>                                                            // iterator_t, range_value_t
 #include <vector>                                                            // vector
 
 BOOST_AUTO_TEST_SUITE(BitLexicographicalCompareThreeWay)
 
 namespace {
+
+template<class I>
+concept lexicographical_compare_three_way_between = requires (I i) { xstd::ranges::bit_lexicographical_compare_three_way(i, i, i, i); xstd::bit_lexicographical_compare_three_way(i, i, i, i); };
 
 template<class R1, class R2>
 concept comparable = requires (R1 const& r1, R2 const& r2) { xstd::ranges::bit_lexicographical_compare_three_way(r1, r2); };
@@ -65,6 +68,16 @@ template<class X, class ForEach>
         auto nrv = std::vector<X>();
         for_each([&](X const& x) -> void { nrv.push_back(x); });
         return nrv;
+}
+
+// Whether every iterator form orders [first, last) against other, both ways round, as the range form orders w.
+template<class I, class W, class V>
+[[nodiscard]] constexpr auto compares_alike(I first, I last, W const& w, V const& other)
+        -> bool
+{
+        auto const want = xstd::ranges::bit_lexicographical_compare_three_way(w, other);
+        auto const back = xstd::ranges::bit_lexicographical_compare_three_way(other, w);
+        return xstd::ranges::bit_lexicographical_compare_three_way(first, last, other.begin(), other.end()) == want and xstd::bit_lexicographical_compare_three_way(first, last, other.begin(), other.end()) == want and xstd::ranges::bit_lexicographical_compare_three_way(other.begin(), other.end(), first, last) == back;
 }
 
 } // namespace
@@ -124,6 +137,29 @@ BOOST_AUTO_TEST_CASE(ComparesOneReadingAndOneWidthKindAlone)
         static_assert(not comparable<xstd::bit_array<8>, xstd::bit_fixed_set<8>> and not comparable<std::vector<bool>, std::vector<bool>>);
         static_assert(not comparable<xstd::bit_fixed_set<8>, xstd::basic_bit_fixed_set<std::size_t, std::uint64_t, 8, xstd::bit_key_mapping<std::size_t>, std::greater<>>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// Two iterator pairs, in both namespaces' lexicographical_compare_three_way, against another sequence one bool apart.
+BOOST_AUTO_TEST_CASE(ComparesBetweenTwoPairsOfIterators)
+{
+        auto const agrees = [](auto first, auto last, auto const& w) -> bool {
+                auto other = xstd::bit_vector(first, last);
+                auto right = compares_alike(first, last, w, other);
+                if (not other.empty()) {
+                        auto const mid = other.size() / 2UZ;
+                        other[mid]     = not other[mid];
+                        right          = right and compares_alike(first, last, w, other);
+                        other[mid]     = not other[mid];
+                }
+                other.push_back(false);
+                return right and compares_alike(first, last, w, other) and std::is_lt(xstd::ranges::bit_lexicographical_compare_three_way(w, other));
+        };
+        BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
+        static_assert([agrees] -> bool {
+                auto const a = test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>());
+                return agrees(a.begin() + 3, a.end() - 1, xstd::bit_span(a).subspan(3UZ, 9UZ));
+        }());
+        static_assert(lexicographical_compare_three_way_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not lexicographical_compare_three_way_between<std::vector<bool>::const_iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

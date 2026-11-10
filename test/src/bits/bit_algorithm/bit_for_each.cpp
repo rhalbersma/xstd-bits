@@ -3,7 +3,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/algorithm/sequences.hpp>             // for_each_sequence, for_each_window, patterned, sequences
+#include <test/algorithm/sequences.hpp>             // agrees_through_iterators, for_each_sequence, for_each_window, patterned, sequences
 #include <test/algorithm/sets.hpp>                  // for_each_set, sets
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <xstd/bits/bit_algorithm/bit_for_each.hpp> // bit_for_each
@@ -16,13 +16,16 @@
 #include <concepts>                                 // same_as
 #include <cstddef>                                  // size_t
 #include <cstdint>                                  // uint8_t
-#include <ranges>                                   // dangling, end, range_value_t, reverse
+#include <ranges>                                   // dangling, end, iterator_t, range_value_t, reverse
 #include <set>                                      // set
 #include <vector>                                   // vector
 
 BOOST_AUTO_TEST_SUITE(BitForEach)
 
 namespace {
+
+template<class I>
+concept for_each_between = requires (I i) { xstd::ranges::bit_for_each(i, i, [](bool) -> void {}); xstd::bit_for_each(i, i, [](bool) -> void {}); };
 
 template<class R, class F>
 concept walks = requires (R const& r, F f) { xstd::ranges::bit_for_each(r, f); };
@@ -143,6 +146,26 @@ BOOST_AUTO_TEST_CASE(AnswersAsRangesForEachDoes)
         static_assert(disagreements(xstd::bit_fixed_set<70>{0UZ, 3UZ, 64UZ, 69UZ}) == 0);
         static_assert(std::same_as<decltype(xstd::ranges::bit_for_each(xstd::bit_array<8>(), collector<bool>())), std::ranges::for_each_result<std::ranges::dangling, collector<bool>>>);
         BOOST_CHECK(true); // silence Boost.Test's "test case did not check any assertions"
+}
+
+// Between two iterators, as std::ranges::for_each(first, last, f) and as std::for_each, in the same order.
+BOOST_AUTO_TEST_CASE(WalksBetweenTwoIterators)
+{
+        auto const agrees = [](auto first, auto last, auto const& w) -> bool {
+                auto want    = std::vector<bool>();
+                auto ranges  = std::vector<bool>();
+                auto classic = std::vector<bool>();
+                xstd::ranges::bit_for_each(w, [&want](bool b) -> void { want.push_back(b); });
+                auto const result = xstd::ranges::bit_for_each(first, last, [&ranges](bool b) -> void { ranges.push_back(b); });
+                xstd::bit_for_each(first, last, [&classic](bool b) -> void { classic.push_back(b); });
+                return result.in == last and ranges == want and classic == want;
+        };
+        BOOST_CHECK_EQUAL(test::algorithm::agrees_through_iterators(test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 21>()), agrees), 0);
+        static_assert([agrees] -> bool {
+                auto const a = test::algorithm::patterned(xstd::basic_bit_array<std::uint8_t, 13>());
+                return agrees(a.begin() + 3, a.end() - 1, xstd::bit_span(a).subspan(3UZ, 9UZ));
+        }());
+        static_assert(for_each_between<std::ranges::iterator_t<xstd::bit_array<8> const>> and not for_each_between<std::vector<bool>::const_iterator>);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

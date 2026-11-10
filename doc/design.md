@@ -958,7 +958,17 @@ operations on a window ([windows](#windows)).
 is: the bits of `value` under `mask` land at `[pos, pos + digits)`, split over two blocks where `pos` is not
 aligned, the tail kept clear. Every masked write goes through it: the storage's ranged `set`,
 `xstd::ranges::bit_fill` over a window, the copy algorithms at any two offsets, and a window's bulk operators, each walking the blocks a range spans with the mask of what each
-holds, whole blocks and a partial one at the end.
+holds. A full mask at an aligned position is a plain store, with nothing of the old block read back.
+
+**Every walk is cut at block boundaries.** `detail::find_chunk` and `detail::for_each_chunk` hand a range of positions
+out in chunks: a head from its first position up to the next multiple of `digits`, whole blocks from there, and a
+tail with what remains of the last. Their `_down` mirrors hand out the same chunks highest first. The storage's ranged
+`count`, `any` and `all`, the searches behind `bit_find` and `bit_find_last`, the blit's writes and `bit_swap_ranges`
+and `bit_mismatch` all walk through them. So only the head and the tail of a window pay for its offset: every chunk
+between them is a whole block, read by `block_at` as the block itself and written as a plain store, and where a
+copy's source sits at the same offset modulo `digits` as its destination, the source's chunks are whole blocks too.
+Where the offsets differ, the destination still takes whole blocks, and each is assembled from two of the source's by
+one funnel shift. The range forms and the iterator forms both reach these primitives, so both get the same walk.
 
 ### the-funnel-shift
 
@@ -2380,32 +2390,36 @@ everywhere: each `std` namespace becomes the matching `xstd` one, and the name t
 `std::ranges::copy(v, out)` is `xstd::ranges::bit_copy(v, out)`. A range signature puts an algorithm in
 `xstd::ranges` even where `std::ranges` has no counterpart yet: `xstd::ranges::bit_lexicographical_compare_three_way`
 takes two ranges and answers only the ordering, the shape [P2022R3](https://wg21.link/P2022R3) proposes for
-`std::ranges::lexicographical_compare_three_way`, where the standard has only the iterator-pair form. `xstd` itself is where the classic
-iterator-pair shapes go when they come, as ordinary functions a user's overload joins through argument-dependent
-lookup, so `std::copy` and `std::ranges::copy` land on two names, as they are two in the standard. The split also
-keeps apart what the standard keeps apart: xstd-ints' `xstd::bit_reverse(x)` reverses the bits of an integer as
-[P3104](https://wg21.link/P3104)'s `std::bit_reverse` does, and `xstd::ranges::bit_reverse(v)` reverses a sequence as `std::ranges::reverse`
-does. The iterator operations live in `xstd::ranges` too, as `std::ranges::advance` and its siblings do. Inside
+`std::ranges::lexicographical_compare_three_way`, where the standard has only the iterator-pair form. `xstd` itself
+holds the classic iterator-pair shapes, as ordinary functions a user's overload joins through argument-dependent
+lookup, so `std::copy` and `std::ranges::copy` land on two names, as they are two in the standard. That puts
+`xstd::bit_reverse(first, last)` beside xstd-ints' `xstd::bit_reverse(x)`, which reverses the bits of an integer as
+[P3104](https://wg21.link/P3104)'s `std::bit_reverse` does. The two are one operation read two ways, the bits taken from
+the other end, so they share the name and part by arity and constraint: one takes two iterators of ours, the other one
+unsigned integer. The iterator operations live in `xstd::ranges` too, as `std::ranges::advance` and its siblings do. Inside
 `namespace xstd`, an unqualified `ranges::` finds `xstd::ranges` before `std::ranges` or range-v3's `::ranges`, so
 `tools/qualified_ranges.py`, run by the Audit job, fails on a `ranges::` that names none of the three.
 
-**Which algorithms get a `bit_` form.** One whose work on packed bits is a pass over blocks rather than a walk of
-proxies: it beats a bit at a time because a block answers, moves or writes `digits` positions in one instruction,
-or, on the set reading, because a loop can hold a block an iterator cannot. That is the whole list below, and it is
-a closed list in the sense that an algorithm not on it is one of two kinds. **It reduces to one of these on
-bools**: every `false` is like every other, so `stable_sort`, `nth_element`, `partial_sort` and `ranges::sort` with
-`std::ranges::less` are all `bit_sort`, `stable_partition` is `bit_partition`, `find_if(v, std::identity())` is
-`bit_find(v, true)`, `fill_n` and `copy_n` are
-`bit_fill` and `bit_copy` over a `subspan`, `lexicographical_compare` is `bit_lexicographical_compare_three_way(a, b)
-< 0`, and `upper_bound`, `lower_bound` and `equal_range` over a sorted sequence are `bit_partition_point` and
-`bit_find`. **Or packing gains it nothing**: an algorithm taking a predicate or a function of an element the
-algorithm cannot see as a block -- `count_if`, `find_if` with a lambda, `remove_if`, `unique`, `search` with a
-comparator -- calls the caller's code once per element whatever the storage, and `std::ranges` already runs it
-correctly over these ranges. `bit_transform` is the exception that proves the rule: a function of one or two
-`bool`s has a truth table of two or four entries, so the algorithm asks it once per entry and applies the table as
-one block expression. A rejected predicate would have no such table, since a predicate's type does not say what it
-tests; the set reading's predicate algorithms are the one family still open, the walk of
-[the-set-for-each](#the-set-for-each) carrying a predicate as cheaply as it carries a functor.
+**Which algorithms get a `bit_` form.** Every algorithm of `<algorithm>` but the subrange searches (`search`,
+`search_n`, `find_end` and `contains_subrange`), so a port finds the name it looks for rather than a note saying which
+other algorithm it reduces to. A reduction on bools is how a `bit_` form is written, not a reason to leave it out:
+every `false` is like every other, so `stable_sort`, `nth_element` and `partial_sort` are `bit_sort`'s count and two
+fills, `stable_partition` is `bit_partition`'s, and `lower_bound` over a sorted sequence is a find. A predicate or a
+function of one or two `bool`s has a truth table of two or four entries, so the algorithm asks it once per entry and
+applies the table as one block expression, as `bit_transform` and `bit_find_if` already do; an equality-preserving
+predicate answers each `bool` alike, so two calls decide what one per element would. A fold takes an accumulator of any
+type and has no table, so it walks the blocks and calls its function once per bit. The table below lists the forms that
+exist so far; the rest arrive section by section of `<algorithm>`.
+
+**Every shape the standard gives.** Each algorithm comes in the range overload, the iterator-sentinel overload
+`std::ranges` has beside it, as `xstd::ranges::bit_find(first, last, value)`, and the classic form in `xstd`, as
+`xstd::bit_find(first, last, value)`, with the classic results: `xstd::bit_copy` the end of what it wrote,
+`xstd::bit_fill` and `xstd::bit_sort` nothing, `xstd::bit_mismatch` a `std::pair`. An iterator form takes the
+positions `[first, last)` as a window over the storage its iterators step over, runs the range form on it, and hands
+back iterators of its own type at the positions the range form answered, so the shapes share one implementation and
+nothing walks a proxy. The classic forms that take a second range's start alone, as `xstd::bit_equal(first1, last1,
+first2)`, take as many positions from it as the first range has. They take our sequences' iterators and sentinels, a
+window's included; a set's iterators get theirs once the set reading has a window of its own.
 
 | algorithm | `std::ranges` equivalent | reading | a window |
 | :--- | :--- | :--- | :--- |
@@ -2415,7 +2429,7 @@ tests; the set reading's predicate algorithms are the one family still open, the
 | `bit_none_of(r)` | `none_of(r, std::identity())` | sequence | yes |
 | `bit_find(r, value)` | `find(r, value)` | sequence | yes |
 | `bit_find_last(r, value)` | `find_last(r, value)` | sequence | yes |
-| `bit_mismatch(r1, r2)` | `mismatch(r1, r2)` | sequence | yes, a `bool` at a time |
+| `bit_mismatch(r1, r2)` | `mismatch(r1, r2)` | sequence | yes |
 | `bit_is_sorted(r)` | `is_sorted(r)` | sequence | yes |
 | `bit_is_partitioned(r)` | `is_partitioned(r, std::identity())` | sequence | yes |
 | `bit_partition_point(r)` | `partition_point(r, std::identity())` | sequence | yes |
@@ -2430,10 +2444,10 @@ tests; the set reading's predicate algorithms are the one family still open, the
 | `bit_fill(r, value)` | `fill(r, value)` | sequence | yes |
 | `bit_sort(r)` | `sort(r)` | sequence | yes |
 | `bit_partition(r)` | `partition(r, std::identity())` | sequence | yes |
-| `bit_reverse(r)` | `reverse(r)` | sequence | no |
-| `bit_rotate(r, middle)` | `rotate(r, middle)` | sequence | no |
-| `bit_shift_left(r, n)` | `shift_left(r, n)` | sequence | no |
-| `bit_shift_right(r, n)` | `shift_right(r, n)` | sequence | no |
+| `bit_reverse(r)` | `reverse(r)` | sequence | yes |
+| `bit_rotate(r, middle)` | `rotate(r, middle)` | sequence | yes |
+| `bit_shift_left(r, n)` | `shift_left(r, n)` | sequence | yes |
+| `bit_shift_right(r, n)` | `shift_right(r, n)` | sequence | yes |
 | `bit_for_each(r, f)` | `for_each(r, f)`, and over `std::views::reverse(r)` | both | yes |
 | `bit_equal(r1, r2)` | `equal(r1, r2)` | both | yes |
 | `bit_lexicographical_compare_three_way(r1, r2)` | `lexicographical_compare_three_way` over both ranges | both | yes |
@@ -2476,13 +2490,15 @@ shifts, over a whole sequence's blocks, and reads and writes a window's blocks t
 iterator opens the same door: `storage_access` hands an algorithm the storage an iterator steps over and the
 position it stands at, which is how `bit_copy` writes through an output iterator and `bit_advance` moves one.
 
-**Whole sequences and windows.** `bit_reverse`, `bit_rotate` and the two shifts permute a whole storage in place,
-and take an owner or a whole view, never a window or a `const` sequence: a window shares its end blocks with
-positions outside it, and its permutation would be a masked walk of its own. Everything else takes a window,
-reading its blocks at its offset through `block_at` and writing them masked to its own positions. `bit_mismatch`
-takes two operands of one type, and compares two whole sequences a block at a time, at two run-time sizes as well,
-stopping at the shorter's end as `std::ranges::mismatch` does; two windows it compares a `bool` at a time through
-`std::ranges::mismatch` itself.
+**Whole sequences and windows.** `bit_reverse`, `bit_rotate` and the two shifts permute a whole storage in place
+through its own `reverse`, `rotate` and shifts where it has them, and a window, or a storage without them, through the
+blit: `bit_reverse` trades a block from each end inward and reverses what remains in the middle, `bit_rotate` reverses
+each part and then the whole, and a shift copies within the window, lowest or highest first so that nothing is
+overwritten before it is read, then clears the positions vacated. None takes a `const` sequence. Everything else takes
+a window too, reading its blocks at its offset through `block_at` and writing them masked to its own positions.
+`bit_mismatch` compares two whole sequences of one type through the storage's `first_difference`, at two run-time sizes
+as well, stopping at the shorter's end as `std::ranges::mismatch` does; any other two sequences of ours, windows and
+different block types included, it compares a block of the first at a time through the blit.
 
 **The writes, at any two offsets.** `bit_copy`, `bit_copy_backward`, `bit_move`, `bit_reverse_copy`,
 `bit_rotate_copy` and `bit_transform` read their source and write their destination a block of the destination at

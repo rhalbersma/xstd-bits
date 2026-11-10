@@ -75,6 +75,10 @@ It needs a C++23 compiler, and CMake 3.30 or later for the supplied CMake projec
   - `bit_rotate`, `bit_reverse` and the shifts (#352, #417);
   - `bit_equal` and the three-way comparison, across block types and storages (#381);
   - `bit_find_if` (#512).
+- **Every shape:** each sequence algorithm also takes an iterator and a sentinel in `xstd::ranges`, and has the classic
+  `<algorithm>` form in `xstd`, as `xstd::bit_copy(first, last, out)`. `bit_reverse`, `bit_rotate` and the shifts take
+  a window, and `bit_mismatch` compares any two sequences a block at a time (#535). Every walk over a window reads
+  and writes whole aligned blocks between a masked head and tail (#537).
 - **Over two sets:** `bit_includes`, `bit_intersects` and `bit_disjoint`, and the four set operations, which return a
   set (#394, #395).
 - **Iterator operations:** `bit_advance`, `bit_next`, `bit_prev` and `bit_distance` step a sequence by offset, and a
