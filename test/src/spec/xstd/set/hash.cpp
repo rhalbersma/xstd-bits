@@ -9,7 +9,7 @@
 #include <test/spec/input.hpp>        // context
 #include <test/spec/set.hpp>          // all, pairs, sets
 #include <test/spec/view.hpp>         // subject
-#include <xstd/bits/bit_set/hash.hpp> // hash
+#include <xstd/bits/bit_set/hash.hpp> // IWYU pragma: keep; the hash_append hooks
 #include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
 #include <set>                        // set
 

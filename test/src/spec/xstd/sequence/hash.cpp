@@ -8,9 +8,9 @@
 #include <test/spec/hash.hpp>                    // check_hashes_as
 #include <test/spec/input.hpp>                   // context
 #include <test/spec/sequence.hpp>                // array_all, inplace_vector_all, sequences, vector_all
-#include <xstd/bits/bit_array/hash.hpp>          // hash
-#include <xstd/bits/bit_inplace_vector/hash.hpp> // hash
-#include <xstd/bits/bit_vector/hash.hpp>         // hash
+#include <xstd/bits/bit_array/hash.hpp>          // IWYU pragma: keep; the hash_append hooks
+#include <xstd/bits/bit_inplace_vector/hash.hpp> // IWYU pragma: keep; the hash_append hooks
+#include <xstd/bits/bit_vector/hash.hpp>         // IWYU pragma: keep; the hash_append hooks
 #include <boost/container/static_vector.hpp>     // static_vector
 #include <boost/container/vector.hpp>            // vector
 #include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
