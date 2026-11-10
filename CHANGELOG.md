@@ -16,7 +16,7 @@ width:
 Views read bits someone else owns, and the `std::ranges` algorithms over them run a block at a time.
 
 It needs a C++23 compiler, and CMake 3.30 or later for the supplied CMake project. It also needs:
-- xstd-ints and xstd-misc, which the supplied project fetches at their v0.1.0 tags (#531);
+- xstd-ints at its v0.1.0 tag and xstd-misc at its v0.2.0 tag, which the supplied project fetches (#531);
 - Boost.Hash2, only for the opt-in hash headers, which no umbrella includes;
 - Boost.Container, where the standard library has no `std::inplace_vector`.
 

@@ -32,6 +32,6 @@ jobs:
       # The revisions CMakeLists.txt pins, as headers on the include path; Boost comes from vcpkg.json.
       dependency_repos: |
         https://github.com/rhalbersma/xstd-ints.git e7cf26aea50d1877c315cbe14ba0b4704ece4226
-        https://github.com/rhalbersma/xstd-misc.git 8921a26d9f1dc961bc79e37a44b9e070949aed79
+        https://github.com/rhalbersma/xstd-misc.git 02a2477a7fd09b44b3db8eff5e45b73eea084d9d
       # One pass of the 126 headers takes about four minutes, and the time it reports never gates.
       repeat: 1

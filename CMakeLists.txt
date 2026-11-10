@@ -36,14 +36,14 @@ if(NOT xstd-ints_FOUND)
 endif()
 
 # xstd-misc supplies conditional_data_member_t and XSTD_NO_UNIQUE_ADDRESS, which bit_block_container uses to carry a run-time width without paying for it under a compile-time one, and simple_allocator and container_compatible_range, which the owners constrain their constructors and deduction guides by, and hash_algorithm and hash_algorithm_is_avalanching, which bit_hash and bit_digest are built on.
-find_package(xstd-misc 0.1.0 CONFIG QUIET)
+find_package(xstd-misc 0.2.0 CONFIG QUIET)
 if(NOT xstd-misc_FOUND)
     include(FetchContent)
     FetchContent_Declare(
         xstd-misc
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-misc.git
-        # Pinned to the commit xstd-misc's v0.1.0 tag names, not a branch head; move consumption.yml's and compile-budget.yml's dependency_repos with it.
-        GIT_TAG 8921a26d9f1dc961bc79e37a44b9e070949aed79
+        # Pinned to the commit xstd-misc's v0.2.0 tag names, not a branch head; move consumption.yml's and compile-budget.yml's dependency_repos with it.
+        GIT_TAG 02a2477a7fd09b44b3db8eff5e45b73eea084d9d
     )
     FetchContent_MakeAvailable(xstd-misc)
 endif()
