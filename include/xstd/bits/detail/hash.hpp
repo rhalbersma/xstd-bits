@@ -42,7 +42,7 @@ template<class Hash, class Flavor>
 constexpr auto append_size(Hash& h, Flavor const& f, std::size_t n)
         -> void
 {
-        bits::detail::append_integral(h, f, static_cast<typename Flavor::size_type>(n));
+        bits::detail::append_integral(h, f, static_cast<Flavor::size_type>(n));
 }
 
 // The model's message, which the hash_append hooks write.
