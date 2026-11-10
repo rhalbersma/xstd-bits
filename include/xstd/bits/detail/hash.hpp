@@ -10,18 +10,40 @@
 #include <xstd/bits/detail/intrinsic.hpp>  // bools_per_block, expand_block
 #include <xstd/bits/detail/ownership.hpp>  // owner, reads, set_reading_tag, storage_access
 #include <xstd/bits/detail/shift.hpp>      // shr
-#include <boost/hash2/hash_append.hpp>     // hash_append, hash_append_size
+#include <boost/hash2/endian.hpp>          // endian
 #include <algorithm>                       // min
 #include <array>                           // array
-#include <concepts>                        // derived_from
+#include <concepts>                        // derived_from, integral
 #include <cstddef>                         // size_t
 #include <cstdint>                         // uint64_t
 #include <ranges>                          // contiguous_range, data, iota, range_value_t, size, sized_range
 #include <span>                            // dynamic_extent, span
-#include <type_traits>                     // remove_cvref_t
+#include <type_traits>                     // make_unsigned_t, remove_cvref_t
 #include <utility>                         // declval
 
 namespace xstd::bits::detail {
+
+// An integer's bytes in the flavor's order, as Hash2's hash_append writes one, without the header that defines it.
+template<class Hash, class Flavor, std::integral T>
+constexpr auto append_integral(Hash& h, Flavor const& /* f */, T x)
+        -> void
+{
+        auto const value = static_cast<std::uint64_t>(static_cast<std::make_unsigned_t<T>>(x));
+        auto bytes       = std::array<unsigned char, sizeof(T)>{};
+        for (auto const i : std::views::iota(0UZ, sizeof(T))) {
+                auto const position = Flavor::byte_order == boost::hash2::endian::big ? sizeof(T) - 1UZ - i : i;
+                bytes[i]            = static_cast<unsigned char>(value >> (bits_per_byte * position));
+        }
+        h.update(bytes.data(), bytes.size());
+}
+
+// A length as Hash2's hash_append_size writes one: narrowed to the flavor's size_type, then its bytes.
+template<class Hash, class Flavor>
+constexpr auto append_size(Hash& h, Flavor const& f, std::size_t n)
+        -> void
+{
+        bits::detail::append_integral(h, f, static_cast<Flavor::size_type>(n));
+}
 
 // The model's message, which the hash_append hooks write.
 
@@ -164,15 +186,15 @@ constexpr auto hash_append_bit_string(Hash& h, Flavor const& f, T const& x)
 {
         if constexpr (hashed_bits_t<T>::extent == 0UZ) {
                 // Hash2 has every append update, an empty std::array with the one byte this writes.
-                boost::hash2::hash_append(h, f, '\x00');
+                bits::detail::append_integral(h, f, '\x00');
         } else {
                 auto const n = bit_byte_count(x);
                 update_bit_bytes(h, storage_access::bits(x).blocks(), n);
                 if constexpr (hashed_bits_t<T>::extent == std::dynamic_extent) {
                         if constexpr (reads<T, set_reading_tag>) {
-                                boost::hash2::hash_append_size(h, f, n);
+                                bits::detail::append_size(h, f, n);
                         } else {
-                                boost::hash2::hash_append_size(h, f, storage_access::bits(x).size());
+                                bits::detail::append_size(h, f, storage_access::bits(x).size());
                         }
                 }
         }
@@ -260,7 +282,7 @@ constexpr auto hash_append_bit_planes(Hash& h, Flavor const& f, R const& r)
         using element_type    = std::ranges::range_value_t<R>;
         constexpr auto extent = static_range_extent_v<R>;
         if constexpr (extent == 0UZ) {
-                boost::hash2::hash_append(h, f, '\x00');
+                bits::detail::append_integral(h, f, '\x00');
         } else {
                 auto const append_each = [&] -> void {
                         for (auto const& x : r) {
@@ -285,7 +307,7 @@ constexpr auto hash_append_bit_planes(Hash& h, Flavor const& f, R const& r)
                         }
                 }
                 if constexpr (extent == std::dynamic_extent) {
-                        boost::hash2::hash_append_size(h, f, std::ranges::size(r));
+                        bits::detail::append_size(h, f, std::ranges::size(r));
                 }
         }
 }
