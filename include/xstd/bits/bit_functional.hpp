@@ -17,8 +17,4 @@
 // [comparisons.three.way], class compare_three_way
 #include <xstd/bits/bit_functional/bit_compare_three_way.hpp> // IWYU pragma: export; bit_compare_three_way
 
-// [unord.hash], class template hash, beside it the digest of the same bits
-#include <xstd/bits/bit_functional/bit_hash.hpp>   // IWYU pragma: export; bit_hash, bit_hash_append
-#include <xstd/bits/bit_functional/bit_digest.hpp> // IWYU pragma: export; bit_digest
-
 #endif // XSTD_BITS_BIT_FUNCTIONAL_HPP

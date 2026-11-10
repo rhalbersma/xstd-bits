@@ -8,7 +8,6 @@
 
 #include <xstd/bits/bit_vector/bit_vector.hpp>         // basic_bit_vector
 #include <xstd/bits/bit_vector/container_hash.hpp>     // IWYU pragma: export; is_range, is_tuple_like
-#include <xstd/bits/bit_vector/hash.hpp>               // IWYU pragma: export; hash
 #include <xstd/bits/detail/num_blocks.hpp>             // num_blocks_v, tiling_block
 #include <xstd/bits/ext/boost/detail/small_blocks.hpp> // IWYU pragma: keep; bit_storage_rebind
 #include <xstd/ints/concepts/unsigned_integer.hpp>     // unsigned_integer

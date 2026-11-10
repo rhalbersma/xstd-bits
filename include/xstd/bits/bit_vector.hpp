@@ -12,9 +12,6 @@
 // [vector.erasure], erasure
 #include <xstd/bits/bit_vector/erase_if.hpp> // IWYU pragma: export; erase, erase_if
 
-// [vector.syn], hash support
-#include <xstd/bits/bit_vector/hash.hpp> // IWYU pragma: export; hash
-
 // Boost.ContainerHash's traits, https://www.boost.org/libs/container_hash
 #include <xstd/bits/bit_vector/container_hash.hpp> // IWYU pragma: export; is_range, is_tuple_like
 

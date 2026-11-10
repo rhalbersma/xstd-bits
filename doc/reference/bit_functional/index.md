@@ -41,10 +41,13 @@ namespace xstd {
 | [`<xstd/bits/bit_functional/bit_hash.hpp>`](bit_hash.md) | `bit_hash`, `bit_hash_append` |
 | [`<xstd/bits/bit_functional/bit_digest.hpp>`](bit_digest.md) | `bit_digest` |
 
+`<xstd/bits/bit_functional/bit_hash.hpp>` and `<xstd/bits/bit_functional/bit_digest.hpp>` include Boost.Hash2, so they are
+opt-in: `<xstd/bits/bit_functional.hpp>` leaves them out, and a project that includes one links `Boost::hash2`.
+
 Each comparison and the hash has a header of its own under `<xstd/bits/bit_functional/>`, and the umbrella exports
-them in [[comparisons]](https://eel.is/c++draft/comparisons)'s order, then
-[[comparisons.three.way]](https://eel.is/c++draft/comparisons.three.way), then
-[[unord.hash]](https://eel.is/c++draft/unord.hash) with the digest beside it. `hash_algorithm` is xstd-misc's. The
+the comparisons in [[comparisons]](https://eel.is/c++draft/comparisons)'s order, then
+[[comparisons.three.way]](https://eel.is/c++draft/comparisons.three.way); the synopsis lists the hash under
+[[unord.hash]](https://eel.is/c++draft/unord.hash), with the digest beside it. `hash_algorithm` is xstd-misc's. The
 comparisons are transparent and agree with the hash: what `bit_equal_to` calls equal, `bit_hash` hashes alike, and
 the orderings order equivalent exactly what it calls equal. So a `std::unordered_set<K, bit_hash<K>, bit_equal_to>`
 or a `std::set<K, bit_less>` finds a key through a view of it or through an owner over narrower blocks.

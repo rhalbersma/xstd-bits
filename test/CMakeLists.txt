@@ -1,7 +1,7 @@
-#          Copyright Rein Halbersma 2014-2025.
-# Distributed under the Boost Software License, Version 1.0.
-#    (See accompanying file LICENSE_1_0.txt or copy at
-#          http://www.boost.org/LICENSE_1_0.txt)
+#Copyright Rein Halbersma 2014 - 2025.
+#Distributed under the Boost Software License, Version 1.0.
+#(See accompanying file LICENSE_1_0.txt or copy at
+#http: // www.boost.org/LICENSE_1_0.txt)
 
 set(Boost_USE_STATIC_LIBS ON)
 find_package(
@@ -9,6 +9,9 @@ find_package(
     unit_test_framework
 )
 find_package(range-v3 CONFIG REQUIRED)
+
+#The opt - in hash headers' one dependency, which the tests link as a consumer of those headers would.
+find_package(boost_hash2 CONFIG REQUIRED)
 
 set(cxx_compile_definitions
     BOOST_ALL_NO_LIB
@@ -51,7 +54,7 @@ set(cxx_compile_options_warnings
         -Wno-ctad-maybe-unsupported         # std::reverse_iterator(it) uses the standard's own deduction guide
         -Wno-zero-as-null-pointer-constant  # triggered by <=> comparisons against 0
     >
-    # Four-byte pointers beside 64-bit members pad the test fixtures, whose layout nothing reads; 64-bit legs keep the check.
+#Four - byte pointers beside 64 - bit members pad the test fixtures, whose layout nothing reads; 64 - bit legs keep the check.
     $<$<AND:$<CXX_COMPILER_ID:Clang>,$<EQUAL:${CMAKE_SIZEOF_VOID_P},4>>:
         -Wno-padded
     >
@@ -78,24 +81,24 @@ set(cxx_compile_options_warnings
 )
 
 set(cxx_compile_options_optimization
-    # The build machine's processor only where the tests run on it: a cross build, such as Emscripten's, has no native.
+#The build machine 's processor only where the tests run on it: a cross build, such as Emscripten' s, has no native.
     $<$<AND:$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:GNU>>,$<NOT:$<BOOL:${CMAKE_CROSSCOMPILING}>>>:
         -march=${${project_option_prefix}_TEST_ARCH}
     >
-    # MinGW emits 32-byte stores to a 16-byte aligned stack; the assembler rewrites them unaligned (#54, GCC PR target/54412).
+#MinGW emits 32 - byte stores to a 16 - byte aligned stack; the assembler rewrites them unaligned(#54, GCC PR target / 54412).
     $<$<AND:$<CXX_COMPILER_ID:GNU>,$<PLATFORM_ID:Windows>>:
         -Wa$<COMMA>-muse-unaligned-vector-move
     >
 )
 
-# Load-bearing in every configuration: without it two of three MinGW rungs cannot assemble these objects at all (#47).
+#Load - bearing in every configuration : without it two of three MinGW rungs cannot assemble these objects at all(#47).
 set(cxx_compile_options_mbig_obj
     $<$<AND:$<CXX_COMPILER_ID:GNU>,$<PLATFORM_ID:Windows>>:
 	    -Wa,-mbig-obj
     >
 )
 
-# Each public header compiled as its own translation unit, proving it self-sufficient; this is what Clang-Tidy analyzes.
+#Each public header compiled as its own translation unit, proving it self - sufficient; this is what Clang - Tidy analyzes.
 set(public_header_dir ${PROJECT_SOURCE_DIR}/include)
 file(
     GLOB_RECURSE public_headers
@@ -117,10 +120,11 @@ foreach(h ${public_headers})
 
     add_executable(header.${header_test_id} ${header_test_source})
 
-    # Boost::headers because the ext/ self-sufficiency units adapt a header-only Boost library; the target carries only hash2.
+    # Boost::headers because the ext/ self-sufficiency units adapt a header-only Boost library, and Boost::hash2 for the opt-in hash headers.
     target_link_libraries(
         header.${header_test_id} PRIVATE
         xstd::bits
+        Boost::hash2
         Boost::headers
     )
 
@@ -138,6 +142,36 @@ foreach(h ${public_headers})
 
     add_test(NAME header.${header_test_id} COMMAND header.${header_test_id})
 endforeach()
+
+# The umbrellas leave Boost.Hash2 out, compiled against a boost/hash2/ whose every header is an #error ahead of the real one.
+find_path(${project_id}_hash2_root boost/hash2/hash_append.hpp REQUIRED)
+file(
+    GLOB_RECURSE hash2_headers
+    RELATIVE ${${project_id}_hash2_root}
+    ${${project_id}_hash2_root}/boost/hash2/*.hpp
+)
+foreach(h ${hash2_headers})
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/without_hash2/${h} "#error \"<${h}> is for the opt-in hash headers, which no umbrella includes\"\n")
+endforeach()
+file(
+    WRITE ${CMAKE_CURRENT_BINARY_DIR}/without_hash2/umbrellas.cpp
+    "#include <xstd/bits.hpp>           // IWYU pragma: keep\n#include <xstd/bits/ext/boost.hpp> // IWYU pragma: keep\nauto main() -> int {}\n"
+)
+add_executable(umbrellas_without_hash2 ${CMAKE_CURRENT_BINARY_DIR}/without_hash2/umbrellas.cpp)
+target_include_directories(umbrellas_without_hash2 BEFORE PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/without_hash2)
+target_link_libraries(
+    umbrellas_without_hash2 PRIVATE
+    xstd::bits
+    Boost::headers
+)
+target_compile_definitions(umbrellas_without_hash2 PRIVATE ${cxx_compile_definitions})
+target_compile_options(
+    umbrellas_without_hash2 PRIVATE
+    ${cxx_compile_options_warnings}
+    ${cxx_compile_options_optimization}
+    ${cxx_compile_options_mbig_obj}
+)
+add_test(NAME umbrellas_without_hash2 COMMAND umbrellas_without_hash2)
 
 # Every public header is answered by one test source at the same path, detail/ excepted; enforced here so it cannot drift. detail/ is excepted because a detail header has no contract to mirror. Where such a test exists all the same -- and the two proxy headers have one each -- it is white-box: it names what nobody outside the library names, and may be rewritten whenever the internals are. The contract those types do carry is asserted through the containers that hand them out, in the Standard clauses under test/src/spec/.
 file(
@@ -208,6 +242,7 @@ foreach(t ${targets})
     target_link_libraries(
         ${target_id} PRIVATE
         xstd::bits
+        Boost::hash2
         Boost::headers
         Boost::unit_test_framework
         range-v3::range-v3

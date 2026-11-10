@@ -27,9 +27,6 @@
 // [set.erasure], erasure
 #include <xstd/bits/bit_set/erase_if.hpp> // IWYU pragma: export; erase_if
 
-// [unord.hash], beside it: std::hash, which <set> does not specialize for std::set
-#include <xstd/bits/bit_set/hash.hpp> // IWYU pragma: export; hash
-
 // Boost.ContainerHash's traits, https://www.boost.org/libs/container_hash
 #include <xstd/bits/bit_set/container_hash.hpp> // IWYU pragma: export; is_range, is_tuple_like
 

@@ -4,6 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #include <xstd/bits/bit_vector.hpp>               // bit_vector, is_range, is_tuple_like
+#include <xstd/bits/bit_vector/hash.hpp>          // hash
 #include <boost/container_hash/is_range.hpp>      // is_range
 #include <boost/container_hash/is_tuple_like.hpp> // is_tuple_like
 #include <boost/hash2/hash_append.hpp>            // hash_append

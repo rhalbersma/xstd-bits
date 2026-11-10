@@ -22,7 +22,7 @@ jobs:
   consumption:
     uses: rhalbersma/cpp-ci/.github/workflows/consumption.yml@028e1b27ed0b090bae643130d60112e974baeaba # main after rhalbersma/cpp-ci#119, v0.16.0 with compile-budget's exclude and dependency_repos
     with:
-      # CMakeLists.txt find_package()s boost_hash2 and boost_container unconditionally, so every configure here needs vcpkg.
+      # CMakeLists.txt find_package()s boost_container unconditionally, so every configure here needs vcpkg.
       vcpkg: true
       # The revisions CMakeLists.txt pins; install(EXPORT) cannot export a FetchContent build tree, so installed dependencies are required.
       dependency_repos: |

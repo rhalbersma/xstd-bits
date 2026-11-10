@@ -13,13 +13,11 @@
 #include <xstd/bits/detail/assert.hpp>                  // XSTD_BITS_ASSERT
 #include <xstd/bits/detail/bit_block_container.hpp>     // bit_block_container_type
 #include <xstd/bits/detail/bit_blocks.hpp>              // bit_blocks
-#include <xstd/bits/detail/bit_hash.hpp>                // bit_hash
 #include <xstd/bits/detail/bit_index_mapping.hpp>       // bit_index_mapping
 #include <xstd/bits/detail/bit_mask_mapping.hpp>        // bit_mask_mapping
 #include <xstd/bits/detail/borrowed_bits.hpp>           // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>             // numeric_three_way, set_equal, three_way
 #include <xstd/bits/detail/from_blocks.hpp>             // from_blocks_t
-#include <xstd/bits/detail/hash.hpp>                    // hash_append_keys
 #include <xstd/bits/detail/input_iterator_pair.hpp>     // input_iterator_pair
 #include <xstd/bits/detail/non_volatile.hpp>            // non_volatile
 #include <xstd/bits/detail/owner_members.hpp>           // owner_members
@@ -31,15 +29,13 @@
 #include <xstd/misc/concepts/specialization_of.hpp>     // specialization_of
 #include <xstd/misc/type_traits/empty_base_type.hpp>    // empty_base_type
 #include <boost/container_hash/is_range.hpp>            // is_range
-#include <boost/hash2/hash_append_fwd.hpp>              // hash_append_tag
-#include <boost/hash2/xxhash.hpp>                       // xxhash_64
 #include <algorithm>                                    // min, partition_point
 #include <cassert>                                      // assert
 #include <compare>                                      // strong_ordering
 #include <concepts>                                     // constructible_from, convertible_to, equality_comparable, same_as, totally_ordered
 #include <cstddef>                                      // ptrdiff_t, size_t
 #include <format>                                       // enable_nonlocking_formatter_optimization, formatter
-#include <functional>                                   // greater, hash, less
+#include <functional>                                   // greater, less
 #include <initializer_list>                             // initializer_list
 #include <iterator>                                     // bidirectional_iterator_tag, iter_reference_t, make_reverse_iterator, reverse_iterator
 #include <ranges>                                       // begin, enable_borrowed_range, enable_view, end, input_range, iota, iota_view, range_reference_t, from_range_t, subrange
@@ -315,14 +311,6 @@ class set_adaptor : public set::sizes_t<Bits, Store, Derived, Key, KeyMapping, C
 
         // The free functions over every reading, bit_convert among them, reach the storage through this one door.
         friend struct storage_access;
-
-        // The value as std::set<Key, Compare> hashes it, a view as its owner: the keys in order, then their count.
-        template<class Provider, class Hash, class Flavor>
-        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const& pr, Hash& h, Flavor const& f, set_adaptor const* v) noexcept
-                -> void
-        {
-                hash_append_keys(pr, h, f, *v);
-        }
 
 public:
         // A vehicle used directly is its own container, which is what a view is.
@@ -1523,17 +1511,6 @@ struct formatter<xstd::bits::detail::set_reference<Owner, Value>, CharT> : forma
 template<auto Owner, class Value>
 constexpr bool enable_nonlocking_formatter_optimization<xstd::bits::detail::set_reference<Owner, Value>> = enable_nonlocking_formatter_optimization<Value>;
 #endif
-
-// Owned or viewed, as std::string_view hashes and std::set does not: the bits, by bit_hash.
-template<class Bits, xstd::bits::detail::storage Store, class Derived, class Key, class KeyMapping, class Compare>
-struct hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>>
-{
-        [[nodiscard]] constexpr auto operator()(xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare> const& v) const noexcept
-                -> std::size_t
-        {
-                return xstd::bit_hash<xstd::bits::detail::set_adaptor<Bits, Store, Derived, Key, KeyMapping, Compare>, boost::hash2::xxhash_64>()(v);
-        }
-};
 
 } // namespace std
 

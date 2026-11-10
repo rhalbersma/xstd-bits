@@ -1553,6 +1553,15 @@ range overload and a hook by `enable_if`, a range with a hook is ambiguous, and 
 hash the proxy the iterators return anyway. The harness checks the invariant beside `==`, wherever a
 `std::hash` exists, and each model's message under three algorithms and both fixed byte orders.
 
+**Where it lives.** Hashing is opt-in: Boost.Hash2 is a dependency of the headers that hash, not of the target.
+`std::hash` and the `hash_append` hooks come with each family's `hash.hpp`, `bit_hash` and `bit_digest` with their own
+headers, and no umbrella includes any of them, so a project that never hashes needs no Hash2, which many installed
+Boosts lack. The hooks are therefore namespace-scope `tag_invoke` functions rather than hidden friends: a hidden friend
+names `boost::hash2::hash_append_tag` in the class, and the class is in every header. ADL still finds them, through the
+adaptor a container derives from, once the family's `hash.hpp` is included. `std::hash` keeps Boost's own xxHash; a
+copy of the algorithm in this library would only be one more thing to keep in step with Hash2. A test compiles every
+umbrella against a `boost/hash2/` whose headers are each an `#error`, so none of them can come to include Hash2.
+
 ## Coverage
 
 ### per-instantiation-slots
@@ -6071,7 +6080,7 @@ Functionality from `std::bitset<N>` that is not in `xstd::bit_fixed_set<N>`:
 - **No integer constructor and no integer conversion operator**: here what is missing is the language's *unnamed* doors and not the capability. The byte exchange does both under a name, `xstd::bit_fixed_set<32>(xstd::from_blocks, 5u)` and `xstd::bit_convert<unsigned>(s)` — and it is named for exactly the reason a constructor would be the wrong spelling: `bit_fixed_set<32>(xstd::from_blocks, 5u)` is the set of positions the **value** five has, `{0, 2}`, and not the set `{5}`. A constructor cannot say which of those it meant; a name can.
 - **No I/O streaming operators**: `operator<<` and `operator>>` are `[bitset.operators]`'s, and go with `to_string`. A set formats instead, in its own vocabulary.
 
-Formatting a set needs nothing beyond the standard library: `std::format` and `std::print` take it in its own vocabulary, as [printing](#printing) above shows. A consumer who formats with [{fmt}](https://fmt.dev/latest/) instead gets the same output through the proxy's hidden-friend `format_as`, and pays for that hook without this library depending on fmt either to build or to test. Hashing is **not** on that list: `std::hash<xstd::bit_fixed_set<N>>` is specialized, over [Boost.Hash2](https://github.com/boostorg/hash2), and every value this library compares it also hashes, so `a == b` implies `hash(a) == hash(b)` under every reading ([design.md#the-hashing-invariant](#the-hashing-invariant)). The `hash_append` hook is there beside it, for a caller wanting an algorithm other than the defaulted `fnv1a_64`.
+Formatting a set needs nothing beyond the standard library: `std::format` and `std::print` take it in its own vocabulary, as [printing](#printing) above shows. A consumer who formats with [{fmt}](https://fmt.dev/latest/) instead gets the same output through the proxy's hidden-friend `format_as`, and pays for that hook without this library depending on fmt either to build or to test. Hashing is opt-in in the same way: `<xstd/bits/bit_set/hash.hpp>` specializes `std::hash<xstd::bit_fixed_set<N>>` over [Boost.Hash2](https://github.com/boostorg/hash2), which the consumer then links, and every value this library compares it also hashes, so `a == b` implies `hash(a) == hash(b)` under every reading ([design.md#the-hashing-invariant](#the-hashing-invariant)). The `hash_append` hook comes with it, for a caller wanting an algorithm other than the default xxHash.
 
 ### 3 Set predicates from `boost::dynamic_bitset`
 

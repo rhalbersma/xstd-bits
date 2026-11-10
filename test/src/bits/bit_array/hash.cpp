@@ -3,12 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/block_types.hpp>     // graded_extents, wide_extents
-#include <xstd/bits/bit_array.hpp>  // basic_bit_array, hash
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <functional>               // hash
-#include <tuple>                    // tuple_cat
-#include <utility>                  // declval
+#include <test/block_types.hpp>         // graded_extents, wide_extents
+#include <xstd/bits/bit_array.hpp>      // basic_bit_array
+#include <xstd/bits/bit_array/hash.hpp> // hash
+#include <boost/test/unit_test.hpp>     // BOOST_AUTO_TEST_CASE_TEMPLATE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <functional>                   // hash
+#include <tuple>                        // tuple_cat
+#include <utility>                      // declval
 
 BOOST_AUTO_TEST_SUITE(BitArrayHash)
 

@@ -5,8 +5,7 @@
   "homepage": "https://github.com/rhalbersma/xstd-bits",
   "license": "BSL-1.0",
   "dependencies": [
-    "boost-container",
-    "boost-hash2"
+    "boost-container"
   ],
   "default-features": [
     "test"
@@ -18,11 +17,18 @@
         "boost-dynamic-bitset"
       ]
     },
+    "hash2": {
+      "description": "Hash the containers through std::hash, bit_hash and bit_digest, whose headers include Boost.Hash2",
+      "dependencies": [
+        "boost-hash2"
+      ]
+    },
     "test": {
       "description": "Build the unit tests and benchmarks",
       "dependencies": [
         "boost-test",
         "boost-dynamic-bitset",
+        "boost-hash2",
         "boost-iterator",
         "boost-unordered",
         "benchmark",

@@ -3,14 +3,15 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_functional.hpp>        // bit_compare_three_way, bit_equal_to, bit_greater, bit_greater_equal, bit_hash, bit_hash_append, bit_less, bit_less_equal, bit_not_equal_to
-#include <xstd/bits/bit_set/bit_fixed_set.hpp> // basic_bit_fixed_set, bit_fixed_set
-#include <boost/hash2/flavor.hpp>              // default_flavor
-#include <boost/hash2/xxhash.hpp>              // xxhash_64
-#include <boost/test/unit_test.hpp>            // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <compare>                             // strong_ordering
-#include <cstddef>                             // size_t
-#include <cstdint>                             // uint8_t
+#include <xstd/bits/bit_functional.hpp>          // bit_compare_three_way, bit_equal_to, bit_greater, bit_greater_equal, bit_less, bit_less_equal, bit_not_equal_to
+#include <xstd/bits/bit_functional/bit_hash.hpp> // bit_hash, bit_hash_append
+#include <xstd/bits/bit_set/bit_fixed_set.hpp>   // basic_bit_fixed_set, bit_fixed_set
+#include <boost/hash2/flavor.hpp>                // default_flavor
+#include <boost/hash2/xxhash.hpp>                // xxhash_64
+#include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <compare>                               // strong_ordering
+#include <cstddef>                               // size_t
+#include <cstdint>                               // uint8_t
 
 BOOST_AUTO_TEST_SUITE(Functional)
 

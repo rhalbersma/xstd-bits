@@ -3,18 +3,21 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <test/for_each_type.hpp>            // for_each_type
-#include <test/inplace_vector.hpp>           // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
-#include <test/spec/hash.hpp>                // check_hashes_as
-#include <test/spec/input.hpp>               // context
-#include <test/spec/sequence.hpp>            // array_all, inplace_vector_all, sequences, vector_all
-#include <boost/container/static_vector.hpp> // static_vector
-#include <boost/container/vector.hpp>        // vector
-#include <boost/test/unit_test.hpp>          // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
-#include <algorithm>                         // copy
-#include <array>                             // array
-#include <tuple>                             // tuple_size_v
-#include <vector>                            // vector
+#include <test/for_each_type.hpp>                // for_each_type
+#include <test/inplace_vector.hpp>               // IWYU pragma: keep; TEST_HAS_INPLACE_VECTOR
+#include <test/spec/hash.hpp>                    // check_hashes_as
+#include <test/spec/input.hpp>                   // context
+#include <test/spec/sequence.hpp>                // array_all, inplace_vector_all, sequences, vector_all
+#include <xstd/bits/bit_array/hash.hpp>          // hash
+#include <xstd/bits/bit_inplace_vector/hash.hpp> // hash
+#include <xstd/bits/bit_vector/hash.hpp>         // hash
+#include <boost/container/static_vector.hpp>     // static_vector
+#include <boost/container/vector.hpp>            // vector
+#include <boost/test/unit_test.hpp>              // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END
+#include <algorithm>                             // copy
+#include <array>                                 // array
+#include <tuple>                                 // tuple_size_v
+#include <vector>                                // vector
 
 #ifdef TEST_HAS_INPLACE_VECTOR
 

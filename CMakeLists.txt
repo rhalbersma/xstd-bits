@@ -48,10 +48,9 @@ if(NOT xstd-misc_FOUND)
     FetchContent_MakeAvailable(xstd-misc)
 endif()
 
-# Boost.Hash2 is a public dependency of this library's headers, not just of the tests, so it is declared explicitly.
-find_package(boost_hash2 CONFIG REQUIRED)
+# Boost.Hash2 is no dependency of the target: the headers that hash, std::hash's, bit_hash's and bit_digest's, are opt-in, in no umbrella, and a consumer who includes one links Boost::hash2 itself.
 
-# Boost.Container likewise: the ext/ column's small_vector, opt-in to include, and the inplace column's blocks where the standard library has no std::inplace_vector.
+# Boost.Container is a public dependency of this library's headers: the ext/ column's small_vector, opt-in to include, and the inplace column's blocks where the standard library has no std::inplace_vector.
 find_package(boost_container CONFIG REQUIRED)
 
 add_library(
@@ -72,6 +71,7 @@ target_sources(
         include/xstd/bits/detail/sequence_adaptor.hpp
         include/xstd/bits/detail/sequence_erasure.hpp
         include/xstd/bits/bit_set/detail/set_adaptor.hpp
+        include/xstd/bits/bit_set/detail/set_hash.hpp
         include/xstd/bits/bit_set/detail/erase_if.hpp
         include/xstd/bits/bit_valarray/detail/valarray_adaptor.hpp
         include/xstd/bits/bit_valarray/detail/valarray_bool.hpp
@@ -350,7 +350,6 @@ target_link_libraries(
     xstd::ints
     xstd::misc
     Boost::container
-    Boost::hash2
 )
 
 target_compile_features(

@@ -9,7 +9,8 @@
 #include <xstd/bits/bit_algorithm/bit_disjoint.hpp>   // bit_disjoint
 #include <xstd/bits/bit_algorithm/bit_includes.hpp>   // bit_includes
 #include <xstd/bits/bit_algorithm/bit_intersects.hpp> // bit_intersects
-#include <xstd/bits/bit_set.hpp>                      // basic_bit_fixed_set, basic_bit_inplace_set, basic_bit_set, bit_fixed_set, bit_inplace_set, bit_set, erase_if, hash
+#include <xstd/bits/bit_set.hpp>                      // basic_bit_fixed_set, basic_bit_inplace_set, basic_bit_set, bit_fixed_set, bit_inplace_set, bit_set, erase_if
+#include <xstd/bits/bit_set/hash.hpp>                 // hash
 #include <xstd/bits/ext/boost/bit_small_set.hpp>      // basic_bit_small_set
 #include <algorithm>                                  // includes, set_difference, set_intersection, set_symmetric_difference, set_union
 #include <array>                                      // array
