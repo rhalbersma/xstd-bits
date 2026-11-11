@@ -45,3 +45,6 @@ namespace boost::container_hash {
 | [`<xstd/bits/bit_array/tuple_element.hpp>`](tuple_element.md) | `tuple_element`, `tuple_size` |
 | [`<xstd/bits/bit_array/hash.hpp>`](hash.md) | `hash` |
 | [`<xstd/bits/bit_array/container_hash.hpp>`](hash.md) | `is_range`, `is_tuple_like` |
+
+`<xstd/bits/bit_array/hash.hpp>` includes Boost.Hash2, so it is opt-in: `<xstd/bits/bit_array.hpp>` leaves it out, and a project that
+includes it links `Boost::hash2`.

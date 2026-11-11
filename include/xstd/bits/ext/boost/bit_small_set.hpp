@@ -11,7 +11,6 @@
 #include <xstd/bits/bit_set/bit_set.hpp>                // basic_bit_set
 #include <xstd/bits/bit_set/container_hash.hpp>         // IWYU pragma: export; is_range, is_tuple_like
 #include <xstd/bits/bit_set/detail/set_adaptor.hpp>     // key_direction
-#include <xstd/bits/bit_set/hash.hpp>                   // IWYU pragma: export; hash
 #include <xstd/bits/detail/num_blocks.hpp>              // num_blocks_v, tiling_block
 #include <xstd/bits/ext/boost/detail/small_blocks.hpp>  // IWYU pragma: keep; bit_storage_rebind
 #include <xstd/ints/concepts/unsigned_integer.hpp>      // unsigned_integer

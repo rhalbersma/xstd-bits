@@ -4,7 +4,7 @@
 #          http://www.boost.org/LICENSE_1_0.txt)
 
 # The set<int> tests read against bit_inplace_set, whose storage grows in place up to 128 keys.
-include = ["xstd/bits/bit_set/bit_inplace_set.hpp", "xstd/bits/bit_set/erase_if.hpp"]
+include = ["xstd/bits/bit_set/bit_inplace_set.hpp", "xstd/bits/bit_set/erase_if.hpp", "xstd/bits/bit_set/hash.hpp"]
 
 # libc++ spells set<int> qualified.
 [libcxx]

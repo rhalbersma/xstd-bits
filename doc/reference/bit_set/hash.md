@@ -1,5 +1,7 @@
 # `<xstd/bits/bit_set/hash.hpp>`, `<xstd/bits/bit_set/container_hash.hpp>`
 
+`hash.hpp` includes Boost.Hash2, and no umbrella includes it: a project that includes it links `Boost::hash2`.
+
 ## `hash`, `is_range`, `is_tuple_like`
 
 - `hash<T>` for each owner and for `bit_set_view`: `operator()` is `noexcept` and returns

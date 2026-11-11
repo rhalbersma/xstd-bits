@@ -1,5 +1,7 @@
 # `<xstd/bits/bit_functional/bit_hash.hpp>`
 
+Includes Boost.Hash2, and no umbrella includes it: a project that includes it links `Boost::hash2`.
+
 ## `bit_hash_append`
 
 - *Constraints:* `Hash` models `hash_algorithm`, and:

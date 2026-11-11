@@ -3,13 +3,14 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_span.hpp>   // bit_span
-#include <xstd/bits/bit_vector.hpp> // basic_bit_vector, hash
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <cstdint>                  // uint8_t
-#include <functional>               // hash
-#include <type_traits>              // is_default_constructible_v
-#include <vector>                   // vector
+#include <xstd/bits/bit_span.hpp>        // bit_span
+#include <xstd/bits/bit_vector.hpp>      // basic_bit_vector
+#include <xstd/bits/bit_vector/hash.hpp> // IWYU pragma: keep; hash
+#include <boost/test/unit_test.hpp>      // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <cstdint>                       // uint8_t
+#include <functional>                    // hash
+#include <type_traits>                   // is_default_constructible_v
+#include <vector>                        // vector
 
 BOOST_AUTO_TEST_SUITE(BitVectorHash)
 

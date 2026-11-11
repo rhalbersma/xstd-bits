@@ -34,3 +34,6 @@ namespace boost::container_hash {
 | [`<xstd/bits/bit_vector/erase_if.hpp>`](erase_if.md) | `erase`, `erase_if` |
 | [`<xstd/bits/bit_vector/hash.hpp>`](hash.md) | `hash` |
 | [`<xstd/bits/bit_vector/container_hash.hpp>`](hash.md) | `is_range`, `is_tuple_like` |
+
+`<xstd/bits/bit_vector/hash.hpp>` includes Boost.Hash2, so it is opt-in: `<xstd/bits/bit_vector.hpp>` leaves it out, and a project that
+includes it links `Boost::hash2`.

@@ -1,5 +1,7 @@
 # `<xstd/bits/bit_array/hash.hpp>`, `<xstd/bits/bit_array/container_hash.hpp>`
 
+`hash.hpp` includes Boost.Hash2, and no umbrella includes it: a project that includes it links `Boost::hash2`.
+
 ## `hash`, `is_range`, `is_tuple_like`
 
 - `hash<basic_bit_array<Block, N>>`: `operator()` is `noexcept` and returns

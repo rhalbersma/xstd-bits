@@ -16,8 +16,8 @@ width:
 Views read bits someone else owns, and the `std::ranges` algorithms over them run a block at a time.
 
 It needs a C++23 compiler, and CMake 3.30 or later for the supplied CMake project. It also needs:
-- xstd-ints and xstd-misc, which the supplied project fetches at their v0.1.0 tags (#531);
-- Boost.Hash2;
+- xstd-ints at its v0.1.0 tag and xstd-misc at its v0.2.0 tag, which the supplied project fetches (#531);
+- Boost.Hash2, only for the opt-in hash headers, which no umbrella includes;
 - Boost.Container, where the standard library has no `std::inplace_vector`.
 
 ### The sequences: `<xstd/bits/bit_array.hpp>`, `<xstd/bits/bit_inplace_vector.hpp>` and `<xstd/bits/bit_vector.hpp>`
@@ -105,6 +105,8 @@ It needs a C++23 compiler, and CMake 3.30 or later for the supplied CMake projec
   - `xstd::hash` hashes a container as its standard model, through Boost.Hash2, and `std::hash` is built on it (#365,
     #366, #368).
   - `bit_hash` and `bit_digest` hash the packed bits, and avalanche as `xstd::hash` does (#463).
+  - Hashing is opt-in: `std::hash` and the `hash_append` hooks come with each family's `hash.hpp`, and `bit_hash` and
+    `bit_digest` with their own headers. No umbrella includes them, and only they need Boost.Hash2 (#542).
 - **Tags:** `from_blocks` reads an argument's blocks as bits. `indeterminate` leaves a fixed owner's blocks unwritten
   for a later assignment (#505).
 

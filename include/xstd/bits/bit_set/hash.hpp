@@ -9,6 +9,7 @@
 #include <xstd/bits/bit_set/detail/bit_fixed_set.hpp> // basic_bit_fixed_set
 #include <xstd/bits/bit_set/detail/bit_set.hpp>       // basic_bit_set
 #include <xstd/bits/bit_set/detail/bit_set_view.hpp>  // bit_set_view
+#include <xstd/bits/bit_set/detail/set_hash.hpp>      // IWYU pragma: keep; the hash<set_adaptor> the specializations derive from
 #include <cstddef>                                    // size_t
 #include <functional>                                 // hash
 

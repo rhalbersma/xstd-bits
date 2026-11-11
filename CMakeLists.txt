@@ -36,22 +36,21 @@ if(NOT xstd-ints_FOUND)
 endif()
 
 # xstd-misc supplies conditional_data_member_t and XSTD_NO_UNIQUE_ADDRESS, which bit_block_container uses to carry a run-time width without paying for it under a compile-time one, and simple_allocator and container_compatible_range, which the owners constrain their constructors and deduction guides by, and hash_algorithm and hash_algorithm_is_avalanching, which bit_hash and bit_digest are built on.
-find_package(xstd-misc 0.1.0 CONFIG QUIET)
+find_package(xstd-misc 0.2.0 CONFIG QUIET)
 if(NOT xstd-misc_FOUND)
     include(FetchContent)
     FetchContent_Declare(
         xstd-misc
         GIT_REPOSITORY https://github.com/rhalbersma/xstd-misc.git
-        # Pinned to the commit xstd-misc's v0.1.0 tag names, not a branch head; move consumption.yml's and compile-budget.yml's dependency_repos with it.
-        GIT_TAG 8921a26d9f1dc961bc79e37a44b9e070949aed79
+        # Pinned to the commit xstd-misc's v0.2.0 tag names, not a branch head; move consumption.yml's and compile-budget.yml's dependency_repos with it.
+        GIT_TAG 02a2477a7fd09b44b3db8eff5e45b73eea084d9d
     )
     FetchContent_MakeAvailable(xstd-misc)
 endif()
 
-# Boost.Hash2 is a public dependency of this library's headers, not just of the tests, so it is declared explicitly.
-find_package(boost_hash2 CONFIG REQUIRED)
+# Boost.Hash2 is no dependency of the target: the headers that hash, std::hash's, bit_hash's and bit_digest's, are opt-in, in no umbrella, and a consumer who includes one links Boost::hash2 itself.
 
-# Boost.Container likewise: the ext/ column's small_vector, opt-in to include, and the inplace column's blocks where the standard library has no std::inplace_vector.
+# Boost.Container is a public dependency of this library's headers: the ext/ column's small_vector, opt-in to include, and the inplace column's blocks where the standard library has no std::inplace_vector.
 find_package(boost_container CONFIG REQUIRED)
 
 add_library(
@@ -72,6 +71,7 @@ target_sources(
         include/xstd/bits/detail/sequence_adaptor.hpp
         include/xstd/bits/detail/sequence_erasure.hpp
         include/xstd/bits/bit_set/detail/set_adaptor.hpp
+        include/xstd/bits/bit_set/detail/set_hash.hpp
         include/xstd/bits/bit_set/detail/erase_if.hpp
         include/xstd/bits/bit_valarray/detail/valarray_adaptor.hpp
         include/xstd/bits/bit_valarray/detail/valarray_bool.hpp
@@ -350,7 +350,6 @@ target_link_libraries(
     xstd::ints
     xstd::misc
     Boost::container
-    Boost::hash2
 )
 
 target_compile_features(

@@ -204,17 +204,17 @@ The Boost extensions sit apart, under `<xstd/bits/ext/>`. The umbrellas are:
 
 | Header | Description |
 | :----- | :---------- |
-| `<xstd/bits/bit_array.hpp>` | `bit_array`, the sequence of `bool` at a fixed width, with `to_bit_array`, the tuple interface and hashing. |
-| `<xstd/bits/bit_inplace_vector.hpp>` | `bit_inplace_vector`, the sequence of `bool` within an inline capacity, with erasure and hashing. |
-| `<xstd/bits/bit_vector.hpp>` | `bit_vector`, the sequence of `bool` on the heap, with erasure and hashing. |
-| `<xstd/bits/bit_set.hpp>` | The ordered sets of keys at a fixed width, within an inline capacity and on the heap, the set view, the key mappings, the enum and flag sets, erasure and hashing. |
+| `<xstd/bits/bit_array.hpp>` | `bit_array`, the sequence of `bool` at a fixed width, with `to_bit_array`, and the tuple interface; `std::hash` is opt-in, in `<xstd/bits/bit_array/hash.hpp>`. |
+| `<xstd/bits/bit_inplace_vector.hpp>` | `bit_inplace_vector`, the sequence of `bool` within an inline capacity, with erasure; `std::hash` is opt-in, in `<xstd/bits/bit_inplace_vector/hash.hpp>`. |
+| `<xstd/bits/bit_vector.hpp>` | `bit_vector`, the sequence of `bool` on the heap, with erasure; `std::hash` is opt-in, in `<xstd/bits/bit_vector/hash.hpp>`. |
+| `<xstd/bits/bit_set.hpp>` | The ordered sets of keys at a fixed width, within an inline capacity and on the heap, the set view, the key mappings, the enum and flag sets, and erasure; `std::hash` is opt-in, in `<xstd/bits/bit_set/hash.hpp>`. |
 | `<xstd/bits/bit_valarray.hpp>` | The valarrays of `bool` on the heap, at a fixed width and within an inline capacity, with their slices and helper arrays. |
 | `<xstd/bits/bit_span.hpp>` | `bit_span` and `bit_subspan`, the sequence reading of bits another object holds, whole or from any bit offset. |
 | `<xstd/bits/bit_algorithm.hpp>` | The `std::ranges` algorithms over bits, a block at a time, and the tests of whether two sets intersect or are disjoint. |
 | `<xstd/bits/bit_iterator.hpp>` | `bit_advance`, `bit_distance`, `bit_next` and `bit_prev`, an offset step on a sequence and select and rank on a set. |
 | `<xstd/bits/bit_concepts.hpp>` | What holds bits and what an owner takes as its storage, what a set asks of its key mapping, and what an owner takes as blocks or converts. |
 | `<xstd/bits/bit_type_traits.hpp>` | How a storage rebinds, the transformations that give an owner another block or width, and the blocks they choose. |
-| `<xstd/bits/bit_functional.hpp>` | The comparisons across block types and storages, and the hash and digest of the bits. |
+| `<xstd/bits/bit_functional.hpp>` | The comparisons across block types and storages. The hash and digest of the bits, `bit_hash` and `bit_digest`, are opt-in, in their own headers. |
 | `<xstd/bits/bit_ranges.hpp>` | `from_blocks`, the tag that reads an argument's blocks as bits. |
 | `<xstd/bits/bit_utility.hpp>` | `indeterminate`, the tag that leaves a fixed-width owner's blocks unwritten for a later assignment. |
 | `<xstd/bits/bit.hpp>` | `bit_convert`, the positions of any bit storage into any other, at any two widths, and `bit_compress` and `bit_expand`, PEXT and PDEP over owners of any width. |
@@ -378,7 +378,7 @@ A sequence formats in brackets, as `std::vector<bool>` does, where a set formats
 
 ### Hashing, and choosing the algorithm
 
-Every owner but the valarrays, whose `==` answers element by element as `std::valarray`'s does, and every set view, hashes, and equal values hash equal whatever holds them. Behind it is [Boost.Hash2](https://www.boost.org/doc/libs/release/libs/hash2/), and there are two hashers, by what they hash:
+Every owner but the valarrays, whose `==` answers element by element as `std::valarray`'s does, and every set view, hashes, and equal values hash equal whatever holds them. Behind it is [Boost.Hash2](https://www.boost.org/doc/libs/release/libs/hash2/), so hashing is opt-in: its headers are in no umbrella, and a project that includes one links `Boost::hash2` itself. `std::hash` and the `hash_append` hooks come with each family's `hash.hpp`, as `<xstd/bits/bit_array/hash.hpp>`, and `bit_hash` and `bit_digest` with their own headers under `bit_functional/`. There are two hashers, by what they hash:
 
 - **`xstd::hash<T, H, Flavor>` hashes the value**, as its standard model does. It is [xstd-misc](https://github.com/rhalbersma/xstd-misc)'s, and runs Hash2's `hash_append`, which each type here meets through a hook that appends exactly the message Hash2 builds for the model: `std::array<bool, N>` for `bit_array<N>`, `std::vector<bool>` for `bit_vector` and `bit_small_vector`, `std::inplace_vector<bool, N>` for `bit_inplace_vector<N>`, and `std::set<Key, Compare>` for every set. So `xstd::hash<T, H, Flavor>()(x) == xstd::hash<Model, H, Flavor>()(model(x))`, and a bit container is a drop-in member of a Hash2-hashed aggregate. It costs what the model costs: a byte per bool, a word per key.
 - **`xstd::bit_hash<T, H, Flavor>` hashes the bits** of a key `T`, from [`<xstd/bits/bit_functional/bit_hash.hpp>`](include/xstd/bits/bit_functional/bit_hash.hpp). Its message is the value's bits as bytes, bit `i` at bit `i % 8` of byte `i / 8` with the unused high bits clear, followed by the width only where the width is a run-time value; a set of run-time width stops at the byte of its last key and appends that byte count instead, since equal sets need not share a width. Wherever the storage already holds those bytes, little-endian blocks of `std::uint8_t` up to `unsigned __int128`, that is one `update` over the storage; elsewhere, and in a constant expression, the same bytes are assembled. The block type is no part of the message, so `bit_hash` is transparent. Its call operator answers a `std::size_t`. `xstd::bit_digest<T, H, Flavor>`, from [`<xstd/bits/bit_functional/bit_digest.hpp>`](include/xstd/bits/bit_functional/bit_digest.hpp), answers the algorithm's whole `result_type` over the same message, for a digest that stands in for its key: by default XXH3's 128 bits over little-endian bytes, the same on every target, where `bit_hash` defaults to native bytes as `std::hash` runs it. `xstd::bit_hash_append(h, f, x)` is the same message for a user's own hook, and also takes a contiguous range of one static-width container, nested arrays included, as the planes of a board game's position: where each plane's object is its bytes, the whole range goes in as one `update`.
@@ -405,11 +405,11 @@ The same spelling works for every other owner and set view, with `xstd::hash` in
 - A conforming [C++23](https://wg21.link/N4950) compiler
 - CMake 3.30 or later when using the supplied CMake project
 - [xstd-ints](https://github.com/rhalbersma/xstd-ints) and [xstd-misc](https://github.com/rhalbersma/xstd-misc), fetched automatically via CMake `FetchContent` when not already installed
-- [Boost.Hash2](https://github.com/boostorg/hash2) for the hashing support
+- [Boost.Hash2](https://github.com/boostorg/hash2), only where a hash header is included: each family's `hash.hpp`, `bit_hash` or `bit_digest`, the `hash2` feature in `vcpkg.json`, and a `Boost::hash2` the consumer links itself
 - [Boost.Container](https://github.com/boostorg/container) for the inplace column's blocks where the standard library has no `std::inplace_vector`, and for the `ext/` column
 - [Boost.DynamicBitset](https://github.com/boostorg/dynamic_bitset), only where `<xstd/bits/ext/boost/dynamic_bitset.hpp>` is included: the `dynamic-bitset` feature in `vcpkg.json`, and a `Boost::dynamic_bitset` the consumer links itself
 
-This library depends on the C++ Standard Library, on [xstd-ints](https://github.com/rhalbersma/xstd-ints) and [xstd-misc](https://github.com/rhalbersma/xstd-misc) (both fetched automatically via CMake `FetchContent` when not already installed), on [Boost.Hash2](https://github.com/boostorg/hash2) for the hashing support, and on [Boost.Container](https://github.com/boostorg/container) for the inplace column where the standard library has no `std::inplace_vector`. It is continuously being tested with the following conforming [C++23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf) compilers, against all three mainstream standard libraries (libstdc++, the MSVC STL, and libc++). Following the model of [apt.llvm.org](https://apt.llvm.org/), we support the latest two stable releases of each compiler, plus its current development branch.
+This library depends on the C++ Standard Library, on [xstd-ints](https://github.com/rhalbersma/xstd-ints) and [xstd-misc](https://github.com/rhalbersma/xstd-misc) (both fetched automatically via CMake `FetchContent` when not already installed), on [Boost.Container](https://github.com/boostorg/container) for the inplace column where the standard library has no `std::inplace_vector`; the opt-in hash headers depend on [Boost.Hash2](https://github.com/boostorg/hash2). It is continuously being tested with the following conforming [C++23](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf) compilers, against all three mainstream standard libraries (libstdc++, the MSVC STL, and libc++). Following the model of [apt.llvm.org](https://apt.llvm.org/), we support the latest two stable releases of each compiler, plus its current development branch.
 
 Two standards are in play and they answer different questions. **C++23 is what the library compiles as** — that is the language it requires, and the tests build at C++26 as well — on GCC 16, GCC 17-SVN and MinGW 16, the three rungs whose libstdc++ carries `<inplace_vector>`. The inplace column exists at either standard and on every standard library: its blocks are a `std::inplace_vector` where the library has one and a `boost::container::static_vector` everywhere else. Only over `std::inplace_vector` are the inplace owners usable in a constant expression, and `XSTD_BITS_HAS_CONSTEXPR_INPLACE` is defined exactly there, for code to test with `#ifdef`; over `static_vector` their copies are not `noexcept` either, as `static_vector`'s own are not, while their `swap` is `noexcept` over both, as `[inplace.vector.modifiers]` declares it. **The current [working draft](https://eel.is/c++draft/) is what the interfaces are measured against**, because a counterpart's synopsis is a moving target and the newest one is the one worth answering. So `std::bitset`'s `basic_string_view` constructor ([P2697R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2697r1.pdf)) and its `charT` Constraints ([LWG 4294](https://cplusplus.github.io/LWG/issue4294)) are here even though C++23 has neither, and the proxy carries the hidden-friend `swap`s of [P3612R1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3612r1.html) and not the static `swap(reference, reference)` that paper moved to `[depr.vector.bool.swap]`.
 
@@ -418,7 +418,7 @@ Note that the benchmarks and unit tests depend on [Boost](https://www.boost.io/)
 ## Installation
 
 
-The library is header-only and its CMake target carries everything a consumer needs: the include directories, the `xstd-ints`, `xstd-misc`, `Boost::container` and `Boost::hash2` dependencies, and `cxx_std_23`. Link `xstd::bits` and you are done — there is no `target_include_directories` or `CMAKE_CXX_STANDARD` to set on your side.
+The library is header-only and its CMake target carries everything a consumer needs: the include directories, the `xstd-ints`, `xstd-misc` and `Boost::container` dependencies, and `cxx_std_23`. Link `xstd::bits` and you are done — there is no `target_include_directories` or `CMAKE_CXX_STANDARD` to set on your side.
 
 All three methods below are built by the [Consumption workflow](.github/workflows/consumption.yml), on every pull request, so what is written here is what is tested.
 
@@ -432,12 +432,12 @@ target_link_libraries(my_target PRIVATE xstd::bits)
 Installing needs no test dependencies:
 
 ```sh
-cmake --preset no-tests-vcpkg          # or --preset no-tests, if Boost.Hash2 is already findable
+cmake --preset no-tests-vcpkg          # or --preset no-tests, if Boost.Container is already findable
 cmake --build --preset no-tests-vcpkg
 cmake --install build/no-tests-vcpkg --prefix /where/you/want/it
 ```
 
-The installed package config calls `find_dependency` for `xstd-ints`, `xstd-misc` and `boost_hash2`, so those three have to be findable from the consuming project too. The version file is written `SameMinorVersion`, so `find_package(xstd-bits 0.1.0)` accepts 0.1.x and rejects 0.2.0.
+The installed package config calls `find_dependency` for `xstd-ints`, `xstd-misc` and `boost_container`, so those three have to be findable from the consuming project too. The version file is written `SameMinorVersion`, so `find_package(xstd-bits 0.1.0)` accepts 0.1.x and rejects 0.2.0.
 
 ### `add_subdirectory`, against a vendored copy
 
@@ -461,11 +461,11 @@ FetchContent_MakeAvailable(xstd-bits)
 target_link_libraries(my_target PRIVATE xstd::bits)
 ```
 
-`xstd-ints` and `xstd-misc` are fetched in turn if they are not already installed, at the commits `CMakeLists.txt` pins. Boost.Hash2 is not fetched — it is a `find_package(... REQUIRED)`, so it has to be installed, whether through vcpkg, your distribution, or a Boost tree you already have.
+`xstd-ints` and `xstd-misc` are fetched in turn if they are not already installed, at the commits `CMakeLists.txt` pins. Boost.Container is not fetched — it is a `find_package(... REQUIRED)`, so it has to be installed, whether through vcpkg, your distribution, or a Boost tree you already have, and so does Boost.Hash2 where a hash header is included.
 
 ### The vcpkg manifest
 
-[`vcpkg.json`](vcpkg.json) is this repository's own manifest, not a published port: it is what `VCPKG_ROOT`-based presets install from when you build **this** library. Its `test` feature — Boost.Test, Boost.Dynamic Bitset, Boost.Unordered, Google Benchmark and range-v3 — is a default feature because building the repository normally means building its tests. The `no-tests-vcpkg` preset turns that off with `VCPKG_MANIFEST_NO_DEFAULT_FEATURES`, so a packaging or install build pays for Boost.Hash2 and nothing else. Consuming the library by any of the three methods above does not read this manifest at all.
+[`vcpkg.json`](vcpkg.json) is this repository's own manifest, not a published port: it is what `VCPKG_ROOT`-based presets install from when you build **this** library. Its `test` feature — Boost.Test, Boost.Dynamic Bitset, Boost.Unordered, Google Benchmark and range-v3 — is a default feature because building the repository normally means building its tests. The `no-tests-vcpkg` preset turns that off with `VCPKG_MANIFEST_NO_DEFAULT_FEATURES`, so a packaging or install build pays for Boost.Container and nothing else. Consuming the library by any of the three methods above does not read this manifest at all.
 
 ## Continuous Integration
 

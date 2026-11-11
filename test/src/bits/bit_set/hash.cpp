@@ -3,12 +3,13 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include <xstd/bits/bit_set.hpp>    // bit_fixed_set, bit_inplace_set, bit_set, bit_set_view, hash
-#include <boost/test/unit_test.hpp> // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
-#include <array>                    // array
-#include <cstdint>                  // uint64_t
-#include <functional>               // hash
-#include <type_traits>              // remove_cvref_t
+#include <xstd/bits/bit_set.hpp>      // bit_fixed_set, bit_inplace_set, bit_set, bit_set_view
+#include <xstd/bits/bit_set/hash.hpp> // IWYU pragma: keep; hash
+#include <boost/test/unit_test.hpp>   // BOOST_AUTO_TEST_CASE, BOOST_AUTO_TEST_SUITE, BOOST_AUTO_TEST_SUITE_END, BOOST_CHECK, BOOST_CHECK_EQUAL
+#include <array>                      // array
+#include <cstdint>                    // uint64_t
+#include <functional>                 // hash
+#include <type_traits>                // remove_cvref_t
 
 BOOST_AUTO_TEST_SUITE(BitSetHash)
 

@@ -26,6 +26,9 @@ include(${cpp-ci_SOURCE_DIR}/cmake/StdTestSuite.cmake)
 # early warning: an entry trunk has edited is reported rather than failing configuration, and doc/vendor.md records the
 # stable rung alone.
 find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
+
+# The suites hash their subjects through std::hash, whose opt-in headers include Boost.Hash2.
+find_package(boost_hash2 CONFIG REQUIRED)
 set(XSTD_BITS_STD_TEST_SUITE_RUNG stable CACHE STRING "The cpp-ci rung whose pinned suites run: stable, or development")
 set_property(CACHE XSTD_BITS_STD_TEST_SUITE_RUNG PROPERTY STRINGS stable development)
 set(rung ${XSTD_BITS_STD_TEST_SUITE_RUNG})
@@ -33,10 +36,10 @@ function(xstd_bits_std_test_suite suite subject)
     set(name ${suite}-${subject})
     list(TRANSFORM ARGN PREPEND ${CMAKE_CURRENT_SOURCE_DIR}/ OUTPUT_VARIABLE mappings)
     if(NOT rung STREQUAL "stable")
-        std_test_suite(${suite} NAME ${name} MAPPING ${mappings} ${CMAKE_CURRENT_SOURCE_DIR}/${subject}.toml LINK_LIBRARIES xstd::bits RUNG ${rung} WARN_STALE)
+        std_test_suite(${suite} NAME ${name} MAPPING ${mappings} ${CMAKE_CURRENT_SOURCE_DIR}/${subject}.toml LINK_LIBRARIES xstd::bits Boost::hash2 RUNG ${rung} WARN_STALE)
         return()
     endif()
-    std_test_suite(${suite} NAME ${name} MAPPING ${mappings} ${CMAKE_CURRENT_SOURCE_DIR}/${subject}.toml LINK_LIBRARIES xstd::bits)
+    std_test_suite(${suite} NAME ${name} MAPPING ${mappings} ${CMAKE_CURRENT_SOURCE_DIR}/${subject}.toml LINK_LIBRARIES xstd::bits Boost::hash2)
     add_test(
         NAME std-test-suite.${name}.table
         COMMAND ${Python3_EXECUTABLE} -I ${PROJECT_SOURCE_DIR}/tools/vendor.py check ${CMAKE_CURRENT_BINARY_DIR}/std-test-suite/${name}/manifest.json

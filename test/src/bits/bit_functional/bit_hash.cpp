@@ -6,16 +6,19 @@
 #include <test/block_types.hpp>                     // all_block_types
 #include <test/for_each_type.hpp>                   // for_each_type
 #include <xstd/bits/bit_array.hpp>                  // bit_array
+#include <xstd/bits/bit_array/hash.hpp>             // IWYU pragma: keep; hash
 #include <xstd/bits/bit_functional/bit_hash.hpp>    // bit_hash, bit_hash_append
 #include <xstd/bits/bit_inplace_vector.hpp>         // basic_bit_inplace_vector
+#include <xstd/bits/bit_inplace_vector/hash.hpp>    // IWYU pragma: keep; hash
 #include <xstd/bits/bit_ranges/from_blocks.hpp>     // from_blocks
-#include <xstd/bits/bit_set.hpp>                    // hash
+#include <xstd/bits/bit_set/hash.hpp>               // IWYU pragma: keep; hash
 #include <xstd/bits/bit_set/bit_fixed_set.hpp>      // basic_bit_fixed_set, bit_fixed_set
 #include <xstd/bits/bit_set/bit_inplace_set.hpp>    // basic_bit_inplace_set
 #include <xstd/bits/bit_set/bit_set.hpp>            // basic_bit_set, bit_set
 #include <xstd/bits/bit_set/bit_set_view.hpp>       // bit_set_view
 #include <xstd/bits/bit_span/bit_span.hpp>          // bit_span
 #include <xstd/bits/bit_vector.hpp>                 // basic_bit_vector, bit_vector
+#include <xstd/bits/bit_vector/hash.hpp>            // IWYU pragma: keep; hash
 #include <xstd/bits/ext/boost/bit_small_set.hpp>    // basic_bit_small_set
 #include <xstd/bits/ext/boost/bit_small_vector.hpp> // basic_bit_small_vector
 #include <xstd/misc/concepts/hash_algorithm.hpp>    // hash_algorithm

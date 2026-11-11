@@ -12,6 +12,9 @@ endif()
 set(${project_option_prefix}_FUZZ_COMPILE_OPTIONS "-fsanitize=fuzzer,address,undefined;-fno-sanitize-recover=undefined;-O1;-g" CACHE STRING "Compile options for the fuzz targets")
 set(${project_option_prefix}_FUZZ_LINK_OPTIONS "-fsanitize=fuzzer,address,undefined" CACHE STRING "Link options for the fuzz targets, which bring in the fuzzing engine")
 
+# fuzz_set and fuzz_vector check that equal values hash alike, through the opt-in hash headers.
+find_package(boost_hash2 CONFIG REQUIRED)
+
 foreach(target_id fuzz_set fuzz_valarray fuzz_vector)
     add_executable(${target_id} ${target_id}.cpp)
 
@@ -23,6 +26,7 @@ foreach(target_id fuzz_set fuzz_valarray fuzz_vector)
     target_link_libraries(
         ${target_id} PRIVATE
         xstd::bits
+        Boost::hash2
     )
 
     target_compile_definitions(

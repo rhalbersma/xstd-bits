@@ -14,7 +14,6 @@
 #include <xstd/bits/detail/borrowed_bits.hpp>                // borrow_bits, borrowable_block, borrowable_blocks, borrowed_bits_t
 #include <xstd/bits/detail/comparisons.hpp>                  // three_way
 #include <xstd/bits/detail/from_blocks.hpp>                  // from_blocks_t
-#include <xstd/bits/detail/hash.hpp>                         // hash_append_bools
 #include <xstd/bits/detail/input_iterator_pair.hpp>          // input_iterator_pair
 #include <xstd/bits/detail/non_volatile.hpp>                 // non_volatile
 #include <xstd/bits/detail/owner_members.hpp>                // owner_members
@@ -27,7 +26,6 @@
 #include <xstd/misc/type_traits/empty_base_type.hpp>         // empty_base_type
 #include <boost/container_hash/is_range.hpp>                 // is_range
 #include <boost/container_hash/is_tuple_like.hpp>            // is_tuple_like
-#include <boost/hash2/hash_append_fwd.hpp>                   // hash_append_tag
 #include <algorithm>                                         // copy, min
 #include <cassert>                                           // assert
 #include <compare>                                           // strong_ordering
@@ -504,15 +502,6 @@ class sequence_adaptor : public sequence::sizes_t<Bits, Store, W, Derived, E>
 
         // The free functions over every reading, bit_convert among them, reach the storage through this one door.
         friend struct storage_access;
-
-        // The owner's value as its model hashes it, bools then a run-time size; a view follows span and hashes none.
-        template<class Provider, class Hash, class Flavor>
-        friend constexpr auto tag_invoke(boost::hash2::hash_append_tag const&, Provider const& pr, Hash& h, Flavor const& f, sequence_adaptor const* v) noexcept
-                -> void
-                requires is_owner
-        {
-                hash_append_bools(pr, h, f, v->bits());
-        }
 
 public:
         // A vehicle used directly is its own container, which is what a view is.
